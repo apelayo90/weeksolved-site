@@ -7750,6 +7750,7 @@ function wizard(firstRun){
     hoursPreset:"same", open:"09:00", close:"17:00",
     dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false, hols:null,
     posts:"", postSpan:"day", postFam:"1", postRelief:"family",
+    xDaySheet:true, xPto:false, xCycles:false, xNotice:false, xWaiver:false, xLic:false,
     satOpen:"10:00", satClose:"16:00", satClosed:false,
     sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
     dayOff:{},                      /* "b:i" -> [dow…] they can never work */
@@ -7784,6 +7785,7 @@ function wizard(firstRun){
     {k:"pri",     t:"Who gets first pick"},
     {k:"cost",    t:"Money"},
     {k:"handout", t:"Getting it to people"},
+    {k:"extras",  t:"Anything else you want switched on?"},
     {k:"reqs",    t:"Anything people have asked for"},
     {k:"period",  t:"How far ahead"},
     {k:"done",    t:"Ready"}
@@ -8160,6 +8162,32 @@ function wizard(firstRun){
           <input type="number" id="wbud" min="0" step="50" value="${W.budget||0}"></div>
           <div class="mini">Rates never appear on a printed or exported schedule.</div>`:""}
       </div>`;
+    if(k==="extras"){
+      const X=(id,on,title,desc)=>`<label class="switch" style="align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <input type="checkbox" data-x="${id}" ${on?"checked":""} style="margin-top:3px">
+        <span style="min-width:0"><b style="font-family:Archivo,sans-serif;font-size:13.5px">${esc(title)}</b>
+        <span class="mini" style="display:block">${esc(desc)}</span></span></label>`;
+      return `
+      <div class="stack">
+        <p class="whead">Everything below is included — it's just off unless you want it. Anything switched off
+          stays completely out of your way: no extra tabs, no extra questions, nothing on your screens.
+          You can turn any of it on later in Settings.</p>
+        ${X("xDaySheet", W.xDaySheet, "The daily station sheet",
+            "An hour-by-hour sheet for each day showing who's on, their meal and rest times, and their posts — the one you print for the back room.")}
+        ${X("xPto", W.xPto, "Time-off balances",
+            "Track how much paid time off each person has banked, accruing as they work and counting down as they take it.")}
+        ${X("xLic", W.xLic, "License and certification expiry",
+            "Put an expiry date on each person's license. The drafter never schedules anyone past a lapsed one, and warns you 30 days out.")}
+        ${X("xCycles", W.xCycles, "Work patterns like 7 on, 7 off",
+            "For staff who don't work the same shape every week — alternating weeks, seven on and seven off, or hours averaged over a pay period.")}
+        ${X("xNotice", W.xNotice, "Advance-notice warnings",
+            "Some cities make short-notice scheduling a payable penalty. Get a warning if you post a week less than 14 days ahead.")}
+        ${X("xWaiver", W.xWaiver, "Meal waivers where the law allows them",
+            "On short shifts some states let a worker waive their meal in writing. Weeksolved marks the shift; it doesn't collect the signature.")}
+        <div class="help">Not listed here but always available once you're in: staff groups with their own limits,
+          week patterns for holiday weeks, shift trades, callout logging, and the ranked holiday poll.</div>
+      </div>`;
+    }
     if(k==="reqs"){
       const people=allNames();
       const cur=curShifts();
@@ -8244,6 +8272,8 @@ function wizard(firstRun){
             <div class="ln"><span>Cover you asked for</span><b>${W.fillMode==="full"?"a floor — everyone fully scheduled":"exactly that many"}</b></div>
             <div class="ln"><span>Handing it out</span><b>${W.sendOut?"emailed or texted from here":"however you do it now"}</b></div>
             ${W.fillMode==="full"? `<div class="ln"><span>${esc(W.topUpLabel||"Project time")}</span><b>${W.projectShape==="chunk"?"in blocks":"wherever it fits"}, ${W.projectShare==="best"?"stacked on your best":"shared round"}</b></div>`:""}
+            ${(()=>{const on=[W.xDaySheet&&"day sheet",W.xPto&&"PTO balances",W.xLic&&"license expiry",W.xCycles&&"work patterns",W.xNotice&&"notice warnings",W.xWaiver&&"meal waivers"].filter(Boolean);
+              return on.length? `<div class="ln"><span>Also on</span><b>${esc(on.join(", "))}</b></div>`:"";})()}
             ${(W.posts||"").trim()? `<div class="ln"><span>Posts</span><b>${(W.posts||"").split(/\n/).filter(x=>x.trim()).length} on the floor${W.postSpan==="day"?", held all day":", rotating "+(W.postSpan==="half"?"at midday":"every "+W.postSpan.replace("h"," hours"))}</b></div>`:""}
             ${W.hols? `<div class="ln"><span>Holidays</span><b>${(()=>{const C=holidayCandidates();
               const c=C.filter(h=>W.hols[h.key]==="closed").length, l=C.filter(h=>W.hols[h.key]==="reduced").length, nn=C.filter(h=>W.hols[h.key]==="normal").length;
@@ -8375,6 +8405,7 @@ function wizard(firstRun){
       if(v===W.posts) return; W.posts=v; setTimeout(paint,0); }); }   /* never redraw mid-blur */
     ["wpspan","wpfam","wprelief"].forEach(id=>{ const el=r.querySelector("#"+id);
       if(el) el.onchange=()=>{ if(id==="wpspan") W.postSpan=el.value; if(id==="wpfam") W.postFam=el.value; if(id==="wprelief") W.postRelief=el.value; paint(); }; });
+    r.querySelectorAll("[data-x]").forEach(cb=>cb.onchange=()=>{ W[cb.dataset.x]=cb.checked; });
     r.querySelectorAll("[data-hall]").forEach(b2=>b2.onclick=()=>{ W.hols=W.hols||{};
       holidayCandidates().forEach(h=>{ W.hols[h.key]=b2.dataset.hall; }); paint(); });
     r.querySelectorAll(".daytog").forEach(btn=>btn.onclick=()=>{
@@ -8456,6 +8487,7 @@ function wizard(firstRun){
     r.querySelectorAll(".wph").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
     r.querySelectorAll(".wmn").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
     const wpx=r.querySelector("#wposts"); if(wpx) W.posts=wpx.value;
+    r.querySelectorAll("[data-x]").forEach(cb=>{ W[cb.dataset.x]=cb.checked; });
     r.querySelectorAll(".wneed").forEach(i=>{ W.perShift[i.dataset.s+":"+i.dataset.r]=+i.value||0; });
     if(g("#wbud")) W.budget=+g("#wbud").value||0;
   }
@@ -8556,6 +8588,12 @@ function wizard(firstRun){
     N.rules.holidayRush=W.holidayRush||"none";
     N.holidays.mode="same";
     N.vacations.on=!!W.vacations;
+    N.rules.useDaySheet = W.xDaySheet!==false;
+    N.org.trackPto = !!W.xPto;
+    N.rules.useCycles = !!W.xCycles;
+    N.rules.advanceNoticeDays = W.xNotice? 14 : 0;
+    N.rules.allowMealWaiver = !!W.xWaiver;
+    N.rules.trackLic = !!W.xLic;
     /* posts on the floor — numbered names group themselves into one rotation */
     const postLines=(W.posts||"").split(/\n/).map(x=>x.trim()).filter(Boolean);
     if(postLines.length){
