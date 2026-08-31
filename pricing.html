@@ -54,10 +54,11 @@ header.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--b
   display:grid;place-items:center;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em}
 .brand{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
 nav.hn{margin-left:auto;display:flex;gap:20px;align-items:center}
-nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px}
+nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
 nav.hn a:hover{color:var(--accent)}
 nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:10px;padding:10px 18px}
 @media(max-width:560px){nav.hn a.plain{display:none}}
+@media(max-width:420px){.brand{font-size:17px}nav.hn a.go{padding:9px 14px;font-size:13.5px}.topin{gap:9px}}
 h1{font-size:clamp(28px,5.4vw,42px);letter-spacing:-.022em;line-height:1.12;margin:34px 0 12px;text-align:center;text-wrap:balance}
 .sub{color:var(--muted);text-align:center;max-width:56ch;margin:0 auto 8px;font-size:16px}
 .beta{display:flex;justify-content:center;margin:18px 0 30px}
@@ -69,7 +70,7 @@ h1{font-size:clamp(28px,5.4vw,42px);letter-spacing:-.022em;line-height:1.12;marg
 .toggle button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .toggle button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .toggle .save{font-size:11.5px;font-weight:700;opacity:.85;margin-left:6px}
-.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:stretch}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:16px;align-items:stretch}
 .tier{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px 22px;display:flex;flex-direction:column}
 .tier.hot{border-color:var(--accent);box-shadow:0 8px 28px rgba(28,106,102,.14);position:relative}
 .tier.hot .flag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);
@@ -122,16 +123,16 @@ footer a{color:var(--accent);text-decoration:none}
   <div class="beta"><span>Free for everyone during the tester program — billing hasn't started</span></div>
 
   <div class="toggle" role="group" aria-label="Billing period">
-    <button id="tmon" aria-pressed="false">Monthly</button>
-    <button id="tann" aria-pressed="true">Annual <span class="save">2 months free</span></button>
+    <button id="tmon" aria-pressed="true">Monthly</button>
+    <button id="tann" aria-pressed="false">Annual <span class="save">2 months free</span></button>
   </div>
 
   <div class="tiers">
     <div class="tier">
       <div class="tn">Solo</div>
       <div class="tfor">One location, the essentials</div>
-      <div class="price" data-mon="$29" data-ann="$24">$24<small> /mo</small></div>
-      <div class="per" data-mon="billed monthly" data-ann="$290 billed yearly">$290 billed yearly</div>
+      <div class="price" data-mon="$29" data-ann="$24">$29<small> /mo</small></div>
+      <div class="per" data-mon="billed monthly" data-ann="$24/mo equivalent — $290 billed yearly">billed monthly</div>
       <ul class="feats">
         <li>Automatic weekly drafts from your own rules</li>
         <li>Coverage minimums, role ratios, hour caps</li>
@@ -147,8 +148,8 @@ footer a{color:var(--accent);text-decoration:none}
       <span class="flag">Most popular</span>
       <div class="tn">Pro</div>
       <div class="tfor">One location, with the law on your side</div>
-      <div class="price" data-mon="$49" data-ann="$41">$41<small> /mo</small></div>
-      <div class="per" data-mon="billed monthly" data-ann="$490 billed yearly">$490 billed yearly</div>
+      <div class="price" data-mon="$49" data-ann="$41">$49<small> /mo</small></div>
+      <div class="per" data-mon="billed monthly" data-ann="$41/mo equivalent — $490 billed yearly">billed monthly</div>
       <ul class="feats">
         <li class="hd">Everything in Solo, plus</li>
         <li>Your state's meal &amp; rest break law on every shift</li>
@@ -164,8 +165,8 @@ footer a{color:var(--accent);text-decoration:none}
     <div class="tier">
       <div class="tn">Multi</div>
       <div class="tfor">Three locations or more</div>
-      <div class="price" data-mon="$39" data-ann="$33">$33<small> /location/mo</small></div>
-      <div class="per" data-mon="billed monthly" data-ann="billed yearly">billed yearly</div>
+      <div class="price" data-mon="$39" data-ann="$33">$39<small> /location/mo</small></div>
+      <div class="per" data-mon="billed monthly" data-ann="$33/location/mo equivalent — billed yearly">billed monthly</div>
       <ul class="feats">
         <li class="hd">Everything in Pro, plus</li>
         <li>Every location on one account</li>
