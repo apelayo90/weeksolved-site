@@ -876,6 +876,7 @@ function blankState(){
             mealPlan:"auto", mealSlots:["11:30","12:00","12:30","13:00"],
             mealClose:{from:"13:00", to:"14:00"},
             useDaySheet:true, stationRotation:"fair", stationSpan:"day", stationFamilies:true, useCycles:false,
+            skillsOn:false, skillsWhen:"always", skillsStrength:"medium",
             fillMode:"demand", topUpLabel:"Project time",
             allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
     weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
@@ -1632,7 +1633,7 @@ function migrate(o){
   s.stations.forEach(x=>{ if(typeof x.double!=="boolean") x.double=false;
     if(typeof x.critical!=="boolean") x.critical=false;
     if(x.reliefFrom===undefined) x.reliefFrom=null; });
-  if(typeof s.rules.useDaySheet!=="boolean") s.rules.useDaySheet=true;
+  s.rules.useDaySheet=true;      /* always generated — the day sheet is core, not an option */
   if(typeof s.rules.useCycles!=="boolean") s.rules.useCycles=false;
   if(!s.rules.fillMode) s.rules.fillMode="demand";
   if(!s.rules.mealPlan) s.rules.mealPlan="auto";
@@ -1649,6 +1650,9 @@ function migrate(o){
   if(!s.rules.topUpLabel) s.rules.topUpLabel="Project time";
   if(!s.rules.stationRotation) s.rules.stationRotation="fair";
   if(!s.rules.stationSpan) s.rules.stationSpan="day";
+  if(!s.rules.skillsWhen) s.rules.skillsWhen="always";
+  if(!s.rules.skillsStrength) s.rules.skillsStrength="medium";
+  s.employees.forEach(e=>{ if(!e.skills) e.skills={}; });
   s.employees.forEach(e=>{ if(!e.hoursMode) e.hoursMode="range";
     if(!e.projectOk) e.projectOk="yes";
     if(typeof e.onCall!=="boolean") e.onCall = false;
@@ -2698,6 +2702,16 @@ function score(e, slot, date, dow, state, target){
   if(e.type==="FT") sc += 6; else if(e.type==="PRN") sc -= 5;
   sc += priorityBonus(e.id, slot.shiftId, dow);
   sc += reqScore(e, slot.shiftId, date);
+  /* on the days the manager picked, someone trained on more of the floor is
+     worth a nudge — never a veto, and never visible to staff */
+  { const bias=skillsBias(date, S.currentWeek);
+    if(bias.dir>0){
+      const posts=stationsOn(dow).filter(x=>x.kind!=="admin");
+      if(posts.length){
+        const lv=posts.reduce((t,st)=>t+skillOf(e, st.id),0)/posts.length;
+        sc += (lv-1)*7*bias.mult;
+      }
+    } }
   if(SHUFFLE) sc += jitter(e.id+"|"+slot.shiftId+"|"+date+"|"+SHUFFLE);
   if(S.priority.mode==="off") sc += Math.min(tenure(e),15)*0.35;
   return sc;
@@ -3293,6 +3307,51 @@ function stationById(id){ return (S.stations||[]).find(x=>x.id===id); }
 function stationsOn(dow){ return activeStations().filter(x=>!x.days || !x.days.length || x.days.includes(dow)); }
 
 /* How often each person has drawn each station, from posted weeks. */
+/* ============================================================
+   Skills — what someone is trained on, post by post. This is a record of
+   training, not a rating of a person: the only three answers are still
+   learning, can work it, and signed off to train others. It never appears
+   on anything staff see, and it is off unless switched on.
+   ============================================================ */
+const SKILL_LEVEL={0:"Still learning", 1:"Can work it", 2:"Signed off — can train others"};
+function skillsOn(){ return !!(S.rules&&S.rules.skillsOn) && (S.stations||[]).length>0; }
+function skillOf(e, stationId){
+  if(!e || !e.skills) return 1;
+  const st=stationById(stationId);
+  const fam=st? stFamily(st) : "";
+  const direct=e.skills[stationId];
+  if(direct!=null) return +direct;
+  /* a level set on one post of a rotation carries to its siblings */
+  if(fam){
+    const sib=(S.stations||[]).find(x=>x.id!==stationId && stFamily(x)===fam && e.skills[x.id]!=null);
+    if(sib) return +e.skills[sib.id];
+  }
+  return 1;
+}
+/* How much the training record should lean on today, and which way.
+   dir  +1 = favour the trained     -1 = deliberately give learners the reps
+   mult 0.5 / 1 / 2 = how hard that leans. Returns dir 0 when it shouldn't apply. */
+const SKILL_MULT={light:0.5, medium:1, strong:2};
+function skillsBias(date, ws){
+  if(!skillsOn()) return {dir:0, mult:0};
+  const when=S.rules.skillsWhen||"always";
+  const mult=SKILL_MULT[S.rules.skillsStrength||"medium"]||1;
+  const dow=parseYmd(date).getDay();
+  const busy = dateLoad(date,dow)>0 || !!holAdj(date);
+  const thin = (()=>{ const wk=peekWeek(ws||S.currentWeek);
+    const on=wk? wk.assignments.filter(a=>a.date===date).length : 0;
+    return on <= expandDemand(dow, ws||S.currentWeek).length; })();
+  if(when==="always") return {dir:1, mult};
+  if(when==="busy")   return busy? {dir:1, mult} : {dir:0, mult:0};
+  if(when==="thin")   return thin? {dir:1, mult} : {dir:0, mult:0};
+  if(when==="train"){                       /* strongest on the hard days, reversed on the easy ones */
+    if(busy || thin) return {dir:1, mult};
+    if(dateLoad(date,dow)<0) return {dir:-1, mult};   /* a quiet day is a teaching day */
+    return {dir:0, mult:0};
+  }
+  return {dir:1, mult};
+}
+function skillsApplyOn(date, ws){ return skillsBias(date, ws).dir!==0; }
 /* Posts that share a rotation: "Typist 1" and "Typist 2" are both Typist, so a turn
    on either counts as a turn on Typist. Numbered posts group themselves. */
 function stFamily(st){
@@ -3372,6 +3431,10 @@ function assignStationBlocks(date, ws, T, posts, list, helpers){
     live.forEach(st=>{
       let fit=onFloor.filter(x=>(!st.roleId || x.e.roleIds.includes(st.roleId)) &&
         (!st.slots || !st.slots.length || st.slots.includes(x.a.shiftId)));
+      if(st.needSkilled && skillsBias(date, ws).dir!==0){
+        const trained=fit.filter(x=>skillOf(x.e, st.id)>0);
+        if(trained.length) fit=trained;      /* only fall back to a learner if there is nobody else */
+      }
       if(!fit.length) return;
       fit.sort((x,y)=> score(x,st)-score(y,st) || x.e.name.localeCompare(y.e.name));
       const pick=fit[0];
@@ -3425,9 +3488,23 @@ function assignStations(date, ws, tally){
     const mineFam=fam? ((rec.byFamily||{})[fam]||0) : 0;
     const mine=(rec.byStation[st.id]||0);
     const bal=(rec.good||0)-(rec.bad||0);
+    /* training: a learner goes to a post only when nobody trained is free,
+       and a signed-off person is nudged toward the posts that need one */
+    let skillPen=0;
+    if(skillBias.dir){
+      const lvl=skillOf(x.e, st.id);
+      if(skillBias.dir>0){
+        if(lvl===0) skillPen += (st.needSkilled? 400 : 60*skillBias.mult);
+        else if(lvl===2 && (st.needSkilled||st.critical)) skillPen -= 6*skillBias.mult;
+      } else {
+        /* teaching day: put the learner on it, unless the post can never be learned on */
+        if(st.needSkilled){ if(lvl===0) skillPen += 400; }
+        else if(lvl===0) skillPen -= 40*skillBias.mult;
+      }
+    }
     /* a turn anywhere in the family counts first, then this exact post,
        then whether they're up or down overall — ties broken by the coin-flip */
-    return mineFam*10 + mine*4 + ((st.desire||0)>=0 ? bal : -bal) + (rec.total||0)*0.01 + jitter(x.e.id)*0.9;
+    return mineFam*10 + mine*4 + ((st.desire||0)>=0 ? bal : -bal) + (rec.total||0)*0.01 + jitter(x.e.id)*0.9 + skillPen;
   };
   const bump=(x, st)=>{
     const rec=T[x.e.id] = T[x.e.id] || {byStation:{}, byFamily:{}, good:0, bad:0, total:0};
@@ -3436,6 +3513,7 @@ function assignStations(date, ws, tally){
     const fam=stFamily(st); if(fam) rec.byFamily[fam]=(rec.byFamily[fam]||0)+1;
     if((st.desire||0)>0) rec.good++; else if((st.desire||0)<0) rec.bad++;
   };
+  const skillBias = skillsBias(date, ws);
   const covers=(x, st)=>{
     if(st.slots && st.slots.length && !st.slots.includes(x.a.shiftId)) return false;
     const f=st.from? t2m(st.from):null, t=st.to? t2m(st.to):null;
@@ -4436,7 +4514,6 @@ const TITLES={
 function renderNav(){
   const n=$("#nav"); if(!n) return;
   let items = (advanced()? NAV : NAV.filter(x=>x.simple)).filter(x=>!x.when || x.when());
-  if(S.rules.useDaySheet===false) items = items.filter(x=>x.id!=="day" && x.id!=="stations");
   n.innerHTML = items.map(item=>{
     if(item.grp) return '<div class="grp">'+esc(item.grp)+"</div>";
     const c = item.n? item.n():null;
@@ -4559,7 +4636,7 @@ function wireCommon(root){
       (el.tagName==="INPUT" && ["text","number","time","date","email","tel"].includes(el.type));
     const commit=()=>{
       let v = el.type==="checkbox"? el.checked : (el.type==="number"? (el.value===""?0:parseFloat(el.value)) : el.value);
-      if(path==="rules.stationFamilies") v = v===true || v==="1" || v===1;
+      if(path==="rules.stationFamilies" || path==="rules.skillsOn") v = v===true || v==="1" || v===1;
       setPath(S,path,v);
       if(path==="org.name" && S.sample) S.sample=false;   /* they've made it theirs */
     };
@@ -4844,7 +4921,7 @@ function vHome(){
       </button>
     </div>
 
-    <div class="card"><header><h3>The week at a glance</h3><span class="hint">${S.rules.useDaySheet===false?"Cover across the week":"Tap a day to see the hour-by-hour with breaks"}</span></header>
+    <div class="card"><header><h3>The week at a glance</h3><span class="hint">Tap a day to see the hour-by-hour with breaks</span></header>
       <div class="body"><div class="daystrip">
         ${dates.map(({date,dow})=>{
           const list=wk.assignments.filter(a=>a.date===date);
@@ -4935,7 +5012,7 @@ WIRE.home = root=>{
   on("#hxls",()=>saveFile("schedule-"+S.currentWeek+".csv", weekGridCSV()));
   on("#hcards",()=>exportPersonCards().catch(()=>pdfUnavailable()));
   root.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{
-    if(S.rules.useDaySheet===false){ go("week"); return; } DAYVIEW=+b.dataset.day; go("day"); });
+    DAYVIEW=+b.dataset.day; go("day"); });
   root.querySelectorAll("[data-week]").forEach(b=>b.onclick=()=>{ S.currentWeek=b.dataset.week; save(); render(); });
   root.querySelectorAll("[data-jump]").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.dataset.jump; go("day"); });
   root.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{
@@ -5077,7 +5154,7 @@ function vSettings(){
         `<select data-set="rules.useCycles"><option value="0" ${cyclesOn()?"":"selected"}>Off</option><option value="1" ${cyclesOn()?"selected":""}>On</option></select>`)}
       ${cyclesOn()? setRow("Who's on a pattern", (()=>{const f=S.employees.filter(e=>e.active&&cycleOf(e));
         return f.length? esc(f.map(e=>e.name.split(" ")[0]+" — "+cycleLabel(e)).join(", ")) : "nobody yet — set one on a profile or a staff group";})(), "", "team") : ""}
-      ${setRow("Planning longer vacations", S.vacations.on
+      ${setRow("Planning longer vacations (optional)", S.vacations.on
         ? "On — a Vacations page runs a ranked survey and one fair draw for the season's time off"
         : "Off — longer time off is handled by hand under Team. Turn it on for a ranked survey where everyone asks at once and the fairest possible set gets granted.",
         `<select data-set="vacations.on"><option value="0" ${S.vacations.on?"":"selected"}>Off</option><option value="1" ${S.vacations.on?"selected":""}>On</option></select>`)}
@@ -5085,7 +5162,7 @@ function vSettings(){
         ? "Asks before re-posting changes — with a choice to tell affected people, everyone, or no one"
         : "Re-posts silently. Turn the check on so nobody's plans change without them hearing about it.",
         `<select data-set="rules.confirmRepost"><option value="1" ${S.rules.confirmRepost!==false?"selected":""}>Ask first</option><option value="0" ${S.rules.confirmRepost===false?"selected":""}>Don't ask</option></select>`)}
-      ${setRow("Sending the schedule out", sendOn()
+      ${setRow("Sending the schedule out (optional)", sendOn()
         ? "On — a Send button on the week and on Export, by email or text"
         : "Off — you hand the schedule out however you do now. Turn it on and each person can get just their own shifts.",
         sel("rules.sendOut", [[1,"On"],[0,"Off"]], sendOn()?1:0))}
@@ -5093,11 +5170,8 @@ function vSettings(){
         const on=S.employees.filter(e=>e.active);
         const em=on.filter(e=>(e.email||"").trim()).length, ph=on.filter(e=>(e.phone||"").trim()).length;
         return em+" of "+on.length+" have an email, "+ph+" have a mobile — add them on each profile";})(), "", "team") : ""}
-      ${setRow("Use the daily station sheet", S.rules.useDaySheet===false
-        ? "Off — you plan by the week and let the day take care of itself"
-        : "On — hour-by-hour day sheets with meals, breaks and stations",
-        `<select data-set="rules.useDaySheet"><option value="1" ${S.rules.useDaySheet===false?"":"selected"}>On</option><option value="0" ${S.rules.useDaySheet===false?"selected":""}>Off</option></select>`)}
-      ${S.rules.useDaySheet!==false? setRow("Stations", (S.stations||[]).length? (S.stations||[]).filter(x=>x.kind!=="admin").length+" stations, "+(S.stations||[]).filter(x=>x.kind==="admin").length+" duties" : "none set up", "", "stations") : ""}
+      ${setRow("The daily sheet", "Always generated with every schedule — hour by hour, with meals, breaks and anything that needs covering", "", "day")}
+      ${setRow("Posts on the floor (optional)", (S.stations||[]).length? (S.stations||[]).filter(x=>x.kind!=="admin").length+" posts, "+(S.stations||[]).filter(x=>x.kind==="admin").length+" duties — handed out on the day sheet only" : "none — the day sheet still prints, it just doesn't name posts", "", "stations")}
       ${setRow("Meal periods (the unpaid one)", "", sel("rules.breakMode", [["assigned","Put a time on the schedule"],["lengths","Say how long, staff pick when"],["self","Staff sort it out themselves"]], S.rules.breakMode))}
       ${S.rules.breakMode==="assigned"? setRow("How those meal times get decided",
         mealPlan()==="slots" ? "Only the times you named: "+esc((S.rules.mealSlots||[]).map(x=>m2disp(t2m(x))).join(", "))
@@ -5162,7 +5236,7 @@ WIRE.settings = root=>{
   root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
     const path=el.dataset.set;
     let v=el.value;
-    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies"];
+    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn"];
     const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH"];
     if(boolPaths.includes(path)) v = v==="1";
     else if(numPaths.includes(path)) v = parseFloat(v);
@@ -5817,6 +5891,13 @@ function empModal(id){
         <span class="mini">Optional. With a date set, the drafter never schedules them past it and starts warning 30 days out.</span></div>
       <div class="field"><label>What it is (optional)</label><input type="text" id="elicn" value="${esc(e.licLabel||"")}" placeholder="RPh license · CPR certification"></div>
     </div>`:""}
+    ${skillsOn()? `<div class="field"><label>Trained on</label>
+      <div class="stack" style="gap:5px">${(S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).map(st=>`
+        <div class="desrow"><strong style="font-size:12.5px;min-width:0;flex:1">${esc(st.name)}</strong>
+          <select class="eskill" data-st="${esc(st.id)}" style="margin-left:auto;max-width:210px">
+            ${[1,0,2].map(v=>`<option value="${v}" ${skillOf(e,st.id)===v?"selected":""}>${esc(SKILL_LEVEL[v])}</option>`).join("")}
+          </select></div>`).join("")}</div>
+      <span class="mini">A record of training, not a rating of the person — it only ever affects which post they're handed, never their hours, and it never appears on anything staff see. Set it on one post of a rotation and its siblings follow.</span></div>`:""}
     ${ptoOn()? `<div class="field"><label>PTO</label><div class="grid3" style="align-items:end">
       <div class="field"><label class="mini">Balance now (hours)</label><input type="number" step="0.5" id="eptob" value="${(e.pto&&e.pto.bal)||0}"></div>
       <div class="field"><label class="mini">As of</label><input type="date" id="eptoa" value="${esc((e.pto&&e.pto.anchor)||ymd(new Date()))}"></div>
@@ -5918,7 +5999,10 @@ function empModal(id){
         licLabel:(((root.querySelector("#elicn")||{}).value)||(root.querySelector("#elicn")?"":e.licLabel||"")).trim(),
         notes:root.querySelector("#enotes").value.trim(),
         seniority:root.querySelector("#esen").value, active:root.querySelector("#eact").checked,
-        rate: root.querySelector("#erate")? (+root.querySelector("#erate").value||0) : (e.rate||0)
+        rate: root.querySelector("#erate")? (+root.querySelector("#erate").value||0) : (e.rate||0),
+        skills: (()=>{ const sk=Object.assign({}, e.skills||{});
+          root.querySelectorAll(".eskill").forEach(sel=>{ sk[sel.dataset.st]=+sel.value; });
+          return sk; })()
       };
       const i=S.employees.findIndex(x=>x.id===e.id);
       if(i>=0) S.employees[i]=rec; else S.employees.push(rec);
@@ -7750,7 +7834,7 @@ function wizard(firstRun){
     hoursPreset:"same", open:"09:00", close:"17:00",
     dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false, hols:null,
     posts:"", postSpan:"day", postFam:"1", postRelief:"family",
-    xDaySheet:true, xPto:false, xCycles:false, xNotice:false, xWaiver:false, xLic:false,
+    xPto:false, xCycles:false, xNotice:false, xWaiver:false, xLic:false, xSkills:false,
     satOpen:"10:00", satClose:"16:00", satClosed:false,
     sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
     dayOff:{},                      /* "b:i" -> [dow…] they can never work */
@@ -8169,11 +8253,13 @@ function wizard(firstRun){
         <span class="mini" style="display:block">${esc(desc)}</span></span></label>`;
       return `
       <div class="stack">
-        <p class="whead">Everything below is included — it's just off unless you want it. Anything switched off
-          stays completely out of your way: no extra tabs, no extra questions, nothing on your screens.
-          You can turn any of it on later in Settings.</p>
-        ${X("xDaySheet", W.xDaySheet, "The daily station sheet",
-            "An hour-by-hour sheet for each day showing who's on, their meal and rest times, and their posts — the one you print for the back room.")}
+        <p class="whead"><b>All of this is optional and none of it is required.</b> Everything below is included in
+          your plan — it's simply off unless you want it, and anything left off stays completely out of your way:
+          no extra tabs, no extra questions, nothing on your screens. You can switch any of it on later in Settings,
+          and off again just as easily.</p>
+        <div class="help" style="margin-bottom:10px"><b>Always included:</b> the day sheet — an hour-by-hour page for every day
+          showing who's on, when their meals and rest breaks fall, and what needs covering. It's generated with every schedule
+          and there's nothing to switch on.</div>
         ${X("xPto", W.xPto, "Time-off balances",
             "Track how much paid time off each person has banked, accruing as they work and counting down as they take it.")}
         ${X("xLic", W.xLic, "License and certification expiry",
@@ -8182,6 +8268,8 @@ function wizard(firstRun){
             "For staff who don't work the same shape every week — alternating weeks, seven on and seven off, or hours averaged over a pay period.")}
         ${X("xNotice", W.xNotice, "Advance-notice warnings",
             "Some cities make short-notice scheduling a payable penalty. Get a warning if you post a week less than 14 days ahead.")}
+        ${X("xSkills", W.xSkills, "A training record for your posts",
+            "Mark who is still learning, who can work a post, and who is signed off to train others — then choose whether that leans on assignments every day, only on busy days, or flips on quiet days to give learners practice. It never affects anyone's hours and staff never see it.")}
         ${X("xWaiver", W.xWaiver, "Meal waivers where the law allows them",
             "On short shifts some states let a worker waive their meal in writing. Weeksolved marks the shift; it doesn't collect the signature.")}
         <div class="help">Not listed here but always available once you're in: staff groups with their own limits,
@@ -8272,7 +8360,7 @@ function wizard(firstRun){
             <div class="ln"><span>Cover you asked for</span><b>${W.fillMode==="full"?"a floor — everyone fully scheduled":"exactly that many"}</b></div>
             <div class="ln"><span>Handing it out</span><b>${W.sendOut?"emailed or texted from here":"however you do it now"}</b></div>
             ${W.fillMode==="full"? `<div class="ln"><span>${esc(W.topUpLabel||"Project time")}</span><b>${W.projectShape==="chunk"?"in blocks":"wherever it fits"}, ${W.projectShare==="best"?"stacked on your best":"shared round"}</b></div>`:""}
-            ${(()=>{const on=[W.xDaySheet&&"day sheet",W.xPto&&"PTO balances",W.xLic&&"license expiry",W.xCycles&&"work patterns",W.xNotice&&"notice warnings",W.xWaiver&&"meal waivers"].filter(Boolean);
+            ${(()=>{const on=[W.xPto&&"PTO balances",W.xLic&&"license expiry",W.xCycles&&"work patterns",W.xNotice&&"notice warnings",W.xWaiver&&"meal waivers",W.xSkills&&"training record"].filter(Boolean);
               return on.length? `<div class="ln"><span>Also on</span><b>${esc(on.join(", "))}</b></div>`:"";})()}
             ${(W.posts||"").trim()? `<div class="ln"><span>Posts</span><b>${(W.posts||"").split(/\n/).filter(x=>x.trim()).length} on the floor${W.postSpan==="day"?", held all day":", rotating "+(W.postSpan==="half"?"at midday":"every "+W.postSpan.replace("h"," hours"))}</b></div>`:""}
             ${W.hols? `<div class="ln"><span>Holidays</span><b>${(()=>{const C=holidayCandidates();
@@ -8588,12 +8676,13 @@ function wizard(firstRun){
     N.rules.holidayRush=W.holidayRush||"none";
     N.holidays.mode="same";
     N.vacations.on=!!W.vacations;
-    N.rules.useDaySheet = W.xDaySheet!==false;
+    N.rules.useDaySheet = true;
     N.org.trackPto = !!W.xPto;
     N.rules.useCycles = !!W.xCycles;
     N.rules.advanceNoticeDays = W.xNotice? 14 : 0;
     N.rules.allowMealWaiver = !!W.xWaiver;
     N.rules.trackLic = !!W.xLic;
+    N.rules.skillsOn = !!W.xSkills;
     /* posts on the floor — numbered names group themselves into one rotation */
     const postLines=(W.posts||"").split(/\n/).map(x=>x.trim()).filter(Boolean);
     if(postLines.length){
@@ -9179,6 +9268,43 @@ function vStations(){
         ? "A turn on Typist 1 counts as a turn on Typist, so that person is less likely to draw Typist 2 tomorrow. Posts group by their name — anything ending in a number joins its family automatically."
         : "Every post is counted on its own. A turn on Typist 1 says nothing about Typist 2, so someone can be typing two days running on different numbers."}</div>
       <div class="row">
+        <span class="lab" style="margin:0">Training record <span class="chip">optional</span></span>
+        <select data-bind="rules.skillsOn" style="min-width:230px">
+          <option value="0" ${S.rules.skillsOn?"":"selected"}>Off — everyone is treated the same</option>
+          <option value="1" ${S.rules.skillsOn?"selected":""}>On — track who's trained on what</option>
+        </select>
+      </div>
+      <div class="mini" style="margin:-4px 0 8px">${S.rules.skillsOn
+        ? "Each profile gets three answers per post: still learning, can work it, or signed off to train others. It only ever affects which post someone is handed — never their hours, never their pay — and it appears nowhere staff can see."
+        : "Leave this off and every post is handed out purely by whose turn it is. Switch it on only if some people are still learning certain posts."}</div>
+      ${S.rules.skillsOn? `
+      <div class="row">
+        <span class="lab" style="margin:0">When it applies</span>
+        <select data-bind="rules.skillsWhen" style="min-width:230px">
+          <option value="always" ${(S.rules.skillsWhen||"always")==="always"?"selected":""}>Every day</option>
+          <option value="busy" ${S.rules.skillsWhen==="busy"?"selected":""}>Only on busy days</option>
+          <option value="thin" ${S.rules.skillsWhen==="thin"?"selected":""}>Only when the floor is thin</option>
+          <option value="train" ${S.rules.skillsWhen==="train"?"selected":""}>Busy days trained, quiet days for learning</option>
+        </select>
+      </div>
+      <div class="mini" style="margin:-4px 0 8px">${
+        (S.rules.skillsWhen||"always")==="always"? "Trained people are preferred for the posts they know, every day."
+        : S.rules.skillsWhen==="busy"? "Normal days ignore training entirely. On days you've marked busy — and around holidays — the trained hands go where they're needed."
+        : S.rules.skillsWhen==="thin"? "Only kicks in on days with no spare hands, when there's no room for anyone to be finding their feet."
+        : "The useful middle: on busy or thin days the trained people take the posts they know; on quiet days it flips and deliberately puts learners on posts so they get the practice."}</div>
+      <div class="row">
+        <span class="lab" style="margin:0">How strongly</span>
+        <select data-bind="rules.skillsStrength" style="min-width:230px">
+          <option value="light" ${S.rules.skillsStrength==="light"?"selected":""}>A gentle nudge</option>
+          <option value="medium" ${(S.rules.skillsStrength||"medium")==="medium"?"selected":""}>Balanced</option>
+          <option value="strong" ${S.rules.skillsStrength==="strong"?"selected":""}>Strong preference</option>
+        </select>
+      </div>
+      <div class="mini" style="margin:-4px 0 8px">${
+        S.rules.skillsStrength==="light"? "Fair rotation still comes first — training only breaks a tie."
+        : S.rules.skillsStrength==="strong"? "Training outweighs whose turn it is. Watch that the same people don't end up on the same posts — the Stations page shows the spread."
+        : "Training and taking turns carry about the same weight."}</div>`:""}
+      <div class="row">
         <button class="btn sm" id="stashuffle">Reassign this week</button>
         <button class="btn primary sm" id="stanew">Add a station</button>
       </div>
@@ -9293,7 +9419,8 @@ function stationModal(id, kind){
         ${S.shifts.map(sh=>`<option value="${sh.id}" ${(st.slots||[]).includes(sh.id)?"selected":""}>Only the ${esc(sh.label)} shift</option>`).join("")}
       </select>
         <span class="mini">Lock a post to one shift when only those hours make sense for it.</span></div>
-      <label class="switch"><input type="checkbox" id="sthold" ${st.holdAllDay?"checked":""}> One person holds this all day, even when the floor rotates</label>`}
+      <label class="switch"><input type="checkbox" id="sthold" ${st.holdAllDay?"checked":""}> One person holds this all day, even when the floor rotates</label>
+      ${skillsOn()? `<label class="switch"><input type="checkbox" id="stskill" ${st.needSkilled?"checked":""}> Only people trained on it — a learner is never left here alone <span class="chip">optional</span></label>`:""}`}
       <div class="field"><label>Which days</label><select id="stdaysel">
         <option value="all" ${(!st.days||!st.days.length)?"selected":""}>Every day</option>
         <option value="custom" ${(st.days&&st.days.length)?"selected":""}>Pick my own…</option></select>
@@ -9328,6 +9455,7 @@ function stationModal(id, kind){
           to:   isAdmin? "" : ((r.querySelector("#stto")||{}).value||""),
           slots: isAdmin? [] : (((r.querySelector("#stslot")||{}).value)? [r.querySelector("#stslot").value] : []),
           holdAllDay: isAdmin? false : !!(r.querySelector("#sthold")||{}).checked,
+          needSkilled: isAdmin? false : !!(r.querySelector("#stskill")||{}).checked,
           days: dsel.value==="custom"? [...r.querySelectorAll("#stcd input:checked")].map(x=>+x.dataset.d) : [],
           off: r.querySelector("#stoff").checked };
         S.stations=S.stations||[];
@@ -10557,6 +10685,8 @@ const KB=[
   a:"On iPhone: open weeksolved.com in Safari, tap the Share button (the square with the arrow), scroll down, tap 'Add to Home Screen', then Add. On Android: open it in Chrome, tap the three-dot menu, tap 'Add to home screen'. You get a real app icon that opens full screen — same account, same data, nothing to install."},
  {t:"Working before opening or after closing", k:"hours open close prep before after doors staffing window overnight stock cleanup setup", go:null,
   a:"The hours you set are staffing hours — the window shifts can be placed in — not your door hours. If a crew preps before you open to the public or closes down after, set the day to start earlier and end later, then add a shift covering that stretch. To change them, re-run the setup questions (Help & FAQ → Change what setup decided)."},
+ {t:"Training record (optional)", k:"skill training learning signed off strong weak level qualified competency bias", go:"stations",
+  a:"Optional and off unless you switch it on under Stations. It records what each person is trained on, post by post — still learning, can work it, or signed off to train others — and nothing else. It only ever affects which post someone is handed on the day sheet; it never changes anyone's hours or pay, and staff never see it. You choose when it applies (every day, only busy days, only when the floor is thin, or busy days for the trained and quiet days for learners to practise) and how strongly it leans (gentle nudge, balanced, strong). A post can also be marked so a learner is never left there alone. Deliberately a training record and not a rating of people — that keeps it useful and fair."},
  {t:"Stations and how the rotation works", k:"station post typist checker rotation family bucket daily sheet where people stand rotate two hours", go:"stations",
   a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Typist 1, Typist 2) share one rotation by default, so a turn on either counts as a turn on Typist and that person is less likely to draw it again; you can switch to counting every post separately under Stations. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
  {t:"Which holidays we close for", k:"holiday closed open christmas eve thanksgiving new year observe list closures skeleton", go:"holidays",
