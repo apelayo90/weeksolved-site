@@ -1058,7 +1058,7 @@ function personalText(empId, ws){
       const on=mine.filter(a=>a.date===d.date);
       if(!on.length) return;
       on.forEach(a=>{
-        const sh=shiftById(a.shiftId)||{label:"Shift"};
+        const sh=aShift(a);
         let line=DSHORT[d.dow]+" "+prettyDate(d.date)+"  "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+"  "+sh.label;
         if(a.topUp) line += " ("+(S.rules.topUpLabel||"project time")+")";
         L.push(line);
@@ -1095,7 +1095,7 @@ function wholeWeekText(ws){
     if((wk.dayNotes||{})[d.date]) L.push("   NOTE: "+wk.dayNotes[d.date]);
     if(!on.length){ L.push("   nobody scheduled"); }
     else on.forEach(a=>{
-      const e=empById(a.empId)||{name:"—"}, sh=shiftById(a.shiftId)||{label:"Shift"};
+      const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
       L.push("   "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+"  "+e.name+"  ("+sh.label+")");
     });
     L.push("");
@@ -1897,6 +1897,8 @@ const BLANK_WEEK = {assignments:[], published:false, generatedAt:null};
 function peekWeek(ws){ return S.weeks[ws||S.currentWeek] || BLANK_WEEK; }
 const empById = id => S.employees.find(e=>e.id===id);
 const shiftById = id => S.shifts.find(s=>s.id===id);
+/* views ask for a shift label via the assignment; seeded holiday work has none */
+function aShift(a){ return shiftById(a&&a.shiftId) || {label:(a&&a.holAssign)? "Holiday":"Shift", color:"#8f5d10"}; }
 const roleById = id => S.roles.find(r=>r.id===id);
 function roleName(id){ const r=roleById(id); return r?r.name:"Any role"; }
 function roleAbbr(id){ const r=roleById(id); return r?r.abbr:"Any"; }
@@ -1979,6 +1981,18 @@ function matchDemand(slots, list){
   });
   return {want, missing:want.filter(w=>!w.used), spare:left};
 }
+/* A holiday whose staffing the poll has already decided */
+function holPolled(h){
+  return !!(h && S.holidays.result && (S.holidays.result.result||[]).some(r=>r.holidayId===h.id));
+}
+/* Fraction of the week's open days this person is actually around for —
+   someone on vacation half the week owes half the guaranteed hours. */
+function minHFactor(empId, ws){
+  const ds=weekDates(ws).filter(d=>!S.hours[d.dow].closed);
+  if(!ds.length) return 1;
+  const here=ds.filter(d=>!onTimeOff(empId,d.date)).length;
+  return here/ds.length;
+}
 function holOn(dow, ws){
   const wd = weekDates(ws).find(x=>x.dow===dow);
   return wd? ((S.holidays.list||[]).find(h=>h.date===wd.date)||null) : null;
@@ -1986,7 +2000,9 @@ function holOn(dow, ws){
 function expandDemand(dow, ws){
   let rows = (demandOf(ws)[dow])||[];
   const hm = S.holidays.mode||"same";
-  if(hm!=="same" && holOn(dow, ws)){
+  const hol = holOn(dow, ws);
+  if(hol && holPolled(hol)) return [];   /* the poll's assignments staff this day */
+  if(hm!=="same" && hol){
     if(hm==="closed") return [];
     rows = S.holidays.demand||[];
   }
@@ -2134,9 +2150,32 @@ function generateSchedule(ws, opts){
   const dates = weekDates(ws);
   const unfilled = [];
 
+  /* Holidays the poll has staffed: put those people on, at the holiday's hours,
+     locked — the manager already settled who works them. */
+  dates.forEach(d=>{
+    const h=(S.holidays.list||[]).find(x=>x.date===d.date);
+    if(!h || !holPolled(h)) return;
+    (S.holidays.result.result||[]).filter(r=>r.holidayId===h.id).forEach(rrow=>{
+      const e=empById(rrow.empId); if(!e||!e.active) return;
+      if(onTimeOff(e.id, d.date)) return;                       /* away — leave the gap visible */
+      if(assignments.some(a=>a.empId===e.id && a.date===d.date)) return;   /* already on (kept) */
+      let aMin=null,bMin=null;
+      const m=/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec((h.hours||"").trim());
+      if(m){ aMin=(+m[1])*60+(+m[2]); bMin=(+m[3])*60+(+m[4]); }
+      else { const hr=S.hours[d.dow]; if(hr && !hr.closed){ aMin=t2m(hr.open); bMin=t2m(hr.close); } else { aMin=600; bMin=840; } }
+      if(bMin<=aMin) bMin=aMin+240;
+      const match=S.shifts.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===aMin&&y===bMin; });
+      const a={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:match? match.id:null,
+        startMin:aMin, endMin:bMin, roleId:rrow.roleId||e.roleIds[0]||null, locked:true, holAssign:h.id};
+      applyBreaks(a);
+      assignments.push(a);
+    });
+  });
+
   const target = {};
   S.employees.forEach(e=>{ const L=effLimits(e, ws);
-    target[e.id] = L.exactH? L.exactH*60 : (((L.minH||0)+(L.maxH||0))/2*60 || (L.maxH||0)*60); });
+    const base = L.exactH? L.exactH*60 : (((L.minH||0)+(L.maxH||0))/2*60 || (L.maxH||0)*60);
+    target[e.id] = Math.round(base * minHFactor(e.id, ws)); });
 
   priorityRefresh();
   const state = {};
@@ -2336,7 +2375,7 @@ function topUpPass(ws, assignments, state, dates){
     return (L.exactH || L.minH) > 0;
   });
   const exhausted=new Set();
-  const deficit=e=>{ const L=effLimits(e, ws); return (L.exactH||L.minH)*60 - state[e.id].min; };
+  const deficit=e=>{ const L=effLimits(e, ws); return Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws)) - state[e.id].min; };
   const soFar=e=>assignments.filter(a=>a.empId===e.id && a.topUp).length;
   let guard=0;
 
@@ -2407,8 +2446,8 @@ function topUpPass(ws, assignments, state, dates){
   /* the people deliberately kept off project work, said plainly rather than silently */
   S.employees.filter(e=>e.active && !e.onCall && projectOk(e)==="no").forEach(e=>{
     const L=effLimits(e, ws);
-    if((L.exactH||L.minH)*60 - state[e.id].min > 30)
-      short.push({empId:e.id, deficit:(L.exactH||L.minH)*60-state[e.id].min,
+    if(Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws)) - state[e.id].min > 30)
+      short.push({empId:e.id, deficit:Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws))-state[e.id].min,
         owed:(L.exactH||L.minH), have:state[e.id].min, held:true,
         why:"they're set to stay on the floor rather than take "+projectLabel().toLowerCase()});
   });
@@ -2888,7 +2927,7 @@ function redoModal(ws){
         <div class="grid2">
           <div class="field"><label>Which shift</label><select id="rdshift">
             <option value="">Choose one…</option>
-            ${mine.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=shiftById(a.shiftId)||{label:"Shift"};
+            ${mine.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
               return `<option value="${a.id}">${esc(e.name.split(" ")[0])} · ${esc(sh.label)} · ${DSHORT[a.dow]} ${esc(prettyDate(a.date))}</option>`; }).join("")}</select></div>
           <div class="field"><label>What should happen</label><select id="rdshiftwhat">
             <option value="other">Someone else takes this shift</option>
@@ -3861,11 +3900,15 @@ function validate(ws){
         (f.ok? "It can be done from the shifts you've defined — something else got in the way this week, so try locking one of their shifts and drafting again."
              : "Can't be done: "+f.why+". Add a shift of the right length under Roles & shifts, or change the contract."),
         {empId:e.id});
-    } else if(!lim.exactH && lim.minH && mins < lim.minH*60-1 && e.type!=="PRN"){
-      const sh=(wk.short||[]).find(x=>x.empId===e.id);
-      push(S.rules.fillMode==="full"? "crit":"warn","Under guaranteed hours — "+e.name,
-        fmtHrs(mins)+" scheduled, "+lim.minH+"h guaranteed."+
-        (S.rules.fillMode==="full"? " "+(sh? "It couldn't be topped up: "+sh.why+"." : "Nothing else in the pool fits."):""), {empId:e.id});
+    } else if(!lim.exactH && lim.minH && e.type!=="PRN"){
+      const fac=minHFactor(e.id, ws);
+      const owe=Math.round(lim.minH*60*fac);
+      if(mins < owe-1){
+        const sh=(wk.short||[]).find(x=>x.empId===e.id);
+        push(S.rules.fillMode==="full"? "crit":"warn","Under guaranteed hours — "+e.name,
+          fmtHrs(mins)+" scheduled, "+fmtHrs(owe)+" owed"+(fac<1? " (guarantee scaled — they're away part of this week)":" ("+lim.minH+"h guaranteed)")+"."+
+          (S.rules.fillMode==="full"? " "+(sh? "It couldn't be topped up: "+sh.why+"." : "Nothing else in the pool fits."):""), {empId:e.id});
+      }
     }
     if(lim.canBeAlone===false){
       mine.forEach(a=>{
@@ -6287,7 +6330,7 @@ ${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return '
               <span class="carat">${open?"▾":"▸"}</span></div>
           </button>
           ${!open||h.closed? "" : on.length? `<div class="dbody">
-            ${on.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=shiftById(a.shiftId)||{label:"Shift",color:"#1c6a66"};
+            ${on.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
               const bad=V.some(v=>v.sev==="crit"&&v.empId===a.empId&&v.date===a.date);
               return `<button class="drow ${bad?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" style="--sc:${sh.color}">
                 <span class="dw">${esc(e.name)}</span>
@@ -6364,7 +6407,7 @@ ${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return '
               ${off&&!mine.length? `<span class="mini" style="text-align:center">${esc((timeOffFor(e.id,d.date)||{type:"Off"}).type)}</span>`
                 : offCycle&&!mine.length? `<span class="mini" style="text-align:center">off cycle</span>`:""}
               ${mine.map(a=>{
-                const sh=shiftById(a.shiftId)||{label:"Shift",color:"#1c6a66"};
+                const sh=aShift(a);
                 const dv = desireOf(a.shiftId,a.dow);
                 return `<div class="shiftblk ${cellViol?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" tabindex="0" role="button" style="--sc:${sh.color}"
                   title="${esc(sh.label)} · ${DESIRE_LABEL[clamp(dv,-2,2)]}">
@@ -6549,7 +6592,7 @@ function newAssignModal(empId,date,dow){
 
 function assignModal(aid){
   const wk=getWeek(); const a=wk.assignments.find(x=>x.id===aid); if(!a) return;
-  const e=empById(a.empId), sh=shiftById(a.shiftId)||{label:"Shift"};
+  const e=empById(a.empId), sh=aShift(a);
   const b=a.breaks||computeBreaks(a.startMin,a.endMin);
   const L=law();
   modal(e.name+" — "+sh.label,`
@@ -6972,7 +7015,7 @@ function vDay(){
           <div class="tlhead"><div></div><div class="tlticks">${ticks.map(t=>`<span style="left:${pct(t)}%">${m2disp(t)}</span>`).join("")}</div></div>
           ${list.map(a=>{
             const e=empById(a.empId)||{name:"—",roleIds:[]};
-            const sh=shiftById(a.shiftId)||{label:"Shift",color:"#1c6a66"};
+            const sh=aShift(a);
             const b=a.breaks||{meals:[],rests:[]};
             const paid=paidMinutes(a);
             return `<div class="tlrow">
@@ -9493,8 +9536,9 @@ function vacAllocate(){
       if(vacDays(p.from,p.to).length<(V.minDays||1)){ skipped.push({empId,pick:round+1,from:p.from,to:p.to,why:"shorter than the "+V.minDays+"-day minimum — use a normal request instead"}); return; }
       const days=vacDays(p.from,p.to);
       let bad=null;
+      const withMe=grants.concat([{empId,from:p.from,to:p.to}]);
       for(const d of days){
-        if(V.opCheck){ if(!vacOpsOk(d,grants)){ bad="on "+prettyDate(d)+" the floor couldn't be covered"; break; } }
+        if(V.opCheck){ if(!vacOpsOk(d,withMe)){ bad="on "+prettyDate(d)+" the floor couldn't be covered"; break; } }
         else if(vacCountOn(d,grants)>=(V.maxOff||1)){ bad=prettyDate(d)+" already has "+(V.maxOff||1)+" away, your limit"; break; }
       }
       if(bad){ skipped.push({empId,pick:round+1,from:p.from,to:p.to,why:bad}); return; }
@@ -10265,7 +10309,7 @@ function icsText(empId, ws){
   const stamp=icsStamp();
   list.forEach(a=>{
     const e=empById(a.empId)||{name:"Staff"};
-    const sh=shiftById(a.shiftId)||{label:"Shift"};
+    const sh=aShift(a);
     const st=a.station? stationById(a.station):null;
     const b=a.breaks||{meals:[]};
     const meals=(b.meals||[]).filter(m=>!m.waived).map(m=>"Meal "+m2disp(m.start)+"\u2013"+m2disp(m.end)).join(", ");
@@ -10762,7 +10806,7 @@ function swapModal(ws){
   ws=ws||S.currentWeek;
   const wk=getWeek(ws);
   if(wk.assignments.length<2){ toast("Two shifts on the board are needed for a trade"); return; }
-  const opt=a=>{ const e=empById(a.empId)||{name:"—"}, sh=shiftById(a.shiftId)||{label:"Shift"};
+  const opt=a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
     return `<option value="${a.id}">${DSHORT[a.dow]} · ${m2disp(a.startMin)}–${m2disp(a.endMin)} ${esc(sh.label)} · ${esc(e.name)}</option>`; };
   const sorted=wk.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.startMin-b.startMin);
   modal("Check a trade", `
