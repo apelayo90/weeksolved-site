@@ -49,8 +49,8 @@
 <style>
 :root{
   --ground:#eaedeb; --surface:#ffffff; --surface2:#f4f6f5; --sunken:#e2e6e4;
-  --ink:#18211f; --ink2:#3c4a47; --muted:#697773; --faint:#7d8b87;
-  --line:#d2d8d6; --line2:#bfc7c4;
+  --ink:#18211f; --ink2:#3c4a47; --muted:#697773; --faint:#667470;
+  --line:#d2d8d6; --line2:#bfc7c4; --line-strong:#7d8b87;
   --accent:#1c6a66; --accent-soft:#dcebe9; --accent-ink:#0f4a47; --on-accent:#ffffff;
   --ok:#2c7a4b; --ok-soft:#dcefe2;
   --warn:#8f5d10; --warn-soft:#f6ead4; --on-warn:#ffffff;
@@ -61,7 +61,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --ground:#101514; --surface:#191f1e; --surface2:#212927; --sunken:#0b100f;
-    --ink:#e7ecea; --ink2:#c2ccc9; --muted:#8d9b97; --faint:#6d7b77;
+    --ink:#e7ecea; --ink2:#c2ccc9; --muted:#8d9b97; --faint:#6d7b77; --line-strong:#778682; --line-strong:#778682;
     --line:#2c3634; --line2:#3c4846;
     --accent:#4cb3a9; --accent-soft:#173432; --accent-ink:#8fd8d0; --on-accent:#08201f;
     --ok:#5cb87e; --ok-soft:#16301f;
@@ -148,7 +148,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .field{display:flex;flex-direction:column;gap:5px;min-width:0}
 .field>label,.lab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
 input[type=text],input[type=number],input[type=time],input[type=date],input[type=email],input[type=tel],select,textarea{
-  background:var(--surface);border:1px solid var(--line2);border-radius:5px;padding:7px 9px;width:100%;
+  background:var(--surface);border:1px solid var(--line-strong);border-radius:5px;padding:7px 9px;width:100%;
   transition:border-color .12s,box-shadow .12s;
 }
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -247,6 +247,27 @@ tr:last-child td{border-bottom:0}
 .shiftblk .tm{font-family:"IBM Plex Mono",monospace;font-size:10.5px;opacity:.85;font-variant-numeric:tabular-nums}
 .shiftblk.viol{border-left-color:var(--crit);background:var(--crit-soft);color:var(--crit)}
 .shiftblk .lk{position:absolute;top:2px;right:4px;font-size:9px;opacity:.7}
+.shiftblk.chg::before{content:"";position:absolute;top:3px;left:3px;width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.mgrid.mhead{margin-bottom:4px;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.mgrid.mhead div{text-align:center}
+.mcell{position:relative;border:1px solid var(--line);border-radius:7px;background:var(--surface);min-height:58px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 7px;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.mcell:hover{border-color:var(--line-strong)}
+.mcell.off{border:0;background:transparent;cursor:default}
+.mcell.closed{background:var(--sunken);color:var(--muted)}
+.mcell.posted{border-color:var(--ok);background:var(--ok-soft)}
+.mcell.draft{border-color:var(--accent);background:var(--accent-soft)}
+.mcell.today .md{background:var(--accent);color:var(--on-accent);border-radius:99px;padding:0 6px;margin-left:-4px}
+.mcell .md{font-weight:700;font-size:12.5px}
+.mcell .mn{font-size:10.5px;color:var(--muted)}
+.mcell .mn.faint{color:var(--faint)}
+.mcell .mh{position:absolute;top:5px;right:7px;font-size:10px;color:var(--warn)}
+@media (max-width:820px){ .mcell{min-height:48px;padding:4px 5px} }
+.shiftblk.cout,.drow.cout{border-style:dashed;opacity:.75}
+.shiftblk.cout .lb::after,.drow.cout .lb::after{content:" · out";font-weight:600;color:var(--crit)}
+.drow{position:relative}
+.drow.chg::before{content:"";position:absolute;top:6px;left:-2px;width:6px;height:6px;border-radius:50%;background:var(--warn)}
 .addbtn{border:1px dashed var(--line2);background:none;border-radius:5px;color:var(--faint);cursor:pointer;font-size:15px;line-height:1;padding:3px 0;margin-top:auto}
 .addbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .week .ecell.off{background:repeating-linear-gradient(45deg,transparent,transparent 5px,var(--sunken) 5px,var(--sunken) 6px)}
@@ -687,6 +708,9 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 <div id="sheetroot"></div>
 <div id="toastroot" role="status" aria-live="polite"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -801,7 +825,7 @@ function blankState(){
   return {
     v:3,
     org:{ name:"", site:"", jurisdiction:"CA", weekStart:1,
-          otDailyH:8, otWeeklyH:40, dtDailyH:12, budget:0, trackCost:false },
+          otDailyH:8, otWeeklyH:40, dtDailyH:12, budget:0, trackCost:false, trackPto:false },
     hours:[0,1,2,3,4,5,6].map(d=>({closed:d===0, open:"09:00", close:"18:00"})),
     roles:[], shifts:[], employees:[], demand:{}, patterns:[], coverage:[], timeoff:[], templates:[], groups:[], requests:[], stations:[],
     dayDesire:[-1,1,1,1,1,0,-1],
@@ -818,7 +842,7 @@ function blankState(){
             fillMode:"demand", topUpLabel:"Project time",
             allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
     weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
-    bugs:[], support:{email:"hello@weeksolved.com", lastSent:0, remind:true},
+    bugs:[], callouts:[], support:{email:"hello@weeksolved.com", lastSent:0, remind:true},
     holidays:{ list:[], poll:null, responses:[], result:null }
   };
 }
@@ -837,18 +861,18 @@ function seedState(){
   ];
   const rp=uid("r"), rt=uid("r"), rc=uid("r");
   s.roles=[
-    {id:rp,name:"Pharmacist",abbr:"RPh",color:"#1c6a66",licensed:true,
+    {id:rp,name:"Pharmacist",abbr:"RPh",color:"#0072B2",licensed:true,
      note:"PharmD + active state license. At least one on duty whenever the window is open."},
     {id:rt,name:"Pharmacy Technician",abbr:"Tech",color:"#7a4fa3",licensed:true,note:"State-registered technician."},
-    {id:rc,name:"Front Counter",abbr:"Clerk",color:"#a8701a",licensed:false,note:"Intake, will-call, cashiering."}
+    {id:rc,name:"Front Counter",abbr:"Clerk",color:"#D55E00",licensed:false,note:"Intake, will-call, cashiering."}
   ];
   const mk=(label,st,en,role,color,desire)=>({id:uid("s"),label,start:st,end:en,roleId:role,color,unpaidBreakMin:30,note:"",desire:desire||0});
   s.shifts=[
-    mk("Opening","07:30","16:00",null,"#1c6a66",2),
+    mk("Opening","07:30","16:00",null,"#0072B2",2),
     mk("Mid","09:00","17:30",null,"#3a7fa8",1),
     mk("Closing","11:30","20:00",null,"#7a4fa3",-2),
-    mk("Short Mid","10:00","15:00",null,"#a8701a",0),
-    mk("Weekend","09:00","17:00",null,"#2c7a4b",-1)
+    mk("Short Mid","10:00","15:00",null,"#CC79A7",0),
+    mk("Weekend","09:00","17:00",null,"#56B4E9",-1)
   ];
   const opening=s.shifts[0].id, mid=s.shifts[1].id, closing=s.shifts[2].id, shortmid=s.shifts[3].id, wknd=s.shifts[4].id;
   /* demand[dow] = [{shiftId, roleId, count}] */
@@ -932,7 +956,7 @@ let saveTimer = null, loaded = false;
 /* ---------- persistence: db capability, mirrored to localStorage ---------- */
 const LSKEY = "dowel.v3";
 const LSKEY_OLD = "coveragedesk.v3";   /* anything saved before the rename */
-function lsSave(){ try{ localStorage.setItem(LSKEY, JSON.stringify(S)); }catch(e){} }
+function lsSave(){ try{ S._at=Date.now(); localStorage.setItem(LSKEY, JSON.stringify(S)); }catch(e){} }
 function lsLoad(){ try{
   let r=localStorage.getItem(LSKEY);
   if(!r){ r=localStorage.getItem(LSKEY_OLD); if(r) localStorage.setItem(LSKEY, r); }
@@ -952,7 +976,8 @@ function save(){
   priorityRefresh();
   trackForUndo();
   lsSave();
-  setSync(true,"Saved on this device");
+  if(FB && FB.user) cloudPush();
+  else setSync(true,"Saved on this device");
 }
 
 function renderCollabBar(){}
@@ -984,6 +1009,12 @@ function personalText(empId, ws){
   const L=[];
   L.push((S.org.name||"Work")+" — your shifts, "+prettyDate(ws)+" to "+prettyDate(addDays(ws,6)));
   L.push("");
+  const D=weekDiff(ws).filter(d=>d.empId===empId);
+  if(D.length){
+    L.push("CHANGED since the last version you saw:");
+    D.forEach(d=>L.push("   "+DSHORT[d.dow]+": "+d.say));
+    L.push("");
+  }
   if(!mine.length){ L.push("You're not on the schedule this week."); }
   else {
     weekDates(ws).forEach(d=>{
@@ -1015,9 +1046,16 @@ function wholeWeekText(ws){
   const L=[];
   L.push((S.org.name||"Work")+" — schedule for "+prettyDate(ws)+" to "+prettyDate(addDays(ws,6)));
   L.push("");
+  const D=weekDiff(ws);
+  if(D.length){
+    L.push("CHANGED since the last version you saw:");
+    D.forEach(d=>L.push("   "+DSHORT[d.dow]+" — "+d.name+": "+d.say));
+    L.push("");
+  }
   weekDates(ws).forEach(d=>{
     const on=wk.assignments.filter(a=>a.date===d.date).sort((x,y)=>x.startMin-y.startMin);
     L.push(DAYS[d.dow]+" "+prettyDate(d.date)+(S.hours[d.dow].closed? "  — closed":""));
+    if((wk.dayNotes||{})[d.date]) L.push("   NOTE: "+wk.dayNotes[d.date]);
     if(!on.length){ L.push("   nobody scheduled"); }
     else on.forEach(a=>{
       const e=empById(a.empId)||{name:"—"}, sh=shiftById(a.shiftId)||{label:"Shift"};
@@ -1118,7 +1156,7 @@ function sendModal(ws){
           const txt=wholeWeekText(ws);
           if(how==="email") openMail(reachable.map(e=>contactOf(e).email).join(","), sub, txt);
           else openSms(reachable.map(e=>contactOf(e).phone).join(","), txt);
-          wk.sentAt=Date.now(); wk.sentTo=reachable.length; save(); closeModal(); render();
+          wk.sentAt=Date.now(); wk.sentTo=reachable.length; snapWeek(wk); save(); closeModal(); render();
           toast("Opened your "+(how==="sms"?"messages":"mail")+" app with all "+reachable.length+" on it");
           return;
         }
@@ -1132,7 +1170,7 @@ function sendModal(ws){
         }
         at++;
         if(at>=queue.length){
-          wk.sentAt=Date.now(); wk.sentTo=queue.length; save(); closeModal(); render();
+          wk.sentAt=Date.now(); wk.sentTo=queue.length; snapWeek(wk); save(); closeModal(); render();
           toast("That's all "+queue.length+" — check your sent folder to be sure");
         } else paint(r);
       };
@@ -1184,7 +1222,7 @@ function gateScreen(msg){
   const expired = ACCESS.until && ymd(new Date()) > ACCESS.until;
   document.body.innerHTML =
     '<div class="gate"><div class="gatebox">'+
-      '<div class="gatemark">DW</div>'+
+      '<div class="gatemark">WS</div>'+
       '<h1>Weeksolved</h1>'+
       '<p class="gsub">'+(expired
         ? "This test build has reached its end date. Ask for a current copy."
@@ -1215,17 +1253,197 @@ function gateScreen(msg){
   inp.focus();
 }
 
-async function boot(){
-  if(!accessOk()){ gateScreen(); return; }
-  const local = lsLoad();
-  if(local && local.v===3) S = migrate(local);
-  else S = seedState();
+
+/* ============================================================
+   Cloud accounts — a tester signs in once and their board follows
+   them between devices. Only alive in builds cut with a cloud
+   config; everywhere else CLOUD is null and none of this runs.
+   ============================================================ */
+const CLOUD = {"apiKey":"AIzaSyD5BrMfKjRf0mzdjaj7tlohjYqqaTKGEao","authDomain":"weeksolved-54472.firebaseapp.com","projectId":"weeksolved-54472","storageBucket":"weeksolved-54472.firebasestorage.app","messagingSenderId":"332039926756","appId":"1:332039926756:web:f5a561eb23d2783eb78df1"};
+let FB=null, CLOUD_REV=0, cloudPushTimer=null, cloudUnsub=null, SIGNING_UP=false, SHELL=null;
+function cloudOn(){ return !!(CLOUD && CLOUD.apiKey && window.firebase); }
+
+function startApp(){
+  if(SHELL && !document.querySelector(".app")) document.body.innerHTML=SHELL;
   render();
-  setSync(true,"Saved on this device");
   loaded = true;
   lastJSON = JSON.stringify(S);
   initTheme(); initRail();
   if(!S.setupDone && !S.employees.length) setTimeout(wizard, 500);
+}
+
+function cloudBoot(){
+  SHELL=document.body.innerHTML;          /* the app shell — auth screens paint over it */
+  firebase.initializeApp(CLOUD);
+  FB={ auth: firebase.auth(), db: firebase.firestore() };
+  FB.auth.onAuthStateChanged(async u=>{
+    if(SIGNING_UP) return;                    /* signup finishes its own entry */
+    if(!u){ FB.user=null; authScreen(); return; }
+    FB.user=u;
+    try{ await cloudEnter(); }
+    catch(e){ authScreen("Couldn't reach your board. Check the connection and sign in again."); }
+  });
+}
+
+async function cloudEnter(){
+  const uid=FB.user.uid;
+  const prof=await FB.db.doc("users/"+uid+"/meta/profile").get();
+  if(!prof.exists){
+    await FB.auth.signOut().catch(()=>{});
+    authScreen("That account isn't part of this test. Create one with the access code you were given.");
+    return;
+  }
+  const p=prof.data()||{};
+  const expMs=(p.activated||0)+(p.days||30)*86400000;
+  const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
+  if(Date.now()>expMs || Date.now()>hardEnd){ expiredScreen(); return; }
+
+  const bref=FB.db.doc("users/"+uid+"/board/current");
+  const snap=await bref.get();
+  const local=lsLoad();
+  if(snap.exists && (snap.data()||{}).json){
+    const d=snap.data();
+    CLOUD_REV=d.rev||0;
+    const localAt=local? (local._at||0):0;
+    if(!local || (d.at||0)>=localAt){ S=migrate(JSON.parse(d.json)); lsSave(); }
+    else { S=migrate(local); cloudPushNow(); }   /* this device is ahead — push it up */
+  } else {
+    S=(local && local.v===3)? migrate(local) : seedState();
+    cloudPushNow();
+  }
+  startApp();
+  setSync(true,"Signed in — your board follows you between devices");
+  if(cloudUnsub) cloudUnsub();
+  cloudUnsub=bref.onSnapshot(sn=>{
+    if(!sn.exists || (sn.metadata&&sn.metadata.hasPendingWrites)) return;
+    const d=sn.data()||{};
+    if((d.rev||0)<=CLOUD_REV) return;
+    CLOUD_REV=d.rev||0;
+    try{ S=migrate(JSON.parse(d.json)); lsSave(); render(); toast("Updated from your other device"); }catch(e){}
+  });
+}
+
+function cloudPush(){
+  if(!FB || !FB.user) return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer=setTimeout(cloudPushNow, 1200);
+}
+function cloudPushNow(){
+  if(!FB || !FB.user) return;
+  CLOUD_REV++;
+  FB.db.doc("users/"+FB.user.uid+"/board/current")
+    .set({json:JSON.stringify(S), rev:CLOUD_REV, at:Date.now()})
+    .then(()=>setSync(true,"Saved to your account"))
+    .catch(()=>setSync(false,"Offline — kept on this device, sends when you're back"));
+}
+
+function authErrSay(e){
+  const c=(e&&e.code)||"";
+  if(c==="auth/email-already-in-use") return "That email already has an account — use Sign in instead.";
+  if(c==="auth/invalid-email") return "That doesn't look like an email address.";
+  if(c==="auth/weak-password") return "Pick a longer password — 8 characters or more.";
+  if(c==="auth/invalid-credential"||c==="auth/wrong-password"||c==="auth/user-not-found") return "Email and password don't match an account here.";
+  if(c==="auth/too-many-requests") return "Too many tries — wait a minute and try again.";
+  if(c==="auth/network-request-failed") return "No connection. Try again when you're back online.";
+  return (e&&e.message)||"Something went wrong — try again.";
+}
+
+async function cloudSignup(code,email,pass){
+  const h=codeHash((code||"").trim());
+  const hit=ACCESS.codes.find(c=>c.h===h);
+  if(!hit) throw {message:"That access code isn't recognized. Check it and try again."};
+  if(ACCESS.until && ymd(new Date())>ACCESS.until) throw {message:"This test has ended."};
+  SIGNING_UP=true;
+  try{
+    const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
+    FB.user=cred.user;
+    try{ await FB.db.doc("codes/"+h).set({uid:cred.user.uid, id:hit.id, at:Date.now()}); }
+    catch(e){
+      await cred.user.delete().catch(()=>{});
+      await FB.auth.signOut().catch(()=>{});
+      throw {message:"That code has already been used to create an account. Each code works once."};
+    }
+    await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
+      .set({codeId:hit.id, days:hit.days||30, activated:Date.now(), email:email.trim()});
+    try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:ymd(new Date(Date.now()+(hit.days||30)*86400000)), at:Date.now()})); }catch(e){}
+  } finally { SIGNING_UP=false; }
+  await cloudEnter();
+}
+
+function authScreen(msg, tab){
+  tab=tab||"in";
+  document.body.innerHTML =
+    '<div class="gate"><div class="gatebox">'+
+      '<div class="gatemark">WS</div>'+
+      '<h1>Weeksolved</h1>'+
+      '<p class="gsub">Your schedule lives in your account — sign in on any device and it\'s all there.</p>'+
+      '<div class="seg" style="margin:0 auto 14px;max-width:280px">'+
+        '<button id="tabin" aria-pressed="'+(tab==="in")+'">Sign in</button>'+
+        '<button id="tabnew" aria-pressed="'+(tab==="new")+'">New tester</button></div>'+
+      (tab==="new"
+        ? '<input type="text" id="gcode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Access code — XXXX-XXXX-XXXX" aria-label="Access code">'
+        : '')+
+      '<input type="email" id="gmail" autocomplete="email" placeholder="Email" aria-label="Email" style="margin-top:8px">'+
+      '<input type="password" id="gpass" autocomplete="'+(tab==="new"?"new-password":"current-password")+'" placeholder="Password'+(tab==="new"?" — 8+ characters":"")+'" aria-label="Password" style="margin-top:8px">'+
+      '<button class="btn primary big" id="gGo" style="margin-top:12px">'+(tab==="new"?"Create my account":"Sign in")+'</button>'+
+      '<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
+      (tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot password?</button>':'')+
+      '<p class="gfoot">'+(tab==="new"
+        ? "Codes are personal and run for 30 days from the day you create the account. Please don\'t pass yours on."
+        : "New here? Switch to New tester and use the access code you were given.")+'</p>'+
+    '</div></div>';
+  const err=t=>{ document.getElementById("gerr").textContent=t; };
+  document.getElementById("tabin").onclick=()=>authScreen("", "in");
+  document.getElementById("tabnew").onclick=()=>authScreen("", "new");
+  const busy=(b)=>{ const g=document.getElementById("gGo"); g.disabled=b; g.textContent=b? "One moment…" : (tab==="new"?"Create my account":"Sign in"); };
+  document.getElementById("gGo").onclick=async ()=>{
+    const email=document.getElementById("gmail").value.trim();
+    const pass=document.getElementById("gpass").value;
+    if(!email){ err("Email first."); return; }
+    if(!pass || pass.length<8){ err("Password needs 8 characters or more."); return; }
+    busy(true);
+    try{
+      if(tab==="new"){
+        const code=document.getElementById("gcode").value;
+        if(!code.trim()){ err("The access code goes in the top box."); busy(false); return; }
+        await cloudSignup(code,email,pass);
+      } else {
+        await FB.auth.signInWithEmailAndPassword(email,pass);
+      }
+    }catch(e){ err(authErrSay(e)); busy(false); }
+  };
+  const fg=document.getElementById("gforgot");
+  if(fg) fg.onclick=async ()=>{
+    const email=document.getElementById("gmail").value.trim();
+    if(!email){ err("Type your email above first, then press this again."); return; }
+    try{ await FB.auth.sendPasswordResetEmail(email); err("Reset email sent — check your inbox."); }
+    catch(e){ err(authErrSay(e)); }
+  };
+  ["gcode","gmail","gpass"].forEach(id=>{ const el=document.getElementById(id);
+    if(el) el.onkeydown=e=>{ if(e.key==="Enter") document.getElementById("gGo").click(); }; });
+  (document.getElementById(tab==="new"?"gcode":"gmail")||{focus:()=>{}}).focus();
+}
+
+function expiredScreen(){
+  document.body.innerHTML =
+    '<div class="gate"><div class="gatebox">'+
+      '<div class="gatemark">WS</div>'+
+      '<h1>Weeksolved</h1>'+
+      '<p class="gsub">Your test window has ended — thank you for putting it through its paces.</p>'+
+      '<p class="gfoot">Your board is kept safe in your account. Ask for a new code and everything picks up where it left off.</p>'+
+      '<button class="btn ghost sm" id="gout" style="margin-top:10px">Sign out</button>'+
+    '</div></div>';
+  document.getElementById("gout").onclick=()=>{ FB.auth.signOut().then(()=>location.reload()); };
+}
+
+async function boot(){
+  if(cloudOn()){ cloudBoot(); return; }         /* accounts take over the whole flow */
+  if(!accessOk()){ gateScreen(); return; }
+  const local = lsLoad();
+  if(local && local.v===3) S = migrate(local);
+  else S = seedState();
+  setSync(true,"Saved on this device");
+  startApp();
 }
 function migrate(o){
   const base = blankState();
@@ -1251,6 +1469,8 @@ function migrate(o){
   if(!s.rules.mealPlan) s.rules.mealPlan="auto";
   if(typeof s.rules.sendOut!=="boolean") s.rules.sendOut=false;
   if(typeof s.rules.preferLong!=="boolean") s.rules.preferLong=false;
+  if(typeof s.org.trackPto!=="boolean") s.org.trackPto=false;
+  if(!Array.isArray(s.callouts)) s.callouts=[];
   if(!s.rules.projectShape) s.rules.projectShape="chunk";
   if(!s.rules.projectShare) s.rules.projectShare="fair";
   if(typeof s.rules.projectMinH!=="number") s.rules.projectMinH=4;
@@ -2042,6 +2262,8 @@ function whyNotPlaced(e, ws, state, assignments, dates){
     if((state[e.id].byDate[d.date]||[]).length){ note("they're already on that day"); return; }
     if(onTimeOff(e.id,d.date)){ const t=timeOffFor(e.id,d.date);
       note("they're on "+((t&&t.type)||"time off")); return; }
+    if(e.licExp && d.date>e.licExp && empLicensed(e)){
+      note("their "+(e.licLabel||"license")+" expired "+prettyDate(e.licExp)); return; }
     if(cyclesOn() && !cycleWorksOn(e,d.date)){ note("their work pattern has them off"); return; }
     if(L.maxD && state[e.id].days.size>=L.maxD && !state[e.id].days.has(d.date)){
       note("they're already on "+state[e.id].days.size+" days, their limit"); return; }
@@ -2092,6 +2314,7 @@ function hardOk(e, slot, date, dow, state, assignments){
   const [aMin,bMin] = shiftMinutes(slot.sh);
   if(!availOk(e,dow,aMin,bMin)) return false;
   if(onTimeOff(e.id,date)) return false;
+  if(e.licExp && date>e.licExp && empLicensed(e)) return false;   /* license lapsed */
   if(!cycleWorksOn(e,date)) return false;             /* off-cycle days aren't theirs to work */
   const st = state[e.id], lim = effLimits(e, date);
   if(st.byDate[date] && st.byDate[date].length) return false;            // already working that day
@@ -3249,6 +3472,106 @@ function ruleSentence(r){
   if(k==="pair")  return (r.min||1)+" "+roleName(r.roleId).toLowerCase()+" on whenever any "+roleName(r.perRoleId).toLowerCase()+" is";
   return "at least "+(r.min||1)+" "+(r.roleId? roleName(r.roleId).toLowerCase() : "on the floor");
 }
+/* ---- What changed since the schedule was last put in front of people ---- */
+function snapWeek(wk){
+  wk.snap = wk.assignments.map(a=>({empId:a.empId,date:a.date,dow:a.dow,startMin:a.startMin,endMin:a.endMin,shiftId:a.shiftId}));
+  wk.snapAt = Date.now();
+}
+function weekDiff(ws){
+  const wk=peekWeek(ws||S.currentWeek);
+  if(!wk.snap) return [];
+  const key=x=>x.empId+"|"+x.date;
+  const line=list=>list.slice().sort((a,b)=>a.startMin-b.startMin)
+    .map(x=>m2disp(x.startMin)+"–"+m2disp(x.endMin)+" "+((shiftById(x.shiftId)||{}).label||"shift")).join(" + ");
+  const before={}, after={};
+  wk.snap.forEach(x=>{ (before[key(x)]=before[key(x)]||[]).push(x); });
+  wk.assignments.forEach(x=>{ (after[key(x)]=after[key(x)]||[]).push(x); });
+  const out=[];
+  new Set(Object.keys(before).concat(Object.keys(after))).forEach(k=>{
+    const b=before[k]||[], a=after[k]||[];
+    const bs=line(b), as=line(a);
+    if(bs===as) return;
+    const [empId,date]=k.split("|");
+    const e=empById(empId);
+    out.push({empId, date, dow:parseYmd(date).getDay(),
+      name:(e? e.name : "Former staff"),
+      before:bs, after:as,
+      say: !bs? "now on "+as : !as? "off (was "+bs+")" : "now "+as+" (was "+bs+")"});
+  });
+  return out.sort((x,y)=>x.date.localeCompare(y.date)||x.name.localeCompare(y.name));
+}
+
+/* ---- What one shift does to a person's week — hours, overtime, dollars ---- */
+function weekImpact(empId, ws, excludeAid, addStart, addEnd){
+  const wk=peekWeek(ws||S.currentWeek);
+  const base=wk.assignments.filter(a=>a.empId===empId && a.id!==excludeAid).reduce((t,a)=>t+paidMinutes(a),0);
+  const add=addStart!=null? paidEstimate(addStart, addEnd<=addStart? addEnd+1440:addEnd) : 0;
+  const tot=base+add;
+  const otLine=(S.org.otWeeklyH||40)*60;
+  const ot=Math.max(0,tot-otLine);
+  const e=empById(empId);
+  let msg="Takes them to "+fmtHrs(tot)+" this week";
+  if(ot>0){ msg+=" — "+fmtHrs(ot)+" past the "+(S.org.otWeeklyH||40)+"h line";
+    if(haveRates() && e && e.rate) msg+=", about "+money(ot/60*e.rate*0.5)+" extra at time-and-a-half";
+  }
+  return {tot, ot, msg: msg+"."};
+}
+
+/* PTO ledger — invisible unless switched on. Balances are the user's own numbers:
+   a starting balance as of a date, an accrual rule, minus approved time off that draws on it. */
+function ptoOn(){ return !!S.org.trackPto; }
+function ptoWorkedMin(empId, from, to){
+  let t=0;
+  Object.keys(S.weeks).forEach(k=>{
+    S.weeks[k].assignments.forEach(a=>{ if(a.empId===empId && a.date>=from && a.date<=to) t+=paidMinutes(a); });
+  });
+  return t;
+}
+function ptoUsedH(e, from, to){
+  let h=0;
+  (S.timeoff||[]).forEach(t=>{
+    if(t.empId!==e.id || t.status!=="approved" || !t.usePto) return;
+    let d=t.start<from? from : t.start;
+    const end=t.end>to? to : t.end;
+    let guard=0;
+    while(d<=end && guard++<400){
+      const dow=parseYmd(d).getDay();
+      if(!S.hours[dow].closed) h+=(t.hoursPerDay || e.holidayPayH || 8);
+      d=addDays(d,1);
+    }
+  });
+  return h;
+}
+function ptoBalance(e, asOf){
+  const p=e.pto; if(!p || !ptoOn()) return null;
+  asOf=asOf||ymd(new Date());
+  const anchor=p.anchor||asOf;
+  let acc=0;
+  if(p.per==="week"){
+    const days=Math.max(0, Math.round((parseYmd(asOf)-parseYmd(anchor))/86400000));
+    acc=days/7*(p.rate||0);
+  } else if(p.per==="per30" || p.per==="per40"){
+    acc=ptoWorkedMin(e.id, anchor, asOf)/60/(p.per==="per30"?30:40)*(p.rate||1);
+  }
+  return Math.round(((p.bal||0)+acc-ptoUsedH(e, anchor, asOf))*10)/10;
+}
+
+/* Licenses — invisible unless a role requires one */
+function licenseOn(){ return (S.roles||[]).some(r=>r.licensed); }
+function empLicensed(e){ return (e.roleIds||[]).some(id=>{const r=roleById(id); return r&&r.licensed;}); }
+
+/* Say immediately when a hand edit breaks something new — never blocks the edit. */
+function vKey(v){ return v.sev+"|"+v.title+"|"+(v.date||"")+"|"+(v.empId||""); }
+function headsUp(fn, okMsg){
+  const before=new Set(validate(S.currentWeek).map(vKey));
+  fn();
+  const fresh=validate(S.currentWeek).filter(v=>!before.has(vKey(v)));
+  if(fresh.length){
+    const worst=fresh.find(v=>v.sev==="crit")||fresh[0];
+    toast((okMsg||"Saved")+" — heads up: "+worst.title.toLowerCase()+(fresh.length>1? " (+"+(fresh.length-1)+" more in the conflicts list)":""));
+  } else if(okMsg) toast(okMsg);
+}
+
 function validate(ws){
   ws = ws||S.currentWeek;
   const wk=peekWeek(ws), L=law(), V=[];
@@ -3293,6 +3616,16 @@ function validate(ws){
     const mine = wk.assignments.filter(a=>a.empId===e.id).sort((a,b)=>a.date.localeCompare(b.date));
     const mins = mine.reduce((t,a)=>t+paidMinutes(a),0);
     const lim = effLimits(e, ws);
+    if(e.licExp && empLicensed(e)){
+      const bad=mine.filter(a=>a.date>e.licExp);
+      if(bad.length) push("crit","License lapsed — "+e.name.split(" ")[0],
+        (e.licLabel||"Their license")+" expired "+prettyDate(e.licExp)+" but they're scheduled "+bad.map(a=>DSHORT[a.dow]).join(", ")+". Renew it or hand those shifts to someone current.",
+        {empId:e.id, date:bad[0].date, dow:bad[0].dow});
+      else if(e.active && e.licExp<=addDays(dates[6].date,30))
+        push("warn","License expiring — "+e.name.split(" ")[0],
+          (e.licLabel||"Their license")+" runs out "+prettyDate(e.licExp)+". Get the renewal moving now — with a date past, the drafter will refuse to schedule them.",
+          {empId:e.id});
+    }
     if(lim.maxH && mins > lim.maxH*60+1)
       push("warn","Over hour cap — "+e.name, fmtHrs(mins)+" scheduled against a "+lim.maxH+"h cap"+
         (lim.groups.length&&lim.maxH!==e.maxH? " (set by the "+lim.groups.join(" and ")+" group)":"")+".", {empId:e.id});
@@ -4098,7 +4431,7 @@ WIRE.home = root=>{
   on("#hsetup2",()=>wizard());
   on("#homesetup",()=>wizard());
   on("#hdraft",()=>draftModal());
-  on("#hpost",()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now();
+  on("#hpost",()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
     wk.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted and locked"); });
   on("#hunpost",()=>{ const wk=getWeek(); wk.published=false; wk.assignments.forEach(a=>a.locked=false); save(); render(); toast("Open for edits again"); });
   on("#hlook",()=>go("week"));
@@ -4295,6 +4628,10 @@ function vSettings(){
       ${setRow("Track what the schedule costs", S.org.trackCost? "Rates live on each profile and never appear on a printed schedule" : "Nothing about cost appears anywhere",
         sel("org.trackCost", [[0,"Just hours, no money"],[1,"Show me what it costs"]], S.org.trackCost?1:0))}
       ${S.org.trackCost? setRow("Weekly labor budget", "", `<input type="number" step="50" min="0" data-bind="org.budget" value="${S.org.budget||0}" style="width:130px">`) : ""}
+      ${(typeof cloudOn==="function"&&cloudOn()&&FB&&FB.user)? setRow("Your account", "Signed in as "+esc(FB.user.email||"")+" — the board saves to this account and follows you between devices",
+        `<button class="btn sm" id="setsignout">Sign out</button>`) : ""}
+      ${setRow("Track PTO balances", S.org.trackPto? "Each profile carries a balance and an accrual rule; approved time off draws it down" : "No balances anywhere — time off is just dates",
+        sel("org.trackPto", [[0,"Don't track balances"],[1,"Track PTO balances"]], S.org.trackPto?1:0))}
       ${setRow("Who gets paid for holidays", S.employees.filter(e=>e.active&&e.holidayPay).length+" of "+S.employees.filter(e=>e.active).length+" — set per person on their profile", "", "holidays")}
       ${setRow("Anyone on a fixed-hours contract", (()=>{const f=S.employees.filter(e=>effLimits(e).exactH);
         return f.length? esc(f.map(e=>e.name.split(" ")[0]+" "+effLimits(e).exactH+"h").join(", ")) : "nobody — everyone works to a range";})(), "", "team")}
@@ -4321,7 +4658,7 @@ WIRE.settings = root=>{
   root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
     const path=el.dataset.set;
     let v=el.value;
-    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut"];
+    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut"];
     const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH"];
     if(boolPaths.includes(path)) v = v==="1";
     else if(numPaths.includes(path)) v = parseFloat(v);
@@ -4368,6 +4705,8 @@ WIRE.settings = root=>{
     r=>{ r.querySelector("#rsgo").onclick=()=>{
       try{ S=migrate(JSON.parse(r.querySelector("#rsbox").value)); priorityRefresh(); save(); closeModal(); render(); toast("Restored"); }
       catch(e){ toast("That doesn't look like a backup file"); } }; });
+  const so=root.querySelector("#setsignout");
+  if(so) so.onclick=()=>{ FB.auth.signOut().then(()=>location.reload()); };
   const cl=root.querySelector("#setclear");
   if(cl) cl.onclick=()=>modal("Clear everything?",
     `<p>This removes the roster, buckets, shifts, cover, rules, schedules, requests and holidays, and leaves you an empty board. There's no undo.</p>`,
@@ -4519,7 +4858,10 @@ WIRE.shifts = root=>{
     S.shifts.push(c); save(); render();
   });
 };
-const PALETTE=["#1c6a66","#3a7fa8","#7a4fa3","#a8701a","#2c7a4b","#ab382c","#4a5f7a","#8a5a2b"];
+/* Categorical colors for roles and shifts — colorblind-separable (Okabe–Ito derived),
+   and deliberately excluding the brand teal, success green, warning amber and critical red
+   so a role can never dress up as a status. */
+const PALETTE=["#0072B2","#7a4fa3","#CC79A7","#56B4E9","#4a5f7a","#D55E00"];
 function roleModal(id){
   const r = id? roleById(id) : {id:uid("r"),name:"",abbr:"",color:PALETTE[S.roles.length%8],note:"",licensed:false};
   modal(id?"Edit role":"New role", `
@@ -4638,7 +4980,7 @@ function vTeam(){
           return `<tr${e.active?"":' style="opacity:.5"'}>
             <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}</td>
             <td>${e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span> `:"";}).join("")}</td>
-            <td><span class="chip">${esc(e.type)}</span>${e.onCall?'<div class="mini">on call only</div>':""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
+            <td><span class="chip">${esc(e.type)}</span>${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const n=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000).length; return n? `<div class="mini"><span class="chip warn">${n} callout${n===1?"":"s"} / 90d</span></div>`:"";})()}${empLicensed(e)&&e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>` : e.licExp<=addDays(ymd(new Date()),45)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>`:""):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
             <td class="mono">${(()=>{const L=effLimits(e);
               if(L.exactH) return "exactly "+L.exactH+"h";
               return (L.minH||0)+"–"+(L.maxH||0)+"h"+((L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH)?" *":"");})()}</td>
@@ -4860,13 +5202,37 @@ function toffModal(){
       <div class="field"><label>First day off</label><input type="date" id="ts" value="${today}"></div>
       <div class="field"><label>Last day off</label><input type="date" id="tend" value="${today}"></div>
       <div class="field"><label>Status</label><select id="tst"><option value="approved">approved</option><option value="pending">pending</option><option value="denied">denied</option></select></div>
-    </div></div>`,
+      ${ptoOn()? `<div class="field"><label>Draws from their PTO balance?</label><select id="tpto">
+        <option value="1">Yes — paid time off</option><option value="0">No — unpaid or doesn't count</option></select></div>
+      <div class="field" id="tphw"><label>Hours per day off</label><select id="tph">${[4,6,7.5,8,10,12].map(h=>`<option value="${h}" ${h===8?"selected":""}>${h} hours</option>`).join("")}</select></div>`:""}
+    </div>${ptoOn()? `<div class="mini" id="tptoline" style="margin-top:6px"></div>`:""}</div>`,
     `<button class="btn" data-close>Cancel</button><button class="btn primary" id="savetoff">Save</button>`,
-    r=>{ r.querySelector("#savetoff").onclick=()=>{
+    r=>{
+      const line=()=>{
+        const el=r.querySelector("#tptoline"); if(!el) return;
+        const e=empById(r.querySelector("#te").value); if(!e){ el.textContent=""; return; }
+        if(r.querySelector("#tpto").value!=="1"){ el.textContent=""; return; }
+        const s0=r.querySelector("#ts").value, e0=r.querySelector("#tend").value;
+        if(!s0||!e0||e0<s0){ el.textContent=""; return; }
+        const per=+r.querySelector("#tph").value||8;
+        let d=s0, days=0, guard=0;
+        while(d<=e0 && guard++<400){ if(!S.hours[parseYmd(d).getDay()].closed) days++; d=addDays(d,1); }
+        const draw=days*per;
+        const bal=ptoBalance(e);
+        if(bal===null){ el.textContent="Draws "+draw+"h."; return; }
+        const left=Math.round((bal-draw)*10)/10;
+        el.textContent="Draws "+draw+"h — leaves "+e.name.split(" ")[0]+" with "+left+"h.";
+        el.style.color = left<0? "var(--crit)":"var(--muted)";
+      };
+      ["#te","#ts","#tend","#tpto","#tph"].forEach(x=>{ const el=r.querySelector(x); if(el) el.onchange=()=>{ const w=r.querySelector("#tphw"); if(w&&r.querySelector("#tpto")) w.style.display=r.querySelector("#tpto").value==="1"?"":"none"; line(); }; });
+      line();
+      r.querySelector("#savetoff").onclick=()=>{
       const s=r.querySelector("#ts").value, e=r.querySelector("#tend").value;
       if(!s||!e||e<s){ toast("Check those dates"); return; }
       S.timeoff.push({id:uid("t"),empId:r.querySelector("#te").value,start:s,end:e,
-        type:r.querySelector("#tt").value,status:r.querySelector("#tst").value});
+        type:r.querySelector("#tt").value,status:r.querySelector("#tst").value,
+        usePto: r.querySelector("#tpto")? r.querySelector("#tpto").value==="1" : false,
+        hoursPerDay: r.querySelector("#tph")? +r.querySelector("#tph").value||8 : 8});
       save(); closeModal(); render(); }; });
 }
 function empModal(id){
@@ -4878,8 +5244,9 @@ function empModal(id){
      notes:"",seniority:ymd(new Date()),active:true,rate:0};
   modal(id?"Edit "+e.name:"Add someone", `
   <div class="stack">
+    <div class="mini">Fields marked * are required — everything else can stay blank and be filled in whenever.</div>
     <div class="grid2">
-      <div class="field"><label>Name</label><input type="text" id="en" value="${esc(e.name)}" placeholder="First Last"></div>
+      <div class="field"><label>Name *</label><input type="text" id="en" value="${esc(e.name)}" placeholder="First Last"></div>
       <div class="field"><label>Employment type</label><select id="et">${Object.keys(TYPES).map(k=>`<option value="${k}" ${e.type===k?"selected":""}>${TYPES[k]}</option>`).join("")}</select></div>
       <div class="field"><label>How they're used</label><select id="eoc">
         <option value="0" ${e.onCall?"":"selected"}>Scheduled as normal</option>
@@ -4890,10 +5257,10 @@ function empModal(id){
         <option value="yes" ${projectOk(e)==="yes"?"selected":""}>Takes their turn like everyone else</option>
         <option value="no" ${projectOk(e)==="no"?"selected":""}>No — keep them on the floor</option></select>
         <span class="mini">When the floor is covered and there are hours left over, this decides who picks up the project work.</span></div>`:""}
-      <div class="field"><label>Email (for polls)</label><input type="email" id="eem" value="${esc(e.email||"")}" placeholder="name@example.com"></div>
-      <div class="field"><label>Mobile (for polls)</label><input type="tel" id="eph" value="${esc(e.phone||"")}" placeholder="(555) 010-0100"></div>
+      <div class="field"><label>Email (optional — for polls and sending schedules)</label><input type="email" id="eem" value="${esc(e.email||"")}" placeholder="name@example.com"></div>
+      <div class="field"><label>Mobile (optional — for polls and sending schedules)</label><input type="tel" id="eph" value="${esc(e.phone||"")}" placeholder="(555) 010-0100"></div>
     </div>
-    <div class="field"><label>Roles this person can fill</label><div class="row" id="eroles">
+    <div class="field"><label>Roles this person can fill *</label><div class="row" id="eroles">
       ${S.roles.length? S.roles.map(r=>`<label class="switch" style="border:1px solid var(--line);padding:5px 9px;border-radius:6px">
         <input type="checkbox" data-r="${r.id}" ${e.roleIds.includes(r.id)?"checked":""}> <span class="tag" style="--sc:${r.color}">${esc(r.name)}</span></label>`).join("")
         : `<span class="mini">No roles defined yet — add them under Roles &amp; shifts.</span>`}</div>
@@ -4941,7 +5308,23 @@ function empModal(id){
       ${DAYS.map((d,i)=>`<label class="switch" style="border:1px solid var(--line);padding:4px 8px;border-radius:6px;font-size:12px">
         <input type="checkbox" data-d="${i}" ${(e.prefDaysOff||[]).includes(i)?"checked":""}> ${DSHORT[i]}</label>`).join("")}</div>
       <span class="mini">A preference, not a block — the scheduler avoids these unless it has no other way to cover.</span></div>
-    <div class="field"><label>Notes</label><input type="text" id="enotes" value="${esc(e.notes||"")}" placeholder="Immunization certified · nursing student"></div>
+    ${(S.roles||[]).some(r=>r.licensed)? `<div class="grid2" id="elicwrap" style="display:${(e.roleIds||[]).some(id=>{const rr=roleById(id);return rr&&rr.licensed;})?"":"none"}">
+      <div class="field"><label>License / certification expires</label><input type="date" id="elic" value="${esc(e.licExp||"")}">
+        <span class="mini">Optional. With a date set, the drafter never schedules them past it and starts warning 30 days out.</span></div>
+      <div class="field"><label>What it is (optional)</label><input type="text" id="elicn" value="${esc(e.licLabel||"")}" placeholder="RPh license · CPR certification"></div>
+    </div>`:""}
+    ${ptoOn()? `<div class="field"><label>PTO</label><div class="grid3" style="align-items:end">
+      <div class="field"><label class="mini">Balance now (hours)</label><input type="number" step="0.5" id="eptob" value="${(e.pto&&e.pto.bal)||0}"></div>
+      <div class="field"><label class="mini">As of</label><input type="date" id="eptoa" value="${esc((e.pto&&e.pto.anchor)||ymd(new Date()))}"></div>
+      <div class="field"><label class="mini">Accrues</label><select id="eptop">
+        <option value="none" ${!(e.pto&&e.pto.per)||e.pto.per==="none"?"selected":""}>Doesn't accrue</option>
+        <option value="week" ${e.pto&&e.pto.per==="week"?"selected":""}>Hours per week</option>
+        <option value="per30" ${e.pto&&e.pto.per==="per30"?"selected":""}>Hours per 30h worked</option>
+        <option value="per40" ${e.pto&&e.pto.per==="per40"?"selected":""}>Hours per 40h worked</option></select></div>
+      <div class="field" id="eptorw" style="display:${e.pto&&e.pto.per&&e.pto.per!=="none"?"":"none"}"><label class="mini">At this rate</label><input type="number" step="0.1" id="eptor" value="${(e.pto&&e.pto.rate)||1}"></div>
+    </div>
+    <span class="mini">Enter today's balance once — from your payroll or records — and the rule it grows by. From then on it accrues from scheduled hours and comes down when approved time off draws on it.</span></div>`:""}
+    <div class="field"><label>Notes (optional)</label><input type="text" id="enotes" value="${esc(e.notes||"")}" placeholder="Immunization certified · nursing student"></div>
     <label class="switch"><input type="checkbox" id="eact" ${e.active?"checked":""}> Currently on the roster</label>
   </div>`,
   `${id?'<button class="btn danger" id="delemp">Remove</button>':""}<button class="btn" data-close>Cancel</button><button class="btn primary" id="saveemp">Save</button>`,
@@ -4983,6 +5366,13 @@ function empModal(id){
     const hp=root.querySelector("#ehp");
     const paintHP=()=>{ root.querySelector("#ehphwrap").style.display = hp.value==="1"? "":"none"; };
     hp.onchange=paintHP; paintHP();
+    const pp=root.querySelector("#eptop");
+    if(pp) pp.onchange=()=>{ root.querySelector("#eptorw").style.display = pp.value==="none"?"none":""; };
+    const lw=root.querySelector("#elicwrap");
+    if(lw) root.querySelectorAll("#eroles input").forEach(cb=>cb.addEventListener("change",()=>{
+      const on=[...root.querySelectorAll("#eroles input:checked")].some(x=>{const rr=roleById(x.dataset.r);return rr&&rr.licensed;});
+      lw.style.display=on?"":"none";
+    }));
     root.querySelectorAll("#eavail .d").forEach(d=>{
       d.querySelector(".tog").onclick=()=>{
         const on = !d.classList.contains("on");
@@ -4993,6 +5383,7 @@ function empModal(id){
     root.querySelector("#saveemp").onclick=()=>{
       const name=root.querySelector("#en").value.trim();
       if(!name){ toast("Name is required"); return; }
+      if(S.roles.length && ![...root.querySelectorAll("#eroles input:checked")].length){ toast("Pick at least one role — it's how shifts find them"); return; }
       const rec={
         id:e.id, name,
         email:root.querySelector("#eem").value.trim(), phone:root.querySelector("#eph").value.trim(),
@@ -5017,6 +5408,10 @@ function empModal(id){
         avoidShiftIds:[...root.querySelectorAll("#eavoid input:checked")].map(x=>x.dataset.s),
         prefDaysOff:[...root.querySelectorAll("#epoff input:checked")].map(x=>+x.dataset.d),
         canOpen:true,canClose:true,
+        pto: root.querySelector("#eptob")? {bal:+root.querySelector("#eptob").value||0, anchor:root.querySelector("#eptoa").value||ymd(new Date()),
+              per:root.querySelector("#eptop").value, rate:+root.querySelector("#eptor").value||0} : (e.pto||null),
+        licExp:((root.querySelector("#elic")||{}).value||"")||(e.licExp&&!root.querySelector("#elic")?e.licExp:""),
+        licLabel:(((root.querySelector("#elicn")||{}).value)||(root.querySelector("#elicn")?"":e.licLabel||"")).trim(),
         notes:root.querySelector("#enotes").value.trim(),
         seniority:root.querySelector("#esen").value, active:root.querySelector("#eact").checked,
         rate: root.querySelector("#erate")? (+root.querySelector("#erate").value||0) : (e.rate||0)
@@ -5587,6 +5982,7 @@ function vWeek(){
     generateSchedule(ws); wk.suggested=true; wk.touched=true; wk.auto=true; save();
   }
   const V=validate(ws);
+  const DIFF=weekDiff(ws), CHG=new Set(DIFF.map(d=>d.empId+"|"+d.date));
   const crit=V.filter(v=>v.sev==="crit"), warn=V.filter(v=>v.sev==="warn"), info=V.filter(v=>v.sev==="info");
   const roster = S.employees.filter(e=>e.active);
   const totalMin = wk.assignments.reduce((t,a)=>t+paidMinutes(a),0);
@@ -5623,7 +6019,7 @@ function vWeek(){
           ${!open||h.closed? "" : on.length? `<div class="dbody">
             ${on.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=shiftById(a.shiftId)||{label:"Shift",color:"#1c6a66"};
               const bad=V.some(v=>v.sev==="crit"&&v.empId===a.empId&&v.date===a.date);
-              return `<button class="drow ${bad?"viol":""}" data-edita="${a.id}" style="--sc:${sh.color}">
+              return `<button class="drow ${bad?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" style="--sc:${sh.color}">
                 <span class="dw">${esc(e.name)}</span>
                 <span class="ds">${a.locked?"● ":""}${esc(sh.label)}${a.topUp?" +":""}</span>
                 <span class="dt mono">${m2disp(a.startMin)}–${m2disp(a.endMin)}</span></button>`;
@@ -5700,7 +6096,7 @@ function vWeek(){
               ${mine.map(a=>{
                 const sh=shiftById(a.shiftId)||{label:"Shift",color:"#1c6a66"};
                 const dv = desireOf(a.shiftId,a.dow);
-                return `<div class="shiftblk ${cellViol?"viol":""}" data-edita="${a.id}" tabindex="0" role="button" style="--sc:${sh.color}"
+                return `<div class="shiftblk ${cellViol?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" tabindex="0" role="button" style="--sc:${sh.color}"
                   title="${esc(sh.label)} · ${DESIRE_LABEL[clamp(dv,-2,2)]}">
                   ${a.locked?'<span class="lk">●</span>':""}
                   <span class="lb">${dv?`<span class="dmark ${dv>0?"g":"b"}">${dv>0?"+":"−"}</span>`:""}${esc(sh.label)}${a.topUp?' <span class="tup">+</span>':""}</span>
@@ -5757,6 +6153,13 @@ function vWeek(){
       <div class="help">Add hourly rates on each person's profile and this turns into a live cost-per-day chart against your weekly budget. Rates never leave this board and never appear on a printed schedule.</div>
       <div class="row" style="margin-top:10px"><button class="btn sm" data-go="team">Add rates</button></div></div></div>`}
 
+    <div class="card" style="display:${DIFF.length?"":"none"}"><header><h3>Changed since it last went out</h3>
+      <span class="hint">${DIFF.length} change${DIFF.length===1?"":"s"} — the dots on the grid mark who's affected</span></header>
+      <div class="viollist" style="max-height:260px;overflow-y:auto">
+        ${DIFF.map(d=>`<div class="viol-i"><span class="sv warn"></span><div class="tx"><strong>${DSHORT[d.dow]} — ${esc(d.name)}</strong><span>${esc(d.say)}</span></div></div>`).join("")}
+      </div>
+    </div>
+
     <div class="card">
       <header><h3>Conflicts and compliance</h3>
         <span class="hint">${crit.length} must fix · ${warn.length} warnings · ${info.length} notes</span></header>
@@ -5785,7 +6188,7 @@ WIRE.week = root=>{
   if(rg) rg.onclick=()=>redoModal(S.currentWeek);
   const wsh=root.querySelector("#wshape"); if(wsh) wsh.onclick=()=>weekPatternModal(S.currentWeek);
   const wp=root.querySelector("#wpost");
-  if(wp) wp.onclick=()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now();
+  if(wp) wp.onclick=()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
     wk.assignments.forEach(a=>a.locked=true); save(); render();
     if(sendOn()){ toast("Posted and locked — now send it out"); setTimeout(()=>sendModal(S.currentWeek), 350); }
     else toast("Week posted and locked"); };
@@ -5852,15 +6255,24 @@ function newAssignModal(empId,date,dow){
         return `<option value="${s.id}">${esc(s.label)} · ${m2disp(a)}–${m2disp(b)}${ok?"":"  (outside stated availability)"}</option>`;}).join("")}</select></div>
       <div class="field"><label>Working as</label><select id="nr">${e.roleIds.map(id=>`<option value="${id}">${esc(roleName(id))}</option>`).join("")||'<option value="">No role set</option>'}</select></div>
       <label class="switch"><input type="checkbox" id="nl"> Lock it — keep this when I rebuild the week</label>
+      <div class="mini" id="nimpact"></div>
     </div>`,
     `<button class="btn" data-close>Cancel</button><button class="btn primary" id="savena">Add shift</button>`,
-    r=>{ r.querySelector("#savena").onclick=()=>{
+    r=>{
+      const nimp=()=>{ const sh=shiftById(r.querySelector("#ns").value); if(!sh) return;
+        const [x,y]=shiftMinutes(sh); const im=weekImpact(empId, null, null, x, y);
+        const el=r.querySelector("#nimpact"); el.textContent=im.msg; el.style.color = im.ot>0? "var(--warn)":"var(--muted)"; };
+      r.querySelector("#ns").addEventListener("change",nimp); nimp();
+      r.querySelector("#savena").onclick=()=>{
       const sh=shiftById(r.querySelector("#ns").value); const [a,b]=shiftMinutes(sh);
       const rec={id:uid("a"),empId,date,dow,shiftId:sh.id,startMin:a,endMin:b,
                  roleId:r.querySelector("#nr").value||null,locked:r.querySelector("#nl").checked};
-      applyBreaks(rec); getWeek().assignments.push(rec);
-      getWeek().assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
-      save(); closeModal(); render(); }; });
+      closeModal();
+      headsUp(()=>{
+        applyBreaks(rec); getWeek().assignments.push(rec);
+        getWeek().assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
+        save(); render();
+      }, "Added"); }; });
 }
 
 function assignModal(aid){
@@ -5877,6 +6289,7 @@ function assignModal(aid){
         <div class="field"><label>Working as</label><select id="ar">${(e.roleIds.length?e.roleIds:[null]).map(id=>`<option value="${id||""}" ${a.roleId===id?"selected":""}>${esc(roleName(id))}</option>`).join("")}</select></div>
         <div class="field"><label>Move to</label><select id="am">${S.employees.filter(x=>x.active).map(x=>`<option value="${x.id}" ${x.id===a.empId?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
       </div>
+      <div class="mini" id="aimpact"></div>
       <label class="switch"><input type="checkbox" id="al" ${a.locked?"checked":""}> Lock it — keep this when I rebuild the week</label>
       <div class="sep"></div>
       <div class="lab">Breaks owed under ${esc(L.name)} rules</div>
@@ -5885,6 +6298,11 @@ function assignModal(aid){
       <div class="spread"><div class="lab">Need someone else on this shift?</div>
         <button class="btn sm ghost" id="acands">Show who could cover it</button></div>
       <div id="candbox"></div>
+      <div class="sep"></div>
+      <div class="spread"><div class="lab">${a.callout? (a.callout==="noshow"?"Logged as a no-show":"Logged as a callout") : "Called out sick, or didn't show?"}</div>
+        ${a.callout? `<button class="btn sm ghost" id="acoundo">Remove the log</button>`
+          : `<div class="row" style="gap:6px"><button class="btn sm" id="acout">Called out</button><button class="btn sm" id="anoshow">No-show</button></div>`}</div>
+      <div class="mini">Logging keeps the record straight — the shift stays on the board so you can hand it to someone above.</div>
     </div>`,
     `<button class="btn danger" id="adel">Remove shift</button><button class="btn" data-close>Cancel</button><button class="btn primary" id="asave">Save</button>`,
     r=>{
@@ -5905,6 +6323,27 @@ function assignModal(aid){
           : `<div class="mini">This shift is short enough that no meal or rest break is owed.</div>`;
       };
       r.querySelector("#as").oninput=paint; r.querySelector("#ae").oninput=paint; paint();
+      const logOut=(kind)=>{
+        S.callouts=S.callouts||[];
+        S.callouts.push({id:uid("co"), empId:a.empId, date:a.date, shiftId:a.shiftId, kind, at:Date.now()});
+        a.callout=kind; save(); render();
+        toast((kind==="noshow"?"No-show":"Callout")+" logged for "+((empById(a.empId)||{name:"them"}).name)+" — now find the cover");
+        closeModal(true); assignModal(a.id);
+      };
+      const co=r.querySelector("#acout"); if(co) co.onclick=()=>logOut("callout");
+      const ns=r.querySelector("#anoshow"); if(ns) ns.onclick=()=>logOut("noshow");
+      const cu=r.querySelector("#acoundo"); if(cu) cu.onclick=()=>{
+        S.callouts=(S.callouts||[]).filter(x=>!(x.empId===a.empId&&x.date===a.date&&x.shiftId===a.shiftId));
+        delete a.callout; save(); render(); closeModal(true); assignModal(a.id); };
+      const impact=()=>{
+        const st=t2m(r.querySelector("#as").value); let en=t2m(r.querySelector("#ae").value); if(en<=st) en+=1440;
+        const who=r.querySelector("#am").value;
+        const el=r.querySelector("#aimpact"); if(!el) return;
+        const im=weekImpact(who, null, a.id, st, en);
+        el.textContent=im.msg; el.style.color = im.ot>0? "var(--warn)":"var(--muted)";
+      };
+      ["#as","#ae","#am"].forEach(x=>{ const el=r.querySelector(x); if(el) el.addEventListener("change",impact); });
+      impact();
       r.querySelector("#asave").onclick=()=>{
         a.startMin=t2m(r.querySelector("#as").value);
         a.endMin=t2m(r.querySelector("#ae").value); if(a.endMin<=a.startMin) a.endMin+=1440;
@@ -5914,7 +6353,7 @@ function assignModal(aid){
         applyBreaks(a);
         r.querySelectorAll(".bm").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]){ a.breaks.meals[i].start=t2m(inp.value); a.breaks.meals[i].end=a.breaks.meals[i].start+a.breaks.meals[i].len; a.breaks.meals[i].late=a.breaks.meals[i].start>a.breaks.meals[i].deadline; } });
         r.querySelectorAll(".bw").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]) a.breaks.meals[i].waived=inp.checked; });
-        save(); closeModal(); render();
+        closeModal(); headsUp(()=>{ save(); render(); }, "Saved");
       };
       r.querySelector("#adel").onclick=()=>{ wk.assignments=wk.assignments.filter(x=>x.id!==aid); save(); closeModal(); render(); };
       r.querySelector("#acands").onclick=()=>{
@@ -5927,7 +6366,8 @@ function assignModal(aid){
           a.empId=b.dataset.swap;
           const ne=empById(a.empId);
           if(ne && !ne.roleIds.includes(a.roleId)) a.roleId = ne.roleIds[0]||null;
-          applyBreaks(a); a.locked=true; save(); closeModal(); render(); toast("Handed to "+ne.name);
+          applyBreaks(a); a.locked=true; closeModal();
+          headsUp(()=>{ save(); render(); }, "Handed to "+ne.name);
         });
         r.querySelector("#acands").textContent="Refresh the list";
       };
@@ -5994,9 +6434,49 @@ function vWeeks(){
     </div>`;
   };
 
+  const monthMode=(S.ui&&S.ui.schedView)==="month";
+  const monthHtml=(function(){
+    if(!monthMode) return "";
+    const anchor=S.ui.monthAnchor || (S.currentWeek||ymd(new Date())).slice(0,7);
+    const [Y,M]=anchor.split("-").map(Number);
+    const first=new Date(Y, M-1, 1), label=first.toLocaleDateString([], {month:"long", year:"numeric"});
+    const firstDow=first.getDay(), dim=new Date(Y, M, 0).getDate();
+    const todayY=ymd(new Date());
+    const cells=[];
+    for(let i=0;i<firstDow;i++) cells.push('<div class="mcell off"></div>');
+    for(let d=1; d<=dim; d++){
+      const dateStr=Y+"-"+String(M).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+      const dow=new Date(Y,M-1,d).getDay();
+      const wsOf=weekStartOf(dateStr, S.org.weekStart);
+      const wk=S.weeks[wsOf];
+      const n=wk? wk.assignments.filter(a=>a.date===dateStr).length : 0;
+      const state=wk&&wk.published? "posted" : n? "draft" : "";
+      const closed=S.hours[dow].closed;
+      const hol=(S.holidays.list||[]).find(h=>h.date===dateStr);
+      cells.push(`<button class="mcell ${state} ${closed?"closed":""} ${dateStr===todayY?"today":""}" data-mday="${dateStr}">
+        <span class="md">${d}</span>
+        ${hol? `<span class="mh" title="${esc(hol.name)}">★</span>`:""}
+        ${closed? `<span class="mn">closed</span>` : n? `<span class="mn">${n} shift${n===1?"":"s"}</span>` : `<span class="mn faint">—</span>`}
+      </button>`);
+    }
+    return `<div class="card"><header>
+        <button class="btn sm" id="mprev">←</button>
+        <h3 style="flex:1;text-align:center">${label}</h3>
+        <button class="btn sm" id="mnext">→</button></header>
+      <div class="body">
+        <div class="mgrid mhead">${DSHORT.map(d=>`<div>${d}</div>`).join("")}</div>
+        <div class="mgrid">${cells.join("")}</div>
+        <div class="legend" style="margin-top:10px"><span><i style="background:var(--ok)"></i>posted</span><span><i style="background:var(--accent)"></i>drafted</span><span>★ holiday · tap a day to open its sheet</span></div>
+      </div></div>`;
+  })();
+
   return `
   <div class="stack">
     <div class="banner info"><div><b>Every week you've touched, and what state it's in.</b> Drafts are yours alone until you post one — work on several at once and let them go up whenever each is ready. Nothing here is posted by accident: posting is always a deliberate press.</div></div>
+    <div class="row" style="justify-content:flex-end">
+      <div class="seg"><button data-schedview="list" aria-pressed="${!monthMode}">Weeks</button><button data-schedview="month" aria-pressed="${monthMode}">Month</button></div>
+    </div>
+    ${monthMode? monthHtml : ""}${monthMode? "" : `
 
     <div class="hgrid">
       <div class="tile" style="cursor:default"><span class="tn">${drafts.length}</span><span class="tlab">drafts on the go</span>
@@ -6021,10 +6501,21 @@ function vWeeks(){
     ${posted.length? `<div class="card">
       <header><h3>Posted</h3><span class="hint">Locked. Unpost one to change it.</span></header>
       <div class="wklist">${posted.slice().reverse().map(row).join("")}</div>
-    </div>`:""}
+    </div>`:""}`}
   </div>`;
 }
 WIRE.weeks = root=>{
+  root.querySelectorAll("[data-schedview]").forEach(b=>b.onclick=()=>{ S.ui.schedView=b.dataset.schedview; save(); render(); });
+  root.querySelectorAll("[data-mday]").forEach(b=>b.onclick=()=>{
+    const d=b.dataset.mday;
+    S.currentWeek=weekStartOf(d, S.org.weekStart); DAYVIEW=parseYmd(d).getDay(); save(); go("day");
+  });
+  const mp=root.querySelector("#mprev"), mn=root.querySelector("#mnext");
+  const shift=(dir)=>{ const a=S.ui.monthAnchor || (S.currentWeek||ymd(new Date())).slice(0,7);
+    let [Y,M]=a.split("-").map(Number); M+=dir; if(M<1){M=12;Y--;} if(M>12){M=1;Y++;}
+    S.ui.monthAnchor=Y+"-"+String(M).padStart(2,"0"); save(); render(); };
+  if(mp) mp.onclick=()=>shift(-1);
+  if(mn) mn.onclick=()=>shift(1);
   root.querySelectorAll("[data-goweek]").forEach(b=>b.onclick=ev=>{
     ev.stopPropagation();
     S.currentWeek=b.dataset.goweek; save(); go("week");
@@ -6044,7 +6535,7 @@ WIRE.weeks = root=>{
       </div>`,
       `<button class="btn" data-close>Cancel</button><button class="btn primary" id="pallgo">Post them all</button>`,
       r=>{ r.querySelector("#pallgo").onclick=()=>{
-        drafts.forEach(k=>{ const wk=S.weeks[k]; wk.published=true; wk.publishedAt=Date.now();
+        drafts.forEach(k=>{ const wk=S.weeks[k]; wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
           wk.assignments.forEach(a=>a.locked=true); });
         save(); closeModal(); render(); toast(drafts.length+" weeks posted"); }; });
   };
@@ -6102,7 +6593,7 @@ function weekMenu(ws){
       on("#wkshape",()=>{ S.currentWeek=ws; closeModal(); weekPatternModal(ws); });
       on("#wkfix",()=>{ S.currentWeek=ws; closeModal(); fixModal(ws); });
       on("#wkdup",()=>{ closeModal(); duplicateWeekModal(ws); });
-      on("#wkpost",()=>{ const w=getWeek(ws); w.published=true; w.publishedAt=Date.now();
+      on("#wkpost",()=>{ const w=getWeek(ws); w.published=true; w.publishedAt=Date.now(); snapWeek(w);
         w.assignments.forEach(a=>a.locked=true); save(); closeModal(); render(); toast("Posted"); });
       on("#wkunpost",()=>{ const w=getWeek(ws); w.published=false; w.assignments.forEach(a=>a.locked=false);
         save(); closeModal(); render(); toast("Unposted — open for edits"); });
@@ -6189,6 +6680,10 @@ function vDay(){
         <button class="btn" id="dayprint">Print this sheet</button>
         <button class="btn" id="daypdf">PDF</button>
       </div>
+    </div>
+    <div class="body" style="padding:8px 14px;border-top:1px solid var(--line)">
+      <input type="text" id="dnote" data-rerender="no" value="${esc((wk.dayNotes||{})[date]||"")}"
+        placeholder="Note for the day — truck at 7am, inspection, flu-shot clinic… shows on the printed sheet and in what you send" style="border:0;background:transparent;width:100%;padding:4px 0">
     </div></div>
 
     ${!list.length? `<div class="empty card" style="padding:40px"><strong>Nobody scheduled ${DSHORT[dow]}</strong>Draft the week from This week.</div>` : `
@@ -6383,6 +6878,14 @@ function collapseGaps(pts){
   return out;
 }
 WIRE.day = root=>{
+  const dn=root.querySelector("#dnote");
+  if(dn) dn.addEventListener("input",()=>{
+    const ws=S.currentWeek, wk=getWeek(ws);
+    const entry=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
+    wk.dayNotes=wk.dayNotes||{};
+    if(dn.value.trim()) wk.dayNotes[entry.date]=dn.value.trim(); else delete wk.dayNotes[entry.date];
+    clearTimeout(bindSaveTimer); bindSaveTimer=setTimeout(save,500);
+  });
   const seg=root.querySelector("#dayseg");
   if(seg) seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.dataset.d; render(); });
   const rot=root.querySelector("#dayrot");
@@ -6527,6 +7030,14 @@ async function exportDayPDF(){
   const L=law();
   const doc=newDoc("portrait");
   pdfHeader(doc,(S.org.name||"Day sheet"), prettyFull(entry.date)+"  ·  "+(S.hours[entry.dow].closed?"Closed":m2disp(t2m(S.hours[entry.dow].open))+"–"+m2disp(t2m(S.hours[entry.dow].close))));
+  let tableY=82;
+  if((wk.dayNotes||{})[entry.date]){
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.6); doc.setTextColor(28,106,102);
+    doc.text("TODAY:", 40, 76);
+    doc.setFont("helvetica","normal"); doc.setTextColor(60,74,71);
+    doc.text(wk.dayNotes[entry.date], 78, 76, {maxWidth:doc.internal.pageSize.getWidth()-118});
+    tableY=94;
+  }
   doc.autoTable({
     head:[[ "Employee" ].concat((S.stations||[]).length?["Station"]:[]).concat(["Role","In","Out","Meal","Rest breaks","Paid"])],
     body:list.map(a=>{
@@ -6544,7 +7055,7 @@ async function exportDayPDF(){
       if((S.stations||[]).length) row.push((stn?stn.name:"—")+(stn2?"\nthen "+stn2.name:""));
       return row.concat([roleAbbr(a.roleId), m2disp(a.startMin), m2disp(a.endMin), mealTxt, restTxt, fmtHrs(paidMinutes(a))]);
     }),
-    startY:82, styles:{fontSize:8.2,cellPadding:5,lineColor:[210,216,214],lineWidth:.5},
+    startY:tableY, styles:{fontSize:8.2,cellPadding:5,lineColor:[210,216,214],lineWidth:.5},
     headStyles:{fillColor:[28,106,102],textColor:255}, alternateRowStyles:{fillColor:[246,248,247]},
     columnStyles:{0:{fontStyle:"bold",cellWidth:104}}, margin:{left:40,right:40}
   });
@@ -6571,6 +7082,7 @@ function printDay(){
   .pen{color:#a8701a}@media print{body{margin:14mm}}</style></head><body>
   <h1>${esc(S.org.name||"Day sheet")}</h1>
   <div class="sub">${esc(prettyFull(entry.date))} · ${S.hours[entry.dow].closed?"Closed":esc(m2disp(t2m(S.hours[entry.dow].open))+"–"+m2disp(t2m(S.hours[entry.dow].close)))}${S.org.site?" · "+esc(S.org.site):""}</div>
+  ${(wk.dayNotes||{})[entry.date]? `<div style="border:1px solid #d2d8d6;border-left:3px solid #1c6a66;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:12.5px"><b>Today:</b> ${esc(wk.dayNotes[entry.date])}</div>`:""}
   <table><thead><tr><th>Employee</th>${(S.stations||[]).length?"<th>Station</th>":""}<th>Role</th><th>In</th><th>Out</th><th>Meal</th><th>Rest breaks</th><th>Paid</th></tr></thead><tbody>
   ${list.map(a=>{const e=empById(a.empId)||{name:"—"},b=a.breaks||{meals:[],rests:[],owed:{meals:0,rests:0}};
     const mealTxt=!b.owed.meals?"not owed":S.rules.breakMode==="self"?"staff-timed":S.rules.breakMode==="lengths"?
@@ -6654,7 +7166,7 @@ function wizard(){
     sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
     dayOff:{},                      /* "b:i" -> [dow…] they can never work */
     headcount:0,
-    bucketCount:2, buckets:["Staff","Lead","",""], bucketNames:["","","",""],
+    bucketCount:2, buckets:["Staff","Lead","",""], bucketNames:["","","",""], bucketLic:[false,false,false,false],
     people:{},                     /* "b:i" -> {type,maxH} */
     shiftPreset:"openclose", shifts:[],
     perShift:{},
@@ -6772,8 +7284,9 @@ function wizard(){
           n===1?"Everyone's the same":n+" buckets", n===1?"No qualifications to track":"")).join("")}</div>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,i)=>`
           <div class="field"><label>Bucket ${i+1}</label><input type="text" class="wrole" data-i="${i}"
-            value="${esc(W.buckets[i]||"")}" placeholder="Role name"></div>`).join("")}</div>
-        <div class="help">Later on you can hang rules off a bucket — "part-timers cap at 28 hours", "trainees never work alone", "one supervisor for every four assistants".</div>
+            value="${esc(W.buckets[i]||"")}" placeholder="Role name">
+            <label class="switch" style="margin-top:6px;font-size:12.5px"><input type="checkbox" class="wlic" data-i="${i}" ${W.bucketLic&&W.bucketLic[i]?"checked":""}> Needs an active license or certification</label></div>`).join("")}</div>
+        <div class="help">Later on you can hang rules off a bucket — "part-timers cap at 28 hours", "trainees never work alone", "one supervisor for every four assistants". Mark a bucket as licensed and you can track each person's expiry date — the drafter will never schedule someone past a lapsed license. Skip it if licenses aren't your world.</div>
       </div>`;
     if(k==="count") return `
       <div class="stack">
@@ -7201,6 +7714,7 @@ function wizard(){
     r.querySelectorAll("[data-wmslot]").forEach(i=>{ W.mealSlots[+i.dataset.wmslot]=i.value; });
     r.querySelectorAll("[data-w]").forEach(i=>{ W[i.dataset.w]=i.value; });
     r.querySelectorAll(".wrole").forEach(i=>{ W.buckets[+i.dataset.i]=i.value.trim(); });
+    r.querySelectorAll(".wlic").forEach(i=>{ W.bucketLic[+i.dataset.i]=i.checked; });
     r.querySelectorAll(".wbn").forEach(t=>{ W.bucketNames[+t.dataset.b]=t.value; });
     r.querySelectorAll(".wsl").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.dataset.i]||{}; W.shifts[+i.dataset.i].label=i.value.trim(); });
     r.querySelectorAll(".wss").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.dataset.i]||{}; W.shifts[+i.dataset.i].start=i.value; });
@@ -7226,7 +7740,7 @@ function wizard(){
       else N.hours[d]={closed:false,open:W.open,close:W.close};
     }
     const bucketNames=W.buckets.slice(0,W.bucketCount).map((x,i)=>x||("Bucket "+(i+1)));
-    N.roles=bucketNames.map((n,i)=>({id:uid("r"),name:n,abbr:n.slice(0,5),color:PALETTE[i%PALETTE.length],note:"",licensed:false}));
+    N.roles=bucketNames.map((n,i)=>({id:uid("r"),name:n,abbr:n.slice(0,5),color:PALETTE[i%PALETTE.length],note:"",licensed:!!(W.bucketLic&&W.bucketLic[i])}));
     const cur=curShifts();
     N.shifts=cur.shifts.map((sh,i)=>({id:uid("s"),
       label:(W.shifts[i]&&W.shifts[i].label)||sh.label,
@@ -8639,6 +9153,40 @@ WIRE.analytics = root=>{
 /* ============================================================
    View: Export & share
    ============================================================ */
+/* Calendar files — floating local times so a 9:00 shift is 9:00 wherever the phone is */
+function icsStamp(){ const d=new Date(); const p=n=>String(n).padStart(2,"0");
+  return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"T"+p(d.getUTCHours())+p(d.getUTCMinutes())+p(d.getUTCSeconds())+"Z"; }
+function icsDT(date, min){ const d=min>=1440? addDays(date,1):date; const m=((min%1440)+1440)%1440;
+  const p=n=>String(n).padStart(2,"0");
+  return d.replace(/-/g,"")+"T"+p(Math.floor(m/60))+p(m%60)+"00"; }
+function icsEsc(x){ return String(x||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+function icsText(empId, ws){
+  const wk=getWeek(ws);
+  const list=wk.assignments.filter(a=>!empId || a.empId===empId)
+    .slice().sort((a,b)=>a.date.localeCompare(b.date)||a.startMin-b.startMin);
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Weeksolved//Schedule//EN","CALSCALE:GREGORIAN",
+    "X-WR-CALNAME:"+icsEsc((S.org.name||"Work")+" schedule")];
+  const stamp=icsStamp();
+  list.forEach(a=>{
+    const e=empById(a.empId)||{name:"Staff"};
+    const sh=shiftById(a.shiftId)||{label:"Shift"};
+    const st=a.station? stationById(a.station):null;
+    const b=a.breaks||{meals:[]};
+    const meals=(b.meals||[]).filter(m=>!m.waived).map(m=>"Meal "+m2disp(m.start)+"\u2013"+m2disp(m.end)).join(", ");
+    const desc=[roleName(a.roleId), st? "Station: "+st.name:"", meals, a.topUp? (S.rules.topUpLabel||"Project time"):""].filter(Boolean).join("\n");
+    L.push("BEGIN:VEVENT",
+      "UID:"+a.id+"@weeksolved.com",
+      "DTSTAMP:"+stamp,
+      "DTSTART:"+icsDT(a.date,a.startMin),
+      "DTEND:"+icsDT(a.date,a.endMin),
+      "SUMMARY:"+icsEsc(empId? sh.label+" \u2014 "+(S.org.name||"Work") : e.name+" \u2014 "+sh.label),
+      "LOCATION:"+icsEsc([S.org.name,S.org.site].filter(Boolean).join(", ")),
+      desc? "DESCRIPTION:"+icsEsc(desc):"",
+      "END:VEVENT");
+  });
+  L.push("END:VCALENDAR");
+  return L.filter(Boolean).join("\r\n")+"\r\n";
+}
 function vExport(){
   const ws=S.currentWeek, wk=getWeek(ws);
   return `
@@ -8665,6 +9213,16 @@ function vExport(){
             <div class="mini">The PDF carries the break rules and any open items on the same page, so what you post is what you can defend.</div>
           </div>
         </div>
+        <div class="sep"></div>
+        <div class="lab">For phone calendars</div>
+        <div class="row">
+          <select id="xicwho" style="width:auto;min-width:170px">
+            <option value="">Whole team — one calendar</option>
+            ${S.employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)} — just their shifts</option>`).join("")}
+          </select>
+          <button class="btn" id="xics">Calendar file (.ics)</button>
+        </div>
+        <div class="mini">Opens straight into Google Calendar, Apple Calendar or Outlook. Send each person theirs and the week lands on their phone — meals, station and all.</div>
       </div>
     </div>
     <div class="card"><header><h3>Everything</h3></header><div class="body stack">
@@ -8681,6 +9239,15 @@ function vExport(){
 WIRE.export = root=>{
   const on=(id,fn)=>{ const b=root.querySelector(id); if(b) b.onclick=fn; };
   on("#xsend",()=>sendModal(S.currentWeek));
+  on("#xics",()=>{
+    const who=root.querySelector("#xicwho").value||null;
+    const wk=getWeek(S.currentWeek);
+    if(!wk.assignments.length){ toast("Nothing drafted this week yet"); return; }
+    const e=who? empById(who):null;
+    if(who && !wk.assignments.some(a=>a.empId===who)){ toast((e?e.name:"They")+" has no shifts this week"); return; }
+    const base=(e? e.name.split(" ")[0].toLowerCase() : "team")+"-week-"+S.currentWeek;
+    saveFile(base+".ics", icsText(who, S.currentWeek));
+  });
   on("#xgrid",()=>saveFile("schedule-grid-"+S.currentWeek+".csv", weekGridCSV()));
   on("#xlist",()=>saveFile("shift-list-"+S.currentWeek+".csv", shiftListCSV()));
   on("#xday",()=>saveFile("day-sheet.csv", dayCSV()));
@@ -8925,7 +9492,7 @@ function costOf(a){ const e=empById(a.empId); if(!e||!e.rate) return 0;
   return reg*e.rate + ot*e.rate*1.5;
 }
 function weekCost(ws){ return peekWeek(ws).assignments.reduce((t,a)=>t+costOf(a),0) + holidayPayCost(ws); }
-function money(n){ return "$"+Math.round(n).toLocaleString([],{dateStyle:"short",timeStyle:"short"}); }
+function money(n){ return "$"+Math.round(n).toLocaleString(); }
 function haveRates(){ return !!S.org.trackCost && S.employees.some(e=>e.rate>0); }
 function costOn(){ return !!S.org.trackCost; }
 
@@ -9095,6 +9662,67 @@ async function exportPersonCards(){
 /* ============================================================
    Week: more menu, open-shift filler, drag and drop
    ============================================================ */
+function swapModal(ws){
+  ws=ws||S.currentWeek;
+  const wk=getWeek(ws);
+  if(wk.assignments.length<2){ toast("Two shifts on the board are needed for a trade"); return; }
+  const opt=a=>{ const e=empById(a.empId)||{name:"—"}, sh=shiftById(a.shiftId)||{label:"Shift"};
+    return `<option value="${a.id}">${DSHORT[a.dow]} · ${m2disp(a.startMin)}–${m2disp(a.endMin)} ${esc(sh.label)} · ${esc(e.name)}</option>`; };
+  const sorted=wk.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.startMin-b.startMin);
+  modal("Check a trade", `
+    <div class="stack">
+      <div class="help">Two people want to swap. Pick both shifts and the trade is checked against every rule — hours, turnaround, availability, coverage, licenses — before anything moves. Nothing changes until you say so.</div>
+      <div class="field"><label>First shift</label><select id="sw1">${sorted.map(opt).join("")}</select></div>
+      <div class="field"><label>Trades with</label><select id="sw2">${sorted.map(opt).join("")}</select></div>
+      <div id="swout" class="stack"></div>
+    </div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn" id="swchk">Check it</button><button class="btn primary" id="swgo" disabled>Make the trade</button>`,
+    r=>{
+      let checked=null;
+      const box=r.querySelector("#swout"), go=r.querySelector("#swgo");
+      const reset=()=>{ checked=null; go.disabled=true; box.innerHTML=""; };
+      r.querySelector("#sw1").onchange=reset; r.querySelector("#sw2").onchange=reset;
+      const doSwap=(x,y)=>{ const t=x.empId; x.empId=y.empId; y.empId=t;
+        const ex=empById(x.empId), ey=empById(y.empId);
+        if(x.roleId && ex && !ex.roleIds.includes(x.roleId)) x.roleId=ex.roleIds[0]||null;
+        if(y.roleId && ey && !ey.roleIds.includes(y.roleId)) y.roleId=ey.roleIds[0]||null;
+        applyBreaks(x); applyBreaks(y); };
+      r.querySelector("#swchk").onclick=()=>{
+        const a1=wk.assignments.find(a=>a.id===r.querySelector("#sw1").value);
+        const a2=wk.assignments.find(a=>a.id===r.querySelector("#sw2").value);
+        if(!a1||!a2||a1===a2){ box.innerHTML='<div class="banner warn"><div>Pick two different shifts.</div></div>'; return; }
+        if(a1.empId===a2.empId){ box.innerHTML='<div class="banner warn"><div>Those are both '+esc((empById(a1.empId)||{name:"the same person"}).name)+"'s shifts — nothing to trade.</div></div>"; return; }
+        const e1=empById(a1.empId), e2=empById(a2.empId);
+        if(a1.roleId && e2 && !e2.roleIds.includes(a1.roleId)){
+          box.innerHTML='<div class="banner warn"><div><b>'+esc(e2.name)+"</b> isn't a "+esc(roleName(a1.roleId).toLowerCase())+", which that shift requires. The trade can't work as-is.</div></div>"; return; }
+        if(a2.roleId && e1 && !e1.roleIds.includes(a2.roleId)){
+          box.innerHTML='<div class="banner warn"><div><b>'+esc(e1.name)+"</b> isn't a "+esc(roleName(a2.roleId).toLowerCase())+", which that shift requires. The trade can't work as-is.</div></div>"; return; }
+        const before=new Set(validate(ws).map(vKey));
+        const keep1={empId:a1.empId,roleId:a1.roleId}, keep2={empId:a2.empId,roleId:a2.roleId};
+        doSwap(a1,a2);
+        const fresh=validate(ws).filter(v=>!before.has(vKey(v)));
+        /* put it back exactly */
+        a1.empId=keep1.empId; a1.roleId=keep1.roleId; a2.empId=keep2.empId; a2.roleId=keep2.roleId;
+        applyBreaks(a1); applyBreaks(a2);
+        if(!fresh.length){
+          box.innerHTML='<div class="banner info"><div><b>Clean trade.</b> Every rule still holds with '+esc(e1.name.split(" ")[0])+" and "+esc(e2.name.split(" ")[0])+" swapped.</div></div>";
+          checked={a1,a2}; go.disabled=false;
+        } else {
+          box.innerHTML='<div class="banner warn"><div><b>This trade breaks '+fresh.length+' thing'+(fresh.length===1?"":"s")+':</b><br>'+
+            fresh.slice(0,4).map(v=>esc(v.title)+" — "+esc(v.detail)).join("<br>")+
+            (fresh.length>4? "<br>…and "+(fresh.length-4)+" more":"")+
+            "</div></div>"+'<div class="mini">You can still make it if the trade matters more — it stays flagged in the conflicts list.</div>';
+          checked={a1,a2}; go.disabled=false;
+        }
+      };
+      go.onclick=()=>{
+        if(!checked) return;
+        doSwap(checked.a1, checked.a2);
+        checked.a1.locked=true; checked.a2.locked=true;
+        save(); closeModal(); render(); toast("Traded and locked");
+      };
+    });
+}
 function weekMoreModal(){
   const tpls = S.templates||[];
   modal("Week tools", `
@@ -9104,6 +9732,7 @@ function weekMoreModal(){
         ${sendOn()? `<button class="btn primary" id="msend">Send it to the team</button>`:""}
         <button class="btn" id="mclear">Clear everything that isn't locked</button>
         <button class="btn" id="mcopy">Copy last week forward</button>
+        <button class="btn" id="mswap">Check a trade — two people swapping shifts</button>
         <button class="btn" id="munlock">Unlock every shift</button>
       </div>
       <div class="sep"></div>
@@ -9130,6 +9759,7 @@ function weekMoreModal(){
     </div>`, `<button class="btn" data-close>Close</button>`,
     r=>{
       const sb=r.querySelector("#msend"); if(sb) sb.onclick=()=>{ closeModal(); sendModal(S.currentWeek); };
+      const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swapModal(S.currentWeek); };
       r.querySelector("#mclear").onclick=()=>{ const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
       r.querySelector("#munlock").onclick=()=>{ getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
       r.querySelector("#mcopy").onclick=()=>{
