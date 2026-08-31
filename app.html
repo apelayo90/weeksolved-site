@@ -6965,10 +6965,11 @@ function vDay(){
     </div>
 
     ${gapPts.length? `<div class="card"><header><h3>Where coverage dips</h3></header>
-      <div class="viollist">${collapseGaps(gapPts).map(g=>`<div class="viol-i"><span class="sv crit"></span>
+      <div class="viollist">${collapseGaps(gapPts).map((g,gi)=>`<div class="viol-i"><span class="sv crit"></span>
         <div class="tx"><strong>${m2disp(g.from)} – ${m2disp(g.to)}</strong>
-          <span>${esc(g.labels.join(" · "))}</span></div></div>`).join("")}</div>
-      <div class="body" style="border-top:1px solid var(--line)"><div class="help">Most midday dips come from meal periods stacking up. Turn on meal staggering under Scheduling rules, or add a short mid shift that overlaps the lunch hour.</div></div>
+          <span>${esc(g.labels.join(" · "))}</span></div>
+        ${stretchOptions(date, ws, g).length? `<button class="btn sm" data-covergap="${gi}" style="flex:none;margin-left:auto">Cover this</button>`:""}</div>`).join("")}</div>
+      <div class="body" style="border-top:1px solid var(--line)"><div class="help">Cover this stretches a shift already on the day — someone stays later or comes in earlier, with any overtime priced before you decide. Midday dips often come from meals stacking up: meal staggering under Scheduling rules helps too.</div></div>
     </div>`:""}
     `}
   </div>`;
@@ -7060,6 +7061,64 @@ function reviewCard(ws, wk, V, crit, warn, wantSlots, roster){
   </div>`;
 }
 
+/* Cover a dip by stretching a shift already on the day — the missing member of
+   the fix family: keep someone later, or bring someone in earlier, with the
+   overtime consequence stated up front. Only ever touches shifts on that day,
+   never invents one, and never breaks the longest-shift rule. */
+function stretchOptions(date, ws, g){
+  const wk=S.weeks[ws]; if(!wk) return [];
+  const maxLen=(S.rules.maxShiftH||12)*60, otLine=(S.org.otWeeklyH||40)*60;
+  const out=[];
+  wk.assignments.filter(a=>a.date===date && !a.topUp && !a.callout).forEach(a=>{
+    const e=empById(a.empId); if(!e||!e.active) return;
+    /* ends at or before the dip starts — keep them later, through the dip */
+    if(a.endMin<=g.from && g.to-a.endMin<=300){
+      const add=g.to-a.endMin;
+      if((a.endMin+add)-a.startMin<=maxLen && add>0)
+        out.push({aId:a.id, e, side:"end", add, newT:a.endMin+add,
+          label:"Keep "+e.name+" until "+m2disp(a.endMin+add)});
+    }
+    /* starts at or after the dip ends — bring them in earlier */
+    if(a.startMin>=g.to && a.startMin-g.from<=300){
+      const add=a.startMin-g.from;
+      if(a.endMin-(a.startMin-add)<=maxLen && add>0)
+        out.push({aId:a.id, e, side:"start", add, newT:a.startMin-add,
+          label:"Bring "+e.name+" in at "+m2disp(a.startMin-add)});
+    }
+  });
+  out.forEach(o=>{
+    const wkMin=empWeekMinutes(o.e.id, ws);
+    o.ot=(wkMin+o.add)>otLine;
+    o.cost=(costOn()&&o.e.rate)? (o.add/60)*o.e.rate*(o.ot?1.5:1) : null;
+  });
+  /* least impact first: regular time before overtime, shorter stretch before longer */
+  return out.sort((x,y)=>(x.ot-y.ot)||(x.add-y.add)).slice(0,4);
+}
+function stretchModal(date, ws, g){
+  const opts=stretchOptions(date, ws, g);
+  if(!opts.length) return;
+  modal("Cover "+m2disp(g.from)+" – "+m2disp(g.to), `
+    <div class="stack">
+      <div class="help">${esc(g.labels.join(" · "))}. These stretch a shift already on the day — nothing new is invented, and the longest-shift rule still holds.</div>
+      ${opts.map((o,i)=>`<button class="btn ${i===0?"bestfix":""}" data-stretch="${i}" style="justify-content:flex-start;text-align:left">
+        <span><b>${esc(o.label)}</b>${i===0?' <span class="chip acc">Recommended — least impact</span>':""}
+        <span class="mini" style="display:block">+${fmtHrs(o.add)} ${o.ot? "at overtime":"at regular time"}${o.cost? " · about "+money(o.cost):""}</span></span>
+      </button>`).join("")}
+    </div>`,
+    `<button class="btn" data-close>Leave it open</button>`,
+    (r)=>{
+      r.querySelectorAll("[data-stretch]").forEach(b=>b.onclick=()=>{
+        const o=opts[+b.dataset.stretch];
+        const wk=S.weeks[ws]; const a=wk.assignments.find(x=>x.id===o.aId);
+        if(!a){ toast("That shift changed — take another look"); closeModal(true); return; }
+        if(o.side==="end") a.endMin=o.newT; else a.startMin=o.newT;
+        a.locked=true; a.extended=true;
+        staggerDay(wk.assignments.filter(x=>x.date===date && !x.locked), wk.assignments.filter(x=>x.date===date));
+        save(); closeModal(true); render();
+        toast(o.label+" — breaks re-checked"+(o.ot? ", overtime noted":""));
+      });
+    });
+}
 function collapseGaps(pts){
   const out=[]; let cur=null;
   pts.forEach(p=>{
@@ -7070,6 +7129,14 @@ function collapseGaps(pts){
   return out;
 }
 WIRE.day = root=>{
+  root.querySelectorAll("[data-covergap]").forEach(btn=>btn.onclick=()=>{
+    const ws=S.currentWeek;
+    const wd=weekDates(ws), en=wd.find(x=>x.dow===DAYVIEW)||wd[0];
+    const d=en.date, dow=en.dow;
+    const prof=coverageProfile(d,dow,ws); if(!prof) return;
+    const gaps=collapseGaps(prof.pts.filter(p=>p.gap>0));
+    const g=gaps[+btn.dataset.covergap]; if(g) stretchModal(d, ws, g);
+  });
   const dn=root.querySelector("#dnote");
   if(dn) dn.addEventListener("input",()=>{
     const ws=S.currentWeek, wk=getWeek(ws);
