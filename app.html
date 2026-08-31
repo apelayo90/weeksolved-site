@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Weeksolved — Staff Scheduling Software with Break Compliance</title>
 <meta name="description" content="Weeksolved builds your staff schedule from your own rules: required coverage, role ratios, availability, hour caps and state meal and rest break law. Weekly and daily rotas, station sheets, holiday polls, Excel and PDF export.">
 <meta name="keywords" content="employee scheduling software, staff scheduling, shift scheduler, work schedule maker, shift planner, staff rota software, employee rota, break compliance, meal break law, rest break scheduling, California meal break, labor law scheduling, coverage planning, shift rotation, seniority scheduling, healthcare staff scheduling, pharmacy staff scheduling, clinic scheduling software, small business scheduling">
@@ -638,7 +638,12 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .phonehide{display:none!important}
   .card>header{padding:10px 12px}
   .card>.body{padding:12px}
-  .modal{max-height:calc(100dvh - 24px)}
+  .modal{max-height:calc(100dvh - 96px)}
+  .modal footer{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .scrim{padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+  .sheetbox{padding-bottom:calc(34px + env(safe-area-inset-bottom,0px))}
+  .modal .body{padding-bottom:26px}
+  input[type=text],input[type=number],input[type=time],input[type=date],input[type=email],input[type=tel],select,textarea{font-size:16px}
   #reportbtn .replbl{display:none}
   #reportbtn{border-radius:99px;width:30px;height:30px;padding:0}
   /* fingers, not cursors: keep every tap target comfortable */
@@ -854,7 +859,7 @@ function blankState(){
             allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
     weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
     bugs:[], callouts:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
-    holidays:{ list:[], poll:null, responses:[], result:null }
+    holidays:{ list:[], poll:null, responses:[], result:null, mode:"same", demand:[] }
   };
 }
 
@@ -1896,8 +1901,17 @@ function matchDemand(slots, list){
   });
   return {want, missing:want.filter(w=>!w.used), spare:left};
 }
+function holOn(dow, ws){
+  const wd = weekDates(ws).find(x=>x.dow===dow);
+  return wd? ((S.holidays.list||[]).find(h=>h.date===wd.date)||null) : null;
+}
 function expandDemand(dow, ws){
-  const rows = (demandOf(ws)[dow])||[];
+  let rows = (demandOf(ws)[dow])||[];
+  const hm = S.holidays.mode||"same";
+  if(hm!=="same" && holOn(dow, ws)){
+    if(hm==="closed") return [];
+    rows = S.holidays.demand||[];
+  }
   const slots=[];
   rows.forEach(r=>{
     const sh = shiftById(r.shiftId); if(!sh) return;
@@ -5666,7 +5680,10 @@ function demModal(dow){
     <div class="stack"><div class="grid2">
       <div class="field"><label>Shift</label><select id="ds">${S.shifts.map(s=>{const[a,b]=shiftMinutes(s);return `<option value="${s.id}">${esc(s.label)} · ${m2disp(a)}–${m2disp(b)}</option>`;}).join("")}</select></div>
       <div class="field"><label>Filled by</label><select id="dr"><option value="">Anyone on the roster</option>${S.roles.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select></div>
-      <div class="field"><label>How many</label><input type="number" id="dc" min="1" max="20" value="1"></div>
+      <div class="field"><label>How many</label><input type="number" id="dc" min="1" max="20" value="1">
+        <span class="mini">${S.rules.fillMode==="full"
+          ? "With your settings this is a floor — anyone left over still gets their contracted hours as "+esc((S.rules.topUpLabel||"project time").toLowerCase())+"."
+          : "With your settings this is exact — spare people simply aren't scheduled. To also fill everyone's contracted hours, flip “target or floor” under Settings → Rules."}</span></div>
       <div class="field"><label>Also apply to</label><select id="dall"><option value="one">Just ${DAYS[dow]}</option><option value="week">Mon–Fri</option><option value="all">Every open day</option></select></div>
     </div></div>`,
     `<button class="btn" data-close>Cancel</button><button class="btn primary" id="savedem">Add</button>`,
@@ -6131,7 +6148,7 @@ function vWeek(){
         return `<div class="dcard ${h.closed?"shut":""} ${open?"open":""}">
           <button class="dhead" data-togday="${d.dow}" aria-expanded="${open}">
             <div class="dl"><strong>${DAYS[d.dow]}</strong> <span class="mini">${esc(prettyDate(d.date))}</span>
-              ${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}
+${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(S.holidays.mode==="closed"?"closed — holiday":S.holidays.mode==="custom"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}
               <div class="mini">${h.closed?"Closed":
                 (on.length? esc(on.slice(0,3).map(a=>(empById(a.empId)||{name:"?"}).name.split(" ")[0]).join(", "))+(on.length>3?" +"+(on.length-3):"") : "nobody on")}</div></div>
             <div class="dr">${h.closed? '<span class="mini">Closed</span>'
@@ -6189,7 +6206,7 @@ function vWeek(){
         ${dates.map(d=>{
           const h=S.hours[d.dow];
           return `<div class="hcell ${h.closed?"closed":""}">
-            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
+            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(S.holidays.mode==="closed"?"closed — holiday":S.holidays.mode==="custom"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
             <div class="dd">${h.closed?"Closed":m2disp(t2m(h.open))+"–"+m2disp(t2m(h.close))}</div>
             ${covStrip(d)}
             <div style="margin-top:4px"><button class="btn sm ghost" data-openday="${d.dow}" style="padding:2px 6px;font-size:11px">Day sheet →</button></div>
@@ -7231,16 +7248,16 @@ function printDay(){
    First login — the interview that builds the whole board
    ============================================================ */
 const BIZ_TYPES=[
-  {id:"retail",   t:"Shop or retail",        d:"Store hours, opening and closing shifts", roles:["Sales associate","Shift lead","Cashier"], open:"09:00", close:"20:00", hours:"wkend", shifts:"openclose"},
-  {id:"food",     t:"Restaurant, café or bar",d:"Rushes, split cover, long days",         roles:["Server","Cook","Host"],                   open:"07:00", close:"22:00", hours:"same",  shifts:"three"},
-  {id:"clinic",   t:"Clinic or medical office",d:"Appointment hours, licensed roles",     roles:["Provider","Medical assistant","Front desk"], open:"08:00", close:"17:00", hours:"wkday", shifts:"openclose"},
-  {id:"pharmacy", t:"Pharmacy",              d:"Licensed cover, supervision ratios",     roles:["Pharmacist","Technician","Front counter"],open:"08:00", close:"20:00", hours:"wkend", shifts:"three"},
-  {id:"warehouse",t:"Warehouse or logistics", d:"Shift blocks, equipment tickets",        roles:["Picker","Forklift operator","Supervisor"],open:"06:00", close:"22:00", hours:"wkday", shifts:"halves"},
-  {id:"support",  t:"Support or call center", d:"Queue cover across long hours",          roles:["Agent","Team lead","Escalations"],        open:"07:00", close:"21:00", hours:"same",  shifts:"three"},
-  {id:"salon",    t:"Salon, spa or studio",   d:"Bookings, chair cover",                  roles:["Stylist","Assistant","Front desk"],       open:"09:00", close:"19:00", hours:"wkend", shifts:"openclose"},
-  {id:"hotel",    t:"Hotel or hospitality",   d:"Round the clock, several departments",   roles:["Front desk","Housekeeping","Maintenance"],open:"00:00", close:"23:59", hours:"always",shifts:"roundclock"},
-  {id:"security", t:"Security or facilities", d:"Continuous posts, night cover",          roles:["Officer","Supervisor"],                   open:"00:00", close:"23:59", hours:"always",shifts:"roundclock"},
-  {id:"office",   t:"Office or professional", d:"Business hours, one shift",              roles:["Staff","Manager"],                        open:"09:00", close:"17:00", hours:"wkday", shifts:"one"},
+  {id:"retail",   t:"Shop or retail",        d:"Store hours, opening and closing shifts", roles:["Sales associate","Shift lead","Cashier"], open:"09:00", close:"20:00", hours:"wkend", shifts:"openclose", rules:{holidayRush:"before", weekendDesire:"unwanted", breakMode:"lengths", restMode:"self", preferLong:false, noClopen:true}},
+  {id:"food",     t:"Restaurant, café or bar",d:"Rushes, split cover, long days",         roles:["Server","Cook","Host"],                   open:"07:00", close:"22:00", hours:"same",  shifts:"three", rules:{holidayRush:"both", weekendDesire:"neutral", breakMode:"self", restMode:"self", noClopen:true, preferLong:false}},
+  {id:"clinic",   t:"Clinic or medical office",d:"Appointment hours, licensed roles",     roles:["Provider","Medical assistant","Front desk"], open:"08:00", close:"17:00", hours:"wkday", shifts:"openclose", rules:{holidayRush:"both", holidayMode:"closed", breakMode:"assigned", restMode:"assigned", preferLong:true, maxConsec:5, noClopen:true}},
+  {id:"pharmacy", t:"Pharmacy",              d:"Licensed cover, supervision ratios",     roles:["Pharmacist","Technician","Front counter"],open:"08:00", close:"20:00", hours:"wkend", shifts:"three", rules:{holidayRush:"both", weekendDesire:"unwanted", breakMode:"assigned", restMode:"assigned", preferLong:true, noClopen:true}},
+  {id:"warehouse",t:"Warehouse or logistics", d:"Shift blocks, equipment tickets",        roles:["Picker","Forklift operator","Supervisor"],open:"06:00", close:"22:00", hours:"wkday", shifts:"halves", rules:{holidayRush:"before", breakMode:"assigned", restMode:"assigned", preferLong:true}},
+  {id:"support",  t:"Support or call center", d:"Queue cover across long hours",          roles:["Agent","Team lead","Escalations"],        open:"07:00", close:"21:00", hours:"same",  shifts:"three", rules:{holidayRush:"after", weekendDesire:"unwanted", breakMode:"assigned", restMode:"assigned", preferLong:false}},
+  {id:"salon",    t:"Salon, spa or studio",   d:"Bookings, chair cover",                  roles:["Stylist","Assistant","Front desk"],       open:"09:00", close:"19:00", hours:"wkend", shifts:"openclose", rules:{holidayRush:"before", weekendDesire:"neutral", breakMode:"self", restMode:"self", preferLong:false}},
+  {id:"hotel",    t:"Hotel or hospitality",   d:"Round the clock, several departments",   roles:["Front desk","Housekeeping","Maintenance"],open:"00:00", close:"23:59", hours:"always",shifts:"roundclock", rules:{holidayRush:"both", weekendDesire:"unwanted", breakMode:"lengths", restMode:"self", preferLong:true, noClopen:true}},
+  {id:"security", t:"Security or facilities", d:"Continuous posts, night cover",          roles:["Officer","Supervisor"],                   open:"00:00", close:"23:59", hours:"always",shifts:"roundclock", rules:{holidayRush:"none", weekendDesire:"neutral", breakMode:"self", restMode:"self", preferLong:true}},
+  {id:"office",   t:"Office or professional", d:"Business hours, one shift",              roles:["Staff","Manager"],                        open:"09:00", close:"17:00", hours:"wkday", shifts:"one", rules:{holidayRush:"none", holidayMode:"closed", breakMode:"self", restMode:"self", preferLong:false}},
   {id:"other",    t:"Something else",         d:"Start from a clean slate",               roles:["Staff","Lead"],                           open:"09:00", close:"17:00", hours:"same",  shifts:"openclose"}
 ];
 const HOURS_PRESETS=[
@@ -7284,7 +7301,7 @@ function wizard(firstRun){
     step:0, biz:"other",
     name:S.org.name||"", site:S.org.site||"", juris:S.org.jurisdiction||"CA",
     hoursPreset:"same", open:"09:00", close:"17:00",
-    dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none",
+    dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same",
     satOpen:"10:00", satClose:"16:00", satClosed:false,
     sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
     dayOff:{},                      /* "b:i" -> [dow…] they can never work */
@@ -7409,6 +7426,17 @@ function wizard(firstRun){
           </select>
         </div>
         <div class="help">Pharmacies often rush the day before a closure and the morning after. Pick it and those days count one step busier whenever a holiday you've listed is next to them.</div>
+        <div class="desrow" style="margin-top:2px">
+          <strong style="font-family:Archivo,sans-serif;font-size:13px">And on the holiday itself?</strong>
+          <select id="whmode" style="margin-left:auto">
+            <option value="same" ${W.holidayMode==="same"?"selected":""}>Same cover as that weekday</option>
+            <option value="custom" ${W.holidayMode==="custom"?"selected":""}>Its own, different cover</option>
+            <option value="closed" ${W.holidayMode==="closed"?"selected":""}>We're closed on holidays</option>
+          </select>
+        </div>
+        <div class="help">${W.holidayMode==="custom"? "You'll set what runs on a holiday — like an eighth day of the week — on the Holidays page once you're in."
+          : W.holidayMode==="closed"? "Nothing gets drafted on any holiday you list — the day simply sits empty."
+          : "A holiday drafts exactly like the weekday it lands on. Change this any time on the Holidays page."}</div>
       </div>`;
     if(k==="buckets") return `
       <div class="stack">
@@ -7584,6 +7612,15 @@ function wizard(firstRun){
         ${W.priority==="seniority"? `<div class="banner info"><div>Seniority reads each person's start date, which you haven't entered yet. Add them on the profiles later and the ladder sorts itself — until then it falls back to the order you listed people in.</div></div>`:""}
         ${W.priority==="custom"? `<div class="help">The order you typed the names in becomes the starting ladder. Drag it around any time under Shift priority.</div>`:""}
         ${W.priority==="lottery"? `<div class="help">Reshuffled every week from a seed you can re-roll — and the same seed always gives the same order, so it's auditable after the fact.</div>`:""}
+        ${W.hoursPreset==="wkday"? "" : `<div class="desrow" style="margin-top:6px">
+          <strong style="font-family:Archivo,sans-serif;font-size:13px">And weekends — wanted or not?</strong>
+          <select id="wwkend" style="margin-left:auto">
+            <option value="unwanted" ${W.weekendDesire==="unwanted"?"selected":""}>Most want them off</option>
+            <option value="wanted" ${W.weekendDesire==="wanted"?"selected":""}>People like working them</option>
+            <option value="neutral" ${W.weekendDesire==="neutral"?"selected":""}>No different</option>
+          </select>
+        </div>
+        <div class="help">Days nobody wants get rotated the same way — pegged as undesirable, weekend shifts are spread around by the pecking order above instead of landing on the same people every week. Adjustable per day later under Shift priority.</div>`}
       </div>`;
     if(k==="cost") return `
       <div class="stack">
@@ -7699,20 +7736,25 @@ function wizard(firstRun){
         ${listed? `<b>${listed} listed.</b>${W.headcount? (listed<W.headcount? " You said about "+W.headcount+" — "+(W.headcount-listed)+" to go." : listed>W.headcount? " That's more than the "+W.headcount+" you said, which is fine." : " That matches what you said.") : ""}`
                 : "<b>Nothing listed yet.</b> Add at least one name to carry on."}</div></div>
       ${listed? `<div class="scroll" style="max-height:210px;margin-top:12px"><table>
-        <thead><tr><th>Name</th><th style="width:140px">Bucket</th><th style="width:140px">Type</th><th style="width:110px">Hours cap</th></tr></thead>
+        <thead><tr><th>Name</th><th style="width:130px">Bucket</th><th style="width:130px">Type</th><th style="width:92px">Min hrs</th><th style="width:92px">Max hrs</th></tr></thead>
         <tbody>${allNames().map(pn=>{ const key=pn.b+":"+pn.i, pp=W.people[key]||{};
           return `<tr><td><strong>${esc(pn.name)}</strong></td><td class="mini">${esc(W.buckets[pn.b]||"")}</td>
             <td><select class="wpt" data-k="${key}">${Object.keys(TYPES).map(t=>`<option value="${t}" ${(pp.type||"FT")===t?"selected":""}>${TYPES[t]}</option>`).join("")}</select></td>
+            <td><input type="number" class="wmn" data-k="${key}" min="0" max="80" value="${pp.minH!=null? pp.minH : (pp.type==="PT"?16:pp.type==="PRN"?0:pp.type==="TEMP"?24:32)}"></td>
             <td><input type="number" class="wph" data-k="${key}" min="0" max="80" value="${pp.maxH|| (pp.type==="PT"?28:pp.type==="PRN"?20:40)}"></td></tr>`;
         }).join("")}</tbody></table></div>
-        <div class="mini" style="margin-top:8px">Everyone starts available all week — narrow anyone's hours on their profile once you're in.</div>`:""}`;
+        <div class="mini" style="margin-top:8px">Min hrs are guaranteed hours — the drafter fills everyone to their minimum on its own and flags anyone it couldn't. Everyone starts available all week; narrow anyone's hours on their profile once you're in.</div>`:""}`;
     box.querySelectorAll(".wpt").forEach(i=>i.onchange=()=>{ const k=i.dataset.k;
       W.people[k]=W.people[k]||{}; W.people[k].type=i.value;
       const h=box.querySelector('.wph[data-k="'+k+'"]');
       if(h) h.value = i.value==="PT"?28 : i.value==="PRN"?20 : i.value==="TEMP"?32 : 40;
-      W.people[k].maxH=+((h||{}).value)||40; });
+      W.people[k].maxH=+((h||{}).value)||40;
+      const mn=box.querySelector('.wmn[data-k="'+k+'"]');
+      if(mn){ mn.value = i.value==="PT"?16 : i.value==="PRN"?0 : i.value==="TEMP"?24 : 32; W.people[k].minH=+mn.value||0; } });
     box.querySelectorAll(".wph").forEach(i=>i.oninput=()=>{ const k=i.dataset.k;
       W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
+    box.querySelectorAll(".wmn").forEach(i=>i.oninput=()=>{ const k=i.dataset.k;
+      W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
   }
 
   function paint(){
@@ -7753,7 +7795,8 @@ function wizard(firstRun){
       collect(); W[g]=v;
       if(g==="biz"){ const bt=BIZ_TYPES.find(x=>x.id===v);
         if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=bt.shifts;
-                W.bucketCount=bt.roles.length; W.buckets=bt.roles.concat(["","","",""]).slice(0,4); W.shifts=[]; W.perShift={}; } }
+                W.bucketCount=bt.roles.length; W.buckets=bt.roles.concat(["","","",""]).slice(0,4); W.shifts=[]; W.perShift={};
+                if(bt.rules) Object.assign(W, bt.rules); } }
       if(g==="shiftPreset"){ W.shifts=[]; W.perShift={}; }
       if(g==="hoursPreset"){ W.shifts=[]; W.perShift={}; }
       paint();
@@ -7786,6 +7829,8 @@ function wizard(firstRun){
       g.querySelectorAll("button").forEach(b=>b.onclick=()=>{ W.dayLoad[i]=+b.dataset.v; collect(); paint(); });
     });
     const whr=r.querySelector("#whrush"); if(whr) whr.onchange=()=>{ W.holidayRush=whr.value; };
+    const wwk=r.querySelector("#wwkend"); if(wwk) wwk.onchange=()=>{ W.weekendDesire=wwk.value; };
+    const whm=r.querySelector("#whmode"); if(whm) whm.onchange=()=>{ W.holidayMode=whm.value; paint(); };
     r.querySelectorAll(".daytog").forEach(btn=>btn.onclick=()=>{
       const k=btn.dataset.k, d=+btn.dataset.d;
       W.dayOff=W.dayOff||{}; const cur=W.dayOff[k]||[];
@@ -7863,6 +7908,7 @@ function wizard(firstRun){
     r.querySelectorAll(".wse").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.dataset.i]||{}; W.shifts[+i.dataset.i].end=i.value; });
     r.querySelectorAll(".wpt").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].type=i.value; });
     r.querySelectorAll(".wph").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
+    r.querySelectorAll(".wmn").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
     r.querySelectorAll(".wneed").forEach(i=>{ W.perShift[i.dataset.s+":"+i.dataset.r]=+i.value||0; });
     if(g("#wbud")) W.budget=+g("#wbud").value||0;
   }
@@ -7898,7 +7944,7 @@ function wizard(firstRun){
       const roleId=N.roles[pn.b]? N.roles[pn.b].id : (N.roles[0]&&N.roles[0].id);
       const off=(W.dayOff||{})[pn.b+":"+pn.i]||[];
       return {id:uid("e"),name:pn.name,email:"",phone:"",roleIds:roleId?[roleId]:[],type,
-        minH: type==="PRN"?0:Math.max(0,Math.round(maxH*0.8)), maxH, maxD: type==="FT"?5:4,
+        minH: Math.min(maxH, pp.minH!=null? pp.minH : (type==="PRN"?0:Math.max(0,Math.round(maxH*0.8)))), maxH, maxD: type==="FT"?5:4,
         avail:[0,1,2,3,4,5,6].map(d=>({ok:!off.includes(d),from:"00:00",to:"23:59"})),
         prefShiftIds:[],avoidShiftIds:[],prefDaysOff:[],canOpen:true,canClose:true,
         hoursMode:"range",
@@ -7961,8 +8007,10 @@ function wizard(firstRun){
     N.rules.sendOut=!!W.sendOut;
     N.dayLoad=(W.dayLoad||[0,1,0,-1,0,1,0]).slice();
     N.rules.holidayRush=W.holidayRush||"none";
+    N.holidays.mode=W.holidayMode||"same";
     N.priority.mode=W.priority; N.priority.order=N.employees.map(e=>e.id); N.priority.strength=2;
     N.dayDesire = W.hoursPreset==="wkday"? [0,1,1,1,1,0,0] : [-1,1,1,1,1,0,-1];
+    if(W.hoursPreset!=="wkday"){ const wv=W.weekendDesire==="wanted"?1:W.weekendDesire==="neutral"?0:-1; N.dayDesire[0]=wv; N.dayDesire[6]=wv; }
     /* requests entered during setup */
     N.requests = W.reqs.map(r=>({id:uid("q"), empId:(N.employees[r.pi]||{}).id, kind:r.kind, hard:!!r.hard,
       from:r.from, to:r.to, shiftId:(N.shifts[r.shiftIdx]||{}).id||null, time:r.time, num:r.num,
@@ -8758,6 +8806,31 @@ function vHolidays(){
             <option value="both" ${holRush()==="both"?"selected":""}>Both</option>
           </select>
         </div>
+        <div class="row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">
+          <div><strong style="font-size:13px">What runs on the holiday itself?</strong>
+            <div class="mini">A holiday can draft like the weekday it lands on, carry its own cover, or sit closed.</div></div>
+          <select id="holmode" style="margin-left:auto">
+            <option value="same" ${(S.holidays.mode||"same")==="same"?"selected":""}>Same as that weekday</option>
+            <option value="custom" ${S.holidays.mode==="custom"?"selected":""}>Its own cover, set below</option>
+            <option value="closed" ${S.holidays.mode==="closed"?"selected":""}>Closed — draft nothing</option>
+          </select>
+        </div>
+        ${S.holidays.mode==="custom"? `
+        <div class="stack" style="gap:6px;margin-top:10px">
+          ${(S.holidays.demand||[]).length? (S.holidays.demand||[]).map((r,i)=>{
+            const sh=shiftById(r.shiftId)||{label:"(deleted shift)"};
+            return `<div class="desrow"><strong style="font-size:13px">${(r.count||1)} × ${esc(sh.label)}</strong>
+              <span class="mini">${r.roleId? esc(roleName(r.roleId)) : "anyone on the roster"}</span>
+              <button class="btn sm" data-hdel="${i}" style="margin-left:auto">Remove</button></div>`;
+          }).join("") : `<div class="mini">Nothing yet — every listed holiday drafts empty until you add what should run.</div>`}
+          <div class="row" style="gap:6px;flex-wrap:wrap">
+            <select id="hdsh">${S.shifts.map(x=>`<option value="${x.id}">${esc(x.label)}</option>`).join("")}</select>
+            <select id="hdrole"><option value="">Anyone</option>${S.roles.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>
+            <input type="number" id="hdct" min="1" max="20" value="1" style="width:76px">
+            <button class="btn sm primary" id="hdadd">Add</button>
+          </div>
+          <div class="mini">This one pattern is used on every holiday in your list — think of it as an eighth day of the week. The "Coverage needed" numbers above still drive the holiday poll.</div>
+        </div>`:""}
       </div>
     </div>
 
@@ -8854,6 +8927,13 @@ function vHolidays(){
 WIRE.holidays = root=>{
   root.querySelector("#addhol").onclick=()=>holModal(null);
   const hr=root.querySelector("#holrush"); if(hr) hr.onchange=()=>{ S.rules.holidayRush=hr.value; save(); toast(hr.value==="none"?"Holiday rush off":"Rush days now count busier when drafting"); };
+  const hm=root.querySelector("#holmode"); if(hm) hm.onchange=()=>{ S.holidays.mode=hm.value; save(); render(); };
+  const ha=root.querySelector("#hdadd"); if(ha) ha.onclick=()=>{
+    const shId=root.querySelector("#hdsh").value; if(!shId){ toast("Add a shift first under Roles & shifts"); return; }
+    S.holidays.demand=S.holidays.demand||[];
+    S.holidays.demand.push({shiftId:shId, roleId:root.querySelector("#hdrole").value||null, count:Math.max(1,+root.querySelector("#hdct").value||1)});
+    save(); render(); };
+  root.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{ S.holidays.demand.splice(+b.dataset.hdel,1); save(); render(); });
   root.querySelectorAll("[data-edithol]").forEach(b=>b.onclick=()=>holModal(b.dataset.edithol));
   root.querySelectorAll("[data-delresp]").forEach(b=>b.onclick=()=>{
     S.holidays.responses=S.holidays.responses.filter(r=>r.empId!==b.dataset.delresp); save(); render(); });
@@ -9367,6 +9447,8 @@ const KB=[
   a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
  {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
   a:"On the Holidays page (or in setup), say whether business spikes the day before a holiday, after, or both. Those days then count one step busier: spare hands are steered there first, drafts fill them first, and thin cover next to a holiday gets flagged. It never adds shifts on its own."},
+ {t:"Different cover on holidays", k:"holiday coverage different closed cover staffing skeleton crew reduced hours draft", go:"holidays",
+  a:"On the Holidays page, 'What runs on the holiday itself?' has three answers: draft the holiday like the weekday it lands on; give holidays their own cover — one pattern you build like an eighth day of the week, used on every listed holiday; or closed, so nothing is drafted at all. Set it in setup or change it any time."},
  {t:"Is this legal advice?", k:"legal advice lawyer liability responsible sued law compliance guarantee promise", go:"rules",
   a:"No. Weeksolved applies published state break rules to help you schedule, and flags problems it can see — but it's a scheduling tool, not a law firm. You review every schedule before it goes up, and responsibility for complying with the laws that apply to your business stays with you. When something's unusual (waivers, union agreements, local ordinances), check with a professional."},
  {t:"Report a problem", k:"bug problem report broken error wrong crash issue feedback", go:null,
