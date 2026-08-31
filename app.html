@@ -188,7 +188,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}
 th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
 td{padding:8px 10px;border-bottom:1px solid var(--line)}
 tr:last-child td{border-bottom:0}
-.scroll{overflow-x:auto}
+.scroll{overflow-x:auto;overscroll-behavior-x:contain}
 .empty{padding:30px 18px;text-align:center;color:var(--muted);font-size:13px}
 .empty strong{display:block;color:var(--ink);font-weight:600;margin-bottom:4px;font-family:"Archivo","Public Sans",sans-serif}
 .help{font-size:12px;color:var(--muted);line-height:1.5}
@@ -214,7 +214,7 @@ tr:last-child td{border-bottom:0}
 .modal{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.28);width:100%;min-width:0;max-width:min(640px,100%);max-height:92vh;display:flex;flex-direction:column;margin:auto}
 .modal>header{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
 .modal>header h3{font-size:15px;font-weight:600;flex:1}
-.modal .body{padding:18px;overflow-y:auto}
+.modal .body{padding:18px;overflow-y:auto;overscroll-behavior:contain}
 .modal>footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:var(--surface2);border-radius:0 0 10px 10px}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw}
 
@@ -4283,8 +4283,11 @@ window.addEventListener("resize", ()=>{
   else WAS_PHONE=now;
 });
 
+let LAST_VIEW=null;
 function render(){
   WAS_PHONE = isPhone();
+  const keepY = (LAST_VIEW===VIEW)? window.scrollY : null;
+  LAST_VIEW=VIEW;
   renderNav();
   renderTabs();
   const t=TITLES[VIEW]||["",""];
@@ -4301,6 +4304,7 @@ function render(){
   pane.innerHTML = fn? fn() : "";
   if(WIRE[VIEW]) WIRE[VIEW](pane);
   wireCommon(pane);
+  if(keepY!=null) requestAnimationFrame(()=>window.scrollTo(0, keepY));
 }
 const WIRE={};
 
@@ -7963,8 +7967,13 @@ function wizard(firstRun){
       W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
   }
 
+  let PAINT_STEP=-1;
   function paint(){
     const r=$("#modalroot");
+    const prevBody=r.querySelector(".modal .body");
+    const keep = (PAINT_STEP===W.step && prevBody)? prevBody.scrollTop : 0;
+    const sameStep = PAINT_STEP===W.step;
+    PAINT_STEP=W.step;
     const last = W.step===STEPS.length-1;
     r.innerHTML=`<div class="scrim"><div class="modal" style="max-width:760px">
       <header><h3>${esc(STEPS[W.step].t)}</h3>
@@ -7979,6 +7988,7 @@ function wizard(firstRun){
         <button class="btn ghost" id="wskip">${last?"":"Skip to the end"}</button>
         <button class="btn primary" id="wnext">${last?"Build it":"Next"}</button>
       </footer></div></div>`;
+    { const nb=r.querySelector(".modal .body"); if(nb && sameStep && keep) nb.scrollTop=keep; }
     r.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal());
     const wex=r.querySelector("#wexplore");
     if(wex) wex.onclick=()=>{ closeModal(true); toast("Look around — Set up my business on the Home screen restarts the questions any time"); };
