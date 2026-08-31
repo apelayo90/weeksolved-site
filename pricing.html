@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weeksolved Pricing — Staff Scheduling Software</title>
+<meta name="description" content="Simple flat pricing for Weeksolved staff scheduling: per location, not per employee. No per-user fees, no employee accounts required. Free during the tester program.">
+<link rel="canonical" href="https://weeksolved.com/pricing.html">
+<meta property="og:site_name" content="Weeksolved">
+<meta property="og:title" content="Weeksolved Pricing — flat per location, never per employee">
+<meta property="og:description" content="Staff scheduling with state break-law compliance. One flat price per location — your staff installs nothing.">
+<meta property="og:url" content="https://weeksolved.com/pricing.html">
+<meta name="theme-color" content="#1c6a66">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+ {"@type":"Question","name":"Does Weeksolved charge per employee?",
+  "acceptedAnswer":{"@type":"Answer","text":"No. Weeksolved is priced flat per location. Your staff never needs accounts or app installs, so there is nothing to count seats for — a team of 8 and a team of 40 at one location pay the same."}},
+ {"@type":"Question","name":"Is there a free trial?",
+  "acceptedAnswer":{"@type":"Answer","text":"Yes — 30 days, no credit card, every feature included. Scheduling runs on a weekly rhythm, so you get four full scheduling cycles to judge it."}},
+ {"@type":"Question","name":"What does the Pro plan add?",
+  "acceptedAnswer":{"@type":"Answer","text":"The compliance engine: your state's meal and rest break rules applied to every drafted shift, staggered meals that never drop coverage below your minimums, license and certification expiry tracking, and the printable compliance paper trail."}}
+]}
+</script>
+<style>
+:root{
+  --bg:#f2f5f4; --surface:#ffffff; --sunken:#e8edec;
+  --ink:#18211f; --ink2:#3c4a47; --muted:#697773;
+  --line:#d2d8d6; --line-strong:#7d8b87;
+  --accent:#1c6a66; --accent-soft:#dcebe9; --on-accent:#fff;
+  --ok:#2c7a4b; --ok-soft:#dcefe2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#101514; --surface:#191f1e; --sunken:#131817;
+    --ink:#e7ecea; --ink2:#c2ccc9; --muted:#8d9b97;
+    --line:#2c3634; --line-strong:#778682;
+    --accent:#4cb3a9; --accent-soft:#173432; --on-accent:#0c1211;
+    --ok:#5cb87f; --ok-soft:#1a2f22;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1020px;margin:0 auto;padding:0 20px 60px}
+header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--on-accent);
+  display:grid;place-items:center;font-weight:800;font-size:15px;letter-spacing:.02em}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.01em}
+header.top a.back{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:600;font-size:13.5px}
+h1{font-size:clamp(26px,5vw,38px);letter-spacing:-.02em;line-height:1.15;margin:26px 0 10px;text-align:center;text-wrap:balance}
+.sub{color:var(--muted);text-align:center;max-width:56ch;margin:0 auto 8px;font-size:16px}
+.beta{display:flex;justify-content:center;margin:18px 0 30px}
+.beta span{background:var(--ok-soft);color:var(--ok);border-radius:99px;padding:8px 16px;font-weight:700;font-size:13.5px}
+.toggle{display:flex;justify-content:center;gap:0;margin-bottom:26px}
+.toggle button{font:inherit;font-weight:600;font-size:13.5px;padding:8px 18px;border:1px solid var(--line-strong);
+  background:var(--surface);color:var(--ink2);cursor:pointer}
+.toggle button:first-child{border-radius:8px 0 0 8px}
+.toggle button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.toggle button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.toggle .save{font-size:11.5px;font-weight:700;opacity:.85;margin-left:6px}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:stretch}
+.tier{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px 22px;display:flex;flex-direction:column}
+.tier.hot{border-color:var(--accent);box-shadow:0 8px 28px rgba(28,106,102,.14);position:relative}
+.tier.hot .flag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;border-radius:99px;padding:4px 12px;white-space:nowrap}
+.tn{font-weight:800;font-size:16px}
+.tfor{color:var(--muted);font-size:12.5px;margin:2px 0 14px}
+.price{font-size:34px;font-weight:800;letter-spacing:-.02em}
+.price small{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0}
+.per{color:var(--muted);font-size:12px;margin:2px 0 16px;min-height:16px}
+ul.feats{list-style:none;margin:0 0 20px;padding:0;font-size:13.5px;color:var(--ink2)}
+ul.feats li{padding:5px 0 5px 24px;position:relative}
+ul.feats li::before{content:"✓";position:absolute;left:2px;color:var(--ok);font-weight:800}
+ul.feats li.hd{padding-left:0;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:4px}
+ul.feats li.hd::before{content:""}
+.cta{margin-top:auto;display:block;text-align:center;text-decoration:none;font-weight:700;font-size:14px;
+  border-radius:9px;padding:12px;border:1px solid var(--line-strong);color:var(--ink)}
+.tier.hot .cta{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.taxline{text-align:center;color:var(--muted);font-size:12.5px;margin:18px 0 40px}
+.why{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px;margin-bottom:40px}
+.why h2{margin:0 0 8px;font-size:20px;letter-spacing:-.01em}
+.why p{margin:0;color:var(--ink2);max-width:74ch}
+.why .math{margin-top:14px;background:var(--sunken);border-radius:9px;padding:14px 16px;font-size:13.5px;color:var(--ink2)}
+.faq{max-width:760px;margin:0 auto}
+.faq h2{font-size:20px;letter-spacing:-.01em;margin:0 0 14px}
+.faq details{border:1px solid var(--line);border-radius:9px;background:var(--surface);margin-bottom:8px;padding:0 16px}
+.faq summary{cursor:pointer;font-weight:600;font-size:14px;padding:13px 0}
+.faq details p{color:var(--ink2);font-size:13.5px;margin:0 0 14px}
+footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px}
+footer a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mark">WS</div><div class="brand">Weeksolved</div>
+    <a class="back" href="/">Open the app →</a>
+  </header>
+
+  <h1>One flat price per location.<br>Never per employee.</h1>
+  <p class="sub">Your staff installs nothing and needs no accounts — so there are no seats to count.
+    A team of 8 and a team of 40 pay exactly the same.</p>
+
+  <div class="beta"><span>Free for everyone during the tester program — billing hasn't started</span></div>
+
+  <div class="toggle" role="group" aria-label="Billing period">
+    <button id="tmon" aria-pressed="false">Monthly</button>
+    <button id="tann" aria-pressed="true">Annual <span class="save">2 months free</span></button>
+  </div>
+
+  <div class="tiers">
+    <div class="tier">
+      <div class="tn">Solo</div>
+      <div class="tfor">One location, the essentials</div>
+      <div class="price" data-mon="$29" data-ann="$24">$24<small> /mo</small></div>
+      <div class="per" data-mon="billed monthly" data-ann="$290 billed yearly">$290 billed yearly</div>
+      <ul class="feats">
+        <li>Automatic weekly drafts from your own rules</li>
+        <li>Coverage minimums, role ratios, hour caps</li>
+        <li>Requests inbox with plain-English outcomes</li>
+        <li>Fair rotation for the sought-after shifts</li>
+        <li>Excel &amp; PDF export, printable day sheets</li>
+        <li>Works on phone, tablet and computer</li>
+      </ul>
+      <a class="cta" href="/">Start free</a>
+    </div>
+
+    <div class="tier hot">
+      <span class="flag">Most popular</span>
+      <div class="tn">Pro</div>
+      <div class="tfor">One location, with the law on your side</div>
+      <div class="price" data-mon="$49" data-ann="$41">$41<small> /mo</small></div>
+      <div class="per" data-mon="billed monthly" data-ann="$490 billed yearly">$490 billed yearly</div>
+      <ul class="feats">
+        <li class="hd">Everything in Solo, plus</li>
+        <li>Your state's meal &amp; rest break law on every shift</li>
+        <li>Staggered meals that never break your minimums</li>
+        <li>License &amp; certification expiry tracking</li>
+        <li>Station assignments with meal-break relief</li>
+        <li>PTO balances with accrual rules</li>
+        <li>The printable compliance paper trail</li>
+      </ul>
+      <a class="cta" href="/">Start free</a>
+    </div>
+
+    <div class="tier">
+      <div class="tn">Multi</div>
+      <div class="tfor">Three locations or more</div>
+      <div class="price" data-mon="$39" data-ann="$33">$33<small> /location/mo</small></div>
+      <div class="per" data-mon="billed monthly" data-ann="billed yearly">billed yearly</div>
+      <ul class="feats">
+        <li class="hd">Everything in Pro, plus</li>
+        <li>Every location on one account</li>
+        <li>Per-location rules, hours and teams</li>
+        <li>Priority answers from a real person</li>
+      </ul>
+      <a class="cta" href="/">Talk to us above 10 locations</a>
+    </div>
+  </div>
+
+  <p class="taxline">Prices plus applicable tax. Cancel any time — your data exports freely, always.</p>
+
+  <div class="why">
+    <h2>Why flat beats per-employee</h2>
+    <p>Most scheduling apps charge $2.50–$5 per employee per month and require every staff member to
+      install an app and keep an account. Weeksolved is built the other way around: the manager runs it,
+      staff just receive their schedules — by text, email, print, or straight into their phone calendars.</p>
+    <div class="math"><b>The math for an 18-person pharmacy:</b> per-seat apps run $45–$90 every month, and grow
+      every time you hire. Weeksolved Pro is a flat $41 — the same on the day you hire your 30th tech.</div>
+  </div>
+
+  <div class="faq">
+    <h2>Fair questions</h2>
+    <details><summary>Is it really free right now?</summary>
+      <p>Yes. During the tester program everything is free — every feature, no card, no time limit beyond your
+      access code's window. When billing opens, testers get first claim on a founding price locked for as long
+      as they stay subscribed.</p></details>
+    <details><summary>What happens when the trial ends later on?</summary>
+      <p>When billing opens: 30 days free, no card up front, every feature on. If you don't continue,
+      your schedule data stays exportable — nothing is held hostage.</p></details>
+    <details><summary>Do my employees need accounts?</summary>
+      <p>No — that's the point. Only the manager signs in. Staff get their schedules however they already
+      live: text, email, print-out, or a calendar file that drops shifts into their phone.</p></details>
+    <details><summary>Why is the compliance plan the popular one?</summary>
+      <p>Because a single missed meal break in states like California costs an hour of premium pay — per person,
+      per day. Pro places every meal and rest break inside the legal window while it drafts, and prints the
+      paper trail that proves it.</p></details>
+  </div>
+
+  <footer>
+    <a href="/">Open Weeksolved</a> · Questions? Use Contact us inside the app — a person reads every message.
+  </footer>
+</div>
+<script>
+(function(){
+  var mon=document.getElementById("tmon"), ann=document.getElementById("tann");
+  function setMode(m){
+    mon.setAttribute("aria-pressed", m==="mon");
+    ann.setAttribute("aria-pressed", m==="ann");
+    document.querySelectorAll(".price").forEach(function(p){
+      var v=p.getAttribute(m==="mon"?"data-mon":"data-ann");
+      var small=p.querySelector("small");
+      p.firstChild.textContent=v;
+      if(small && !p.contains(small)) p.appendChild(small);
+    });
+    document.querySelectorAll(".per").forEach(function(p){
+      p.textContent=p.getAttribute(m==="mon"?"data-mon":"data-ann");
+    });
+  }
+  mon.onclick=function(){ setMode("mon"); };
+  ann.onclick=function(){ setMode("ann"); };
+})();
+</script>
+</body>
+</html>

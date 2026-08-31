@@ -248,6 +248,11 @@ tr:last-child td{border-bottom:0}
 .shiftblk.viol{border-left-color:var(--crit);background:var(--crit-soft);color:var(--crit)}
 .shiftblk .lk{position:absolute;top:2px;right:4px;font-size:9px;opacity:.7}
 .shiftblk.chg::before{content:"";position:absolute;top:3px;left:3px;width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.card.folded>*:not(header){display:none}
+.fixopt.bestfix{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 5%,var(--surface))}
+.hnotice{display:flex;align-items:center;gap:10px;justify-content:space-between;
+  border-left:3px solid var(--accent);background:var(--surface);border-radius:0 7px 7px 0;
+  padding:9px 12px;font-size:13px;color:var(--ink2)}
 .mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .mgrid.mhead{margin-bottom:4px;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .mgrid.mhead div{text-align:center}
@@ -632,6 +637,8 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .card>header{padding:10px 12px}
   .card>.body{padding:12px}
   .modal{max-height:calc(100dvh - 24px)}
+  #reportbtn .replbl{display:none}
+  #reportbtn{border-radius:99px;width:30px;height:30px;padding:0}
   /* fingers, not cursors: keep every tap target comfortable */
   .btn.sm{padding:10px 12px}
   .daytog{padding:10px 12px}
@@ -699,6 +706,8 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
       <h2 id="ttl">Overview</h2>
       <div class="desc" id="tdesc"></div>
       <div id="tacts" class="row"></div>
+      <button class="btn sm" id="reportbtn" aria-label="Report a problem" title="Report a problem" style="flex:none"><span class="repico">⚑</span><span class="replbl"> Report</span></button>
+      <button class="btn ghost sm" id="helpbtn" aria-label="Help and frequently asked questions" title="Help" style="flex:none;border-radius:99px;width:30px;height:30px;padding:0;font-weight:700">?</button>
     </div>
     <div class="pane" id="pane"></div>
   </div>
@@ -832,7 +841,7 @@ function blankState(){
     dayLoad:[0,0,0,0,0,0,0],          /* how busy the business is, Sun..Sat */
     priority:{ mode:"seniority", order:[], strength:2, applyTo:"desirable",
                seed:1, ledgerFrom:"posted", adjust:{} },
-    rules:{ minRestH:10, maxConsecDays:6, noClopen:true, maxShiftH:12, preferLong:false,
+    rules:{ minRestH:10, maxConsecDays:6, noClopen:true, maxShiftH:12, preferLong:false, perDiem:"ask",
             breakMode:"assigned", restMode:"assigned", staggerMeals:true,
             projectShape:"chunk", projectShare:"fair", projectMinH:4,
             sendOut:false,
@@ -842,7 +851,7 @@ function blankState(){
             fillMode:"demand", topUpLabel:"Project time",
             allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
     weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
-    bugs:[], callouts:[], support:{email:"hello@weeksolved.com", lastSent:0, remind:true},
+    bugs:[], callouts:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
     holidays:{ list:[], poll:null, responses:[], result:null }
   };
 }
@@ -1266,6 +1275,11 @@ function cloudOn(){ return !!(CLOUD && CLOUD.apiKey && window.firebase); }
 function startApp(){
   if(SHELL && !document.querySelector(".app")) document.body.innerHTML=SHELL;
   render();
+  /* first arrival: open the setup questions once, with an easy out to explore the sample */
+  if(S.sample && !(S.ui&&S.ui.wizOffered)){
+    S.ui=S.ui||{}; S.ui.wizOffered=true; save();
+    setTimeout(()=>wizard(true), 600);
+  }
   loaded = true;
   lastJSON = JSON.stringify(S);
   initTheme(); initRail();
@@ -1294,6 +1308,7 @@ async function cloudEnter(){
     return;
   }
   const p=prof.data()||{};
+  window.TESTER_ID=p.codeId||"";
   const expMs=(p.activated||0)+(p.days||30)*86400000;
   const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
   if(Date.now()>expMs || Date.now()>hardEnd){ expiredScreen(); return; }
@@ -1389,8 +1404,8 @@ function authScreen(msg, tab){
       '<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
       (tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot password?</button>':'')+
       '<p class="gfoot">'+(tab==="new"
-        ? "Codes are personal and run for 30 days from the day you create the account. Please don\'t pass yours on."
-        : "New here? Switch to New tester and use the access code you were given.")+'</p>'+
+        ? "Codes are personal and run for 30 days from the day you create the account. Please don\'t pass yours on. Everything is free during the tester program."
+        : "New here? Switch to New tester and use the access code you were given. Free while testing — <a href=\'/pricing.html\' style=\'color:inherit\'>see what it will cost later</a>.")+'</p>'+
     '</div></div>';
   const err=t=>{ document.getElementById("gerr").textContent=t; };
   document.getElementById("tabin").onclick=()=>authScreen("", "in");
@@ -1459,7 +1474,7 @@ function migrate(o){
   if(!Array.isArray(s.stations)) s.stations=[];
   if(!Array.isArray(s.bugs)) s.bugs=[];
   s.support = Object.assign({email:"", lastSent:0, remind:true}, o.support||{});
-  if(!s.support.email) s.support.email="hello@weeksolved.com";
+  if(!s.support.email || s.support.email==="hello@weeksolved.com") s.support.email="weeksolved@gmail.com";
   s.stations.forEach(x=>{ if(typeof x.double!=="boolean") x.double=false;
     if(typeof x.critical!=="boolean") x.critical=false;
     if(x.reliefFrom===undefined) x.reliefFrom=null; });
@@ -1470,6 +1485,7 @@ function migrate(o){
   if(typeof s.rules.sendOut!=="boolean") s.rules.sendOut=false;
   if(typeof s.rules.preferLong!=="boolean") s.rules.preferLong=false;
   if(typeof s.org.trackPto!=="boolean") s.org.trackPto=false;
+  if(s.rules.perDiem!=="auto") s.rules.perDiem="ask";
   if(!Array.isArray(s.callouts)) s.callouts=[];
   if(!s.rules.projectShape) s.rules.projectShape="chunk";
   if(!s.rules.projectShare) s.rules.projectShare="fair";
@@ -2075,9 +2091,24 @@ function generateSchedule(ws, opts){
   wk.assignments = assignments.sort((x,y)=> x.date.localeCompare(y.date) || x.startMin-y.startMin);
   wk.generatedAt = Date.now();
   wk.unfilled = unfilled;
+  /* per diem on auto: when nobody regular can cover, call in the on-call bench without asking */
+  if(S.rules.perDiem==="auto" && unfilled.length && S.employees.some(e=>e.active && e.onCall)){
+    const still=[];
+    unfilled.forEach(u=>{
+      const opt=optionsFor({shiftId:u.shiftId, roleId:u.roleId, date:u.date, dow:u.dow}, ws)
+        .find(o=>o.kind==="percall");
+      if(opt){
+        opt.apply();
+        const a=wk.assignments.find(x=>x.empId===opt.emp.id && x.date===u.date && x.shiftId===u.shiftId);
+        if(a) a.perDiemAuto=true;
+      } else still.push(u);
+    });
+    wk.perDiemUsed=(unfilled.length-still.length)||0;
+    wk.unfilled = still;
+  } else wk.perDiemUsed=0;
   if((S.stations||[]).length){ const T=seedTally(ws);
     dates.forEach(({date})=>{ clearAdmin(date,ws); assignStations(date,ws,T); }); }
-  return {filled:assignments.length-kept.length, unfilled};
+  return {filled:assignments.length-kept.length, unfilled:wk.unfilled, perDiem:wk.perDiemUsed||0};
 }
 
 /* Lay shifts of a given length across an open window, overlapping only as much as needed. */
@@ -2879,14 +2910,16 @@ function fixModal(ws){
           <div class="mini">Open on ${esc(dates.join(", "))}${g.slots.length>1? " — "+g.slots.length+" days":""}</div></div>
       </div>
       ${ranked.length? `<div class="stack" style="gap:6px;margin-top:9px">
-        ${ranked.map((x,i)=>`<div class="fixopt">
-          <span class="fixk ${x.o.kind}">${({percall:"per diem",overtime:"overtime",extra:"extra shift",deny:"request",move:"move",rest:"rest",free:"available"})[x.o.kind]||x.o.kind}</span>
+        ${ranked.slice(0,4).map((x,i)=>`<div class="fixopt${i===0?" bestfix":""}">
+          <span class="fixk ${x.o.kind}">${({percall:"Per diem",overtime:"Overtime shift",extra:"Extra shift",deny:"Decline a request",move:"Move someone",rest:"Bend a rest rule",free:"Available now"})[x.o.kind]||x.o.kind}</span>
           <div style="flex:1;min-width:0">
+            ${i===0? `<span class="chip ok" style="margin-bottom:3px">Recommended — ${({free:"breaks no rules at all",percall:"that's what per diem is for",extra:"inside everyone's limits",overtime:"costs money but bends nothing else",deny:"one person disappointed, everyone covered",move:"reshuffles rather than breaks",rest:"the smallest bend available"})[x.o.kind]||"least impact of the options here"}</span>`:""}
             <strong>${esc(x.o.title)}${x.dates.length>1? " — any of "+x.dates.map(d=>prettyDate(d.date)).join(", ") : " on "+prettyDate(x.dates[0].date)}</strong>
             <div class="mini">${esc(x.o.why)}</div></div>
           <div class="row" style="gap:6px;flex:none">
             ${x.dates.map((d,di)=>`<button class="btn sm ${i===0&&di===0?"primary":""}" data-fixgo="${gi}:${ranked.indexOf(x)}:${di}">${x.dates.length>1? prettyDate(d.date) : "Do it"}</button>`).join("")}
           </div></div>`).join("")}
+        ${ranked.length>4? `<div class="mini">${ranked.length-4} weaker option${ranked.length-4===1?"":"s"} not shown — the ones above bend the fewest rules.</div>`:""}
       </div>`
       : `<div class="banner crit" style="margin-top:9px"><div><b>Nothing on your roster can cover this.</b> Everyone qualified is either away, at their limit, or already on that day. The realistic answers are a new hire, a shorter shift you'd need to define under Roles &amp; shifts, or accepting the gap.</div></div>`}
     </div>`;
@@ -2894,7 +2927,7 @@ function fixModal(ws){
 
   modal("Cover the gaps", `
     <div class="stack">
-      <p class="whead">${slots.length} shift${slots.length===1?"":"s"} couldn't be filled by the rules as they stand. Here's every way out, worked out for you — pick one and it's done, locked so the next draft doesn't undo it.</p>
+      <p class="whead">${slots.length} shift${slots.length===1?"":"s"} couldn't be filled by the rules as they stand. Only the best ways out are shown, least disruptive first — pick one and it's done, locked so the next draft doesn't undo it.</p>
       ${body}
     </div>`,
     `<button class="btn" data-close>Leave them open</button>`,
@@ -3793,6 +3826,17 @@ function logBug(rec){
   else { rec.seen=1; S.bugs.push(rec); }
   if(S.bugs.length>200) S.bugs = S.bugs.slice(-200);
   lsSave();
+  /* quietly file it upstream too, so reports arrive without anyone pressing send */
+  try{
+    if(typeof FB!=="undefined" && FB && FB.user){
+      const b=twin||rec;
+      FB.db.doc("reports/"+FB.user.uid+"_"+b.id).set({
+        uid:FB.user.uid, tester:(window.TESTER_ID||""), at:b.at, kind:b.kind||"", auto:!!b.auto,
+        note:String(b.note||"").slice(0,500),
+        ctx:String(typeof b.ctx==="string"? b.ctx : JSON.stringify(b.ctx||"")).slice(0,300), seen:b.seen||1
+      }).catch(()=>{});
+    }
+  }catch(e){}
 }
 /* Anything the app throws is worth knowing about even if nobody reports it. */
 window.addEventListener("error", ev=>{
@@ -3848,32 +3892,27 @@ function bugDigest(){
 
 function bugModal(){
   const pending=bugsSince((S.support||{}).lastSent||0);
+  const cloud=(typeof FB!=="undefined" && FB && FB.user);
+  const here=(TITLES[VIEW]||["this screen"])[0];
   modal("Report a problem", `
     <div class="stack">
-      <p class="whead">Tell us what went wrong and it goes into this week's report. Nothing is sent on its own, and no staff names, hours or contact details ever leave this device.</p>
-      <div class="field"><label>What happened</label><select id="bgk">
+      <div class="field"><label>What went wrong?</label>
+        <textarea id="bgn" rows="4" placeholder="Say it in your own words — what you were doing, what happened, what you expected instead. One sentence is plenty."></textarea></div>
+      <div class="field"><label>What kind of problem is it? (optional)</label><select id="bgk">
         ${BUG_KINDS.map(k=>`<option value="${k[0]}">${esc(k[1])}${k[2]?" — "+esc(k[2]):""}</option>`).join("")}</select></div>
-      <div class="field"><label>Where were you?</label><select id="bgw">
-        ${Object.keys(TITLES).map(v=>`<option value="${v}" ${v===VIEW?"selected":""}>${esc(TITLES[v][0])}</option>`).join("")}
-        <option value="other">Somewhere else</option></select></div>
-      <div class="field"><label>Anything you can add</label>
-        <textarea id="bgn" rows="3" placeholder="What you were doing, and what you expected instead"></textarea>
-        <span class="mini">Optional, but one sentence makes a fault far easier to find.</span></div>
-      ${pending.length? `<div class="banner info"><div><b>${pending.length} item${pending.length===1?"":"s"} waiting to be sent.</b>
-        They go out together as one note rather than one email each.</div>
-        <button class="btn sm" id="bgsend" style="flex:none;margin-left:auto">See this week's report</button></div>`:""}
+      <div class="mini">Attached automatically: the screen you're on (${esc(here)}), the app version, and your device type — never staff names, hours, or contact details.</div>
+      ${pending.length && !cloud? `<div class="mini">${pending.length} earlier item${pending.length===1?"":"s"} will travel with it.</div>`:""}
     </div>`,
-    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="bgsave">Add it to the report</button>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="bgsave">${cloud? "Send report":"Add it to the report"}</button>`,
     r=>{
+      setTimeout(()=>{ const t=r.querySelector("#bgn"); if(t) t.focus(); }, 60);
       r.querySelector("#bgsave").onclick=()=>{
-        logBug({kind:r.querySelector("#bgk").value,
-                where:(TITLES[r.querySelector("#bgw").value]||["Somewhere else"])[0],
-                note:r.querySelector("#bgn").value.trim().slice(0,600)});
+        const note=r.querySelector("#bgn").value.trim();
+        if(!note){ toast("A few words first — even three will do"); r.querySelector("#bgn").focus(); return; }
+        logBug({kind:r.querySelector("#bgk").value, where:here, note:note.slice(0,600)});
         save(); closeModal(); render();
-        toast("Added — it'll go out with this week's report");
+        toast(cloud? "Sent — thank you. It goes straight onto the fix list." : "Added — it'll go out with this week's report");
       };
-      const sn=r.querySelector("#bgsend");
-      if(sn) sn.onclick=()=>{ closeModal(); digestModal(); };
     });
 }
 
@@ -3885,7 +3924,7 @@ function digestModal(){
     <div class="stack">
       <p class="whead">${list.length} item${list.length===1?"":"s"} since you last sent one. Send it in one go — or copy it and paste it wherever you like.</p>
       <div class="field"><label>Send it to</label>
-        <input type="email" id="dgto" value="${esc(to)}" placeholder="hello@weeksolved.com">
+        <input type="email" id="dgto" value="${esc(to)}" placeholder="weeksolved@gmail.com">
         <span class="mini">Set once and it's remembered. Leave it blank and you can still copy or download the report.</span></div>
       <div class="field"><label>The report</label>
         <textarea id="dgtxt" rows="12" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px" readonly>${esc(txt)}</textarea></div>
@@ -3935,6 +3974,7 @@ const NAV=[
   {id:"team", label:"Team", simple:true, n:()=>S.employees.length||null},
   {id:"holidays", label:"Holidays", simple:true, n:()=>S.holidays.list.length||null},
   {grp:"Tools"},
+  {id:"help", label:"Help & FAQ", simple:true},
   {id:"day", label:"Day sheet"},
   {id:"analytics", label:"Analytics"},
   {id:"export", label:"Export & share"},
@@ -3964,7 +4004,8 @@ const TITLES={
   priority:["Shift priority","Who gets first claim on the good shifts, and who gets first refusal on the bad ones."],
   analytics:["Analytics","What you scheduled, what people asked for, and what you had to turn down."],
   holidays:["Holiday poll","Rank-order poll so the least-wanted days land fairly."],
-  export:["Export & share","Excel, PDF, and printable sheets."]
+  export:["Export & share","Excel, PDF, and printable sheets."],
+  help:["Help & FAQ","Ask anything about how it works — answers are instant."]
 };
 
 function renderNav(){
@@ -4065,12 +4106,14 @@ function render(){
   renderTabs();
   const t=TITLES[VIEW]||["",""];
   $("#ttl").textContent=t[0]; $("#tdesc").textContent=t[1];
+  const hb=$("#helpbtn"); if(hb){ hb.style.display = VIEW==="help"? "none":""; hb.onclick=()=>go("help"); }
+  const rb=$("#reportbtn"); if(rb) rb.onclick=()=>bugModal();
   const nav=NAV.find(x=>x.id===VIEW);
   $("#tacts").innerHTML = (VIEW!=="home" && (VIEW==="settings" || (nav && !nav.simple)) && !advanced())
     ? '<button class="btn sm" data-go="home">← Back to home</button>' : "";
   $("#tacts").querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
   const pane=$("#pane");
-  const fn = {home:vHome, settings:vSettings, analytics:vAnalytics, overview:vOverview, week:vWeek, weeks:vWeeks, day:vDay, stations:vStations, requests:vRequests, org:vOrg, shifts:vShifts,
+  const fn = {home:vHome, help:vHelp, settings:vSettings, analytics:vAnalytics, overview:vOverview, week:vWeek, weeks:vWeeks, day:vDay, stations:vStations, requests:vRequests, org:vOrg, shifts:vShifts,
               team:vTeam, demand:vDemand, rules:vRules, priority:vPriority, holidays:vHolidays, export:vExport}[VIEW];
   pane.innerHTML = fn? fn() : "";
   if(WIRE[VIEW]) WIRE[VIEW](pane);
@@ -4099,6 +4142,22 @@ function wireCommon(root){
     }
   });
   root.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
+  /* collapsible reference cards — remembered per device, never used for anything actionable */
+  root.querySelectorAll("[data-fold]").forEach(h=>{
+    h.addEventListener("click",ev=>{
+      if(ev.target.closest("button,a,input,select")) return;   /* header controls still work */
+      const key=h.dataset.fold, card=h.closest(".card");
+      S.ui.fold=S.ui.fold||{};
+      S.ui.fold[key]=!S.ui.fold[key];
+      card.classList.toggle("folded", S.ui.fold[key]);
+      const c=h.querySelector(".foldc"); if(c) c.textContent=S.ui.fold[key]? "+":"–";
+      clearTimeout(bindSaveTimer); bindSaveTimer=setTimeout(save,400);
+    });
+  });
+}
+function folded(key){ return !!((S.ui&&S.ui.fold)||{})[key]; }
+function foldHead(key, title, hintHtml){
+  return `<header data-fold="${key}" style="cursor:pointer"><h3>${title}</h3>${hintHtml||""}<span class="mini foldc" style="flex:none;font-size:15px">${folded(key)?"+":"–"}</span></header>`;
 }
 function setPath(o,p,v){
   const k=p.split("."); let c=o;
@@ -4252,7 +4311,7 @@ function vOverview(){
 WIRE.overview = root=>{
   const su=root.querySelector("#ovsetup"); if(su) su.onclick=()=>wizard();
   const b=root.querySelector("#ovgen");
-  if(b) b.onclick=()=>{ const r=generateSchedule(); save(); toast("Drafted "+r.filled+" shifts"+(r.unfilled.length?" · "+r.unfilled.length+" could not be filled":"")); go("week"); };
+  if(b) b.onclick=()=>{ const r=generateSchedule(); save(); toast("Drafted "+r.filled+" shifts"+(r.perDiem? " · "+r.perDiem+" per diem called in":"")+(r.unfilled.length?" · "+r.unfilled.length+" could not be filled":"")); go("week"); };
 };
 
 
@@ -4297,11 +4356,12 @@ function vHome(){
 
   return `
   <div class="stack home">
-    ${bugDue()? `<div class="banner info"><div><b>${bugsSince((S.support||{}).lastSent||0).length} problem report${bugsSince((S.support||{}).lastSent||0).length===1?"":"s"} waiting.</b>
-      They go out together as one note, not one email each — takes a moment.</div>
-      <button class="btn sm" data-bugsend="1" style="flex:none;margin-left:auto">Send this week's report</button></div>`:""}
-    ${S.sample? `<div class="banner info"><div><b>You're looking at a sample business.</b> Everything here is demonstration data so you can poke around. When you're ready, run setup to replace it with your own.</div>
-      <button class="btn sm primary" id="homesetup" style="flex:none;margin-left:auto">Set up my business</button></div>`:""}
+    ${ACCESS.on && !(S.ui&&S.ui.repTip)? `<div class="hnotice"><span>Spot something wrong while testing? The <b>⚑ Report</b> button up top sends it straight to the fix list — ten seconds, no email needed.</span>
+      <button class="btn sm" id="reptipok" style="flex:none">Got it</button></div>`:""}
+    ${S.sample? `<div class="hnotice"><span>This is a <b>sample business</b> — poke around freely, then make it yours.</span>
+      <button class="btn sm primary" id="homesetup" style="flex:none">Set up my business</button></div>`:""}
+    ${bugDue()? `<div class="hnotice"><span>${bugsSince((S.support||{}).lastSent||0).length} problem report${bugsSince((S.support||{}).lastSent||0).length===1?"":"s"} ready to go out as one note.</span>
+      <button class="btn sm" data-bugsend="1" style="flex:none">Send</button></div>`:""}
     <div class="card hero">
       <div class="body">
         <div class="spread" style="align-items:flex-start;gap:18px">
@@ -4430,6 +4490,7 @@ WIRE.home = root=>{
   on("#hsetup",()=>wizard());
   on("#hsetup2",()=>wizard());
   on("#homesetup",()=>wizard());
+  on("#reptipok",()=>{ S.ui=S.ui||{}; S.ui.repTip=true; save(); render(); });
   on("#hdraft",()=>draftModal());
   on("#hpost",()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
     wk.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted and locked"); });
@@ -4612,7 +4673,7 @@ function vSettings(){
         return n? n+" item"+(n===1?"":"s")+" since you last sent a report" : "nothing at the moment";})(),
         `<button class="btn sm" data-bugopen="1">Report a problem</button>${bugsSince((S.support||{}).lastSent||0).length?' <button class="btn sm primary" data-bugsend="1">See the report</button>':""}`)}
       ${setRow("Where reports should go", ((S.support||{}).email||"not set — you can still copy or download it"),
-        `<input type="email" data-bind="support.email" value="${esc((S.support||{}).email||"")}" placeholder="hello@weeksolved.com" data-rerender="no" style="min-width:190px">`)}
+        `<input type="email" data-bind="support.email" value="${esc((S.support||{}).email||"")}" placeholder="weeksolved@gmail.com" data-rerender="no" style="min-width:190px">`)}
       ${setRow("Weekly reminder", (S.support||{}).remind!==false? "On — a nudge once a week when something is waiting" : "Off",
         sel("support.remind", [[1,"On"],[0,"Off"]], (S.support||{}).remind!==false?1:0))}
     </div></div>
@@ -4629,7 +4690,7 @@ function vSettings(){
         sel("org.trackCost", [[0,"Just hours, no money"],[1,"Show me what it costs"]], S.org.trackCost?1:0))}
       ${S.org.trackCost? setRow("Weekly labor budget", "", `<input type="number" step="50" min="0" data-bind="org.budget" value="${S.org.budget||0}" style="width:130px">`) : ""}
       ${(typeof cloudOn==="function"&&cloudOn()&&FB&&FB.user)? setRow("Your account", "Signed in as "+esc(FB.user.email||"")+" — the board saves to this account and follows you between devices",
-        `<button class="btn sm" id="setsignout">Sign out</button>`) : ""}
+        `<span class="chip acc" style="margin-right:8px">Free — tester program</span><button class="btn sm" id="setsignout">Sign out</button>`) : ""}
       ${setRow("Track PTO balances", S.org.trackPto? "Each profile carries a balance and an accrual rule; approved time off draws it down" : "No balances anywhere — time off is just dates",
         sel("org.trackPto", [[0,"Don't track balances"],[1,"Track PTO balances"]], S.org.trackPto?1:0))}
       ${setRow("Who gets paid for holidays", S.employees.filter(e=>e.active&&e.holidayPay).length+" of "+S.employees.filter(e=>e.active).length+" — set per person on their profile", "", "holidays")}
@@ -4994,10 +5055,10 @@ function vTeam(){
       ${(S.groups||[]).length && S.employees.some(e=>{const L=effLimits(e); return (L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH);})? `<div class="body" style="border-top:1px solid var(--line)"><div class="mini">* tightened by a staff group.</div></div>`:""}
     </div>
 
-    <div class="card">
-      <header><h3>Staff groups</h3>
-        <span class="hint">One set of limits applied to a whole bucket of people, instead of typing the same numbers into every profile.</span>
-        <button class="btn primary sm" id="addgrp">Add group</button></header>
+    <div class="card ${folded("teamgroups")?"folded":""}">
+      ${(function(){const n=(S.groups||[]).length; return `<header data-fold="teamgroups" style="cursor:pointer"><h3>Staff groups${n?` (${n})`:""}</h3>
+        <span class="hint">One set of limits for a whole bucket of people</span>
+        <button class="btn primary sm" id="addgrp">Add group</button><span class="mini foldc" style="flex:none;font-size:15px">${folded("teamgroups")?"+":"–"}</span></header>`;})()}
       <div class="scroll">${(S.groups||[]).length? `<table>
         <thead><tr><th>Group</th><th style="width:230px">Who's in it</th><th>What it enforces</th><th style="width:80px">People</th><th style="width:80px"></th></tr></thead>
         <tbody>${S.groups.map(g=>{
@@ -5930,6 +5991,12 @@ function vRules(){
       <label class="switch"><input type="checkbox" data-bind="rules.fairness" ${R.fairness?"checked":""}> Spread hours and weekends evenly rather than loading the same people</label>
       <label class="switch"><input type="checkbox" data-bind="rules.preferLong" ${R.preferLong?"checked":""}> Prefer fewer, longer shifts over lots of short ones</label>
       <div class="help" style="margin-left:28px">When topping people up to their hours, one 8-hour shift beats two 4-hour ones. Healthcare and retail crews usually want this on — fewer handoffs, fewer commutes for the same pay. Leave it off if you rely on short overlap shifts to cover rushes.</div>
+      <div class="field" style="max-width:420px;margin-top:6px"><label>People you keep on call (per diem)</label>
+        <select data-bind="rules.perDiem">
+          <option value="ask" ${R.perDiem!=="auto"?"selected":""}>Suggest them when a gap appears — I decide each time</option>
+          <option value="auto" ${R.perDiem==="auto"?"selected":""}>Call them in automatically when nobody else can cover</option>
+        </select>
+        <span class="mini">Either way they're never drafted for ordinary shifts — only when coverage can't be met without them.</span></div>
     </div></div></div>
 
     <div class="card"><header><h3>How the scheduler decides</h3></header><div class="body">
@@ -6588,7 +6655,7 @@ function weekMenu(ws){
         w.assignments=w.assignments.filter(a=>a.locked);
         const res=generateSchedule(ws); w.suggested=true; w.touched=true;
         S.currentWeek=ws; save(); closeModal(); render();
-        toast(res.filled+" shifts drafted"+(res.unfilled.length? ", "+res.unfilled.length+" left open":""));
+        toast(res.filled+" shifts drafted"+(res.perDiem? " · "+res.perDiem+" per diem called in":"")+(res.unfilled.length? ", "+res.unfilled.length+" left open":""));
       });
       on("#wkshape",()=>{ S.currentWeek=ws; closeModal(); weekPatternModal(ws); });
       on("#wkfix",()=>{ S.currentWeek=ws; closeModal(); fixModal(ws); });
@@ -7156,7 +7223,7 @@ function wizDefaultDemand(nShifts, nRoles, capacity){
   return {grid,total};
 }
 
-function wizard(){
+function wizard(firstRun){
   const W = {
     step:0, biz:"other",
     name:S.org.name||"", site:S.org.site||"", juris:S.org.jurisdiction||"CA",
@@ -7170,7 +7237,7 @@ function wizard(){
     people:{},                     /* "b:i" -> {type,maxH} */
     shiftPreset:"openclose", shifts:[],
     perShift:{},
-    minRest:10, maxConsec:6, noClopen:true, preferLong:false, breakMode:"assigned", restMode:"self", holPay:"ft", cycles:false, fillMode:"demand",
+    minRest:10, maxConsec:6, noClopen:true, preferLong:false, perDiem:"ask", breakMode:"assigned", restMode:"self", holPay:"ft", cycles:false, fillMode:"demand",
     mealPlan:"auto", mealSlots:["11:30","12:00","12:30"], mealCloseFrom:"13:00", mealCloseTo:"14:00",
     sendOut:false,
     topUpLabel:"Project time", projectShape:"chunk", projectShare:"fair",
@@ -7402,6 +7469,10 @@ function wizard(){
           <div class="wopts">${
             opt("preferLong",true,W.preferLong,"Fewer, longer shifts","One 8-hour shift instead of two 4-hour ones — fewer handoffs, fewer commutes for the same pay.")+
             opt("preferLong",false,W.preferLong,"Whatever fits best","Short shifts are fine — useful when you cover rushes with overlap shifts.")}</div></div>
+        <div class="field"><label>People you keep on call (per diem)</label>
+          <div class="wopts">${
+            opt("perDiem","ask",W.perDiem,"Ask me each time","A gap suggests them as one of the ways out — you decide instance by instance.")+
+            opt("perDiem","auto",W.perDiem,"Use them automatically","When nobody regular can cover, the draft calls them in on its own and tells you who it used.")}</div></div>
         <div class="sep"></div>
         <div class="help">Meals and rest breaks are usually handled differently — plenty of places put lunches on the schedule and leave the short breaks to whoever's on the floor. So they're asked separately.</div>
         <div class="field"><label>Meal periods (the unpaid one)</label>
@@ -7588,11 +7659,15 @@ function wizard(){
       <div class="wbar">${STEPS.map((x,i)=>`<i class="${i<W.step?"done":i===W.step?"now":""}"></i>`).join("")}</div>
       <div class="body">${body()}</div>
       <footer>
-        ${W.step>0? `<button class="btn" id="wback">Back</button>`:`<span style="flex:1"></span>`}
+        ${W.step>0? `<button class="btn" id="wback">Back</button>`
+          : firstRun? `<button class="btn ghost" id="wexplore">Explore the sample first</button>`
+          : `<span style="flex:1"></span>`}
         <button class="btn ghost" id="wskip">${last?"":"Skip to the end"}</button>
         <button class="btn primary" id="wnext">${last?"Build it":"Next"}</button>
       </footer></div></div>`;
     r.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal());
+    const wex=r.querySelector("#wexplore");
+    if(wex) wex.onclick=()=>{ closeModal(true); toast("Look around — Set up my business on the Home screen restarts the questions any time"); };
     /* don't let a stray Escape or scrim click eat sixteen steps of answers */
     MODAL_GUARD = W.step>0 ? ()=>{
       const foot=$("#modalroot").querySelector(".modal footer");
@@ -7806,7 +7881,7 @@ function wizard(){
       N.coverage=Object.keys(groups).map(k=>{ const [o,c]=k.split("|");
         return {id:uid("c"),kind:"min",label:"Somebody on duty whenever we're open",roleId:null,min:1,start:o,end:c,days:groups[k],mealsCount:true}; });
     }
-    N.rules.minRestH=W.minRest; N.rules.maxConsecDays=W.maxConsec; N.rules.noClopen=!!W.noClopen; N.rules.preferLong=!!W.preferLong;
+    N.rules.minRestH=W.minRest; N.rules.maxConsecDays=W.maxConsec; N.rules.noClopen=!!W.noClopen; N.rules.preferLong=!!W.preferLong; N.rules.perDiem=W.perDiem==="auto"?"auto":"ask";
     N.rules.breakMode=W.breakMode; N.rules.restMode=W.restMode; N.rules.useCycles=!!W.cycles;
     N.rules.mealPlan=W.mealPlan||"auto";
     N.rules.mealSlots=(W.mealSlots||[]).filter(Boolean).sort();
@@ -7932,15 +8007,14 @@ function vRequests(){
 
     ${(()=>{ const st=all.filter(r=>r.every&&r.every.length&&r.status!=="declined");
       if(!st.length) return "";
-      return `<div class="card"><header><h3>Standing every week</h3>
-        <span class="hint">${st.length} ongoing — these apply to every schedule until you remove them</span></header>
+      return `<div class="card ${folded("reqstand")?"folded":""}">${foldHead("reqstand","Standing every week",`<span class="hint">${st.length} ongoing — apply to every schedule until removed</span>`)}
         <div class="scroll"><table><thead><tr><th style="width:150px">Who</th><th style="width:140px">Asking</th>
           <th style="width:180px">When</th><th>Detail</th><th style="width:120px"></th></tr></thead>
         <tbody>${st.map(r=>row(r,false)).join("")}</tbody></table></div>
         <div class="body" style="border-top:1px solid var(--line)"><div class="help">If someone can <em>never</em> work a day — a standing class, a second job — it's tidier on their profile under Team, where it shows up as availability. Use a standing request when it's a preference, when it has an end date, or when you want it visible here as something you granted.</div></div>
       </div>`; })()}
 
-    ${later.length? `<div class="card"><header><h3>Further out</h3><span class="hint">Waiting for the week they fall in</span></header>
+    ${later.length? `<div class="card ${folded("reqlater")?"folded":""}">${foldHead("reqlater","Further out",`<span class="hint">${later.length} waiting for the week they fall in</span>`)}
       <div class="scroll"><table><thead><tr><th style="width:150px">Who</th><th style="width:140px">Asking</th><th style="width:150px">When</th><th>Detail</th><th style="width:120px"></th></tr></thead>
       <tbody>${later.map(r=>row(r,false)).join("")}</tbody></table></div></div>`:""}
 
@@ -9153,6 +9227,237 @@ WIRE.analytics = root=>{
 /* ============================================================
    View: Export & share
    ============================================================ */
+
+/* ============================================================
+   Help & FAQ — a knowledge base and a chat-style assistant that
+   answers plain-English questions from it. Entirely built in:
+   nothing typed here leaves the device.
+   ============================================================ */
+const KB=[
+ {t:"Draft the week", k:"draft generate build schedule create week make auto", go:"home",
+  a:"Press Draft on the Home screen (or This week). The scheduler fills every shift you've defined, placing meal and rest breaks inside your state's legal windows. It never invents a shift — if something can't be covered, it stays open and the conflicts list tells you exactly which limit stopped each person."},
+ {t:"Why is a shift open?", k:"open unfilled empty nobody uncovered blocked cant fill why still open slot", go:"week",
+  a:"An open shift means nobody cleared every limit — the conflicts list names each person and the exact reason: hour cap, turnaround, availability, a request you approved, a license, a coverage rule. Press 'Who could work it?' on the gap for the ways out: a per diem on call, an hour of overtime with the cost shown, or a request you could decline."},
+ {t:"Reject a schedule and redo it", k:"reject redo redraft different dont like change shuffle again", go:"week",
+  a:"On This week, press Draft again for a fresh take with the same rules. To steer it, open the shift, day, or person you don't like and use the redo options — you can veto a specific pairing, add a request, or just ask for a different outcome."},
+ {t:"Post the schedule", k:"post publish lock finalize final done approve", go:"week",
+  a:"Posting locks every shift and marks the week as the official copy. Edit afterwards and you'll see a 'Changed since it last went out' list so you know who to tell. Unpost from the same place if you need to rework it."},
+ {t:"Send schedules by email or text", k:"send email text sms message everyone personal share out", go:"export",
+  a:"Turn the send option on under Scheduling rules (it's asked in setup too). Then from This week or Export & share: send everyone their own shifts, or the whole week to the whole team. It opens your own mail or messages app with everything written — nothing sends until you press send there."},
+ {t:"Calendar files for phones", k:"calendar ics google apple outlook phone subscribe", go:"export",
+  a:"Export & share → 'For phone calendars'. Pick one person or the whole team and download a calendar file (.ics). Opened on a phone it drops every shift — times, station, meal — straight into Google or Apple Calendar."},
+ {t:"Meal and rest breaks", k:"meal lunch break rest legal law compliance late missing window waive", go:"rules",
+  a:"Pick your state under Business & law and every drafted shift gets its meal placed inside the legal window, with paid rest breaks laid around it. Choose under Scheduling rules whether meals are scheduled, length-only, or left to staff. A late or missing meal is flagged before you post, never after."},
+ {t:"Close for lunch / set meal times", k:"close lunch fixed slots meal times stagger closed", go:"rules",
+  a:"Scheduling rules → meal handling. Three modes: staggered automatically so the floor never empties; your own fixed lunch slots; or close the business for a stretch — while closed, coverage isn't counted against you."},
+ {t:"Coverage rules and minimums", k:"coverage minimum ratio never alone floor pharmacist supervisor", go:"demand",
+  a:"Coverage needs sets how many of each shift you want. Coverage rules add hard floors: at least N people, a role ratio (one pharmacist per three techs), or never-below rules. Floors hold even during meals. A bucket with no real minimum simply doesn't get a rule — the shift counts do the work."},
+ {t:"Stations and rotation", k:"station post position rotate assign fair drive through window", go:"stations",
+  a:"Add stations and each drafted day hands them out with fair rotation — nobody draws the worst post every day. Stations can require a role, link as swap-at-midday pairs, take a second person when someone's spare, and be marked as needing cover during meal breaks — the break sheet then names who steps in."},
+ {t:"Requests and time off", k:"request day off vacation sick ask cant work timeoff pto approve deny", go:"requests",
+  a:"Punch requests in as they arrive — day off, specific shift, hour caps — marked must or if-possible. The drafter honors what it can and tells you what it couldn't and why. Longer stretches (vacations, leave) go under Team → time off, and if PTO tracking is on, approved time off draws down their balance."},
+ {t:"PTO balances", k:"pto balance accrue accrual vacation hours bank earn", go:"team",
+  a:"Turn on 'Track PTO balances' in Settings. On each profile enter today's balance once, plus how it accrues (per week, or per 30/40 hours worked). From then on it maintains itself and shows on the Team page; booking PTO shows exactly what it draws and what's left."},
+ {t:"Licenses and certifications", k:"license certification expire lapse pharmacist rph cpr credential", go:"team",
+  a:"Mark a bucket as licensed (asked in setup, or under Roles & shifts). Each person in it can carry an expiry date — the drafter will never schedule anyone past a lapsed license, warns you 30 days out, and shows expiry chips on the Team page."},
+ {t:"Fairness and who gets good shifts", k:"fair seniority priority lottery rotate good shifts weekend spread", go:"priority",
+  a:"Shift priority decides who gets first claim on the sought-after shifts: seniority, your own order, take-turns, or an auditable lottery. A ledger tracks who's had what so the same people don't draw the short straw week after week."},
+ {t:"Overtime and hour caps", k:"overtime cap hours limit 40 ot cost time and a half", go:"team",
+  a:"Each person has a guarantee and a cap; the drafter aims for the guarantee and never passes the cap. Editing a shift shows live where it takes their week — including the overtime cost if you track rates. The week header flags anyone past the overtime line."},
+ {t:"Trade two shifts safely", k:"swap trade switch exchange cover swap shifts", go:"week",
+  a:"This week → More → 'Check a trade'. Pick the two shifts; every rule is checked — hours, turnaround, availability, coverage, licenses — before anything moves. Clean trades apply in one tap; risky ones tell you exactly what would break, and you decide."},
+ {t:"Someone called out", k:"callout call out sick noshow no show absent didnt come cover emergency", go:"week",
+  a:"Open the shift → 'Called out sick, or didn't show?' Logging keeps the record (the Team page tallies the last 90 days) and drops you straight into the list of who could legally cover it, with anyone blocked explained."},
+ {t:"Month at a glance", k:"month view calendar overview monthly", go:"weeks",
+  a:"All schedules → Month toggle. Every day shows its shift count — green posted, teal drafted — with holidays starred. Tap any day to open its sheet."},
+ {t:"Print and export", k:"print pdf excel csv export paper post wall breaksheet", go:"export",
+  a:"Export & share has the week grid and shift list for Excel, weekly and day-sheet PDFs, a printable day sheet, and one-card-per-person schedules. PDF footers name the break law applied — that's your paper trail."},
+ {t:"Day notes", k:"note day truck delivery reminder today annotation", go:"day",
+  a:"Type a note on any day sheet — 'Truck at 7am', 'Inspection' — and it shows on the printed sheet, the PDF, and in what you send to the team."},
+ {t:"Accounts and signing in", k:"account login sign in password code tester device sync move phone computer", go:null,
+  a:"Your access code creates your account — one code, one account, yours alone. Sign in on any phone or computer and your whole board is there; changes save to your account within a second or two. Codes run 30 days from the day the account was created."},
+ {t:"Forgot password", k:"forgot password reset cant login locked out email", go:null,
+  a:"On the sign-in screen, type your email and press 'Forgot password?' — a reset link arrives by email within a minute or two. Check spam if it doesn't."},
+ {t:"Working offline", k:"offline internet connection lost wifi airplane sync later", go:null,
+  a:"Keep working — everything saves on the device and sends itself up the moment you're back online. The footer tells you which state you're in."},
+ {t:"Is my data private", k:"privacy data private secure safe hidden visible others tech techs coworkers employees read access account each other", go:null,
+  a:"Your board is yours alone: it's stored under your account and no other user can read it — that's enforced by the database itself, not just the app. Nothing about your schedule appears anywhere public, and nothing leaves the app unless you send it."},
+ {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
+  a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
+ {t:"Report a problem", k:"bug problem report broken error wrong crash issue feedback", go:null,
+  a:"Use 'Report a problem' (bottom of the menu). Say what you expected and what happened — reports also collect quietly in the background so the fix crew sees crashes even when nobody writes them up. Reports never include your staff's names."},
+ {t:"Budget and labor cost", k:"budget cost money dollars labor rate spend", go:"org",
+  a:"Optional: turn on cost tracking in Settings, put rates on profiles, and the week shows live labor cost against your budget. Money never appears on anything you print or send to staff."},
+ {t:"Rotating patterns", k:"rotation 7 on 7 off alternating weeks averaged pay period cycle", go:"team",
+  a:"Turn on work cycles under Scheduling rules, then set a pattern on a profile: seven-on-seven-off, alternating weeks, or hours averaged over a pay period. The drafter schedules only their on-days and paces hours to the cycle."},
+ {t:"Holiday poll", k:"holiday christmas thanksgiving poll rank fair who works", go:"holidays",
+  a:"List your holidays, send the ranked-choice poll (it opens in your own mail or messages app), enter the answers, and the split lands so the least-wanted days are shared fairly — with an auditable result you can show anyone who grumbles."},
+ {t:"Prefer longer shifts", k:"short shifts long 8 hour 4 hour fewer prefer minimize", go:"rules",
+  a:"Scheduling rules → 'Prefer fewer, longer shifts'. When hours can be made up either way, one 8-hour shift beats two 4-hour ones — fewer handoffs and commutes. Leave it off if you cover rushes with short overlap shifts."},
+ {t:"Project time", k:"project time spare extra bodies chunk stack lead eligible", go:"rules",
+  a:"When the floor is covered and hours remain, spare time becomes project time. You choose: chunked into half or full days versus scattered, stacked on your best project person versus shared fairly, and per-person who's first in line or kept on the floor."},
+ {t:"Change what setup decided", k:"setup questions redo change answer wizard start over settings", go:"settings",
+  a:"Every answer from the setup questions lives in Settings, changeable any time. 'Run setup again' re-asks everything from scratch; 'Clear everything' empties the board (there's no undo, so back up first)."},
+ {t:"Backup and restore", k:"backup restore save file json move data export data", go:"settings",
+  a:"Settings → backup gives you a file with the whole board. Restore it on any copy of the app to carry everything over. With an account this is belt-and-braces — sync already keeps your devices matching."},
+ {t:"Busy and quiet days", k:"busy quiet day load move suggestion mismatch", go:"home",
+  a:"Tell it which days run hot and the app checks your coverage against that — if Wednesday asks for more people than busy Monday, it proposes a specific one-tap fix like moving one technician's shift, never a vague warning."}
+];
+let HCHAT=[];
+function kbAsk(q){
+  const words=(q||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w.length>2);
+  if(!words.length) return {best:null, more:[]};
+  const GENERIC={work:1,works:1,working:1,week:1,shift:1,shifts:1,schedule:1,schedules:1,people:1,person:1,staff:1,how:1,whole:1,see:1,the:1,does:1,doesnt:1,make:1,need:1};
+  const scored=KB.map(e=>{
+    let sc=0;
+    const kt=e.k+" "+e.t.toLowerCase();
+    const body=e.a.toLowerCase();
+    words.forEach(w=>{
+      const wt=GENERIC[w]? 0.5 : 3;
+      if(kt.includes(w)) sc+=wt;
+      else if(body.includes(w)) sc+=(GENERIC[w]?0.2:1);
+    });
+    return {e, sc};
+  }).sort((a,b)=>b.sc-a.sc);
+  const best=scored[0].sc>=3? scored[0].e : null;
+  const more=scored.slice(best?1:0, best?3:4).filter(x=>x.sc>=2).map(x=>x.e);
+  return {best, more};
+}
+const HCHIPS=["How do I send everyone their schedule?","Someone called out — now what?","Why is a shift still open?","How do meal breaks work?","Can two people trade shifts?"];
+function vHelp(){
+  return `
+  <div class="stack">
+    <div class="card"><header><h3>Ask anything</h3><span class="hint">Instant answers — nothing you type leaves this device</span></header>
+      <div class="body">
+        <div id="hlog" class="stack" style="gap:8px;max-height:340px;overflow-y:auto">${HCHAT.length? HCHAT.map(m=>m.html).join("")
+          : `<div style="background:var(--sunken);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;max-width:88%">
+              I can answer questions about drafting schedules, breaks and the law, stations, requests and time off, PTO, licenses, sending schedules, accounts, and printing. Ask in your own words, or start with one of these:</div>
+            <div class="row" id="hchips" style="gap:6px;flex-wrap:wrap">
+              ${HCHIPS.map(c=>`<button class="btn sm" data-hchip="${esc(c)}">${esc(c)}</button>`).join("")}</div>`}</div>
+        <div id="hsuggest" class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+        <div class="row" style="margin-top:6px">
+          <input type="text" id="hq" placeholder="Type a question…" style="flex:1" aria-label="Ask a question">
+          <button class="btn primary" id="hgo">Ask</button>
+        </div>
+      </div>
+    </div>
+    <div class="card"><header><h3>Frequently asked</h3><span class="hint">Tap a question to open the answer</span></header>
+      <div class="body stack" style="gap:6px">
+        ${KB.map((e,i)=>`<div class="faqi" style="border:1px solid var(--line);border-radius:7px">
+          <button class="faqq" data-faq="${i}" aria-expanded="false" style="all:unset;display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box;padding:10px 12px;cursor:pointer;font-weight:600;font-size:13.5px">${esc(e.t)}<span class="mini" style="flex:none">+</span></button>
+          <div class="faqa" hidden style="padding:0 12px 11px;font-size:13px;color:var(--ink2)">${esc(e.a)}${e.go? ` <a href="#" data-go="${e.go}" style="color:var(--accent)">Take me there →</a>`:""}</div>
+        </div>`).join("")}
+      </div>
+    </div>
+    <div class="card"><header><h3>Still stuck?</h3></header>
+      <div class="body">
+        <div class="spread"><div>
+          <div style="font-weight:600;font-size:13.5px">Report the problem</div>
+          <div class="mini">Say what you expected and what happened. Reports go to the people who fix things — never with your staff's names attached.</div></div>
+          <button class="btn primary" id="hbug" style="flex:none">Report a problem</button></div>
+      </div>
+    </div>
+
+    <div class="card"><header><h3>Contact us</h3><span class="hint">Questions, ideas, business — a person reads every one</span></header>
+      <div class="body stack">
+        <div class="grid2">
+          <div class="field"><label>What's it about?</label><select id="cttopic">
+            <option>A question</option><option>An idea or suggestion</option>
+            <option>Business inquiry</option><option>Something else</option></select></div>
+        </div>
+        <div class="field"><label>Your message</label>
+          <textarea id="ctmsg" rows="4" placeholder="Write it here and press send — it goes straight to the team, no email app involved."></textarea></div>
+        <div class="row">
+          <button class="btn primary" id="ctsend">Send message</button>
+          <span class="mini">A person reads every one. Replies come back to the email on your account.</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+WIRE.help = root=>{
+  const log=root.querySelector("#hlog");
+  const say=(who, html)=>{
+    const wrap=`<div style="align-self:${who==="me"?"flex-end":"flex-start"};max-width:88%;background:${who==="me"?"var(--accent-soft)":"var(--sunken)"};border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:13px">${html}</div>`;
+    HCHAT.push({html:wrap});
+    log.insertAdjacentHTML("beforeend", wrap);
+    log.scrollTop=log.scrollHeight;
+  };
+  const wireGo=()=>{ log.querySelectorAll("[data-go]").forEach(el=>el.onclick=ev=>{ ev.preventDefault(); go(el.dataset.go); }); };
+  const wireChips=()=>{
+    log.querySelectorAll("[data-hchip]").forEach(b=>b.onclick=()=>{ root.querySelector("#hq").value=b.dataset.hchip; ask(); });
+    log.querySelectorAll("[data-hvote]").forEach(b=>b.onclick=()=>{
+      const [vote,q,title]=[b.dataset.hvote, b.dataset.q, b.dataset.t];
+      const row=b.parentElement;
+      if(vote==="up"){ row.innerHTML='<span class="mini">Glad that helped.</span>'; }
+      else {
+        logBug({kind:"kbmiss", note:"Help answer didn't help: asked \""+q+"\", got \""+title+"\"", auto:false});
+        row.outerHTML='<div class="mini">Noted — that answer gets improved. Meanwhile: try other words, or '
+          +'<a href="#" id="hesc" style="color:var(--accent)">describe the problem</a> and a person will look.</div>';
+        const e2=log.querySelector("#hesc"); if(e2) e2.onclick=ev=>{ ev.preventDefault(); bugModal(); };
+      }
+    });
+  };
+  const ask=()=>{
+    const q=root.querySelector("#hq").value.trim();
+    if(!q) return;
+    root.querySelector("#hq").value="";
+    root.querySelector("#hsuggest").innerHTML="";
+    const chips=log.querySelector("#hchips"); if(chips) chips.remove();
+    say("me", esc(q));
+    const {best, more}=kbAsk(q);
+    if(best){
+      say("bot", `<b>${esc(best.t)}.</b> ${esc(best.a)}${best.go? ` <a href="#" data-go="${best.go}" style="color:var(--accent)">Take me there →</a>`:""}`
+        + `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+            <span class="row" style="gap:4px"><button class="btn sm ghost" data-hvote="up" data-q="${esc(q)}" data-t="${esc(best.t)}" aria-label="That helped">👍</button><button class="btn sm ghost" data-hvote="down" data-q="${esc(q)}" data-t="${esc(best.t)}" aria-label="That did not help">👎</button></span>
+            ${more.map(m=>`<button class="btn sm" data-hchip="${esc(m.t)}">${esc(m.t)}</button>`).join("")}</div>`);
+    } else if(more.length){
+      say("bot", `I'm not sure which of these you mean — tap one:`
+        + `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${more.map(m=>`<button class="btn sm" data-hchip="${esc(m.t)}">${esc(m.t)}</button>`).join("")}</div>`
+        + `<div class="mini" style="margin-top:6px">None of them? <a href="#" data-hbug="1" style="color:var(--accent)">Describe the problem</a> and a person will look.</div>`);
+    } else {
+      say("bot", `That one isn't in the book yet — I can only answer what's written down, and I'd rather say so than guess. Try different words, browse the questions below, or <a href="#" data-hbug="1" style="color:var(--accent)">describe the problem</a> and a person will get you a real answer.`);
+    }
+    log.querySelectorAll("[data-hbug]").forEach(el=>el.onclick=ev=>{ ev.preventDefault(); bugModal(); });
+    wireGo(); wireChips();
+  };
+  root.querySelector("#hgo").onclick=ask;
+  root.querySelector("#hq").onkeydown=e=>{ if(e.key==="Enter") ask(); };
+  /* live suggestions while typing — the fastest answer is the one you never had to send */
+  let sugT=null;
+  root.querySelector("#hq").addEventListener("input",()=>{
+    clearTimeout(sugT);
+    sugT=setTimeout(()=>{
+      const q=root.querySelector("#hq").value.trim();
+      const box=root.querySelector("#hsuggest");
+      if(q.length<4){ box.innerHTML=""; return; }
+      const {best, more}=kbAsk(q);
+      const cands=[best].concat(more).filter(Boolean).slice(0,3);
+      box.innerHTML=cands.map(m=>`<button class="btn sm ghost" data-hchip="${esc(m.t)}">${esc(m.t)}</button>`).join("");
+      box.querySelectorAll("[data-hchip]").forEach(b=>b.onclick=()=>{ root.querySelector("#hq").value=b.dataset.hchip; ask(); });
+    },200);
+  });
+  wireChips();
+  root.querySelectorAll("[data-faq]").forEach(b=>b.onclick=()=>{
+    const a=b.parentElement.querySelector(".faqa");
+    a.hidden=!a.hidden;
+    b.setAttribute("aria-expanded", String(!a.hidden));
+    b.querySelector(".mini").textContent=a.hidden? "+":"–";
+  });
+  root.querySelector("#hbug").onclick=()=>bugModal();
+  const ct=root.querySelector("#ctsend");
+  if(ct) ct.onclick=()=>{
+    const topic=root.querySelector("#cttopic").value;
+    const msg=root.querySelector("#ctmsg").value.trim();
+    if(!msg){ toast("Write the message first — even a line"); root.querySelector("#ctmsg").focus(); return; }
+    logBug({kind:"contact", note:"["+topic+"] "+msg.slice(0,500), auto:false});
+    save();
+    root.querySelector("#ctmsg").value="";
+    toast("Sent — a person will read it. Replies go to the email on your account.");
+  };
+  wireGo();
+};
+
 /* Calendar files — floating local times so a 9:00 shift is 9:00 wherever the phone is */
 function icsStamp(){ const d=new Date(); const p=n=>String(n).padStart(2,"0");
   return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"T"+p(d.getUTCHours())+p(d.getUTCMinutes())+p(d.getUTCSeconds())+"Z"; }
