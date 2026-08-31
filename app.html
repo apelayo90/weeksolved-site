@@ -210,8 +210,8 @@ tr:last-child td{border-bottom:0}
 .kpi.ok .v{color:var(--ok)}
 
 /* ---------- modal ---------- */
-.scrim{position:fixed;inset:0;background:rgba(12,18,17,.5);backdrop-filter:blur(2px);z-index:100;display:grid;place-items:center;padding:16px;overflow-y:auto}
-.modal{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.28);width:100%;max-width:640px;max-height:92vh;display:flex;flex-direction:column;margin:auto}
+.scrim{position:fixed;inset:0;background:rgba(12,18,17,.5);backdrop-filter:blur(2px);z-index:100;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:16px;overflow-y:auto}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.28);width:100%;min-width:0;max-width:min(640px,100%);max-height:92vh;display:flex;flex-direction:column;margin:auto}
 .modal>header{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
 .modal>header h3{font-size:15px;font-weight:600;flex:1}
 .modal .body{padding:18px;overflow-y:auto}
@@ -219,11 +219,23 @@ tr:last-child td{border-bottom:0}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw}
 
 /* ---------- availability grid ---------- */
-.avail{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.avail{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+@media (max-width:700px){.avail{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .avail .d{border:1px solid var(--line);border-radius:6px;padding:8px 6px;text-align:center;background:var(--surface2)}
 .avail .d .dn{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--muted);margin-bottom:6px}
 .avail .d.on{background:var(--accent-soft);border-color:var(--accent)}
-.avail .d input[type=time]{font-size:11px;padding:3px 4px;text-align:center}
+.avail .d input[type=time]{font-size:11px;padding:3px 2px;text-align:center;width:100%;min-width:0}
+.vmonths{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.vmon .t{font-weight:700;font-size:12.5px;margin-bottom:5px}
+.vgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.vgrid span{font-size:9px;color:var(--muted);text-align:center}
+.vgrid i{display:block;aspect-ratio:1;border-radius:3px;background:var(--sunken);position:relative;font-style:normal;font-size:8.5px;color:var(--muted);text-align:center;line-height:2.1}
+.vgrid i.h1{background:#e7d9ae}.vgrid i.h2{background:#dfb684}.vgrid i.h3{background:#d99a8f}
+.vgrid i.ok{background:var(--accent);color:#fff;font-weight:700}
+.vgrid i.hol{outline:2px solid var(--warn);outline-offset:-2px}
+@media (prefers-color-scheme: dark){.vgrid i.h1{background:#4d431f}.vgrid i.h2{background:#59391b}.vgrid i.h3{background:#5c241c}}
+.vleg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:10px}
+.vleg i{width:11px;height:11px;border-radius:3px;display:inline-block;vertical-align:-1px;margin-right:4px}
 .avail .d .tog{width:100%;border:0;background:var(--sunken);border-radius:4px;padding:4px;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);margin-bottom:5px}
 .avail .d.on .tog{background:var(--accent);color:var(--on-accent)}
 
@@ -865,7 +877,10 @@ function blankState(){
             allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
     weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
     bugs:[], callouts:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
-    holidays:{ list:[], poll:null, responses:[], result:null, mode:"same", demand:[] }
+    holidays:{ list:[], poll:null, responses:[], result:null, mode:"same", demand:[] },
+    vacations:{ on:false, rule:"fairness", maxOff:1, opCheck:false, minDays:5, maxPicks:3,
+                deadline:"", openFrom:"", windowFrom:"", windowTo:"", responses:[], seed:1234,
+                notifyH:8 }
   };
 }
 
@@ -1229,7 +1244,7 @@ function codeHash(str){
 /* Existing accounts keep everything across updates — state carries defaults for
    anything new. When an update adds settings worth an answer, bump UPDREV and
    updModal() offers just those questions, once, with a skip that keeps defaults. */
-const UPDREV=1;
+const UPDREV=2;
 function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
 function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
 function updModal(){
@@ -1258,9 +1273,15 @@ function updModal(){
           <option value="wanted" ${wd==="wanted"?"selected":""}>People like working them</option>
           <option value="neutral" ${wd==="neutral"?"selected":""}>No different from other days</option>
         </select></div>`:""}
-      <div class="help">Also new, no answer needed: guaranteed minimum hours now sit next to the cap on every profile
-        (yours were kept as they were), and the hours you set are treated as staffing hours — start earlier or end
-        later under the setup questions if crews work before opening or after closing.</div>
+      <div class="field"><label>Plan longer vacations with a ranked survey?</label>
+        <select id="u_vac">
+          <option value="0" ${S.vacations.on?"":"selected"}>Not needed</option>
+          <option value="1" ${S.vacations.on?"selected":""}>Yes — adds a Vacations page</option>
+        </select></div>
+      <div class="help">Also new, no answer needed: changing an already-posted schedule now asks first and offers to
+        tell the affected people (adjustable in Settings); guaranteed minimum hours sit next to the cap on every
+        profile; and your hours are treated as staffing hours — start earlier or end later in setup if crews work
+        before opening or after closing.</div>
     </div>`,
     `<button class="btn" id="u_skip">Skip — keep the defaults</button>
      <button class="btn primary" id="u_save">Save</button>`,
@@ -1270,6 +1291,7 @@ function updModal(){
         S.holidays.mode=r.querySelector("#u_hmode").value;
         const wsel=r.querySelector("#u_wkend");
         if(wsel){ const v=wsel.value==="wanted"?1:wsel.value==="neutral"?0:-1; S.dayDesire[0]=v; S.dayDesire[6]=v; }
+        S.vacations.on = r.querySelector("#u_vac").value==="1";
         closeModal(true); updDone(); toast("Saved — the next draft uses the new settings");
       };
       r.querySelector("#u_skip").onclick=()=>{ closeModal(true); updDone(); };
@@ -1567,6 +1589,7 @@ function migrate(o){
   s.org = Object.assign(base.org, o.org||{});
   s.rules = Object.assign(base.rules, o.rules||{});
   s.holidays = Object.assign(base.holidays, o.holidays||{});
+  s.vacations = Object.assign(base.vacations, o.vacations||{});
   s.priority = Object.assign(base.priority, o.priority||{});
   s.ui = Object.assign(base.ui, o.ui||{});
   if(!Array.isArray(s.groups)) s.groups=[];
@@ -3630,6 +3653,40 @@ function ruleSentence(r){
   return "at least "+(r.min||1)+" "+(r.roleId? roleName(r.roleId).toLowerCase() : "on the floor");
 }
 /* ---- What changed since the schedule was last put in front of people ---- */
+/* Re-posting a week people already planned around: say so, and choose who hears.
+   Gate: rules.confirmRepost (default on). */
+function repostGuard(ws, doPost){
+  const wk=peekWeek(ws||S.currentWeek);
+  const changes = wk && wk.postedOnce ? weekDiff(ws||S.currentWeek) : [];
+  if(!(wk && wk.postedOnce) || !changes.length || S.rules.confirmRepost===false){ doPost(null); return; }
+  const who=[...new Set(changes.map(d=>d.empId))].map(id=>(empById(id)||{name:"?"}).name);
+  modal("This schedule was already posted", `
+    <div class="stack">
+      <div class="help"><b>${changes.length} change${changes.length===1?"":"s"}</b> since it went up, affecting <b>${esc(who.join(", "))}</b> — people may have planned around the old version. Who should hear about it?</div>
+      ${changes.slice(0,8).map(d=>`<div class="mini">• ${esc(d.name)} — ${esc(prettyDate(d.date))}: ${esc(d.say)}</div>`).join("")}
+      ${changes.length>8? `<div class="mini">…and ${changes.length-8} more.</div>`:""}
+    </div>`,
+    `<button class="btn" data-close>Cancel</button>
+     <button class="btn" id="rpnone">Post quietly</button>
+     <button class="btn" id="rpaff">Notify affected</button>
+     <button class="btn primary" id="rpall">Notify everyone</button>`,
+    r=>{
+      r.querySelector("#rpnone").onclick=()=>{ closeModal(true); doPost("none"); };
+      r.querySelector("#rpaff").onclick=()=>{ closeModal(true); doPost("affected"); };
+      r.querySelector("#rpall").onclick=()=>{ closeModal(true); doPost("all"); };
+    });
+}
+function repostNotify(ws, choice, changes){
+  if(!choice || choice==="none") return;
+  if(sendOn()){ setTimeout(()=>sendModal(ws),300); return; }
+  const lines=(changes||weekDiff(ws)).map(d=>d.name+" — "+prettyDate(d.date)+": "+d.say);
+  modal("Tell "+(choice==="all"?"everyone":"the affected people"), `
+    <div class="stack"><div class="help">Sending isn't switched on, so here's the change list ready to paste into a text or email.</div>
+    <textarea style="min-height:120px" id="rptxt">Schedule update for the week of ${esc(prettyDate(ws))}:
+${lines.join("\n")}</textarea></div>`,
+    `<button class="btn" data-close>Done</button><button class="btn primary" id="rpcopy">Copy it</button>`,
+    r=>{ r.querySelector("#rpcopy").onclick=()=>copyText(r.querySelector("#rptxt").value,"Copied"); });
+}
 function snapWeek(wk){
   wk.snap = wk.assignments.map(a=>({empId:a.empId,date:a.date,dow:a.dow,startMin:a.startMin,endMin:a.endMin,shiftId:a.shiftId}));
   wk.snapAt = Date.now();
@@ -4097,6 +4154,7 @@ const NAV=[
   {id:"requests", label:"Requests", simple:true, n:()=>reqActive(reqPeriod(S.currentWeek,S.horizon||1)).filter(r=>r.status!=="declined").length||null},
   {id:"team", label:"Team", simple:true, n:()=>S.employees.length||null},
   {id:"holidays", label:"Holidays", simple:true, n:()=>S.holidays.list.length||null},
+  {id:"vacation", label:"Vacations", simple:true, when:()=>!!(S.vacations&&S.vacations.on), n:()=>(S.vacations&&S.vacations.responses.length)||null},
   {grp:"Tools"},
   {id:"help", label:"Help & FAQ", simple:true},
   {id:"day", label:"Day sheet"},
@@ -4128,13 +4186,14 @@ const TITLES={
   priority:["Shift priority","Who gets first claim on the good shifts, and who gets first refusal on the bad ones."],
   analytics:["Analytics","What you scheduled, what people asked for, and what you had to turn down."],
   holidays:["Holiday poll","Rank-order poll so the least-wanted days land fairly."],
+  vacation:["Vacation calendar","Everyone asks at once; the fairest possible set gets granted."],
   export:["Export & share","Excel, PDF, and printable sheets."],
   help:["Help & FAQ","Ask anything about how it works — answers are instant."]
 };
 
 function renderNav(){
   const n=$("#nav"); if(!n) return;
-  let items = advanced()? NAV : NAV.filter(x=>x.simple);
+  let items = (advanced()? NAV : NAV.filter(x=>x.simple)).filter(x=>!x.when || x.when());
   if(S.rules.useDaySheet===false) items = items.filter(x=>x.id!=="day" && x.id!=="stations");
   n.innerHTML = items.map(item=>{
     if(item.grp) return '<div class="grp">'+esc(item.grp)+"</div>";
@@ -4179,7 +4238,7 @@ function renderTabs(){
 }
 function closeSheet(){ $("#sheetroot").innerHTML=""; }
 function moreSheet(){
-  const items = NAV.filter(x=>x.id && !TABS.some(t=>t.id===x.id));
+  const items = NAV.filter(x=>x.id && !TABS.some(t=>t.id===x.id)).filter(x=>!x.when || x.when());
   const setup = items.filter(x=>!x.simple);
   const main  = items.filter(x=>x.simple);
   const row = x=>{ const c=x.n? x.n():null;
@@ -4238,7 +4297,7 @@ function render(){
   $("#tacts").querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
   const pane=$("#pane");
   const fn = {home:vHome, help:vHelp, settings:vSettings, analytics:vAnalytics, overview:vOverview, week:vWeek, weeks:vWeeks, day:vDay, stations:vStations, requests:vRequests, org:vOrg, shifts:vShifts,
-              team:vTeam, demand:vDemand, rules:vRules, priority:vPriority, holidays:vHolidays, export:vExport}[VIEW];
+              team:vTeam, demand:vDemand, rules:vRules, priority:vPriority, holidays:vHolidays, vacation:vVacation, export:vExport}[VIEW];
   pane.innerHTML = fn? fn() : "";
   if(WIRE[VIEW]) WIRE[VIEW](pane);
   wireCommon(pane);
@@ -4620,8 +4679,9 @@ WIRE.home = root=>{
   on("#reptipok",()=>{ S.ui=S.ui||{}; S.ui.repTip=true; save(); render(); });
   on("#updgo",()=>updModal());
   on("#hdraft",()=>draftModal());
-  on("#hpost",()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
-    wk.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted and locked"); });
+  on("#hpost",()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
+    repostGuard(ws, choice=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
+      wk.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted and locked"); repostNotify(ws, choice, changes); }); });
   on("#hunpost",()=>{ const wk=getWeek(); wk.published=false; wk.assignments.forEach(a=>a.locked=false); save(); render(); toast("Open for edits again"); });
   on("#hlook",()=>go("week"));
   on("#hpdf",()=>exportWeekPDF().catch(()=>pdfUnavailable()));
@@ -4770,6 +4830,14 @@ function vSettings(){
         `<select data-set="rules.useCycles"><option value="0" ${cyclesOn()?"":"selected"}>Off</option><option value="1" ${cyclesOn()?"selected":""}>On</option></select>`)}
       ${cyclesOn()? setRow("Who's on a pattern", (()=>{const f=S.employees.filter(e=>e.active&&cycleOf(e));
         return f.length? esc(f.map(e=>e.name.split(" ")[0]+" — "+cycleLabel(e)).join(", ")) : "nobody yet — set one on a profile or a staff group";})(), "", "team") : ""}
+      ${setRow("Planning longer vacations", S.vacations.on
+        ? "On — a Vacations page runs a ranked survey and one fair draw for the season's time off"
+        : "Off — longer time off is handled by hand under Team. Turn it on for a ranked survey where everyone asks at once and the fairest possible set gets granted.",
+        `<select data-set="vacations.on"><option value="0" ${S.vacations.on?"":"selected"}>Off</option><option value="1" ${S.vacations.on?"selected":""}>On</option></select>`)}
+      ${setRow("Changing a posted schedule", S.rules.confirmRepost!==false
+        ? "Asks before re-posting changes — with a choice to tell affected people, everyone, or no one"
+        : "Re-posts silently. Turn the check on so nobody's plans change without them hearing about it.",
+        `<select data-set="rules.confirmRepost"><option value="1" ${S.rules.confirmRepost!==false?"selected":""}>Ask first</option><option value="0" ${S.rules.confirmRepost===false?"selected":""}>Don't ask</option></select>`)}
       ${setRow("Sending the schedule out", sendOn()
         ? "On — a Send button on the week and on Export, by email or text"
         : "Off — you hand the schedule out however you do now. Turn it on and each person can get just their own shifts.",
@@ -4847,7 +4915,7 @@ WIRE.settings = root=>{
   root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
     const path=el.dataset.set;
     let v=el.value;
-    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut"];
+    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost"];
     const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH"];
     if(boolPaths.includes(path)) v = v==="1";
     else if(numPaths.includes(path)) v = parseFloat(v);
@@ -6386,10 +6454,12 @@ WIRE.week = root=>{
   if(rg) rg.onclick=()=>redoModal(S.currentWeek);
   const wsh=root.querySelector("#wshape"); if(wsh) wsh.onclick=()=>weekPatternModal(S.currentWeek);
   const wp=root.querySelector("#wpost");
-  if(wp) wp.onclick=()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
-    wk.assignments.forEach(a=>a.locked=true); save(); render();
-    if(sendOn()){ toast("Posted and locked — now send it out"); setTimeout(()=>sendModal(S.currentWeek), 350); }
-    else toast("Week posted and locked"); };
+  if(wp) wp.onclick=()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
+    repostGuard(ws, choice=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
+      wk.assignments.forEach(a=>a.locked=true); save(); render();
+      if(choice){ toast("Posted and locked"); repostNotify(ws, choice, changes); }
+      else if(sendOn()){ toast("Posted and locked — now send it out"); setTimeout(()=>sendModal(S.currentWeek), 350); }
+      else toast("Week posted and locked"); }); };
   const wsend=root.querySelector("#wsend"); if(wsend) wsend.onclick=()=>sendModal(S.currentWeek);
   const wu=root.querySelector("#wunpost");
   if(wu) wu.onclick=()=>{ const wk=getWeek(); wk.published=false; wk.assignments.forEach(a=>a.locked=false); save(); render(); toast("Unposted — edits are open again"); };
@@ -6733,7 +6803,7 @@ WIRE.weeks = root=>{
       </div>`,
       `<button class="btn" data-close>Cancel</button><button class="btn primary" id="pallgo">Post them all</button>`,
       r=>{ r.querySelector("#pallgo").onclick=()=>{
-        drafts.forEach(k=>{ const wk=S.weeks[k]; wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
+        drafts.forEach(k=>{ const wk=S.weeks[k]; wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
           wk.assignments.forEach(a=>a.locked=true); });
         save(); closeModal(); render(); toast(drafts.length+" weeks posted"); }; });
   };
@@ -6791,8 +6861,9 @@ function weekMenu(ws){
       on("#wkshape",()=>{ S.currentWeek=ws; closeModal(); weekPatternModal(ws); });
       on("#wkfix",()=>{ S.currentWeek=ws; closeModal(); fixModal(ws); });
       on("#wkdup",()=>{ closeModal(); duplicateWeekModal(ws); });
-      on("#wkpost",()=>{ const w=getWeek(ws); w.published=true; w.publishedAt=Date.now(); snapWeek(w);
-        w.assignments.forEach(a=>a.locked=true); save(); closeModal(); render(); toast("Posted"); });
+      on("#wkpost",()=>{ const changes=weekDiff(ws); closeModal(true);
+        repostGuard(ws, choice=>{ const w=getWeek(ws); w.published=true; w.publishedAt=Date.now(); w.postedOnce=true; snapWeek(w);
+          w.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted"); repostNotify(ws, choice, changes); }); });
       on("#wkunpost",()=>{ const w=getWeek(ws); w.published=false; w.assignments.forEach(a=>a.locked=false);
         save(); closeModal(); render(); toast("Unposted — open for edits"); });
       on("#wkclear",()=>{
@@ -7426,7 +7497,7 @@ function wizard(firstRun){
     step:0, biz:"other",
     name:S.org.name||"", site:S.org.site||"", juris:S.org.jurisdiction||"CA",
     hoursPreset:"same", open:"09:00", close:"17:00",
-    dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same",
+    dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false,
     satOpen:"10:00", satClose:"16:00", satClosed:false,
     sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
     dayOff:{},                      /* "b:i" -> [dow…] they can never work */
@@ -7564,6 +7635,14 @@ function wizard(firstRun){
         <div class="help">${W.holidayMode==="custom"? "You'll set what runs on a holiday — like an eighth day of the week — on the Holidays page once you're in."
           : W.holidayMode==="closed"? "Nothing gets drafted on any holiday you list — the day simply sits empty."
           : "A holiday drafts exactly like the weekday it lands on. Change this any time on the Holidays page."}</div>
+        <div class="desrow" style="margin-top:2px">
+          <strong style="font-family:Archivo,sans-serif;font-size:13px">Plan longer vacations with a ranked survey?</strong>
+          <select id="wvac" style="margin-left:auto">
+            <option value="0" ${W.vacations?"":"selected"}>Not needed</option>
+            <option value="1" ${W.vacations?"selected":""}>Yes — one fair draw for the season</option>
+          </select>
+        </div>
+        <div class="help">Everyone submits ranked choices by a deadline; the draw grants the most it can under your rule — seniority, lottery, or fairness. Off by default; flip it any time in Settings.</div>
       </div>`;
     if(k==="buckets") return `
       <div class="stack">
@@ -7958,6 +8037,7 @@ function wizard(firstRun){
     const whr=r.querySelector("#whrush"); if(whr) whr.onchange=()=>{ W.holidayRush=whr.value; };
     const wwk=r.querySelector("#wwkend"); if(wwk) wwk.onchange=()=>{ W.weekendDesire=wwk.value; };
     const whm=r.querySelector("#whmode"); if(whm) whm.onchange=()=>{ W.holidayMode=whm.value; paint(); };
+    const wvc=r.querySelector("#wvac"); if(wvc) wvc.onchange=()=>{ W.vacations=wvc.value==="1"; };
     r.querySelectorAll(".daytog").forEach(btn=>btn.onclick=()=>{
       const k=btn.dataset.k, d=+btn.dataset.d;
       W.dayOff=W.dayOff||{}; const cur=W.dayOff[k]||[];
@@ -8135,6 +8215,7 @@ function wizard(firstRun){
     N.dayLoad=(W.dayLoad||[0,1,0,-1,0,1,0]).slice();
     N.rules.holidayRush=W.holidayRush||"none";
     N.holidays.mode=W.holidayMode||"same";
+    N.vacations.on=!!W.vacations;
     N.priority.mode=W.priority; N.priority.order=N.employees.map(e=>e.id); N.priority.strength=2;
     N.dayDesire = W.hoursPreset==="wkday"? [0,1,1,1,1,0,0] : [-1,1,1,1,1,0,-1];
     if(W.hoursPreset!=="wkday"){ const wv=W.weekendDesire==="wanted"?1:W.weekendDesire==="neutral"?0:-1; N.dayDesire[0]=wv; N.dayDesire[6]=wv; }
@@ -8900,6 +8981,200 @@ function allocateHolidays(){
   return {result, unfilled, totals, cap, responded:R.length, pool:pool.length};
 }
 
+
+function vsel(path, opts, cur){
+  return '<select data-vset="'+path+'">'+opts.map(o=>'<option value="'+o[0]+'" '+(String(cur)===String(o[0])?"selected":"")+'>'+esc(String(o[1]))+'</option>').join("")+'</select>';
+}
+function vacMonthsHtml(extra){
+  const V=S.vacations, heat=vacHeat(extra);
+  const holSet=new Set((S.holidays.list||[]).map(h=>h.date));
+  const start=V.windowFrom||ymd(new Date());
+  const end=V.windowTo||addDays(start,180);
+  const months=[];
+  let d=parseYmd(start); d.setDate(1);
+  const stop=parseYmd(end);
+  let guard=0;
+  while(d<=stop && guard++<14){
+    const y=d.getFullYear(), m=d.getMonth();
+    const label=d.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+    const first=new Date(y,m,1), days=new Date(y,m+1,0).getDate();
+    let cells=DSHORT.map(x=>`<span>${x[0]}</span>`).join("");
+    for(let i=0;i<first.getDay();i++) cells+="<i style='visibility:hidden'></i>";
+    for(let dd=1;dd<=days;dd++){
+      const ds=ymd(new Date(y,m,dd));
+      const h=heat[ds]||{ask:0,ok:0};
+      const lvl=h.ask>=4?"h3":h.ask>=2?"h2":h.ask>=1?"h1":"";
+      const cls=(h.ok?"ok ":"")+lvl+(holSet.has(ds)?" hol":"");
+      const tip=(h.ok? h.ok+" approved away. ":"")+(h.ask? h.ask+" request"+(h.ask===1?"":"s")+" touch this day.":"")+(holSet.has(ds)?" Assigned holiday.":"");
+      cells+=`<i class="${cls.trim()}" title="${esc(tip.trim()||prettyDate(ds))}">${h.ok||""}</i>`;
+    }
+    months.push(`<div class="vmon"><div class="t">${esc(label)}</div><div class="vgrid">${cells}</div></div>`);
+    d=new Date(y,m+1,1);
+  }
+  return `<div class="vmonths">${months.join("")}</div>
+    <div class="vleg"><span><i style="background:#e7d9ae"></i>requested</span><span><i style="background:#d99a8f"></i>heavily requested</span><span><i style="background:var(--accent)"></i>approved away (count)</span><span><i style="outline:2px solid var(--warn);outline-offset:-2px;background:var(--sunken)"></i>assigned holiday</span></div>`;
+}
+function vVacation(){
+  const V=S.vacations;
+  const today=ymd(new Date());
+  const canRun = !V.openFrom || today>=V.openFrom;
+  const resp=V.responses||[];
+  return `
+  <div class="stack">
+    <div class="banner info"><div><b>One draw, not a race.</b> Everyone submits ranked choices by the deadline; the draw grants the largest set it can — first choices first, ties settled by the rule you pick. Submitting early or late changes nothing, so nobody camps your inbox at midnight.</div></div>
+
+    <div class="card"><header><h3>How the draw runs</h3></header><div class="setbody">
+      ${setRow("Who wins a contested date", "", vsel("vacations.rule",[["fairness","Fairness — least vacation lately goes first"],["seniority","Seniority — longest-tenured first"],["lottery","Lottery — seeded, auditable"]], V.rule))}
+      ${setRow("How many can be away at once", "", vsel("vacations.opCheck",[[0,"A fixed cap"],[1,"Whatever still covers the floor"]], V.opCheck?1:0))}
+      ${V.opCheck? "" : setRow("The cap", "", vsel("vacations.maxOff",[[1,"1 person"],[2,"2 people"],[3,"3 people"],[4,"4 people"],[5,"5 people"]], V.maxOff))}
+      ${setRow("Counts as a vacation from", "", vsel("vacations.minDays",[[3,"3 days"],[5,"5 days"],[7,"7 days"],[10,"10 days"],[14,"14 days"]], V.minDays))}
+      ${setRow("Choices each person may rank", "", vsel("vacations.maxPicks",[[2,"2"],[3,"3"],[4,"4"],[5,"5"]], V.maxPicks))}
+      ${setRow("Window being planned", "First and last day people may ask for",
+        `<div class="row" style="gap:6px"><input type="date" data-bind="vacations.windowFrom" value="${esc(V.windowFrom||"")}" style="min-width:130px"><input type="date" data-bind="vacations.windowTo" value="${esc(V.windowTo||"")}" style="min-width:130px"></div>`)}
+      ${setRow("Requests due by", "Codes that arrive after this don't go in the draw",
+        `<input type="date" data-bind="vacations.deadline" value="${esc(V.deadline||"")}" style="min-width:130px">`)}
+      ${setRow("Approvals may start", "Leave blank to approve any time — set a date to give slower planners a fair shot",
+        `<input type="date" data-bind="vacations.openFrom" value="${esc(V.openFrom||"")}" style="min-width:130px">`)}
+      ${setRow("Vacations never land on assigned holidays", "Those days are staffed by the holiday poll — handle holidays first, vacations second, day-to-day requests after", "")}
+    </div></div>
+
+    <div class="card"><header><h3>The survey</h3><span class="hint">${resp.length} of ${S.employees.filter(e=>e.active).length} in</span></header>
+      <div class="body stack">
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="vacdl">Download the survey</button>
+          <button class="btn" id="vacmail">Copy the email to send with it</button>
+          <button class="btn" id="vaccodes">Paste reply codes</button>
+          <button class="btn" id="vachand">Enter one by hand</button>
+        </div>
+        <div class="help">The form runs on each person's own device and hands them a short code to send back — no accounts, nothing installed. Re-download any time: the fresh copy shows everyone the busy dates so far (no names), so flexible people can aim for quiet weeks. A re-sent code replaces that person's earlier one.</div>
+        ${resp.length? `<div class="scroll"><table><thead><tr><th>Who</th><th>Choices</th><th style="width:120px">Sent</th><th style="width:70px"></th></tr></thead>
+          <tbody>${resp.map(r=>{ const e=empById(r.empId)||{name:"?"};
+            return `<tr><td><strong>${esc(e.name)}</strong></td>
+              <td class="mini">${r.picks.map((p,i)=>(i+1)+". "+prettyDate(p.from)+" – "+prettyDate(p.to)).join("  ·  ")}</td>
+              <td class="mini">${new Date(r.at).toLocaleDateString()}</td>
+              <td><button class="btn sm" data-vacdel="${esc(r.empId)}">Remove</button></td></tr>`; }).join("")}</tbody></table></div>`
+          : `<div class="empty"><strong>No responses yet</strong>Download the survey and send it round.</div>`}
+      </div>
+    </div>
+
+    <div class="card"><header><h3>The calendar</h3><span class="hint">Anonymous — counts, never names</span></header>
+      <div class="body">${vacMonthsHtml()}</div>
+    </div>
+
+    <div class="card"><header><h3>Run the draw</h3>
+      ${canRun? "" : `<span class="chip">opens ${esc(prettyDate(V.openFrom))}</span>`}</header>
+      <div class="body stack">
+        ${canRun? `<div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn primary" id="vacrun" ${resp.length?"":"disabled"}>Preview the draw</button>
+            ${V.rule==="lottery"? `<button class="btn sm" id="vacseed">Re-roll the lottery seed (${V.seed})</button>`:""}
+          </div>
+          <div id="vacout"></div>`
+        : `<div class="help">You set approvals to start ${esc(prettyDate(V.openFrom))} so everyone gets a fair chance to submit first. Come back then — or clear the date above to run it now.</div>`}
+      </div>
+    </div>
+
+    <div class="card"><header><h3>Approved vacations</h3>
+      <button class="btn sm" id="vacemail2" ${vacApprovedList().length?"":"disabled"}>Copy the announcement email</button></header>
+      <div class="scroll">${vacApprovedList().length? `<table><thead><tr><th>Who</th><th>Away</th><th style="width:90px">Choice</th><th style="width:80px"></th></tr></thead>
+        <tbody>${vacApprovedList().slice().sort((a,b)=>a.start.localeCompare(b.start)).map(t=>{
+          const e=empById(t.empId)||{name:"?"};
+          return `<tr><td><strong>${esc(e.name)}</strong></td><td>${esc(prettyFull(t.start))} – ${esc(prettyFull(t.end))}</td>
+            <td class="mini">${t.vacPick? "choice #"+t.vacPick : "manual"}</td>
+            <td><button class="btn sm" data-vacoff="${esc(t.id||"")}">Undo</button></td></tr>`; }).join("")}</tbody></table>`
+        : `<div class="empty"><strong>Nothing approved yet</strong>Granted vacations land here — and on the calendar above, the week grid, and the drafter, all at once.</div>`}
+      </div>
+    </div>
+  </div>`;
+}
+WIRE.vacation = root=>{
+  root.querySelectorAll("[data-vset]").forEach(el=>el.onchange=()=>{
+    let v=el.value; if(/^-?\d+$/.test(v)) v=+v;
+    if(el.dataset.vset==="vacations.opCheck") v=!!+el.value;
+    setPath(S, el.dataset.vset, v); save(); render();
+  });
+  root.querySelector("#vacdl").onclick=()=>saveFile("vacation-survey.html", vacPollFile());
+  root.querySelector("#vacmail").onclick=()=>copyText(vacEmailText(),"Email text copied");
+  root.querySelector("#vaccodes").onclick=()=>vacPasteModal();
+  root.querySelector("#vachand").onclick=()=>vacManualModal();
+  const se=root.querySelector("#vacseed"); if(se) se.onclick=()=>{ S.vacations.seed=1000+Math.floor(Math.random()*9000); save(); render(); };
+  const em=root.querySelector("#vacemail2"); if(em) em.onclick=()=>copyText(vacApprovedEmailText(),"Announcement copied — paste into any email");
+  root.querySelectorAll("[data-vacdel]").forEach(b=>b.onclick=()=>{ S.vacations.responses=S.vacations.responses.filter(r=>r.empId!==b.dataset.vacdel); save(); render(); });
+  root.querySelectorAll("[data-vacoff]").forEach(b=>b.onclick=()=>{ S.timeoff=S.timeoff.filter(t=>String(t.id)!==b.dataset.vacoff); save(); render(); toast("Undone — those days are open again"); });
+  const run=root.querySelector("#vacrun");
+  if(run) run.onclick=()=>{
+    const R=vacAllocate();
+    const out=root.querySelector("#vacout");
+    if(!R.grants.length && !R.skipped.length){ out.innerHTML=`<div class="banner warn"><div>No requests to draw from yet.</div></div>`; return; }
+    out.innerHTML=`
+      <div class="banner ${R.grants.length?"info":"warn"}"><div><b>${R.grants.length} of ${R.asked} get a vacation</b>${R.grants.filter(g=>g.pick===1).length? " — "+R.grants.filter(g=>g.pick===1).length+" got their first choice":""}. Nothing is saved until you press Grant.</div></div>
+      ${R.grants.map(g=>{ const e=empById(g.empId)||{name:"?"};
+        return `<div class="desrow"><strong style="font-size:13px">${esc(e.name)}</strong>
+          <span class="mini">${esc(prettyDate(g.from))} – ${esc(prettyDate(g.to))}</span>
+          <span class="chip ${g.pick===1?"ok":""}" style="margin-left:auto">choice #${g.pick}</span></div>`; }).join("")}
+      ${R.skipped.length? `<div class="lab" style="margin:10px 0 6px">Couldn't be granted</div>`+
+        R.skipped.map(x=>{ const e=empById(x.empId)||{name:"?"};
+          return `<div class="mini" style="margin-bottom:4px"><b>${esc(e.name)}</b> — choice #${x.pick} (${esc(prettyDate(x.from))} – ${esc(prettyDate(x.to))}): ${esc(x.why)}</div>`; }).join(""):""}
+      ${R.unserved.length? `<div class="help" style="margin-top:8px">Left without a vacation this round: ${esc(R.unserved.map(id=>(empById(id)||{name:"?"}).name).join(", "))} — their requests stay in the list; hand-place them with "Take someone off the schedule" on the Team page, or re-run after loosening the cap.</div>`:""}
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="vacapply">Grant these ${R.grants.length}</button></div>`;
+    out.querySelector("#vacapply").onclick=()=>{
+      R.grants.forEach(g=>{
+        S.timeoff.push({id:uid("v"), empId:g.empId, type:"Vacation", start:g.from, end:g.to,
+          status:"approved", vac:true, vacPick:g.pick});
+        S.vacations.responses=S.vacations.responses.filter(r=>r.empId!==g.empId);
+      });
+      save(); render();
+      toast(R.grants.length+" vacation"+(R.grants.length===1?"":"s")+" granted — the drafter now works around them");
+    };
+  };
+};
+function vacPasteModal(){
+  modal("Paste vacation reply codes", `
+    <div class="stack">
+      <div class="help">One code per line. ${S.vacations.deadline? "Requests were due "+esc(prettyDate(S.vacations.deadline))+" — codes still read in after that, but call it what it is.":""}</div>
+      <textarea id="vcin" style="min-height:150px;font-family:'IBM Plex Mono',monospace;font-size:11.5px"></textarea>
+      <div id="vcres"></div>
+    </div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="dovac">Read them in</button>`,
+    r=>{ r.querySelector("#dovac").onclick=()=>{
+      const lines=r.querySelector("#vcin").value.split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean);
+      let ok=0,bad=0,unknown=[];
+      lines.forEach(l=>{ try{
+        const pr=vacParseCode(l);
+        if(!pr.empId){ unknown.push(pr.name); bad++; return; }
+        if(!pr.picks.length){ bad++; return; }
+        S.vacations.responses=S.vacations.responses.filter(x=>x.empId!==pr.empId);
+        S.vacations.responses.push({empId:pr.empId, picks:pr.picks.slice(0,S.vacations.maxPicks||3), at:Date.now()});
+        ok++;
+      }catch(e){ bad++; } });
+      save();
+      if(ok){ closeModal(); render(); toast(ok+" response"+(ok===1?"":"s")+" read in"+(bad?" · "+bad+" couldn't be matched":"")); }
+      else r.querySelector("#vcres").innerHTML=`<div class="banner crit"><div>None of those matched. ${unknown.length? "Not on the roster: "+esc(unknown.join(", "))+".":"Check the whole code was copied."}</div></div>`;
+    }; });
+}
+function vacManualModal(){
+  const V=S.vacations;
+  modal("Enter a vacation request by hand", `
+    <div class="stack">
+      <div class="field"><label>Who</label><select id="vme">${S.employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></div>
+      ${Array.from({length:V.maxPicks||3},(_,i)=>`
+        <div class="field"><label>Choice ${i+1}${i?" (optional)":""}</label>
+          <div class="row" style="gap:6px"><input type="date" class="vmf" data-i="${i}" style="min-width:130px"><input type="date" class="vmt" data-i="${i}" style="min-width:130px"></div></div>`).join("")}
+    </div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="vmsave">Save</button>`,
+    r=>{ r.querySelector("#vmsave").onclick=()=>{
+      const empId=r.querySelector("#vme").value;
+      const picks=[];
+      r.querySelectorAll(".vmf").forEach(f=>{
+        const i=f.dataset.i, t=r.querySelector('.vmt[data-i="'+i+'"]');
+        if(f.value && t.value && t.value>=f.value) picks.push({from:f.value,to:t.value});
+      });
+      if(!picks.length){ toast("Enter at least one choice with both dates"); return; }
+      S.vacations.responses=S.vacations.responses.filter(x=>x.empId!==empId);
+      S.vacations.responses.push({empId,picks,at:Date.now()});
+      save(); closeModal(); render();
+    }; });
+}
+
 function vHolidays(){
   const H=S.holidays.list, R=S.holidays.responses;
   const alloc=S.holidays.result;
@@ -9136,6 +9411,111 @@ function parseCode(code){
   if(!emp) emp = S.employees.find(e=>e.name.toLowerCase()===key.toLowerCase());
   return {empId:emp?emp.id:null, name:emp?emp.name:key, rank, cant};
 }
+
+/* ============================================================
+   Vacation calendar — everyone asks at once, ranked; the app
+   grants the largest fair set that keeps the floor covered.
+   Opt-in: invisible unless S.vacations.on.
+   ============================================================ */
+function vacDays(from,to){ const out=[]; let d=from,g=0; while(d<=to&&g++<400){ out.push(d); d=addDays(d,1);} return out; }
+function vacOverlapsHoliday(from,to){
+  return (S.holidays.list||[]).find(h=>h.date>=from&&h.date<=to)||null;
+}
+function vacApprovedList(){
+  return S.timeoff.filter(t=>t.vac&&t.status!=="denied");
+}
+function vacCountOn(date, extra){
+  let c=vacApprovedList().filter(t=>date>=t.start&&date<=t.end).length;
+  (extra||[]).forEach(g=>{ if(date>=g.from&&date<=g.to) c++; });
+  return c;
+}
+function vacOpsOk(date, extra){
+  /* enough hands left that day to run the base pattern */
+  const dow=parseYmd(date).getDay();
+  if(S.hours[dow].closed) return true;
+  const need=(S.demand[dow]||[]).reduce((t,r)=>t+(r.count||1),0);
+  const heads=S.employees.filter(e=>e.active && e.avail[dow]&&e.avail[dow].ok && !onTimeOff(e.id,date)).length;
+  return heads - vacCountOn(date, extra) >= need;
+}
+function vacFairScore(empId, grants){
+  /* days of vacation already granted (past 18 months) + this round — fewer = first in line */
+  const cut=addDays(ymd(new Date()),-550);
+  let d=0;
+  vacApprovedList().forEach(t=>{ if(t.empId===empId && t.end>=cut) d+=vacDays(t.start,t.end).length; });
+  (grants||[]).forEach(g=>{ if(g.empId===empId) d+=vacDays(g.from,g.to).length; });
+  return d;
+}
+function vacOrder(empIds, grants){
+  const V=S.vacations;
+  const ladder=S.priority.order||[];
+  const lad=id=>{ const i=ladder.indexOf(id); return i<0? 999:i; };
+  if(V.rule==="seniority"){
+    return empIds.slice().sort((a,b)=>{
+      const ea=empById(a)||{}, eb=empById(b)||{};
+      const sa=ea.seniority||"9999-12-31", sb=eb.seniority||"9999-12-31";
+      return sa.localeCompare(sb) || lad(a)-lad(b);
+    });
+  }
+  if(V.rule==="lottery"){
+    let x=V.seed||1234;
+    const rnd=()=>{ x=(x*1103515245+12345)%2147483648; return x/2147483648; };
+    const arr=empIds.slice(); 
+    for(let i=arr.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=arr[i];arr[i]=arr[j];arr[j]=t; }
+    return arr;
+  }
+  /* fairness: least vacation already had goes first */
+  return empIds.slice().sort((a,b)=> vacFairScore(a,grants)-vacFairScore(b,grants) || lad(a)-lad(b));
+}
+function vacAllocate(){
+  const V=S.vacations;
+  const grants=[], skipped=[];
+  const served={};
+  const resp=V.responses.filter(r=>empById(r.empId) && (empById(r.empId)||{}).active);
+  for(let round=0; round<(V.maxPicks||3); round++){
+    const inRound=resp.filter(r=>!served[r.empId] && r.picks[round]);
+    const order=vacOrder(inRound.map(r=>r.empId), grants);
+    order.forEach(empId=>{
+      const r=resp.find(x=>x.empId===empId);
+      const p=r.picks[round]; if(!p) return;
+      const e=empById(empId);
+      const hol=vacOverlapsHoliday(p.from,p.to);
+      if(hol){ skipped.push({empId,pick:round+1,from:p.from,to:p.to,why:"overlaps "+hol.name+" — holidays are staffed separately"}); return; }
+      if(vacDays(p.from,p.to).length<(V.minDays||1)){ skipped.push({empId,pick:round+1,from:p.from,to:p.to,why:"shorter than the "+V.minDays+"-day minimum — use a normal request instead"}); return; }
+      const days=vacDays(p.from,p.to);
+      let bad=null;
+      for(const d of days){
+        if(V.opCheck){ if(!vacOpsOk(d,grants)){ bad="on "+prettyDate(d)+" the floor couldn't be covered"; break; } }
+        else if(vacCountOn(d,grants)>=(V.maxOff||1)){ bad=prettyDate(d)+" already has "+(V.maxOff||1)+" away, your limit"; break; }
+      }
+      if(bad){ skipped.push({empId,pick:round+1,from:p.from,to:p.to,why:bad}); return; }
+      grants.push({empId,from:p.from,to:p.to,pick:round+1});
+      served[empId]=true;
+    });
+  }
+  const unserved=resp.filter(r=>!served[r.empId]).map(r=>r.empId);
+  return {grants, skipped, unserved, asked:resp.length};
+}
+function vacHeat(extra){
+  /* anonymous per-date pressure: requested + approved counts, no names */
+  const heat={};
+  S.vacations.responses.forEach(r=>r.picks.forEach(p=>{ if(p) vacDays(p.from,p.to).forEach(d=>{ heat[d]=heat[d]||{ask:0,ok:0}; heat[d].ask++; }); }));
+  vacApprovedList().forEach(t=>vacDays(t.start,t.end).forEach(d=>{ heat[d]=heat[d]||{ask:0,ok:0}; heat[d].ok++; }));
+  (extra||[]).forEach(g=>vacDays(g.from,g.to).forEach(d=>{ heat[d]=heat[d]||{ask:0,ok:0}; heat[d].ok++; }));
+  return heat;
+}
+function vacParseCode(line){
+  const raw=b64d(line);
+  const parts=raw.split("|");
+  if(parts[0]!=="VC1") throw new Error("not a vacation code");
+  const key=parts[1];
+  const e=S.employees.find(x=>x.id===key) ||
+          S.employees.find(x=>x.name.trim().toLowerCase()===String(key).trim().toLowerCase());
+  const picks=(parts[2]||"").split(".").filter(Boolean).map(seg=>{
+    const [f,t]=seg.split("~"); return {from:f,to:t};
+  }).filter(p=>/^\d{4}-\d{2}-\d{2}$/.test(p.from)&&/^\d{4}-\d{2}-\d{2}$/.test(p.to)&&p.to>=p.from);
+  return {empId:e? e.id:null, name:e? e.name:key, picks};
+}
+
 function pasteCodeModal(){
   modal("Paste reply codes", `
     <div class="stack">
@@ -9197,6 +9577,105 @@ function manualRespModal(){
         S.holidays.result=null; save(); closeModal(); render();
       };
     });
+}
+
+
+/* ---------- the standalone vacation survey form ---------- */
+function vacPollFile(){
+  const V=S.vacations;
+  const heat=vacHeat();
+  const heatOut={}; Object.keys(heat).forEach(d=>{ heatOut[d]=heat[d].ask+heat[d].ok; });
+  const payload = {
+    org:S.org.name||"Our team",
+    staff:S.employees.filter(e=>e.active).map(e=>({id:e.id,name:e.name})),
+    maxPicks:V.maxPicks||3, minDays:V.minDays||1,
+    from:V.windowFrom||"", to:V.windowTo||"", deadline:V.deadline||"",
+    hol:(S.holidays.list||[]).map(h=>h.date),
+    heat:heatOut
+  };
+  const data=b64e(JSON.stringify(payload));
+  return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<title>Vacation requests — '+esc(payload.org)+'</title>',
+    '<style>:root{--g:#eaedeb;--s:#fff;--i:#18211f;--m:#697773;--l:#d2d8d6;--a:#1c6a66;--as:#dcebe9;--c:#ab382c;--cs:#f7e0dc;--w:#8f5d10;--wsx:#f5ead2}',
+    '@media(prefers-color-scheme:dark){:root{--g:#101514;--s:#191f1e;--i:#e7ecea;--m:#8d9b97;--l:#2c3634;--a:#4cb3a9;--as:#173432;--c:#e2796a;--cs:#3a1c17;--w:#d4a04a;--wsx:#33270f}}',
+    '*{box-sizing:border-box}body{margin:0;background:var(--g);color:var(--i);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px 14px 60px}',
+    '.w{max-width:620px;margin:0 auto}h1{font-size:21px;margin:0 0 4px}.sub{color:var(--m);font-size:13.5px;margin-bottom:18px}',
+    '.card{background:var(--s);border:1px solid var(--l);border-radius:9px;padding:16px;margin-bottom:14px}',
+    'label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--m);font-weight:700;margin-bottom:6px}',
+    'select,input{width:100%;font:inherit;color:inherit;background:var(--s);border:1px solid var(--l);border-radius:6px;padding:9px 10px}',
+    '.pick{border:1px solid var(--l);border-radius:8px;padding:10px;margin-bottom:8px}',
+    '.pick .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}',
+    '.no{width:26px;height:26px;border-radius:6px;background:var(--a);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}',
+    '.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.warn{font-size:12px;color:var(--c);margin-top:6px;min-height:14px}',
+    '.busy{font-size:12px;color:var(--w);margin-top:6px}',
+    '.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
+    '.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}',
+    '.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
+    '.hide{display:none}.hm{display:flex;gap:2px;flex-wrap:wrap;margin-top:8px}',
+    '.hm i{width:11px;height:11px;border-radius:2px;background:var(--l);display:inline-block}',
+    '.hm i.h1{background:#d9c48a}.hm i.h2{background:#c98a4b}.hm i.h3{background:#ab382c}</style></head><body><div class="w">',
+    '<h1>Vacation requests</h1><div class="sub" id="sub"></div>',
+    '<div class="card"><div class="step">How this works</div><div class="hint">List up to <b id="mx"></b> stretches of time off, best first. Your manager runs everyone’s requests together and grants the most it can — first choices first. '+
+      'Dates lots of people already want are marked <b>busy</b>; if you’re flexible, picking quieter dates raises everyone’s odds — including yours.'+
+      '<span id="dl"></span></div></div>',
+    '<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
+    '<div class="card"><div class="step">Step 2 — your choices, best first</div><div id="picks"></div></div>',
+    '<div class="card"><div class="step">Step 3</div><button class="go" id="mk">Get my reply code</button>',
+    '<div id="out" class="hide"><div class="hint" style="margin-top:12px">Send this code back to your manager before the deadline — it holds all your choices.</div>',
+    '<div class="code" id="cd"></div><button class="go" id="cp" style="background:var(--s);color:var(--a);border:1px solid var(--a)">Copy the code</button></div></div>',
+    '<div class="hint">Nothing is sent anywhere by this page — the code is the only thing that leaves, and you send it yourself.</div>',
+    '</div><script>',
+    'var D=JSON.parse(decodeURIComponent(escape(atob("'+data+'"))));',
+    'document.getElementById("sub").textContent=D.org+(D.from?" · "+D.from+" to "+D.to:"");',
+    'document.getElementById("mx").textContent=D.maxPicks;',
+    'if(D.deadline){document.getElementById("dl").innerHTML=" All requests are due by <b>"+D.deadline+"</b>.";}',
+    'var who=document.getElementById("who");',
+    'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+s.name+"</option>";}).join("")+"<option value=\'__other\'>My name isn’t listed</option>";',
+    'function busyLevel(f,t){var mx=0,d=new Date(f+"T00:00:00"),e=new Date(t+"T00:00:00"),g=0;',
+    'while(d<=e&&g++<400){var k=d.toISOString().slice(0,10);mx=Math.max(mx,D.heat[k]||0);d.setDate(d.getDate()+1);}return mx;}',
+    'function holHit(f,t){for(var i=0;i<D.hol.length;i++){if(D.hol[i]>=f&&D.hol[i]<=t)return D.hol[i];}return null;}',
+    'var P=document.getElementById("picks");',
+    'for(var i=0;i<D.maxPicks;i++){var el=document.createElement("div");el.className="pick";',
+    'el.innerHTML="<div class=\'hd\'><span class=\'no\'>"+(i+1)+"</span><b>"+(i===0?"First choice":i===1?"Second choice":"Choice "+(i+1))+(i>0?" (optional)":"")+"</b></div>"+',
+    '"<div class=\'g2\'><div><label class=\'f\'>First day</label><input type=date class=pf></div><div><label class=\'f\'>Last day</label><input type=date class=pt></div></div><div class=\'warn\'></div><div class=\'busy\'></div>";',
+    'P.appendChild(el);}',
+    'function check(el){var f=el.querySelector(".pf").value,t=el.querySelector(".pt").value;var w=el.querySelector(".warn"),b=el.querySelector(".busy");w.textContent="";b.textContent="";',
+    'if(!f||!t)return;if(t<f){w.textContent="Last day is before the first day.";return;}',
+    'if(D.from&&f<D.from||D.to&&t>D.to){w.textContent="Outside the window ("+D.from+" to "+D.to+").";}',
+    'var days=Math.round((new Date(t)-new Date(f))/86400000)+1;',
+    'if(days<D.minDays){w.textContent="That’s "+days+" day"+(days===1?"":"s")+" — this survey is for "+D.minDays+"+ days. Short requests go to your manager the normal way.";}',
+    'var h=holHit(f,t);if(h){w.textContent="Includes "+h+" — that’s an assigned holiday, it can’t be inside a vacation.";}',
+    'var lv=busyLevel(f,t);if(lv>=3)b.textContent="Very busy dates — "+lv+" requests already touch them.";else if(lv>=1)b.textContent="Somewhat busy — "+lv+" other request"+(lv===1?"":"s")+" touch these dates.";}',
+    'P.addEventListener("change",function(ev){var el=ev.target.closest(".pick");if(el)check(el);});',
+    'document.getElementById("mk").onclick=function(){',
+    'var k=who.value;if(!k){alert("Pick your name first.");return;}',
+    'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;}',
+    'var segs=[];var bad=false;',
+    'P.querySelectorAll(".pick").forEach(function(el,i){var f=el.querySelector(".pf").value,t=el.querySelector(".pt").value;',
+    'if(!f&&!t)return;if(!f||!t||t<f){bad=true;return;}segs.push(f+"~"+t);});',
+    'if(bad){alert("One of your choices has a missing or backwards date.");return;}',
+    'if(!segs.length){alert("Enter at least your first choice.");return;}',
+    'var raw="VC1|"+k+"|"+segs.join(".");',
+    'var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
+    'document.getElementById("cd").textContent=code;document.getElementById("out").className="";',
+    'document.getElementById("out").scrollIntoView({behavior:"smooth"});};',
+    'document.getElementById("cp").onclick=function(){var t=document.getElementById("cd").textContent;',
+    'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){document.getElementById("cp").textContent="Copied ✓";});}else{var r=document.createRange();r.selectNode(document.getElementById("cd"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");document.getElementById("cp").textContent="Copied ✓";}};',
+    '<\/script></body></html>'].join("\n");
+}
+function vacEmailText(){
+  const V=S.vacations;
+  return "Subject: Vacation requests for "+(V.windowFrom? V.windowFrom+" to "+V.windowTo : "the coming season")+" — due "+(V.deadline||"[date]")+"\n\n"+
+  "Hi all,\n\nTime to plan the longer time off. Attached is a one-page form: open it on your phone or laptop, list up to "+(V.maxPicks||3)+" stretches you’d like ("+(V.minDays||5)+" days or more), best first, and it gives you a short code — reply with that code before "+(V.deadline||"the deadline")+".\n\n"+
+  "Everyone’s requests are decided together, not first-come-first-served — submitting early or late changes nothing except that late means you’re not in the draw. The form shows which dates are already crowded, so if you’re flexible, quieter dates raise your odds.\n\n"+
+  "Approvals start "+(V.openFrom||"after the deadline")+". I’ll confirm everyone’s dates once they’re granted.\n\nThanks!";
+}
+function vacApprovedEmailText(){
+  const rows=vacApprovedList().slice().sort((a,b)=>a.start.localeCompare(b.start))
+    .map(t=>"  • "+((empById(t.empId)||{name:"?"}).name)+" — "+prettyFull(t.start)+" to "+prettyFull(t.end));
+  return "Subject: Approved vacations\n\nHi all,\n\nHere are the approved vacations so far:\n\n"+rows.join("\n")+"\n\nAnything not listed is still open — talk to me if your plans change.";
 }
 
 /* ---------- the standalone poll form ---------- */
@@ -9572,6 +10051,10 @@ const KB=[
   a:"Your board is yours alone: it's stored under your account and no other user can read it — that's enforced by the database itself, not just the app. Nothing about your schedule appears anywhere public, and nothing leaves the app unless you send it."},
  {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
   a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
+ {t:"Vacation calendar", k:"vacation calendar survey draw ranked longer time off season annual pto request weeks", go:"vacation",
+  a:"Turn it on in Settings (or in setup) and a Vacations page appears. Download the survey, send it to everyone; each person ranks up to a few stretches of time off and sends back a short code by your deadline. The draw grants the largest set it can — first choices first, ties settled by fairness, seniority, or an auditable lottery — never more away at once than your cap (or than keeps the floor covered), and never on an assigned holiday. Granted vacations flow straight into the drafter and the calendar."},
+ {t:"Why can't vacations land on holidays?", k:"vacation holiday overlap blocked assigned staffed conflict", go:"vacation",
+  a:"Assigned holidays are staffed by the holiday poll, so a vacation can't swallow one. The usual order: assign holidays first, run the vacation draw second, and handle day-to-day requests after. A request that touches a holiday is skipped with a note, and the person's next choice is tried instead."},
  {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
   a:"On the Holidays page (or in setup), say whether business spikes the day before a holiday, after, or both. Those days then count one step busier: spare hands are steered there first, drafts fill them first, and thin cover next to a holiday gets flagged. It never adds shifts on its own."},
  {t:"Put Weeksolved on your home screen", k:"home screen install app icon phone shortcut add pin homescreen", go:null,
