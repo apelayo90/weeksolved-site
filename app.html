@@ -4309,6 +4309,7 @@ function vOverview(){
               <span class="chip">${S.rules.restMode==="assigned"?"Rests assigned":S.rules.restMode==="lengths"?"Rest length only":"Staff coordinate rests"}</span>
             </div>
             <div class="row"><button class="btn sm" data-go="rules">Change break handling</button></div>
+            <div class="help" style="font-size:11.5px;opacity:.8">Weeksolved applies published state break rules to help you schedule — it’s a scheduling tool, not legal advice. Reviewing each schedule and your own compliance stays with you.</div>
           </div>
         </div>
         <div class="card">
@@ -5982,7 +5983,7 @@ function vRules(){
         ${R.breakMode==="assigned"? `
         <div class="field"><label>How the meal times get decided</label>
           <select data-bind="rules.mealPlan">
-            <option value="auto" ${mealPlan()==="auto"?"selected":""}>Work them out for me — staggered, always compliant</option>
+            <option value="auto" ${mealPlan()==="auto"?"selected":""}>Work them out for me — staggered inside the legal window</option>
             <option value="slots" ${mealPlan()==="slots"?"selected":""}>Use the meal times I set — everyone goes on one of them</option>
             <option value="closed" ${mealPlan()==="closed"?"selected":""}>We close for lunch — everybody eats at the same time</option>
           </select>
@@ -7090,7 +7091,7 @@ function pdfFooter(doc){
   const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
   doc.setFontSize(7.5); doc.setTextColor(140,150,147);
   const L=law();
-  doc.text("Break rules applied: "+L.name+". "+(L.premium?L.premium:""), 40, H-26, {maxWidth:W-160});
+  doc.text("Break rules applied: "+L.name+". "+(L.premium?L.premium:"")+" Prepared with scheduling software; reviewed and approved by management.", 40, H-26, {maxWidth:W-160});
   doc.text("Generated "+new Date().toLocaleString([],{dateStyle:"short",timeStyle:"short"}), W-40, H-26, {align:"right"});
 }
 async function exportWeekPDF(){
@@ -9322,6 +9323,8 @@ const KB=[
   a:"Your board is yours alone: it's stored under your account and no other user can read it — that's enforced by the database itself, not just the app. Nothing about your schedule appears anywhere public, and nothing leaves the app unless you send it."},
  {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
   a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
+ {t:"Is this legal advice?", k:"legal advice lawyer liability responsible sued law compliance guarantee promise", go:"rules",
+  a:"No. Weeksolved applies published state break rules to help you schedule, and flags problems it can see — but it's a scheduling tool, not a law firm. You review every schedule before it goes up, and responsibility for complying with the laws that apply to your business stays with you. When something's unusual (waivers, union agreements, local ordinances), check with a professional."},
  {t:"Report a problem", k:"bug problem report broken error wrong crash issue feedback", go:null,
   a:"Use 'Report a problem' (bottom of the menu). Say what you expected and what happened — reports also collect quietly in the background so the fix crew sees crashes even when nobody writes them up. Reports never include your staff's names."},
  {t:"Budget and labor cost", k:"budget cost money dollars labor rate spend", go:"org",
