@@ -4,17 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Weeksolved — Staff Scheduling Software with Break Compliance</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c6a66'/%3E%3Ctext x='32' y='43' font-family='Arial,Helvetica,sans-serif' font-size='28' font-weight='800' fill='%23fff' text-anchor='middle'%3EWS%3C/text%3E%3C/svg%3E">
 <meta name="description" content="Weeksolved builds your staff schedule from your own rules: required coverage, role ratios, availability, hour caps and state meal and rest break law. Flat pricing per location — your staff installs nothing.">
 <link rel="canonical" href="https://weeksolved.com/">
 <meta property="og:site_name" content="Weeksolved">
 <meta property="og:title" content="Weeksolved — Staff Scheduling Software with Break Compliance">
 <meta property="og:description" content="Give it your coverage rules once. Weeksolved drafts a compliant weekly schedule, places every meal and rest break inside the legal window, and tells you exactly what blocked any shift it could not fill.">
 <meta property="og:url" content="https://weeksolved.com/">
-<meta name="theme-color" content="#1c6a66">
+<meta property="og:image" content="https://weeksolved.com/shot-week.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#134744">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication",
  "name":"Weeksolved","url":"https://weeksolved.com/",
  "applicationCategory":"BusinessApplication","operatingSystem":"Web",
+ "screenshot":"https://weeksolved.com/shot-week.png",
  "offers":{"@type":"AggregateOffer","lowPrice":"29","highPrice":"49","priceCurrency":"USD",
    "offerCount":"3","url":"https://weeksolved.com/pricing.html"},
  "description":"Weeksolved turns a manager's coverage rules into a compliant staff schedule. It handles required coverage by role and time of day, role ratios, staff groups and hour caps, individual availability and requests, seniority or lottery rotation for the sought-after shifts, and meal and rest breaks under the labor law of the state you pick.",
@@ -22,150 +29,304 @@
 </script>
 <style>
 :root{
-  --bg:#f2f5f4; --surface:#ffffff; --sunken:#e8edec;
-  --ink:#18211f; --ink2:#3c4a47; --muted:#697773;
-  --line:#d2d8d6; --line-strong:#7d8b87;
-  --accent:#1c6a66; --accent-soft:#dcebe9; --on-accent:#fff;
-  --ok:#2c7a4b; --ok-soft:#dcefe2; --warn:#8f5d10;
+  --bg:#f4f7f6; --surface:#ffffff; --sunken:#e9efed;
+  --ink:#141d1b; --ink2:#3c4a47; --muted:#63716d;
+  --line:#dbe2e0; --line-strong:#7d8b87;
+  --accent:#176a65; --accent-deep:#134744; --accent-soft:#ddedeb; --on-accent:#fff;
+  --ok:#2c7a4b; --ok-soft:#ddefe3; --gold:#b98a2f;
+  --shadow-lg:0 24px 60px -18px rgba(19,71,68,.28), 0 6px 18px -8px rgba(19,71,68,.18);
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#101514; --surface:#191f1e; --sunken:#131817;
-    --ink:#e7ecea; --ink2:#c2ccc9; --muted:#8d9b97;
-    --line:#2c3634; --line-strong:#778682;
-    --accent:#4cb3a9; --accent-soft:#173432; --on-accent:#0c1211;
-    --ok:#5cb87f; --ok-soft:#1a2f22; --warn:#d4a04a;
+    --bg:#0e1413; --surface:#171f1e; --sunken:#111817;
+    --ink:#e8edec; --ink2:#c2ccc9; --muted:#8d9b97;
+    --line:#28322f; --line-strong:#778682;
+    --accent:#48b1a7; --accent-deep:#0d2f2d; --accent-soft:#16342f; --on-accent:#0b1210;
+    --ok:#5cb87f; --ok-soft:#16301f; --gold:#d4a04a;
+    --shadow-lg:0 24px 60px -18px rgba(0,0,0,.6), 0 6px 18px -8px rgba(0,0,0,.4);
   }
 }
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
+section[id]{scroll-margin-top:76px}
 body{margin:0;background:var(--bg);color:var(--ink);
-  font:15px/1.6 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:1020px;margin:0 auto;padding:0 20px 60px}
-header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
-.mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--on-accent);
-  display:grid;place-items:center;font-weight:800;font-size:15px}
-.brand{font-weight:800;font-size:18px;letter-spacing:-.01em}
-nav.hn{margin-left:auto;display:flex;gap:18px;align-items:center}
-nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:13.5px}
-nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:9px;padding:9px 16px}
-.hero{text-align:center;padding:44px 0 10px}
-h1{font-size:clamp(28px,5.4vw,44px);letter-spacing:-.025em;line-height:1.12;margin:0 0 14px;text-wrap:balance}
-.hero p{color:var(--muted);font-size:17px;max-width:60ch;margin:0 auto 24px}
-.cta-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.btn{display:inline-block;text-decoration:none;font-weight:700;font-size:15px;border-radius:10px;padding:13px 24px}
-.btn.pri{background:var(--accent);color:var(--on-accent)}
-.btn.sec{border:1px solid var(--line-strong);color:var(--ink)}
-.beta{display:flex;justify-content:center;margin:22px 0 46px}
-.beta span{background:var(--ok-soft);color:var(--ok);border-radius:99px;padding:8px 16px;font-weight:700;font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:46px}
-.f{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:20px}
-.f h3{margin:0 0 6px;font-size:15.5px;letter-spacing:-.01em}
-.f p{margin:0;color:var(--ink2);font-size:13.5px}
-.how{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;margin-bottom:46px}
-.how h2, .law h2{margin:0 0 18px;font-size:22px;letter-spacing:-.015em;text-align:center}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
-.step{padding:0 6px}
-.step .n{width:30px;height:30px;border-radius:99px;background:var(--accent-soft);color:var(--accent);
-  display:grid;place-items:center;font-weight:800;margin-bottom:10px}
-.step h3{margin:0 0 5px;font-size:15px}
-.step p{margin:0;color:var(--ink2);font-size:13.5px}
-.law{margin-bottom:46px;text-align:center}
-.law .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;text-align:left;max-width:820px;margin:0 auto}
-.law p{color:var(--ink2);margin:0 0 10px}
-.built{color:var(--muted);text-align:center;font-size:13.5px;max-width:70ch;margin:0 auto 46px}
-.bottom{text-align:center;background:var(--accent);border-radius:16px;padding:38px 24px;margin-bottom:20px}
-.bottom h2{color:var(--on-accent);margin:0 0 8px;font-size:24px;letter-spacing:-.015em}
-.bottom p{color:var(--on-accent);opacity:.85;margin:0 0 18px}
-.bottom .btn{background:var(--surface);color:var(--accent)}
-footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:34px}
-footer a{color:var(--accent);text-decoration:none;margin:0 8px}
+  font:16px/1.62 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  text-rendering:optimizeLegibility}
+h1,h2,h3{font-family:"Archivo","Public Sans",sans-serif;letter-spacing:-.022em;line-height:1.12;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+
+/* header */
+header.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topin{display:flex;align-items:center;gap:11px;padding:14px 0}
+.mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  color:#fff;display:grid;place-items:center;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em}
+.brand{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
+nav.hn{margin-left:auto;display:flex;gap:22px;align-items:center}
+nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px}
+nav.hn a:hover{color:var(--accent)}
+nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:10px;padding:10px 18px;transition:transform .12s}
+nav.hn a.go:hover{transform:translateY(-1px);color:var(--on-accent)}
+
+/* hero */
+.hero{position:relative;padding:72px 0 30px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-40% -20% auto;height:130%;
+  background:radial-gradient(46% 60% at 68% 18%, color-mix(in srgb,var(--accent) 16%,transparent), transparent 70%);
+  pointer-events:none}
+.herogrid{position:relative;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:44px;align-items:center}
+.kick{display:inline-flex;align-items:center;gap:8px;background:var(--ok-soft);color:var(--ok);
+  border-radius:99px;padding:7px 14px;font-weight:700;font-size:12.5px;margin-bottom:18px}
+.kick i{width:7px;height:7px;border-radius:99px;background:var(--ok);display:inline-block}
+h1{font-size:clamp(30px,4.6vw,48px);font-weight:800;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{color:var(--muted);font-size:17.5px;max-width:52ch;margin:18px 0 26px}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-block;text-decoration:none;font-weight:700;font-size:15px;border-radius:11px;padding:14px 26px;transition:transform .12s, box-shadow .12s}
+.btn.pri{background:var(--accent);color:var(--on-accent);box-shadow:0 8px 22px -8px color-mix(in srgb,var(--accent) 55%,transparent)}
+.btn.pri:hover{transform:translateY(-1px)}
+.btn.sec{border:1.5px solid var(--line-strong);color:var(--ink)}
+.subcta{color:var(--muted);font-size:13px;margin-top:14px}
+.browser{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-lg)}
+.browser .bar{display:flex;align-items:center;gap:6px;background:var(--sunken);border-bottom:1px solid var(--line);padding:10px 12px}
+.browser .bar i{width:10px;height:10px;border-radius:99px;background:var(--line-strong);opacity:.5}
+.browser .bar span{margin-left:8px;flex:1;background:var(--surface);border:1px solid var(--line);border-radius:6px;
+  font-size:11px;color:var(--muted);padding:3px 10px;max-width:280px;white-space:nowrap;overflow:hidden}
+.browser img{display:block;width:100%;height:auto}
+
+/* logos-ish trust strip */
+.trust{display:flex;gap:10px 26px;flex-wrap:wrap;justify-content:center;color:var(--muted);
+  font-size:13px;font-weight:600;padding:34px 0 8px}
+.trust span{display:inline-flex;align-items:center;gap:7px}
+.trust svg{width:15px;height:15px;stroke:var(--accent);fill:none;stroke-width:2}
+
+/* sections */
+section{padding:64px 0}
+.seclab{color:var(--accent);font-weight:800;font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;
+  font-family:"Archivo",sans-serif;margin-bottom:10px}
+h2{font-size:clamp(24px,3.2vw,34px);font-weight:800;margin-bottom:14px;text-wrap:balance}
+.secintro{color:var(--muted);max-width:62ch;margin:0 0 34px;font-size:16.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.f{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:24px 22px;transition:transform .15s, box-shadow .15s}
+.f:hover{transform:translateY(-2px);box-shadow:0 12px 30px -14px rgba(19,71,68,.25)}
+.f .ic{width:38px;height:38px;border-radius:10px;background:var(--accent-soft);display:grid;place-items:center;margin-bottom:13px}
+.f .ic svg{width:19px;height:19px;stroke:var(--accent);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.f h3{font-size:16.5px;font-weight:700;margin-bottom:6px}
+.f p{margin:0;color:var(--ink2);font-size:14px}
+
+/* how */
+.how{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:40px 34px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:26px;margin-top:26px}
+.step .n{font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;color:var(--accent);
+  background:var(--accent-soft);width:34px;height:34px;border-radius:99px;display:grid;place-items:center;margin-bottom:12px}
+.step h3{font-size:16px;margin-bottom:6px}
+.step p{margin:0;color:var(--ink2);font-size:14px}
+
+/* dual shots */
+.duo{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,3fr);gap:26px;align-items:start}
+.phone{border:6px solid var(--ink);border-radius:34px;overflow:hidden;box-shadow:var(--shadow-lg);background:var(--ink);max-width:270px;justify-self:center}
+.phone img{display:block;width:100%;height:auto;border-radius:26px}
+.capt{color:var(--muted);font-size:13px;text-align:center;margin-top:12px}
+
+/* law band */
+.law{background:linear-gradient(150deg,var(--accent-deep),color-mix(in srgb,var(--accent-deep) 78%,#000)); border-radius:22px;color:#e9f4f2;padding:44px 38px}
+.law .seclab{color:#8fd0c8}
+.law h2{color:#fff}
+.law p{color:#c8dedb;max-width:74ch;font-size:15.5px}
+.law .fine{color:#7fa9a4;font-size:12.5px;margin-top:16px}
+.lawstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:26px}
+.ls{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:16px 18px}
+.ls b{display:block;font-family:"Archivo",sans-serif;font-size:21px;color:#fff;margin-bottom:2px}
+.ls span{font-size:13px;color:#b7d2ce}
+
+/* math */
+.math{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.m{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:24px}
+.m.win{border-color:var(--accent);box-shadow:0 10px 30px -14px color-mix(in srgb,var(--accent) 45%,transparent)}
+.m h3{font-size:14px;color:var(--muted);font-weight:700;margin-bottom:10px}
+.m .big{font-family:"Archivo",sans-serif;font-weight:800;font-size:30px}
+.m .big small{font-size:14px;color:var(--muted);font-weight:600}
+.m p{margin:8px 0 0;color:var(--ink2);font-size:13.5px}
+
+/* bottom cta */
+.bottom{text-align:center;background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  border-radius:24px;padding:56px 26px;box-shadow:var(--shadow-lg)}
+.bottom h2{color:#fff;font-size:clamp(26px,3.6vw,38px)}
+.bottom p{color:#d4e9e6;margin:10px 0 24px;font-size:16px}
+.bottom .btn{background:#fff;color:var(--accent-deep)}
+
+footer{color:var(--muted);font-size:13px;padding:44px 0 40px}
+.fgrid{display:flex;gap:14px 26px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
+footer a{color:var(--ink2);text-decoration:none;font-weight:600}
+footer a:hover{color:var(--accent)}
+.fnote{text-align:center}
+
+@media (max-width:900px){
+  .herogrid{grid-template-columns:1fr;gap:34px}
+  .hero{padding-top:44px}
+  .duo{grid-template-columns:1fr}
+  .phone{max-width:230px}
+  section{padding:46px 0}
+  nav.hn a:not(.go){display:none}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="mark">WS</div><div class="brand">Weeksolved</div>
-    <nav class="hn">
-      <a href="/pricing.html">Pricing</a>
-      <a class="go" href="/app.html">Open the app</a>
-    </nav>
-  </header>
+<header class="top"><div class="wrap topin">
+  <div class="mark">WS</div><div class="brand">Weeksolved</div>
+  <nav class="hn">
+    <a href="#features">Features</a>
+    <a href="#compliance">Compliance</a>
+    <a href="/pricing.html">Pricing</a>
+    <a class="go" href="/app.html">Open the app</a>
+  </nav>
+</div></header>
 
-  <section class="hero">
-    <h1>Staff scheduling that follows your rules — and your state's break law</h1>
-    <p>Tell Weeksolved once how your week has to look: coverage, roles, hours, limits.
-       From then on you press one button and read the result — every meal and rest break
-       placed inside the legal window, every rule respected, every gap explained.</p>
+<div class="hero"><div class="wrap herogrid">
+  <div>
+    <span class="kick"><i></i>Now in closed testing — free with an access code</span>
+    <h1>Staff scheduling that follows your rules — <em>and your state's break law</em></h1>
+    <p class="lede">Tell Weeksolved once how your week has to look: coverage, roles, hours, limits.
+      From then on you press one button and read the result — every meal and rest break placed
+      inside the legal window, every rule respected, every gap explained in plain words.</p>
     <div class="cta-row">
       <a class="btn pri" href="/app.html">Open Weeksolved</a>
       <a class="btn sec" href="/pricing.html">See pricing</a>
     </div>
-  </section>
-
-  <div class="beta"><span>Currently in closed testing — free with an access code, paid plans coming</span></div>
-
-  <div class="grid">
-    <div class="f"><h3>It never invents a shift</h3>
-      <p>Weeksolved schedules only the shifts you've defined. If your coverage can't be met from that pool,
-      the slot stays open and it tells you exactly which limit stopped each person — then shows the best ways out,
-      clearly labeled, least disruptive first.</p></div>
-    <div class="f"><h3>It knows your break law</h3>
-      <p>Pick your state and every drafted shift gets its meal placed inside the legal window, rest breaks laid
-      around it, and staggering that never drops coverage below your minimums. Late or missing meals are flagged
-      before the schedule goes up — not after a claim lands.</p></div>
-    <div class="f"><h3>No employee accounts. Ever.</h3>
-      <p>Only the manager signs in. Staff get their schedules the way they already live — text, email, print,
-      or a calendar file that drops shifts straight into their phone. Nothing to install, nothing to teach.</p></div>
-    <div class="f"><h3>Fair, and it can prove it</h3>
-      <p>Sought-after shifts rotate by seniority, by turns, or by an auditable lottery. A ledger tracks who's had
-      what, so the same people don't draw the short straw week after week — and you can show the receipts.</p></div>
-    <div class="f"><h3>Built for licensed workplaces</h3>
-      <p>Pharmacist-to-tech ratios, license and certification expiry tracking, stations that must never sit empty
-      with named meal-break relief. The compliance features enterprise suites charge thousands for, at a flat small-business price.</p></div>
-    <div class="f"><h3>Your data stays yours</h3>
-      <p>Schedules live in your private account and follow you between devices. No ads, no trackers, no selling
-      your data — and everything exports to Excel and PDF whenever you want it.</p></div>
+    <div class="subcta">No employee accounts. No per-user fees. Works on any phone or computer.</div>
   </div>
-
-  <div class="how">
-    <h2>How it works</h2>
-    <div class="steps">
-      <div class="step"><div class="n">1</div><h3>Answer the setup questions once</h3>
-        <p>Your hours, roles, shifts, team, and rules — most answers are just picking an option. Ten minutes, one time.</p></div>
-      <div class="step"><div class="n">2</div><h3>Add the week's requests</h3>
-        <p>Day off, specific shifts, hour caps — punched in as the messages arrive, marked must or if-possible.</p></div>
-      <div class="step"><div class="n">3</div><h3>Press Draft, read the result</h3>
-        <p>A full week in seconds: breaks placed, stations rotated, requests honored where possible — and plain words
-        about anything that couldn't be.</p></div>
-    </div>
+  <div class="browser">
+    <div class="bar"><i></i><i></i><i></i><span>weeksolved.com/app</span></div>
+    <img src="/shot-week.png" width="1440" height="880" alt="The Weeksolved weekly schedule: a drafted week with every shift placed, compliance checks summarized, and plain-language notes on what needs attention" loading="eager">
   </div>
+</div></div>
 
-  <div class="law">
-    <h2>The break-law engine</h2>
-    <div class="card">
-      <p>Meal and rest break rules differ by state, and the penalties are real — in California a single missed
-      or late meal period owes an hour of premium pay, per person, per day.</p>
-      <p>Weeksolved carries each state's rules: how long a shift runs before a meal is owed, the latest legal
-      moment it can start, how many paid rest breaks the hours earn, and when a waiver is allowed. Every draft
-      applies them automatically, and every printed schedule carries the paper trail that shows the breaks were
-      placed lawfully — the first thing anyone asks for.</p>
-      <p style="margin:0;color:var(--muted);font-size:13px">Weeksolved is scheduling software, not legal advice — you stay in charge of your own compliance.</p>
-    </div>
-  </div>
-
-  <p class="built">Built for pharmacies, clinics, laboratories, veterinary and dental practices, retail, hospitality,
-  security, warehousing, call centers, salons — anywhere 5 to 100 people need covering to a rule.</p>
-
-  <div class="bottom">
-    <h2>Your week, solved.</h2>
-    <p>Flat pricing per location. Free while in testing.</p>
-    <a class="btn" href="/app.html">Open Weeksolved</a>
-  </div>
-
-  <footer>
-    <a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/refunds.html">Refunds</a>
-    <div style="margin-top:8px">Contact: weeksolved@gmail.com · Weeksolved, operated by Alberto Pelayo</div>
-  </footer>
+<div class="wrap trust">
+  <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Pharmacies</span>
+  <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Clinics &amp; dental</span>
+  <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Veterinary</span>
+  <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Retail &amp; hospitality</span>
+  <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Labs &amp; warehouses</span>
+  <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Anywhere 5–100 people cover to a rule</span>
 </div>
+
+<section id="features"><div class="wrap">
+  <div class="seclab">Why managers switch</div>
+  <h2>The schedule does what you'd do — just in seconds</h2>
+  <p class="secintro">Most scheduling apps hand you an empty grid and wish you luck. Weeksolved asks
+    what your week has to look like, then builds it — and shows its work.</p>
+  <div class="grid">
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+      <h3>It never invents a shift</h3>
+      <p>Only the shifts you've defined ever get scheduled. If coverage can't be met from that pool, the slot
+      stays open and it names exactly which limit stopped each person — then offers the best ways out,
+      clearly labeled, least disruptive first.</p></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></svg></div>
+      <h3>It knows your break law</h3>
+      <p>Pick your state and every drafted shift gets its meal placed inside the legal window, rest breaks laid
+      around it, and staggering that never drops the floor below your minimums. Problems are flagged before
+      the schedule goes up — not after a claim lands.</p></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+      <h3>No employee accounts. Ever.</h3>
+      <p>Only the manager signs in. Staff get their schedules the way they already live — text, email, print,
+      or a calendar file that drops shifts straight into their phones. Nothing to install, nothing to teach,
+      nobody locked out.</p></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></div>
+      <h3>Fair — and it can prove it</h3>
+      <p>Sought-after shifts rotate by seniority, by turns, or by an auditable lottery. A running ledger tracks
+      who's had what, so the same people never quietly draw the short straw — and you can show the receipts.</p></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <h3>Built for licensed workplaces</h3>
+      <p>Pharmacist-to-tech ratios, license and certification expiry tracking, stations that must never sit
+      empty with named meal-break relief. The compliance depth enterprise suites charge thousands for —
+      at a flat small-business price.</p></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
+      <h3>Your data stays yours</h3>
+      <p>Schedules live in your private account and follow you between devices. No ads, no trackers, no selling
+      your data — and everything exports to Excel, PDF and calendars whenever you want it.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap how">
+  <div class="seclab">How it works</div>
+  <h2>Ten minutes of questions. Then it's one button, forever.</h2>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3>Answer the setup questions once</h3>
+      <p>Your hours, roles, shifts, team and rules — most answers are just picking an option. The app builds
+      your defaults from them.</p></div>
+    <div class="step"><div class="n">2</div><h3>Add the week's requests</h3>
+      <p>Day off, specific shifts, hour caps — punched in as the messages arrive, marked <b>must</b> or
+      <b>if possible</b>.</p></div>
+    <div class="step"><div class="n">3</div><h3>Press Draft. Read the result.</h3>
+      <p>A full week in seconds: breaks placed, stations rotated, requests honored where possible — and plain
+      words about anything that couldn't be.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="seclab">On the counter and in the pocket</div>
+  <h2>The day sheet runs the floor. The phone runs everywhere.</h2>
+  <p class="secintro">An hour-by-hour day sheet shows who's where with every meal and rest break placed —
+    print it for the back room. And the whole app fits a phone without a single feature missing.</p>
+  <div class="duo">
+    <div>
+      <div class="browser"><div class="bar"><i></i><i></i><i></i><span>weeksolved.com/app — day sheet</span></div>
+      <img src="/shot-day.png" width="1440" height="880" alt="The Weeksolved day sheet: an hour-by-hour timeline of every person on shift with meal and rest breaks placed, station assignments, and coverage checked against minimums" loading="lazy"></div>
+      <div class="capt">The printable day sheet — breaks, stations and coverage, hour by hour</div>
+    </div>
+    <div>
+      <div class="phone"><img src="/shot-phone.png" width="390" height="800" alt="Weeksolved on a phone: the drafted week summarized with what needs attention, in a clean mobile layout" loading="lazy"></div>
+      <div class="capt">Full app on any phone</div>
+    </div>
+  </div>
+</div></section>
+
+<section id="compliance"><div class="wrap law">
+  <div class="seclab">The break-law engine</div>
+  <h2>Compliance isn't a report you run. It's how the schedule gets built.</h2>
+  <p>Meal and rest break rules differ by state, and the penalties are real — in California, one missed or
+  late meal period owes an hour of premium pay, per person, per day. Weeksolved carries each state's rules
+  and applies them while drafting: how long a shift runs before a meal is owed, the latest legal minute it
+  can start, how many paid rest breaks the hours earn, and when a waiver is allowed.</p>
+  <div class="lawstats">
+    <div class="ls"><b>Every shift</b><span>gets its breaks placed inside the legal window, automatically</span></div>
+    <div class="ls"><b>Before posting</b><span>late or missing meals are flagged — never discovered after</span></div>
+    <div class="ls"><b>On paper</b><span>every printed schedule carries the compliance trail that proves it</span></div>
+  </div>
+  <p class="fine">Weeksolved is scheduling software, not legal advice — you stay in charge of your own compliance.</p>
+</div></section>
+
+<section><div class="wrap">
+  <div class="seclab">The pricing difference</div>
+  <h2>Flat per location. Never per employee.</h2>
+  <p class="secintro">Per-seat apps charge for every staff member, every month, and grow every time you hire.
+    Weeksolved doesn't count seats — because your staff doesn't need accounts at all.</p>
+  <div class="math">
+    <div class="m"><h3>Per-seat apps · 18-person pharmacy</h3>
+      <div class="big">$45–$90<small> /month</small></div>
+      <p>At $2.50–$5 per employee — plus every hire raises the bill, and every employee must install an app
+      and keep an account.</p></div>
+    <div class="m win"><h3>Weeksolved Pro · same pharmacy</h3>
+      <div class="big">$41<small> /month, billed yearly</small></div>
+      <p>Flat. The same price on the day you hire your 30th tech — with the break-law engine included.
+      <a href="/pricing.html" style="color:var(--accent);font-weight:700">Full pricing →</a></p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap bottom">
+  <h2>Your week, solved.</h2>
+  <p>Free while in testing · flat pricing per location when it isn't · your data exports freely, always</p>
+  <a class="btn" href="/app.html">Open Weeksolved</a>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="fgrid">
+    <a href="/app.html">Open the app</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/refunds.html">Refunds</a>
+  </div>
+  <div class="fnote">Contact: weeksolved@gmail.com · Weeksolved, operated by Alberto Pelayo</div>
+</div></footer>
 </body>
 </html>

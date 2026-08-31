@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /app.html
+
+Sitemap: https://weeksolved.com/sitemap.xml
