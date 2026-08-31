@@ -369,6 +369,10 @@ tr:last-child td{border-bottom:0}
 
 .setbody{padding:4px 0}
 .setrow{display:flex;gap:16px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.snote{border:0;border-bottom:1px dashed var(--line2);background:transparent;font-size:11.5px;color:var(--muted);width:100%;max-width:210px;padding:2px 0;margin-top:3px}
+.snote:focus{outline:0;border-bottom-color:var(--acc);color:var(--fg)}
+.devrow{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.devrow:last-child{border-bottom:0}
 .setrow:last-child{border-bottom:0}
 .setrow .sq{flex:1;min-width:220px}
 .setrow .sq strong{font-size:13.5px;font-weight:600;display:block}
@@ -872,7 +876,7 @@ function blankState(){
     rules:{ minRestH:10, maxConsecDays:6, noClopen:true, maxShiftH:12, preferLong:false, perDiem:"ask", holidayRush:"none",
             breakMode:"assigned", restMode:"assigned", staggerMeals:true,
             projectShape:"chunk", projectShare:"fair", projectMinH:4,
-            sendOut:false,
+            sendOut:false, remindH:12, auditKeep:730, deviceWatch:true, newDeviceConfirm:false,
             mealPlan:"auto", mealSlots:["11:30","12:00","12:30","13:00"],
             mealClose:{from:"13:00", to:"14:00"},
             useDaySheet:true, stationRotation:"fair", stationSpan:"day", stationFamilies:true, useCycles:false,
@@ -880,7 +884,7 @@ function blankState(){
             fillMode:"demand", topUpLabel:"Project time",
             allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
     weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
-    bugs:[], callouts:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
+    bugs:[], callouts:[], audit:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
     holidays:{ list:[], poll:null, responses:[], result:null, mode:"same", demand:[] },
     vacations:{ on:false, rule:"fairness", maxOff:1, opCheck:false, minDays:5, maxPicks:3,
                 deadline:"", openFrom:"", windowFrom:"", windowTo:"", responses:[], seed:1234,
@@ -1097,6 +1101,8 @@ function wholeWeekText(ws){
     const on=wk.assignments.filter(a=>a.date===d.date).sort((x,y)=>x.startMin-y.startMin);
     L.push(DAYS[d.dow]+" "+prettyDate(d.date)+(S.hours[d.dow].closed? "  — closed":""));
     if((wk.dayNotes||{})[d.date]) L.push("   NOTE: "+wk.dayNotes[d.date]);
+    (wk.assignments||[]).filter(a=>a.date===d.date && shiftNote(ws,d.date,a.empId))
+      .forEach(a=>L.push("   "+((empById(a.empId)||{}).name||"")+": "+shiftNote(ws,d.date,a.empId)));
     if(!on.length){ L.push("   nobody scheduled"); }
     else on.forEach(a=>{
       const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
@@ -1248,7 +1254,7 @@ function codeHash(str){
 /* Existing accounts keep everything across updates — state carries defaults for
    anything new. When an update adds settings worth an answer, bump UPDREV and
    updModal() offers just those questions, once, with a skip that keeps defaults. */
-const UPDREV=4;
+const UPDREV=5;
 function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
 function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
 function updModal(){
@@ -1303,6 +1309,19 @@ function updModal(){
           <option value="0" ${S.vacations.on?"":"selected"}>Not needed</option>
           <option value="1" ${S.vacations.on?"selected":""}>Yes — adds a Vacations page</option>
         </select></div>
+      <div class="field"><label>Should their phone remind them before a shift?</label>
+        <select id="u_rem">
+          <option value="0" ${!S.rules.remindH?"selected":""}>No reminder</option>
+          <option value="2" ${S.rules.remindH===2?"selected":""}>2 hours before</option>
+          <option value="12" ${S.rules.remindH===12?"selected":""}>12 hours before</option>
+          <option value="24" ${S.rules.remindH===24?"selected":""}>The day before</option>
+        </select>
+        <span class="mini">New: the alarm rides along inside the calendar file, so it goes off on their own phone. Nothing for them to install, nothing for you to send.</span></div>
+      <div class="help">Also new, no answer needed: <b>your account now lists the devices it has been opened on</b>, under
+        Settings \u2014 with a way to sign the others out, and an optional emailed confirmation the first time a new device
+        signs in. <b>Every change to a posted schedule is now recorded</b> \u2014 what changed, when, and who was told \u2014 kept
+        for as long as you say and exportable from the record. And <b>a note can now sit on a single shift</b>: type it under
+        someone\'s name on the day sheet and it prints, exports and travels with their calendar file.</div>
       <div class="help">Also new, no answer needed: changing an already-posted schedule now asks first and offers to
         tell the affected people (adjustable in Settings); guaranteed minimum hours sit next to the cap on every
         profile; and your hours are treated as staffing hours — start earlier or end later in setup if crews work
@@ -1318,6 +1337,7 @@ function updModal(){
         if(wsel){ const v=wsel.value==="wanted"?1:wsel.value==="neutral"?0:-1; S.dayDesire[0]=v; S.dayDesire[6]=v; }
         S.vacations.on = r.querySelector("#u_vac").value==="1";
         const sp=r.querySelector("#u_span"); if(sp) S.rules.stationSpan=sp.value;
+        const rm=r.querySelector("#u_rem"); if(rm) S.rules.remindH=+rm.value||0;
         r.querySelectorAll("[data-uhol]").forEach(sel=>{
           const h=S.holidays.list.find(x=>x.id===sel.dataset.uhol);
           if(h){ h.hmode=sel.value; if(sel.value==="closed") h.need={}; }
@@ -1443,8 +1463,12 @@ async function cloudEnter(){
     S=(local && local.v===3)? migrate(local) : seedState();
     cloudPushNow();
   }
+  if(!(await newDeviceGate(uid))) return;
+  SESSION_AT=Date.now();
   startApp();
   setSync(true,"Signed in — your board follows you between devices");
+  watchKick(uid);
+  deviceCheck();
   if(cloudUnsub) cloudUnsub();
   cloudUnsub=FB.db.doc("users/"+uid+"/board/current").onSnapshot(async sn=>{
     if(!sn.exists || (sn.metadata&&sn.metadata.hasPendingWrites)) return;
@@ -1452,10 +1476,186 @@ async function cloudEnter(){
     if((d.rev||0)<=CLOUD_REV) return;
     CLOUD_REV=d.rev||0;
     try{
+      const before={n:S.org.name, ids:S.employees.map(e=>e.id)};
       const r=await cloudFetchAll(uid);
-      if(r){ S=migrate(r.state); lsSave(); render(); toast("Updated from your other device"); }
+      if(r){ S=migrate(r.state); rosterSwapCheck(before); lsSave(); render(); toast("Updated from your other device"); }
     }catch(e){}
   });
+}
+
+/* ============================================================
+   Devices on this account — one account covers one location, and
+   the owner can see everywhere their login is in use. Nothing is
+   ever locked out: this is visibility, not a leash.
+   ============================================================ */
+const DEVKEY="ws.devid";
+let DEVTIMER=null, DEVLIST=[], SESSION_AT=0, kickUnsub=null;
+function deviceId(){
+  let d="";
+  try{ d=localStorage.getItem(DEVKEY)||""; }catch(e){}
+  if(!d){
+    d="d"+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+    try{ localStorage.setItem(DEVKEY,d); }catch(e){}
+  }
+  return d;
+}
+function deviceLabel(){
+  const u=navigator.userAgent||"";
+  let os="Computer";
+  if(/iPhone/i.test(u)) os="iPhone";
+  else if(/iPad/i.test(u)) os="iPad";
+  else if(/Android/i.test(u)) os="Android phone";
+  else if(/Mac OS X|Macintosh/i.test(u)) os="Mac";
+  else if(/Windows/i.test(u)) os="Windows PC";
+  else if(/Linux/i.test(u)) os="Linux computer";
+  let br="browser";
+  if(/Edg\//.test(u)) br="Edge";
+  else if(/OPR\/|Opera/i.test(u)) br="Opera";
+  else if(/Chrome\//.test(u)) br="Chrome";
+  else if(/Firefox\//.test(u)) br="Firefox";
+  else if(/Safari\//.test(u)) br="Safari";
+  return os+" \u00b7 "+br;
+}
+function deviceWhere(){
+  try{
+    const z=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"";
+    return z? z.split("/").pop().replace(/_/g," ") : "";
+  }catch(e){ return ""; }
+}
+function devRef(id){ return FB.db.doc("users/"+FB.user.uid+"/devices/"+(id||deviceId())); }
+async function deviceTouch(){
+  if(!FB || !FB.user) return;
+  try{
+    const ref=devRef();
+    const sn=await ref.get();
+    const patch={label:deviceLabel(), where:deviceWhere(), last:Date.now()};
+    if(!sn.exists || !(sn.data()||{}).first) patch.first=Date.now();
+    await ref.set(patch,{merge:true});
+  }catch(e){}
+  clearTimeout(DEVTIMER);
+  DEVTIMER=setTimeout(deviceTouch, 600000);      /* a quiet check-in every 10 minutes */
+}
+async function deviceFetch(){
+  if(!FB || !FB.user) return [];
+  try{
+    const sn=await FB.db.collection("users/"+FB.user.uid+"/devices").get();
+    DEVLIST=(sn.docs||[]).map(d=>Object.assign({id:d.id}, d.data()||{}))
+      .sort((a,b)=>(b.last||0)-(a.last||0));
+  }catch(e){ DEVLIST=[]; }
+  return DEVLIST;
+}
+const DEV_LIVE_MS=20*60*1000;
+function devLive(list){ const t=Date.now(); return (list||DEVLIST).filter(d=>t-(d.last||0)<DEV_LIVE_MS); }
+function devAgo(ms){
+  if(!ms) return "never";
+  const m=Math.floor((Date.now()-ms)/60000);
+  if(m<2) return "right now";
+  if(m<60) return m+" minutes ago";
+  const h=Math.floor(m/60);
+  if(h<24) return h+" hour"+(h===1?"":"s")+" ago";
+  const d=Math.floor(h/24);
+  if(d===1) return "yesterday";
+  if(d<30) return d+" days ago";
+  return prettyDate(ymd(new Date(ms)));
+}
+async function deviceCheck(){
+  await deviceTouch();
+  if(S.rules.deviceWatch===false) return;
+  const live=devLive(await deviceFetch());
+  S.ui=S.ui||{};
+  if(live.length>=3 && Date.now()-(S.ui.devNudge||0) > 86400000){
+    S.ui.devNudge=Date.now(); save();
+    toast("Signed in from "+live.length+" places right now \u2014 Settings shows where");
+  }
+}
+async function deviceForget(id){
+  try{ const r=devRef(id); if(r.delete) await r.delete(); }catch(e){}
+  await deviceFetch();
+}
+/* Sign out everywhere: every honest device is watching this note and
+   steps out when it sees one it isn't named in. Changing the password
+   is the belt-and-braces version, offered alongside it. */
+async function deviceSignOutOthers(){
+  if(!FB || !FB.user) return;
+  try{
+    await FB.db.doc("users/"+FB.user.uid+"/meta/kick").set({at:Date.now(), keep:deviceId()});
+    const list=await deviceFetch();
+    await Promise.all(list.filter(d=>d.id!==deviceId()).map(d=>deviceForget(d.id)));
+    toast("Every other device is being signed out");
+  }catch(e){ toast("Couldn't reach your account just now \u2014 try again in a moment"); }
+}
+function watchKick(uid){
+  if(kickUnsub) kickUnsub();
+  kickUnsub=FB.db.doc("users/"+uid+"/meta/kick").onSnapshot(sn=>{
+    const k=(sn.exists && sn.data())||null;
+    if(!k || k.keep===deviceId()) return;
+    if((k.at||0) < SESSION_AT) return;
+    FB.auth.signOut().then(()=>location.reload()).catch(()=>{});
+  }, ()=>{});
+}
+
+/* One account, one location. If a board arrives with a different name
+   and a wholly different roster, two businesses are sharing a login —
+   we say so plainly once, and change nothing. */
+function rosterSwapCheck(before){
+  if(!before || !before.ids.length) return;
+  const now=S.employees.map(e=>e.id);
+  const kept=before.ids.filter(id=>now.indexOf(id)>=0).length;
+  if(kept/before.ids.length < 0.3 && (S.org.name||"")!==(before.n||"")){
+    S.ui=S.ui||{}; S.ui.rosterSwap=Date.now(); save();
+  }
+}
+
+/* A device this account has never been used on. Optional, and it fails
+   open — nobody gets locked out of their own schedule by a setting. */
+async function newDeviceGate(uid){
+  if(S.rules.newDeviceConfirm!==true) return true;
+  let known=false;
+  try{
+    const sn=await FB.db.doc("users/"+uid+"/devices/"+deviceId()).get();
+    known = sn.exists && (sn.data()||{}).ok===true;
+  }catch(e){ return true; }
+  if(known) return true;
+  try{
+    if(FB.auth.isSignInWithEmailLink && FB.auth.isSignInWithEmailLink(window.location.href)){
+      await FB.db.doc("users/"+uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true});
+      try{ history.replaceState({}, "", window.location.pathname); }catch(e){}
+      return true;
+    }
+  }catch(e){}
+  confirmDeviceScreen(uid);
+  return false;
+}
+function confirmDeviceScreen(uid){
+  const email=(FB.user&&FB.user.email)||"";
+  document.body.innerHTML =
+    '<div class="gate"><div class="gatebox">'+
+      '<div class="gatemark">WS</div>'+
+      '<h1>One quick check</h1>'+
+      '<p class="gsub">Your account hasn\'t been used on this device before. Confirm it from your email once and this device won\'t ask again.</p>'+
+      '<button class="btn primary big" id="dcsend">Email me a confirmation link</button>'+
+      '<div class="gerr" id="dcerr"></div>'+
+      '<p class="gfoot">The link goes to '+esc(email)+'. Open it on this device to carry on.</p>'+
+      '<button class="btn ghost sm" id="dcout" style="margin-top:10px">Sign out</button>'+
+    '</div></div>';
+  const err=t=>{ const e=document.getElementById("dcerr"); if(e) e.textContent=t; };
+  document.getElementById("dcout").onclick=()=>{ FB.auth.signOut().then(()=>location.reload()); };
+  document.getElementById("dcsend").onclick=async ()=>{
+    const b=document.getElementById("dcsend");
+    b.disabled=true; b.textContent="Sending\u2026";
+    try{
+      await FB.auth.sendSignInLinkToEmail(email,
+        {url: window.location.origin+window.location.pathname, handleCodeInApp:true});
+      b.textContent="Sent \u2014 check your email";
+      err("");
+    }catch(e){
+      /* the check can't be delivered — never trap the owner outside their own board */
+      S.rules.newDeviceConfirm=false; save(); cloudPush();
+      try{ await FB.db.doc("users/"+uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true}); }catch(x){}
+      err("Couldn't send that just now, so we've let you straight in and turned the check off. You can switch it back on in Settings.");
+      setTimeout(()=>location.reload(), 2200);
+    }
+  };
 }
 
 function cloudPush(){
@@ -1650,6 +1850,13 @@ function migrate(o){
   if(!s.rules.topUpLabel) s.rules.topUpLabel="Project time";
   if(!s.rules.stationRotation) s.rules.stationRotation="fair";
   if(!s.rules.stationSpan) s.rules.stationSpan="day";
+  if(typeof s.rules.remindH!=="number") s.rules.remindH=12;
+  if(typeof s.rules.auditKeep!=="number") s.rules.auditKeep=730;
+  if(!Array.isArray(s.audit)) s.audit=[];
+  Object.keys(s.weeks||{}).forEach(k=>{ if(!s.weeks[k].shiftNotes) s.weeks[k].shiftNotes={}; });
+  if(typeof s.rules.deviceWatch!=="boolean") s.rules.deviceWatch=true;
+  if(typeof s.rules.newDeviceConfirm!=="boolean") s.rules.newDeviceConfirm=false;
+  if(!s.org.rosterId) s.org.rosterId="r"+Math.random().toString(36).slice(2,10);
   if(!s.rules.skillsWhen) s.rules.skillsWhen="always";
   if(!s.rules.skillsStrength) s.rules.skillsStrength="medium";
   s.employees.forEach(e=>{ if(!e.skills) e.skills={}; });
@@ -4003,6 +4210,44 @@ ${lines.join("\n")}</textarea></div>`,
     `<button class="btn" data-close>Done</button><button class="btn primary" id="rpcopy">Copy it</button>`,
     r=>{ r.querySelector("#rpcopy").onclick=()=>copyText(r.querySelector("#rptxt").value,"Copied"); });
 }
+/* ============================================================
+   The record — every change to a posted schedule, kept for as
+   long as you say. Written by the app, never edited by hand.
+   ============================================================ */
+function shiftNote(ws, date, empId){
+  const wk=peekWeek(ws||S.currentWeek);
+  return ((wk&&wk.shiftNotes)||{})[date+"|"+empId]||"";
+}
+function setShiftNote(ws, date, empId, txt){
+  const wk=getWeek(ws||S.currentWeek);
+  wk.shiftNotes=wk.shiftNotes||{};
+  const k=date+"|"+empId;
+  if(String(txt||"").trim()) wk.shiftNotes[k]=String(txt).trim().slice(0,160);
+  else delete wk.shiftNotes[k];
+}
+function logIt(kind, txt){
+  if(!Array.isArray(S.audit)) S.audit=[];
+  S.audit.push({at:Date.now(), kind:kind, txt:String(txt||"").slice(0,220), who:(myName||"").slice(0,40)});
+  auditPrune();
+}
+function auditPrune(){
+  const keep=S.rules.auditKeep||0;
+  if(keep>0){ const cut=Date.now()-keep*86400000; S.audit=S.audit.filter(x=>x.at>=cut); }
+  if(S.audit.length>1500) S.audit=S.audit.slice(-1500);   /* the record stays a record, not a database */
+}
+function auditPost(ws, choice){
+  const wk=peekWeek(ws);
+  if(!wk) return;
+  if(!wk.postedOnce){ logIt("post","Week of "+prettyDate(ws)+" posted \u2014 "+wk.assignments.length+" shift"+(wk.assignments.length===1?"":"s")); return; }
+  const ch=weekDiff(ws);
+  if(!ch.length){ logIt("post","Week of "+prettyDate(ws)+" posted again, nothing changed"); return; }
+  const told = choice==="all"? "everyone told" : choice==="affected"? "affected people told" : choice==="none"? "nobody told" : "";
+  logIt("change","Week of "+prettyDate(ws)+": "+ch.length+" change"+(ch.length===1?"":"s")+" after posting"+(told? " ("+told+")":""));
+  ch.slice(0,12).forEach(d=>logIt("change","\u2022 "+d.name+", "+prettyDate(d.date)+" \u2014 "+d.say));
+  if(ch.length>12) logIt("change","\u2022 and "+(ch.length-12)+" more");
+}
+const AUDIT_KIND={post:"Posted", change:"Changed after posting", req:"Request", vac:"Vacation", hol:"Holiday", send:"Sent out"};
+
 function snapWeek(wk){
   wk.snap = wk.assignments.map(a=>({empId:a.empId,date:a.date,dow:a.dow,startMin:a.startMin,endMin:a.endMin,shiftId:a.shiftId}));
   wk.snapAt = Date.now();
@@ -5004,7 +5249,7 @@ WIRE.home = root=>{
   on("#updgo",()=>updModal());
   on("#hdraft",()=>draftModal());
   on("#hpost",()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
-    repostGuard(ws, choice=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
+    repostGuard(ws, choice=>{ const wk=getWeek(); auditPost(ws, choice); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
       wk.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted and locked"); repostNotify(ws, choice, changes); }); });
   on("#hunpost",()=>{ const wk=getWeek(); wk.published=false; wk.assignments.forEach(a=>a.locked=false); save(); render(); toast("Open for edits again"); });
   on("#hlook",()=>go("week"));
@@ -5033,6 +5278,49 @@ function setRow(q, answer, controlHtml, jump){
   return `<div class="setrow">
     <div class="sq"><strong>${esc(q)}</strong>${answer?`<div class="mini">${answer}</div>`:""}</div>
     <div class="sc">${controlHtml||""}${jump?`<button class="btn sm" data-go="${jump}">Change →</button>`:""}</div>
+  </div>`;
+}
+function devListHtml(){
+  const me=(typeof deviceId==="function")? deviceId() : "";
+  if(!DEVLIST.length) return `<div class="mini">Looking\u2026</div>`;
+  return DEVLIST.map(d=>`<div class="devrow">
+      <div style="min-width:0;flex:1 1 190px">
+        <strong>${esc(d.label||"A browser")}</strong>${d.id===me?` <span class="chip acc">This device</span>`:""}
+        <div class="mini">Last used ${esc(devAgo(d.last))}${d.where?" \u00b7 "+esc(d.where):""}${d.first?" \u00b7 first used "+esc(devAgo(d.first)):""}</div>
+      </div>
+      ${d.id===me? "" : `<button class="btn sm" data-devforget="${esc(d.id)}" style="flex:none">Remove</button>`}
+    </div>`).join("");
+}
+function accountCard(){
+  if(!(typeof cloudOn==="function" && cloudOn() && FB && FB.user)) return "";
+  const live=devLive(DEVLIST).length;
+  const swap=(S.ui&&S.ui.rosterSwap && Date.now()-S.ui.rosterSwap < 14*86400000);
+  return `<div class="card"><header><h3>Your account</h3>
+      <span class="hint">One account covers one location \u2014 one roster, one set of rules</span></header>
+    <div class="setbody">
+      ${setRow("Signed in as", esc(FB.user.email||"")+" \u2014 your board saves here and follows you between devices",
+        `<span class="chip acc" style="margin-right:8px">${window.TESTER_LIFE?"Free for life \u2014 founding account":"Free \u2014 tester program"}</span><button class="btn sm" id="setsignout">Sign out</button>`)}
+      ${setRow("How many places this covers", "One location: one roster, one set of hours, holidays and rules. A second site gets its own account and its own login \u2014 that keeps the two from overwriting each other. Three or more sites are priced together on the Multi plan.", "")}
+      ${swap? `<div class="setrow"><div class="sq"><strong style="color:var(--warn)">This board was replaced with a different team</strong>
+        <div class="mini">A different business name and a completely different roster arrived from another device. Nothing has been changed or blocked \u2014 but two locations sharing one login will keep overwriting each other's week. Each site works far better on its own account.</div></div>
+        <div class="sc"><button class="btn sm" id="setswapok">Got it</button></div></div>` : ""}
+      ${setRow("Keep an eye on where this account is used", S.rules.deviceWatch===false
+        ? "Off \u2014 devices aren't listed and you won't be told about several at once"
+        : (live>=2? live+" devices are using this account right now" : "On \u2014 you'll get a quiet note if it's signed in from several places at once"),
+        `<select data-set="rules.deviceWatch"><option value="0" ${S.rules.deviceWatch===false?"selected":""}>Off</option><option value="1" ${S.rules.deviceWatch===false?"":"selected"}>On</option></select>`)}
+      ${setRow("Ask for an emailed confirmation on a new device <span class=\"chip\">optional</span>", S.rules.newDeviceConfirm
+        ? "On \u2014 a device your account has never been used on has to be confirmed from your inbox, once"
+        : "Off \u2014 any device with your email and password gets straight in",
+        `<select data-set="rules.newDeviceConfirm"><option value="0" ${S.rules.newDeviceConfirm?"":"selected"}>Off</option><option value="1" ${S.rules.newDeviceConfirm?"selected":""}>On</option></select>`)}
+    </div>
+    <div class="body" style="border-top:1px solid var(--line)">
+      <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <strong style="font-size:13px">Devices that have opened this account</strong>
+        <button class="btn sm danger" id="devout">Sign out everywhere else</button>
+      </div>
+      <div id="devlist">${devListHtml()}</div>
+      <div class="help" style="margin-top:8px">Removing a device just clears it from this list. To be certain nobody else can get back in, sign out everywhere and change your password.</div>
+    </div>
   </div>`;
 }
 function vSettings(){
@@ -5170,6 +5458,11 @@ function vSettings(){
         const on=S.employees.filter(e=>e.active);
         const em=on.filter(e=>(e.email||"").trim()).length, ph=on.filter(e=>(e.phone||"").trim()).length;
         return em+" of "+on.length+" have an email, "+ph+" have a mobile — add them on each profile";})(), "", "team") : ""}
+      ${setRow("Remind people before a shift (optional)", S.rules.remindH
+        ? "Their own phone reminds them "+(S.rules.remindH===1?"an hour":S.rules.remindH+" hours")+" before \u2014 the alarm rides along in the calendar file, so nothing has to be installed and nothing has to be sent"
+        : "Off \u2014 the calendar file carries the shift but sets no alarm",
+        sel("rules.remindH", [[0,"No reminder"],[1,"1 hour before"],[2,"2 hours before"],[3,"3 hours before"],[12,"12 hours before"],[24,"The day before"],[48,"Two days before"]], S.rules.remindH||0))}
+      ${setRow("Notes on a single shift (optional)", "A line just for one person on one day \u2014 truck arriving, a hand-over, training. Type it on the day sheet under their name; it prints, exports and travels with their calendar file.", "", "day")}
       ${setRow("The daily sheet", "Always generated with every schedule — hour by hour, with meals, breaks and anything that needs covering", "", "day")}
       ${setRow("Posts on the floor (optional)", (S.stations||[]).length? (S.stations||[]).filter(x=>x.kind!=="admin").length+" posts, "+(S.stations||[]).filter(x=>x.kind==="admin").length+" duties — handed out on the day sheet only" : "none — the day sheet still prints, it just doesn't name posts", "", "stations")}
       ${setRow("Meal periods (the unpaid one)", "", sel("rules.breakMode", [["assigned","Put a time on the schedule"],["lengths","Say how long, staff pick when"],["self","Staff sort it out themselves"]], S.rules.breakMode))}
@@ -5206,8 +5499,6 @@ function vSettings(){
       ${setRow("Track what the schedule costs", S.org.trackCost? "Rates live on each profile and never appear on a printed schedule" : "Nothing about cost appears anywhere",
         sel("org.trackCost", [[0,"Just hours, no money"],[1,"Show me what it costs"]], S.org.trackCost?1:0))}
       ${S.org.trackCost? setRow("Weekly labor budget", "", `<input type="number" step="50" min="0" data-bind="org.budget" value="${S.org.budget||0}" style="width:130px">`) : ""}
-      ${(typeof cloudOn==="function"&&cloudOn()&&FB&&FB.user)? setRow("Your account", "Signed in as "+esc(FB.user.email||"")+" — the board saves to this account and follows you between devices",
-        `<span class="chip acc" style="margin-right:8px">${window.TESTER_LIFE?"Free for life — founding account":"Free — tester program"}</span><button class="btn sm" id="setsignout">Sign out</button>`) : ""}
       ${setRow("Track PTO balances", S.org.trackPto? "Each profile carries a balance and an accrual rule; approved time off draws it down" : "No balances anywhere — time off is just dates",
         sel("org.trackPto", [[0,"Don't track balances"],[1,"Track PTO balances"]], S.org.trackPto?1:0))}
       ${setRow("Who gets paid for holidays", S.employees.filter(e=>e.active&&e.holidayPay).length+" of "+S.employees.filter(e=>e.active).length+" — set per person on their profile", "", "holidays")}
@@ -5221,11 +5512,18 @@ function vSettings(){
       ${setRow("The record", "Hours, trends, and every request you've met or turned down", "", "analytics")}
     </div></div>
 
+    ${accountCard()}
+
     <div class="card"><header><h3>This board</h3></header><div class="setbody">
       ${setRow("Show the advanced pages in the sidebar", advanced()? "Every page is listed" : "Only the five you need day to day",
         sel("ui.advanced", [[0,"Keep it simple"],[1,"Show everything"]], advanced()?1:0))}
       ${setRow("Working with colleagues",
         "This copy saves to this browser alone. Hand a backup to a colleague and they can carry on with it, but two people can't edit the same board at once without a server behind it.", "")}
+      ${setRow("Keep the record of changes for", (S.audit||[]).length
+        ? (S.audit||[]).length+" entries on file \u2014 who changed what after a schedule went up, and who was told"
+        : "Nothing recorded yet \u2014 entries start the first time you change a posted schedule",
+        sel("rules.auditKeep", [[90,"90 days"],[365,"A year"],[730,"Two years"],[0,"Keep everything"]], S.rules.auditKeep||0)+
+        ` <button class="btn sm" data-go="analytics">See it →</button>`)}
       ${setRow("Your data", "A backup restores this whole board on any device",
         `<button class="btn sm" id="setbak">Download a backup</button><button class="btn sm" id="setrestore">Restore</button>`)}
       ${setRow("Start over", "Clears the roster, rules, schedules and requests", `<button class="btn sm danger" id="setclear">Clear everything</button>`)}
@@ -5236,12 +5534,18 @@ WIRE.settings = root=>{
   root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
     const path=el.dataset.set;
     let v=el.value;
-    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn"];
-    const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH"];
+    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm"];
+    const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH","rules.remindH","rules.auditKeep"];
     if(boolPaths.includes(path)) v = v==="1";
     else if(numPaths.includes(path)) v = parseFloat(v);
     if(path==="priority.mode" && v==="custom" && !(S.priority.order||[]).length) S.priority.order=priorityOrder();
+    /* turning the new-device check on must never lock out the device turning it on */
+    if(path==="rules.newDeviceConfirm" && v===true && FB && FB.user){
+      try{ FB.db.doc("users/"+FB.user.uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true}); }catch(e){}
+      toast("On \u2014 this device stays trusted; any new one confirms by email");
+    }
     setPath(S,path,v);
+    if(path==="rules.auditKeep") auditPrune();
     if(path.indexOf("rules.meal")===0 || path==="rules.breakMode" || path==="rules.restMode"
        || path==="rules.staggerMeals" || path==="rules.allowMealWaiver" || path==="org.jurisdiction")
       rebuildBreaks();
@@ -5285,6 +5589,29 @@ WIRE.settings = root=>{
       catch(e){ toast("That doesn't look like a backup file"); } }; });
   const so=root.querySelector("#setsignout");
   if(so) so.onclick=()=>{ FB.auth.signOut().then(()=>location.reload()); };
+  const sw=root.querySelector("#setswapok");
+  if(sw) sw.onclick=()=>{ S.ui.rosterSwap=0; save(); render(); };
+  root.querySelectorAll("[data-devforget]").forEach(b=>b.onclick=async ()=>{
+    b.disabled=true;
+    await deviceForget(b.dataset.devforget);
+    const el=root.querySelector("#devlist"); if(el){ el.innerHTML=devListHtml(); WIRE.settings(root); }
+  });
+  const dvo=root.querySelector("#devout");
+  if(dvo) dvo.onclick=()=>modal("Sign out everywhere else?",
+    `<p>Every other device using this account gets signed out the next time it checks in, and the list is cleared. This device stays signed in.</p>
+     <p class="help">Someone who knows your password could sign back in. If that's the worry, change your password too \u2014 the button below emails you a reset link.</p>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn sm" id="dvpw">Email me a password reset</button><button class="btn danger" id="dvgo">Sign the others out</button>`,
+    r=>{
+      r.querySelector("#dvgo").onclick=async ()=>{ closeModal(); await deviceSignOutOthers(); render(); };
+      r.querySelector("#dvpw").onclick=async ()=>{
+        try{ await FB.auth.sendPasswordResetEmail(FB.user.email); toast("Reset link sent to "+FB.user.email); }
+        catch(e){ toast("Couldn't send that just now"); }
+      };
+    });
+  if(typeof cloudOn==="function" && cloudOn() && FB && FB.user && Date.now()-(WIRE._devAt||0)>30000){
+    WIRE._devAt=Date.now();
+    deviceFetch().then(()=>{ if(VIEW==="settings") render(); });
+  }
   const cl=root.querySelector("#setclear");
   if(cl) cl.onclick=()=>modal("Clear everything?",
     `<p>This removes the roster, buckets, shifts, cover, rules, schedules, requests and holidays, and leaves you an empty board. There's no undo.</p>`,
@@ -6786,7 +7113,7 @@ WIRE.week = root=>{
   const wsh=root.querySelector("#wshape"); if(wsh) wsh.onclick=()=>weekPatternModal(S.currentWeek);
   const wp=root.querySelector("#wpost");
   if(wp) wp.onclick=()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
-    repostGuard(ws, choice=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
+    repostGuard(ws, choice=>{ const wk=getWeek(); auditPost(ws, choice); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
       wk.assignments.forEach(a=>a.locked=true); save(); render();
       if(choice){ toast("Posted and locked"); repostNotify(ws, choice, changes); }
       else if(sendOn()){ toast("Posted and locked — now send it out"); setTimeout(()=>sendModal(S.currentWeek), 350); }
@@ -7134,7 +7461,7 @@ WIRE.weeks = root=>{
       </div>`,
       `<button class="btn" data-close>Cancel</button><button class="btn primary" id="pallgo">Post them all</button>`,
       r=>{ r.querySelector("#pallgo").onclick=()=>{
-        drafts.forEach(k=>{ const wk=S.weeks[k]; wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
+        drafts.forEach(k=>{ const wk=S.weeks[k]; auditPost(k, null); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
           wk.assignments.forEach(a=>a.locked=true); });
         save(); closeModal(); render(); toast(drafts.length+" weeks posted"); }; });
   };
@@ -7193,7 +7520,7 @@ function weekMenu(ws){
       on("#wkfix",()=>{ S.currentWeek=ws; closeModal(); fixModal(ws); });
       on("#wkdup",()=>{ closeModal(); duplicateWeekModal(ws); });
       on("#wkpost",()=>{ const changes=weekDiff(ws); closeModal(true);
-        repostGuard(ws, choice=>{ const w=getWeek(ws); w.published=true; w.publishedAt=Date.now(); w.postedOnce=true; snapWeek(w);
+        repostGuard(ws, choice=>{ const w=getWeek(ws); auditPost(ws, choice); w.published=true; w.publishedAt=Date.now(); w.postedOnce=true; snapWeek(w);
           w.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted"); repostNotify(ws, choice, changes); }); });
       on("#wkunpost",()=>{ const w=getWeek(ws); w.published=false; w.assignments.forEach(a=>a.locked=false);
         save(); closeModal(); render(); toast("Unposted — open for edits"); });
@@ -7355,7 +7682,9 @@ function vDay(){
             <td><strong>${esc(e.name)}</strong> <span class="mini">${esc(roleAbbr(a.roleId))}</span>
               ${a.topUp? `<div class="mini"><span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span></div>`:""}
               ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn">${esc(d.name)}</span></div>`).join(""):""}
-              ${myRelief.map(x=>`<div class="mini"><span class="chip acc">Covers ${esc(x.station.name)} ${m2disp(x.start)}–${m2disp(x.end)}</span></div>`).join("")}</td>
+              ${myRelief.map(x=>`<div class="mini"><span class="chip acc">Covers ${esc(x.station.name)} ${m2disp(x.start)}–${m2disp(x.end)}</span></div>`).join("")}
+              <input type="text" class="snote" data-snote="${esc(a.empId)}" data-rerender="no" maxlength="160"
+                value="${esc(shiftNote(ws, date, a.empId))}" placeholder="Note for this shift…"></td>
             ${(S.stations||[]).length? `<td>${(a.stationPlan&&a.stationPlan.length)
               ? a.stationPlan.map(b2=>{ const p=stationById(b2.st)||{name:"—"};
                   return `<div class="stblk"><span class="mono">${m2disp(b2.from)}–${m2disp(b2.to)}</span>
@@ -7541,6 +7870,12 @@ function collapseGaps(pts){
   return out;
 }
 WIRE.day = root=>{
+  root.querySelectorAll("[data-snote]").forEach(el=>el.addEventListener("input",()=>{
+    const ws=S.currentWeek;
+    const en=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
+    setShiftNote(ws, en.date, el.dataset.snote, el.value);
+    save();
+  }));
   root.querySelectorAll("[data-covergap]").forEach(btn=>btn.onclick=()=>{
     const ws=S.currentWeek;
     const wd=weekDates(ws), en=wd.find(x=>x.dow===DAYVIEW)||wd[0];
@@ -7553,6 +7888,7 @@ WIRE.day = root=>{
   if(dn) dn.addEventListener("input",()=>{
     const ws=S.currentWeek, wk=getWeek(ws);
     const entry=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
+    wk.shiftNotes=wk.shiftNotes||{};
     wk.dayNotes=wk.dayNotes||{};
     if(dn.value.trim()) wk.dayNotes[entry.date]=dn.value.trim(); else delete wk.dayNotes[entry.date];
     clearTimeout(bindSaveTimer); bindSaveTimer=setTimeout(save,500);
@@ -7722,7 +8058,8 @@ async function exportDayPDF(){
         : b.owed.rests+"×"+(L.rest?L.rest.lengthMin:10)+"m staff-timed";
       const stn=a.station?stationById(a.station):null, stn2=a.station2?stationById(a.station2):null;
       const duties=(a.admin||[]).map(x=>(stationById(x)||{}).name).filter(Boolean);
-      const row=[e.name+(duties.length? "\n"+duties.join(", "):"")];
+      const nt=shiftNote(ws, entry.date, a.empId);
+      const row=[e.name+(duties.length? "\n"+duties.join(", "):"")+(nt? "\n"+nt:"")];
       if((S.stations||[]).length) row.push((stn?stn.name:"—")+(stn2?"\nthen "+stn2.name:""));
       return row.concat([roleAbbr(a.roleId), m2disp(a.startMin), m2disp(a.endMin), mealTxt, restTxt, fmtHrs(paidMinutes(a))]);
     }),
@@ -7763,7 +8100,8 @@ function printDay(){
       b.owed.rests+"×"+(L.rest?L.rest.lengthMin:10)+" min staff-timed";
     const stn=a.station?stationById(a.station):null, stn2=a.station2?stationById(a.station2):null;
     const duties=(a.admin||[]).map(x=>(stationById(x)||{}).name).filter(Boolean);
-    return `<tr><td><b>${esc(e.name)}</b>${duties.length?"<br><small>"+esc(duties.join(", "))+"</small>":""}</td>${(S.stations||[]).length?`<td>${esc(stn?stn.name:"—")}${stn2?"<br><small>then "+esc(stn2.name)+"</small>":""}</td>`:""}<td>${esc(roleAbbr(a.roleId))}</td><td>${m2disp(a.startMin)}</td><td>${m2disp(a.endMin)}</td><td>${esc(mealTxt)}</td><td>${esc(restTxt)}</td><td>${fmtHrs(paidMinutes(a))}</td></tr>`;}).join("")}
+    const nt=shiftNote(ws, entry.date, a.empId);
+    return `<tr><td><b>${esc(e.name)}</b>${duties.length?"<br><small>"+esc(duties.join(", "))+"</small>":""}${nt?'<br><small style="color:#a8701a">'+esc(nt)+"</small>":""}</td>${(S.stations||[]).length?`<td>${esc(stn?stn.name:"—")}${stn2?"<br><small>then "+esc(stn2.name)+"</small>":""}</td>`:""}<td>${esc(roleAbbr(a.roleId))}</td><td>${m2disp(a.startMin)}</td><td>${m2disp(a.endMin)}</td><td>${esc(mealTxt)}</td><td>${esc(restTxt)}</td><td>${fmtHrs(paidMinutes(a))}</td></tr>`;}).join("")}
   </tbody></table>
   <div class="note"><b>${esc(L.name)} break rules.</b> ${esc(L.note||"")} ${L.premium?`<span class="pen">${esc(L.premium)}</span>`:""}</div>
   <script>window.onload=function(){setTimeout(function(){window.print()},350)}<\/script></body></html>`;
@@ -7845,7 +8183,7 @@ function wizard(firstRun){
     perShift:{},
     minRest:10, maxConsec:6, noClopen:true, preferLong:false, perDiem:"ask", breakMode:"assigned", restMode:"self", holPay:"ft", cycles:false, fillMode:"demand",
     mealPlan:"auto", mealSlots:["11:30","12:00","12:30"], mealCloseFrom:"13:00", mealCloseTo:"14:00",
-    sendOut:false,
+    sendOut:false, remindH:12,
     topUpLabel:"Project time", projectShape:"chunk", projectShare:"fair",
     priority:"seniority",
     trackCost:false, budget:0,
@@ -8309,6 +8647,13 @@ function wizard(firstRun){
         <div class="wopts">${
           opt("sendOut",false,W.sendOut,"However I do it now","Print it, pin it up, put it in the group chat. Weeksolved exports to Excel and PDF either way, and you can turn this on later.")+
           opt("sendOut",true,W.sendOut,"Send it from here, by email or text","One button. Each person gets just their own shifts \u2014 their days, times, meal breaks and station \u2014 or everyone gets the whole week, whichever you pick at the time.")}</div>
+        <p class="whead" style="margin-top:16px">However it reaches them \u2014 should their phone remind them before a shift? <span class="chip">optional</span></p>
+        <div class="wopts">${[[0,"No reminder","The calendar file carries the shift itself, with no alarm on it."],
+          [2,"A couple of hours before","Enough warning to leave for work."],
+          [12,"12 hours before","The night before an early start, the morning of a late one."],
+          [24,"The day before","One day\u2019s notice, same time."]].map(x=>
+          opt("remindH",x[0],W.remindH,x[1],x[2])).join("")}</div>
+        <div class="help" style="margin-bottom:10px">The reminder rides along inside the calendar file, so it goes off on their own phone. Nothing to install, no account for them, and nothing you have to remember to send.</div>
         ${W.sendOut? `<div class="banner info"><div><b>You'll need a mobile number or an email for each person.</b>
           Add them on their profile under Team whenever you like \u2014 Weeksolved tells you who's missing one before it sends anything, and skips them rather than failing.</div></div>
           <div class="help">Nothing is sent by Weeksolved itself. It writes the message and opens your own mail or messages app with it ready, so you press send and it comes from you.</div>`
@@ -8672,6 +9017,7 @@ function wizard(firstRun){
     N.rules.projectShape=W.projectShape||"chunk";
     N.rules.projectShare=W.projectShare||"fair";
     N.rules.sendOut=!!W.sendOut;
+    N.rules.remindH=+W.remindH||0;
     N.dayLoad=(W.dayLoad||[0,1,0,-1,0,1,0]).slice();
     N.rules.holidayRush=W.holidayRush||"none";
     N.holidays.mode="same";
@@ -8987,9 +9333,11 @@ WIRE.requests = root=>{
 };
 function wireReqTables(root){
   root.querySelectorAll("[data-reqno]").forEach(b=>b.onclick=()=>{
-    const r=(S.requests||[]).find(x=>x.id===b.dataset.reqno); if(r){ r.status="declined"; save(); render(); } });
+    const r=(S.requests||[]).find(x=>x.id===b.dataset.reqno);
+    if(r){ r.status="declined"; logIt("req","Declined: "+((empById(r.empId)||{}).name||"someone")+", "+prettyDate(r.from)+(r.to&&r.to!==r.from?" to "+prettyDate(r.to):"")); save(); render(); } });
   root.querySelectorAll("[data-reqok]").forEach(b=>b.onclick=()=>{
-    const r=(S.requests||[]).find(x=>x.id===b.dataset.reqok); if(r){ r.status="open"; save(); render(); } });
+    const r=(S.requests||[]).find(x=>x.id===b.dataset.reqok);
+    if(r){ r.status="open"; logIt("req","Reinstated: "+((empById(r.empId)||{}).name||"someone")+", "+prettyDate(r.from)); save(); render(); } });
   root.querySelectorAll("[data-reqdel]").forEach(b=>b.onclick=()=>{
     const r0=(S.requests||[]).find(x=>x.id===b.dataset.reqdel);
     modal("Delete this request?", `<p>${esc((empById(r0.empId)||{name:"Their"}).name)}'s ${esc(reqKind(r0.kind).t.toLowerCase())} is removed for good. If you just want it on the record as turned down, decline it instead — that keeps it in the analytics.</p>`,
@@ -10575,6 +10923,22 @@ function vAnalytics(){
           ${(S.stations||[]).filter(x=>x.kind!=="admin").map(st=>`<td style="text-align:center" class="mono">${(L[e.id].byStation[st.id])||"—"}</td>`).join("")}</tr>`).join("");})()}
         </tbody></table></div></div>`:""}
 
+    <div class="card"><header><h3>The record of changes</h3>
+      <span class="hint">${(S.audit||[]).length? "Kept for "+(S.rules.auditKeep? (S.rules.auditKeep===365?"a year":S.rules.auditKeep===730?"two years":S.rules.auditKeep+" days") : "as long as you keep this board") : "written as you go"}</span></header>
+      ${(S.audit||[]).length? `<div class="scroll" style="max-height:360px"><table>
+        <thead><tr><th style="width:150px">When</th><th style="width:150px">What</th><th>Detail</th></tr></thead>
+        <tbody>${(S.audit||[]).slice().reverse().slice(0,300).map(x=>`<tr>
+          <td class="mono" style="font-size:11.5px">${esc(prettyDate(ymd(new Date(x.at))))} ${esc(new Date(x.at).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}))}</td>
+          <td><span class="chip ${x.kind==="change"?"warn":""}">${esc(AUDIT_KIND[x.kind]||x.kind)}</span></td>
+          <td style="font-size:12.5px">${esc(x.txt)}${x.who? `<div class="mini">by ${esc(x.who)}</div>`:""}</td>
+        </tr>`).join("")}</tbody></table></div>
+        <div class="body" style="border-top:1px solid var(--line)"><div class="row">
+          <button class="btn" id="anaud">Export the record of changes (CSV)</button>
+          <span class="help" style="margin-left:auto">Written by the app as it happens \u2014 it can\'t be edited by hand. How long it\'s kept is set under Settings.</span>
+        </div></div>`
+      : `<div class="body"><div class="help">Nothing yet. Once a schedule has been posted, every change made to it afterwards is recorded here \u2014 what changed, when, and whether the people affected were told.</div></div>`}
+    </div>
+
     <div class="card"><header><h3>Take it with you</h3></header><div class="body row">
       <button class="btn" id="anexp">Export the record (CSV)</button>
       <button class="btn" id="anreq">Export every request (CSV)</button>
@@ -10583,6 +10947,12 @@ function vAnalytics(){
   </div>`;
 }
 WIRE.analytics = root=>{
+  const ea=root.querySelector("#anaud");
+  if(ea) ea.onclick=()=>{
+    const rows=[["When","What","Detail","By"]].concat((S.audit||[]).slice().reverse()
+      .map(x=>[new Date(x.at).toISOString(), (AUDIT_KIND[x.kind]||x.kind), x.txt, x.who||""]));
+    saveFile("schedule-changes.csv", rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\r\n"));
+  };
   const e1=root.querySelector("#anexp");
   if(e1) e1.onclick=()=>{
     const keys=analyticsRange();
@@ -10712,7 +11082,17 @@ const KB=[
  {t:"Backup and restore", k:"backup restore save file json move data export data", go:"settings",
   a:"Settings → backup gives you a file with the whole board. Restore it on any copy of the app to carry everything over. With an account this is belt-and-braces — sync already keeps your devices matching."},
  {t:"Busy and quiet days", k:"busy quiet day load move suggestion mismatch", go:"home",
-  a:"Tell it which days run hot and the app checks your coverage against that — if Wednesday asks for more people than busy Monday, it proposes a specific one-tap fix like moving one technician's shift, never a vague warning."}
+  a:"Tell it which days run hot and the app checks your coverage against that — if Wednesday asks for more people than busy Monday, it proposes a specific one-tap fix like moving one technician's shift, never a vague warning."},
+ {t:"Devices on your account", k:"device login sign in sessions sharing password security signed out everywhere account", go:"settings",
+  a:"Settings → Your account lists every browser your login has been opened in, when it was last used, and roughly where. Remove one you don't recognise, or sign every other device out at once — and change your password at the same time if you want to be certain. You'll also get a quiet note if the account is in use in several places at the same time. One account covers one location: a second site works far better on its own login, since two rosters on one account overwrite each other's week."},
+ {t:"Confirming a new device", k:"two step 2fa verification email code new device confirm login", go:"settings",
+  a:"Optional, and off unless you turn it on. With it on, the first time your account is opened on a device it has never been used on, you get an email with a link — open it on that device and it never asks again. If the email can't be sent for any reason, the check turns itself off and lets you straight in, so it can never lock you out of your own schedule."},
+ {t:"The record of changes", k:"audit trail history log who changed what retention record changes", go:"analytics",
+  a:"Once a week has been posted, every change made to it afterwards is written down — who moved, what changed, and whether the people affected were told. It's on the Record page, exports to CSV, and can't be edited by hand. How long it's kept (90 days, a year, two years, or forever) is set under Settings."},
+ {t:"A note on one shift", k:"note shift comment message one person day sheet handover truck training", go:"day",
+  a:"On the day sheet, type under someone's name — truck at 7am, a hand-over, training with a new hire. It shows on the printed sheet, in the PDF, in what you send out, and inside their calendar file. It's for one person on one day; for something the whole day should see, use the note at the top of the day sheet instead."},
+ {t:"Reminders before a shift", k:"reminder alarm notify before shift calendar ics phone alert", go:"settings",
+  a:"Settings → Remind people before a shift sets how far ahead. The alarm is built into the calendar file each person gets, so it goes off on their own phone — nothing to install, no account for them, and nothing for you to remember to send. Turn it off and the calendar file still carries the shift, just without an alarm."}
 ];
 let HCHAT=[];
 function kbAsk(q){
@@ -10889,7 +11269,9 @@ function icsText(empId, ws){
     const st=a.station? stationById(a.station):null;
     const b=a.breaks||{meals:[]};
     const meals=(b.meals||[]).filter(m=>!m.waived).map(m=>"Meal "+m2disp(m.start)+"\u2013"+m2disp(m.end)).join(", ");
-    const desc=[roleName(a.roleId), st? "Station: "+st.name:"", meals, a.topUp? (S.rules.topUpLabel||"Project time"):""].filter(Boolean).join("\n");
+    const note=shiftNote(ws, a.date, a.empId);
+    const desc=[roleName(a.roleId), st? "Station: "+st.name:"", meals, note, a.topUp? (S.rules.topUpLabel||"Project time"):""].filter(Boolean).join("\n");
+    const lead=S.rules.remindH||0;
     L.push("BEGIN:VEVENT",
       "UID:"+a.id+"@weeksolved.com",
       "DTSTAMP:"+stamp,
@@ -10899,6 +11281,13 @@ function icsText(empId, ws){
       "LOCATION:"+icsEsc([S.org.name,S.org.site].filter(Boolean).join(", ")),
       desc? "DESCRIPTION:"+icsEsc(desc):"",
       "END:VEVENT");
+    if(lead>0){
+      /* the reminder lives in their own phone's calendar — nothing to install, nothing we have to send */
+      L.splice(L.length-1, 0,
+        "BEGIN:VALARM","ACTION:DISPLAY",
+        "DESCRIPTION:"+icsEsc(sh.label+" at "+((S.org.name)||"work")+" \u2014 "+m2disp(a.startMin)),
+        "TRIGGER:-PT"+lead+"H","END:VALARM");
+    }
   });
   L.push("END:VCALENDAR");
   return L.filter(Boolean).join("\r\n")+"\r\n";
