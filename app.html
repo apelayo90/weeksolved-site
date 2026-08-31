@@ -215,7 +215,8 @@ tr:last-child td{border-bottom:0}
 .modal>header{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
 .modal>header h3{font-size:15px;font-weight:600;flex:1}
 .modal .body{padding:18px;overflow-y:auto;overscroll-behavior:contain}
-.modal>footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:var(--surface2);border-radius:0 0 10px 10px}
+.modal>footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;background:var(--surface2);border-radius:0 0 10px 10px}
+.modal>footer>*{min-width:0}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw}
 
 /* ---------- availability grid ---------- */
@@ -296,6 +297,8 @@ tr:last-child td{border-bottom:0}
 .week .ecell.off{background:repeating-linear-gradient(45deg,transparent,transparent 5px,var(--sunken) 5px,var(--sunken) 6px)}
 
 /* ---------- coverage bar ---------- */
+.stblk{display:flex;gap:6px;align-items:center;margin-bottom:3px;font-size:12px;white-space:nowrap}
+.stblk .mono{color:var(--muted);font-size:11px;min-width:88px}
 .covbar{display:flex;height:26px;border-radius:5px;overflow:hidden;border:1px solid var(--line);background:var(--sunken)}
 .covbar i{flex:1;border-right:1px solid var(--surface);position:relative}
 .covbar i:last-child{border-right:0}
@@ -872,7 +875,7 @@ function blankState(){
             sendOut:false,
             mealPlan:"auto", mealSlots:["11:30","12:00","12:30","13:00"],
             mealClose:{from:"13:00", to:"14:00"},
-            useDaySheet:true, stationRotation:"fair", useCycles:false,
+            useDaySheet:true, stationRotation:"fair", stationSpan:"day", stationFamilies:true, useCycles:false,
             fillMode:"demand", topUpLabel:"Project time",
             allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
     weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
@@ -1244,7 +1247,7 @@ function codeHash(str){
 /* Existing accounts keep everything across updates — state carries defaults for
    anything new. When an update adds settings worth an answer, bump UPDREV and
    updModal() offers just those questions, once, with a skip that keeps defaults. */
-const UPDREV=2;
+const UPDREV=4;
 function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
 function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
 function updModal(){
@@ -1273,6 +1276,27 @@ function updModal(){
           <option value="wanted" ${wd==="wanted"?"selected":""}>People like working them</option>
           <option value="neutral" ${wd==="neutral"?"selected":""}>No different from other days</option>
         </select></div>`:""}
+      ${(S.holidays.list||[]).length? `<div class="field"><label>How you run each holiday you've listed</label>
+        <div class="stack" style="gap:5px">${S.holidays.list.map(h=>`
+          <div class="desrow"><div style="min-width:0;flex:1"><strong style="font-size:12.5px">${esc(h.name)}</strong>
+            <div class="mini mono">${esc(prettyDate(h.date))}</div></div>
+            <select data-uhol="${esc(h.id)}" style="margin-left:auto;max-width:180px">
+              <option value="closed" ${holMode(h)==="closed"?"selected":""}>Closed</option>
+              <option value="reduced" ${holMode(h)==="reduced"?"selected":""}>Open, fewer people</option>
+              <option value="normal" ${holMode(h)==="normal"?"selected":""}>Open, normal hours</option>
+            </select></div>`).join("")}</div>
+        <span class="mini">Closed days are never scheduled and stay out of the holiday poll.</span></div>`
+      : `<div class="help">New: each holiday can now be marked closed, lighter, or normal — and the Holidays page can add the usual US holidays in one tap.</div>`}
+      ${(S.stations||[]).length? `<div class="field"><label>How long someone holds a post</label>
+        <select id="u_span">
+          <option value="day" ${(S.rules.stationSpan||"day")==="day"?"selected":""}>All day — one post each</option>
+          <option value="half" ${S.rules.stationSpan==="half"?"selected":""}>Half a day, then everyone moves</option>
+          <option value="2h" ${S.rules.stationSpan==="2h"?"selected":""}>Every 2 hours</option>
+          <option value="3h" ${S.rules.stationSpan==="3h"?"selected":""}>Every 3 hours</option>
+          <option value="4h" ${S.rules.stationSpan==="4h"?"selected":""}>Every 4 hours</option>
+        </select>
+        <span class="mini">New: the floor can rotate during the day, and numbered posts (Typist 1, Typist 2) now share one rotation so a turn on either counts the same. Both adjustable under Stations.</span></div>`
+      : `<div class="help">New: if people take posts during the day — a typing window, a checking bench — set them up under Stations. They never touch the weekly schedule; they're handed out on the day sheet, fairly, every time you draft.</div>`}
       <div class="field"><label>Plan longer vacations with a ranked survey?</label>
         <select id="u_vac">
           <option value="0" ${S.vacations.on?"":"selected"}>Not needed</option>
@@ -1292,6 +1316,12 @@ function updModal(){
         const wsel=r.querySelector("#u_wkend");
         if(wsel){ const v=wsel.value==="wanted"?1:wsel.value==="neutral"?0:-1; S.dayDesire[0]=v; S.dayDesire[6]=v; }
         S.vacations.on = r.querySelector("#u_vac").value==="1";
+        const sp=r.querySelector("#u_span"); if(sp) S.rules.stationSpan=sp.value;
+        r.querySelectorAll("[data-uhol]").forEach(sel=>{
+          const h=S.holidays.list.find(x=>x.id===sel.dataset.uhol);
+          if(h){ h.hmode=sel.value; if(sel.value==="closed") h.need={}; }
+        });
+        S.holidays.result=null;
         closeModal(true); updDone(); toast("Saved — the next draft uses the new settings");
       };
       r.querySelector("#u_skip").onclick=()=>{ closeModal(true); updDone(); };
@@ -1618,6 +1648,7 @@ function migrate(o){
   if(!s.rules.mealClose || !s.rules.mealClose.from) s.rules.mealClose=Object.assign({},base.rules.mealClose);
   if(!s.rules.topUpLabel) s.rules.topUpLabel="Project time";
   if(!s.rules.stationRotation) s.rules.stationRotation="fair";
+  if(!s.rules.stationSpan) s.rules.stationSpan="day";
   s.employees.forEach(e=>{ if(!e.hoursMode) e.hoursMode="range";
     if(!e.projectOk) e.projectOk="yes";
     if(typeof e.onCall!=="boolean") e.onCall = false;
@@ -1981,6 +2012,52 @@ function matchDemand(slots, list){
   });
   return {want, missing:want.filter(w=>!w.used), spare:left};
 }
+/* The holidays most US businesses reckon with, with their real dates worked out.
+   Nothing is assumed observed — the manager says which ones touch their business. */
+function nthDow(y, mon, dow, nth){            /* nth=1..4, or -1 for last */
+  if(nth>0){ const d=new Date(y,mon,1); const shift=(dow-d.getDay()+7)%7; return new Date(y,mon,1+shift+(nth-1)*7); }
+  const last=new Date(y,mon+1,0); const back=(last.getDay()-dow+7)%7; return new Date(y,mon+1,0-back);
+}
+function easterSunday(y){                     /* anonymous Gregorian algorithm */
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),
+        g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,
+        l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const mon=Math.floor((h+l-7*m+114)/31)-1, day=((h+l-7*m+114)%31)+1;
+  return new Date(y,mon,day);
+}
+const HOLIDAY_PRESETS=[
+  {k:"ny",    n:"New Year's Day",        f:y=>new Date(y,0,1),            common:"closed"},
+  {k:"mlk",   n:"Martin Luther King Jr. Day", f:y=>nthDow(y,0,1,3),      common:"normal"},
+  {k:"pres",  n:"Presidents' Day",       f:y=>nthDow(y,1,1,3),            common:"normal"},
+  {k:"easter",n:"Easter Sunday",         f:y=>easterSunday(y),            common:"closed"},
+  {k:"mem",   n:"Memorial Day",          f:y=>nthDow(y,4,1,-1),           common:"reduced"},
+  {k:"june",  n:"Juneteenth",            f:y=>new Date(y,5,19),           common:"normal"},
+  {k:"jul4",  n:"Independence Day",      f:y=>new Date(y,6,4),            common:"closed"},
+  {k:"labor", n:"Labor Day",             f:y=>nthDow(y,8,1,1),            common:"reduced"},
+  {k:"vets",  n:"Veterans Day",          f:y=>new Date(y,10,11),          common:"normal"},
+  {k:"thxeve",n:"Thanksgiving Eve",      f:y=>addDaysD(nthDow(y,10,4,4),-1), common:"normal"},
+  {k:"thx",   n:"Thanksgiving",          f:y=>nthDow(y,10,4,4),           common:"closed"},
+  {k:"bfri",  n:"Day after Thanksgiving",f:y=>addDaysD(nthDow(y,10,4,4),1),  common:"normal"},
+  {k:"xeve",  n:"Christmas Eve",         f:y=>new Date(y,11,24),          common:"reduced"},
+  {k:"xmas",  n:"Christmas Day",         f:y=>new Date(y,11,25),          common:"closed"},
+  {k:"nye",   n:"New Year's Eve",        f:y=>new Date(y,11,31),          common:"reduced"}
+];
+function addDaysD(d,k){ const x=new Date(d.getTime()); x.setDate(x.getDate()+k); return x; }
+/* Each preset's next occurrence from today, so the list a manager sees is always live */
+function holidayCandidates(){
+  const today=ymd(new Date()), y=new Date().getFullYear();
+  return HOLIDAY_PRESETS.map(h=>{
+    let d=ymd(h.f(y)); if(d<today) d=ymd(h.f(y+1));
+    return {key:h.k, name:h.n, date:d, common:h.common};
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+}
+/* How a given holiday is run: its own answer wins, then the global setting. */
+function holMode(h){
+  if(h && h.hmode) return h.hmode;
+  const g=S.holidays.mode||"same";
+  return g==="closed"? "closed" : g==="custom"? "reduced" : "normal";
+}
+const HMODE_LABEL={closed:"Closed", reduced:"Fewer people", normal:"Normal hours"};
 /* A holiday whose staffing the poll has already decided */
 function holPolled(h){
   return !!(h && S.holidays.result && (S.holidays.result.result||[]).some(r=>r.holidayId===h.id));
@@ -1999,12 +2076,13 @@ function holOn(dow, ws){
 }
 function expandDemand(dow, ws){
   let rows = (demandOf(ws)[dow])||[];
-  const hm = S.holidays.mode||"same";
   const hol = holOn(dow, ws);
-  if(hol && holPolled(hol)) return [];   /* the poll's assignments staff this day */
-  if(hm!=="same" && hol){
-    if(hm==="closed") return [];
-    rows = S.holidays.demand||[];
+  if(hol){
+    if(holPolled(hol)) return [];               /* the poll's assignments staff this day */
+    const m=holMode(hol);
+    if(m==="closed") return [];                 /* shut — nothing is drafted */
+    if(m==="reduced") rows = S.holidays.demand||[];   /* the lighter holiday pattern */
+    /* "normal" falls through to the weekday's own pattern */
   }
   const slots=[];
   rows.forEach(r=>{
@@ -3215,9 +3293,25 @@ function stationById(id){ return (S.stations||[]).find(x=>x.id===id); }
 function stationsOn(dow){ return activeStations().filter(x=>!x.days || !x.days.length || x.days.includes(dow)); }
 
 /* How often each person has drawn each station, from posted weeks. */
+/* Posts that share a rotation: "Typist 1" and "Typist 2" are both Typist, so a turn
+   on either counts as a turn on Typist. Numbered posts group themselves. */
+function stFamily(st){
+  if(!st) return "";
+  if(S.rules.stationFamilies===false) return "";      /* every post stands alone */
+  if(st.family) return st.family;
+  const m=/^(.*?)[\s\-#]*\d+$/.exec((st.name||"").trim());
+  return (m? m[1] : (st.name||"")).trim().toLowerCase();
+}
+function stationFamilies(){
+  const f={};
+  (S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).forEach(st=>{
+    const k=stFamily(st); (f[k]=f[k]||[]).push(st);
+  });
+  return f;
+}
 function stationLedger(){
   const L={};
-  S.employees.forEach(e=>{ L[e.id]={good:0,bad:0,byStation:{},total:0}; });
+  S.employees.forEach(e=>{ L[e.id]={good:0,bad:0,byStation:{},byFamily:{},total:0}; });
   Object.keys(S.weeks).forEach(k=>{
     const wk=S.weeks[k];
     if(S.priority.ledgerFrom==="posted" && !wk.published) return;
@@ -3226,6 +3320,7 @@ function stationLedger(){
         const st=stationById(sid), rec=L[a.empId];
         if(!st||!rec) return;
         rec.total++; rec.byStation[sid]=(rec.byStation[sid]||0)+1;
+        const fam=stFamily(st); if(fam) rec.byFamily[fam]=(rec.byFamily[fam]||0)+1;
         if((st.desire||0)>0) rec.good++; else if((st.desire||0)<0) rec.bad++;
       });
     });
@@ -3236,13 +3331,73 @@ function stationLedger(){
 /* Hand out the day's stations. Whoever has had a post least often gets first refusal
    on the bad ones and first claim on the good — counted across history AND the week
    being drafted, so the same person doesn't draw the short straw five days running. */
+/* How long someone holds a post before the floor rotates. "day" keeps the
+   classic one-post-all-day behaviour; anything else splits the open hours into
+   equal blocks and rotates people through the posts, CVS-style. */
+const SPAN_MIN={day:0, half:-1, "2h":120, "3h":180, "4h":240};
+function stationBlocks(date, dow, list){
+  const span=S.rules.stationSpan||"day";
+  if(span==="day" || !list.length) return null;
+  const open=Math.min.apply(null, list.map(a=>a.startMin));
+  const close=Math.max.apply(null, list.map(a=>a.endMin));
+  if(close<=open) return null;
+  let len = span==="half" ? Math.ceil((close-open)/2/15)*15 : (SPAN_MIN[span]||120);
+  if(len<60) len=60;
+  const out=[];
+  for(let t=open; t<close; t+=len) out.push([t, Math.min(close, t+len)]);
+  /* a stub tail (under half a block) folds into the one before it */
+  if(out.length>1 && (out[out.length-1][1]-out[out.length-1][0]) < len*0.5){
+    out[out.length-2][1]=out[out.length-1][1]; out.pop();
+  }
+  return out;
+}
+function assignStationBlocks(date, ws, T, posts, list, helpers){
+  const {score, bump} = helpers;
+  const blocks=stationBlocks(date, parseYmd(date).getDay(), list);
+  if(!blocks) return false;
+  const rows=list.filter(a=>!a.stationLocked);
+  rows.forEach(a=>{ a.stationPlan=[]; });
+  blocks.forEach(([bFrom,bTo])=>{
+    /* who is actually on the floor for this block — and free of their meal */
+    let onFloor=rows.map(a=>({a, e:empById(a.empId)})).filter(x=>x.e &&
+      Math.min(x.a.endMin,bTo) - Math.max(x.a.startMin,bFrom) >= 30);   /* a real slice of that block */
+    /* posts that must be staffed during this block */
+    const live=posts.filter(st=>{
+      if(st.holdAllDay) return false;                       /* handled as a day-long post */
+      const f=st.from? t2m(st.from):null, t=st.to? t2m(st.to):null;
+      if(f!=null && bTo<=f) return false;
+      if(t!=null && bFrom>=t) return false;
+      return true;
+    }).sort((a,b)=>(b.desire||0)-(a.desire||0));
+    live.forEach(st=>{
+      let fit=onFloor.filter(x=>(!st.roleId || x.e.roleIds.includes(st.roleId)) &&
+        (!st.slots || !st.slots.length || st.slots.includes(x.a.shiftId)));
+      if(!fit.length) return;
+      fit.sort((x,y)=> score(x,st)-score(y,st) || x.e.name.localeCompare(y.e.name));
+      const pick=fit[0];
+      onFloor=onFloor.filter(x=>x!==pick);
+      bump(pick, st);
+      pick.a.stationPlan.push({from:Math.max(bFrom, pick.a.startMin), to:Math.min(bTo, pick.a.endMin), st:st.id});
+    });
+  });
+  /* tidy: merge a person's back-to-back blocks on the same post */
+  rows.forEach(a=>{
+    const p=(a.stationPlan||[]).sort((x,y)=>x.from-y.from);
+    const merged=[];
+    p.forEach(b2=>{ const last=merged[merged.length-1];
+      if(last && last.st===b2.st && last.to===b2.from) last.to=b2.to; else merged.push(Object.assign({},b2)); });
+    a.stationPlan=merged;
+    if(merged.length) a.station=merged[0].st;      /* so every existing view still shows something */
+  });
+  return true;
+}
 function assignStations(date, ws, tally){
   ws = ws||S.currentWeek;
   const wk=peekWeek(ws);
   const dow=parseYmd(date).getDay();
   const list=wk.assignments.filter(a=>a.date===date).sort((a,b)=>a.startMin-b.startMin);
   if(!list.length) return;
-  list.forEach(a=>{ if(!a.stationLocked){ delete a.station; delete a.station2; delete a.second; delete a.project; } });
+  list.forEach(a=>{ if(!a.stationLocked){ delete a.station; delete a.station2; delete a.second; delete a.project; delete a.stationPlan; } });
 
   const posts=stationsOn(dow).filter(x=>x.kind!=="admin");
   const admin=stationsOn(dow).filter(x=>x.kind==="admin");
@@ -3253,26 +3408,44 @@ function assignStations(date, ws, tally){
   let people=list.filter(a=>!a.stationLocked).map(a=>({a, e:empById(a.empId)})).filter(x=>x.e);
 
   /* lower is "more owed this station" */
+  /* a stable coin-flip: same week and day always shuffles the same way, so a redraft
+     doesn't reshuffle the floor, but two equal claims aren't settled alphabetically */
+  const jitter=(id)=>{ let h=(wk.seed||0)+date.length;
+    const k=id+"|"+date; for(let i=0;i<k.length;i++) h=(h*31+k.charCodeAt(i))>>>0;
+    return (h%1000)/1000; };
   const score=(x, st)=>{
-    const rec=T[x.e.id] || {byStation:{}, good:0, bad:0, total:0};
-    if(mode==="none") return 0;
+    const rec=T[x.e.id] || {byStation:{}, byFamily:{}, good:0, bad:0, total:0};
+    if(mode==="none") return jitter(x.e.id);
     if(mode==="seniority"){
       const rank=ladder.indexOf(x.e.id);
       /* the senior end gets the wanted posts and is spared the unwanted ones */
-      return (st.desire||0) >= 0 ? rank : -rank;
+      return ((st.desire||0) >= 0 ? rank : -rank) + jitter(x.e.id)*0.01;
     }
+    const fam=stFamily(st);
+    const mineFam=fam? ((rec.byFamily||{})[fam]||0) : 0;
     const mine=(rec.byStation[st.id]||0);
     const bal=(rec.good||0)-(rec.bad||0);
-    /* first: how often they have had THIS post; then whether they are up or down overall */
-    return mine*10 + ((st.desire||0)>=0 ? bal : -bal) + (rec.total||0)*0.01;
+    /* a turn anywhere in the family counts first, then this exact post,
+       then whether they're up or down overall — ties broken by the coin-flip */
+    return mineFam*10 + mine*4 + ((st.desire||0)>=0 ? bal : -bal) + (rec.total||0)*0.01 + jitter(x.e.id)*0.9;
   };
   const bump=(x, st)=>{
-    const rec=T[x.e.id] = T[x.e.id] || {byStation:{}, good:0, bad:0, total:0};
+    const rec=T[x.e.id] = T[x.e.id] || {byStation:{}, byFamily:{}, good:0, bad:0, total:0};
     rec.byStation[st.id]=(rec.byStation[st.id]||0)+1; rec.total++;
+    rec.byFamily=rec.byFamily||{};
+    const fam=stFamily(st); if(fam) rec.byFamily[fam]=(rec.byFamily[fam]||0)+1;
     if((st.desire||0)>0) rec.good++; else if((st.desire||0)<0) rec.bad++;
   };
+  const covers=(x, st)=>{
+    if(st.slots && st.slots.length && !st.slots.includes(x.a.shiftId)) return false;
+    const f=st.from? t2m(st.from):null, t=st.to? t2m(st.to):null;
+    if(f==null && t==null) return true;
+    return x.a.startMin <= (f==null? x.a.startMin : f) && x.a.endMin >= (t==null? x.a.endMin : t);
+  };
   const take=(st)=>{
-    const fit=people.filter(x=>!st.roleId || x.e.roleIds.includes(st.roleId));
+    let fit=people.filter(x=>(!st.roleId || x.e.roleIds.includes(st.roleId)) && covers(x,st));
+    if(!fit.length && (st.from||st.to||(st.slots&&st.slots.length)))
+      fit=people.filter(x=>!st.roleId || x.e.roleIds.includes(st.roleId));   /* nobody spans it — best available */
     if(!fit.length) return null;
     fit.sort((x,y)=> score(x,st)-score(y,st) || x.e.name.localeCompare(y.e.name));
     const pick=fit[0];
@@ -3280,6 +3453,23 @@ function assignStations(date, ws, tally){
     bump(pick, st);
     return pick;
   };
+
+  /* rotating floors: split the day into blocks and move people between posts */
+  if((S.rules.stationSpan||"day")!=="day"){
+    const rotated=assignStationBlocks(date, ws, T, posts.filter(st=>!st.holdAllDay), list, {score, bump});
+    if(rotated){
+      /* posts someone holds for the whole day still get handed out the classic way */
+      posts.filter(st=>st.holdAllDay).forEach(st=>{ const p=take(st); if(p) p.a.station=st.id; });
+      if(admin.length && list.length){
+        const opener=list[0], closer=list[list.length-1];
+        admin.forEach(t=>{
+          const target = t.assignTo==="closer"? closer : t.assignTo==="opener"? opener : opener;
+          target.admin=(target.admin||[]).concat([t.id]);
+        });
+      }
+      return T;
+    }
+  }
 
   /* linked pairs swap at the middle of the day, so both people share the good and the bad */
   const done=new Set(), pairs=[];
@@ -3350,8 +3540,16 @@ function mealReliefFor(date, ws){
         if(((b.breaks||{}).meals||[]).some(x=>!x.waived && x.start<m.end && x.end>m.start)) return false;
         return true;
       });
+      const prefers=(b)=>{
+        if(!st.reliefFrom) return 1;
+        if(st.reliefFrom==="family"){
+          const bst=b.station? stationById(b.station):null;
+          return (bst && stFamily(bst) && stFamily(bst)===stFamily(st))? 0 : 1;
+        }
+        return b.station===st.reliefFrom? 0 : 1;
+      };
       cand.sort((x,y)=>{
-        const xm=(st.reliefFrom && x.station===st.reliefFrom)?0:1, ym=(st.reliefFrom && y.station===st.reliefFrom)?0:1;
+        const xm=prefers(x), ym=prefers(y);
         if(xm!==ym) return xm-ym;
         const xp=(x.project||x.topUp)?0:1, yp=(y.project||y.topUp)?0:1;  /* project time is interruptible */
         if(xp!==yp) return xp-yp;
@@ -3368,7 +3566,7 @@ function mealReliefFor(date, ws){
 function seedTally(ws){
   const L=stationLedger();
   const T={};
-  Object.keys(L).forEach(id=>{ T[id]={byStation:Object.assign({},L[id].byStation), good:L[id].good, bad:L[id].bad, total:L[id].total}; });
+  Object.keys(L).forEach(id=>{ T[id]={byStation:Object.assign({},L[id].byStation), byFamily:Object.assign({},L[id].byFamily||{}), good:L[id].good, bad:L[id].bad, total:L[id].total}; });
   /* plus anything already handed out earlier in the week being drafted */
   const wk=S.weeks[ws]; 
   return T;
@@ -3376,6 +3574,7 @@ function seedTally(ws){
 function clearAdmin(date, ws){
   getWeek(ws||S.currentWeek).assignments.filter(a=>a.date===date).forEach(a=>{ if(!a.stationLocked) delete a.admin; });
 }
+let STATION_PASS=false;
 function assignStationsWeek(ws){
   ws=ws||S.currentWeek;
   const T=seedTally(ws);
@@ -4360,6 +4559,7 @@ function wireCommon(root){
       (el.tagName==="INPUT" && ["text","number","time","date","email","tel"].includes(el.type));
     const commit=()=>{
       let v = el.type==="checkbox"? el.checked : (el.type==="number"? (el.value===""?0:parseFloat(el.value)) : el.value);
+      if(path==="rules.stationFamilies") v = v===true || v==="1" || v===1;
       setPath(S,path,v);
       if(path==="org.name" && S.sample) S.sample=false;   /* they've made it theirs */
     };
@@ -4962,7 +5162,7 @@ WIRE.settings = root=>{
   root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
     const path=el.dataset.set;
     let v=el.value;
-    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost"];
+    const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies"];
     const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH"];
     if(boolPaths.includes(path)) v = v==="1";
     else if(numPaths.includes(path)) v = parseFloat(v);
@@ -6321,7 +6521,7 @@ function vWeek(){
         return `<div class="dcard ${h.closed?"shut":""} ${open?"open":""}">
           <button class="dhead" data-togday="${d.dow}" aria-expanded="${open}">
             <div class="dl"><strong>${DAYS[d.dow]}</strong> <span class="mini">${esc(prettyDate(d.date))}</span>
-${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(S.holidays.mode==="closed"?"closed — holiday":S.holidays.mode==="custom"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}
+${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}
               <div class="mini">${h.closed?"Closed":
                 (on.length? esc(on.slice(0,3).map(a=>(empById(a.empId)||{name:"?"}).name.split(" ")[0]).join(", "))+(on.length>3?" +"+(on.length-3):"") : "nobody on")}</div></div>
             <div class="dr">${h.closed? '<span class="mini">Closed</span>'
@@ -6379,7 +6579,7 @@ ${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return '
         ${dates.map(d=>{
           const h=S.hours[d.dow];
           return `<div class="hcell ${h.closed?"closed":""}">
-            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(S.holidays.mode==="closed"?"closed — holiday":S.holidays.mode==="custom"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
+            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
             <div class="dd">${h.closed?"Closed":m2disp(t2m(h.open))+"–"+m2disp(t2m(h.close))}</div>
             ${covStrip(d)}
             <div style="margin-top:4px"><button class="btn sm ghost" data-openday="${d.dow}" style="padding:2px 6px;font-size:11px">Day sheet →</button></div>
@@ -7072,9 +7272,13 @@ function vDay(){
               ${a.topUp? `<div class="mini"><span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span></div>`:""}
               ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn">${esc(d.name)}</span></div>`).join(""):""}
               ${myRelief.map(x=>`<div class="mini"><span class="chip acc">Covers ${esc(x.station.name)} ${m2disp(x.start)}–${m2disp(x.end)}</span></div>`).join("")}</td>
-            ${(S.stations||[]).length? `<td>${stn? `<span class="chip ${(stn.desire||0)>0?"ok":(stn.desire||0)<0?"warn":""}">${esc(stn.name)}</span>`+
-              (a.second? `<div class="mini">second pair of hands</div>`:"")+
-              (stn2? `<div class="mini">then ${esc(stn2.name)} after ${m2disp(Math.round((a.startMin+a.endMin)/2/15)*15)}</div>`:"")
+            ${(S.stations||[]).length? `<td>${(a.stationPlan&&a.stationPlan.length)
+              ? a.stationPlan.map(b2=>{ const p=stationById(b2.st)||{name:"—"};
+                  return `<div class="stblk"><span class="mono">${m2disp(b2.from)}–${m2disp(b2.to)}</span>
+                    <span class="chip ${(p.desire||0)>0?"ok":(p.desire||0)<0?"warn":""}">${esc(p.name)}</span></div>`; }).join("")
+              : stn? `<span class="chip ${(stn.desire||0)>0?"ok":(stn.desire||0)<0?"warn":""}">${esc(stn.name)}</span>`+
+                (a.second? `<div class="mini">second pair of hands</div>`:"")+
+                (stn2? `<div class="mini">then ${esc(stn2.name)} after ${m2disp(Math.round((a.startMin+a.endMin)/2/15)*15)}</div>`:"")
               : a.project? `<span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span>`
               : '<span class="mini">—</span>'}</td>`:""}
             <td class="mono">${m2disp(a.startMin)}–${m2disp(a.endMin)}</td>
@@ -7544,7 +7748,8 @@ function wizard(firstRun){
     step:0, biz:"other",
     name:S.org.name||"", site:S.org.site||"", juris:S.org.jurisdiction||"CA",
     hoursPreset:"same", open:"09:00", close:"17:00",
-    dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false,
+    dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false, hols:null,
+    posts:"", postSpan:"day", postFam:"1", postRelief:"family",
     satOpen:"10:00", satClose:"16:00", satClosed:false,
     sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
     dayOff:{},                      /* "b:i" -> [dow…] they can never work */
@@ -7573,6 +7778,8 @@ function wizard(firstRun){
     {k:"days",    t:"Days that don't work"},
     {k:"shifts",  t:"Your shifts"},
     {k:"need",    t:"How many on each shift"},
+    {k:"hols",    t:"Which holidays affect you?"},
+    {k:"posts",   t:"Posts on the floor"},
     {k:"rules",   t:"Ground rules"},
     {k:"pri",     t:"Who gets first pick"},
     {k:"cost",    t:"Money"},
@@ -7581,6 +7788,12 @@ function wizard(firstRun){
     {k:"period",  t:"How far ahead"},
     {k:"done",    t:"Ready"}
   ];
+  const wizHolDefault=(h)=>{
+    const b=W.biz;
+    if(b==="hotel"||b==="security") return h.common==="closed"? "reduced" : h.common==="reduced"? "reduced" : "skip";
+    if(b==="office"||b==="clinic")  return h.common==="reduced"? "closed" : h.common==="closed"? "closed" : "skip";
+    return h.common==="normal"? "skip" : h.common;   /* retail, food, pharmacy, salon, warehouse, support, other */
+  };
   const opt=(group,val,cur,title,desc)=>`<button type="button" class="wopt ${cur===val?"on":""}" data-g="${group}" data-v="${val}">
     <span class="wt">${esc(title)}</span>${desc?`<span class="wd">${esc(desc)}</span>`:""}</button>`;
   const namesIn = b => (W.bucketNames[b]||"").split(/\n/).map(x=>x.trim()).filter(Boolean);
@@ -7671,17 +7884,7 @@ function wizard(firstRun){
           </select>
         </div>
         <div class="help">Pharmacies often rush the day before a closure and the morning after. Pick it and those days count one step busier whenever a holiday you've listed is next to them.</div>
-        <div class="desrow" style="margin-top:2px">
-          <strong style="font-family:Archivo,sans-serif;font-size:13px">And on the holiday itself?</strong>
-          <select id="whmode" style="margin-left:auto">
-            <option value="same" ${W.holidayMode==="same"?"selected":""}>Same cover as that weekday</option>
-            <option value="custom" ${W.holidayMode==="custom"?"selected":""}>Its own, different cover</option>
-            <option value="closed" ${W.holidayMode==="closed"?"selected":""}>We're closed on holidays</option>
-          </select>
-        </div>
-        <div class="help">${W.holidayMode==="custom"? "You'll set what runs on a holiday — like an eighth day of the week — on the Holidays page once you're in."
-          : W.holidayMode==="closed"? "Nothing gets drafted on any holiday you list — the day simply sits empty."
-          : "A holiday drafts exactly like the weekday it lands on. Change this any time on the Holidays page."}</div>
+        <div class="help">Which holidays you close for comes a few questions from now.</div>
         <div class="desrow" style="margin-top:2px">
           <strong style="font-family:Archivo,sans-serif;font-size:13px">Plan longer vacations with a ranked survey?</strong>
           <select id="wvac" style="margin-left:auto">
@@ -7803,6 +8006,78 @@ function wizard(firstRun){
           : "<b>"+perDay+" shift"+(perDay===1?"":"s")+" a day, about "+(perDay*openDays)+" a week.</b> "+names2+" people can cover roughly "+(capacity*openDays)+", so that fits."}</div></div>
       </div>`;
     }
+    if(k==="hols"){
+      if(!W.hols){ W.hols={}; holidayCandidates().forEach(h=>{ W.hols[h.key]=wizHolDefault(h); }); }
+      const C=holidayCandidates();
+      const shut=C.filter(h=>W.hols[h.key]==="closed").length;
+      const light=C.filter(h=>W.hols[h.key]==="reduced").length;
+      const norm=C.filter(h=>W.hols[h.key]==="normal").length;
+      return `
+      <div class="stack">
+        <p class="whead">Every business keeps its own holidays. Say what each day looks like for you —
+          the ones you're closed for are never scheduled and nobody is asked to work them; the rest go into
+          the holiday poll so the days people least mind working land fairly.</p>
+        <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:2px">
+          <button type="button" class="btn sm" data-hall="skip">None of these</button>
+          <button type="button" class="btn sm" data-hall="normal">All normal hours</button>
+          <button type="button" class="btn sm" data-hall="closed">Closed for all</button>
+        </div>
+        <div class="stack" style="gap:6px">${C.map(h=>`
+          <div class="desrow">
+            <div style="min-width:0;flex:1">
+              <strong style="font-family:Archivo,sans-serif;font-size:13px">${esc(h.name)}</strong>
+              <div class="mini mono">${esc(prettyDate(h.date))}</div>
+            </div>
+            <select data-hol="${esc(h.key)}" style="margin-left:auto;max-width:190px">
+              <option value="skip" ${W.hols[h.key]==="skip"?"selected":""}>Doesn't apply</option>
+              <option value="closed" ${W.hols[h.key]==="closed"?"selected":""}>Closed</option>
+              <option value="reduced" ${W.hols[h.key]==="reduced"?"selected":""}>Open, fewer people</option>
+              <option value="normal" ${W.hols[h.key]==="normal"?"selected":""}>Open, normal hours</option>
+            </select>
+          </div>`).join("")}</div>
+        <div class="banner info"><div><b>${shut} closed · ${light} lighter · ${norm} normal.</b>
+          ${light? "For the lighter days a reduced pattern is set up for you — about half your usual cover — and you can fine-tune it on the Holidays page. ":""}
+          Anything you skip can be added later, and a holiday you observe that isn't listed can be added by hand.</div></div>
+      </div>`;
+    }
+    if(k==="posts") return `
+      <div class="stack">
+        <p class="whead">Some floors run on posts — the typing window, the checking bench, the front counter —
+          and people move between them during the day. This is separate from who works when:
+          <b>posts never appear on the weekly schedule, only on the day sheet.</b> Skip it if your floor doesn't work that way.</p>
+        <div class="field"><label>Your posts — one per line</label>
+          <textarea id="wposts" rows="5" placeholder="Typist 1&#10;Typist 2&#10;Checker 1&#10;Checker 2&#10;Front counter">${esc(W.posts||"")}</textarea>
+          <span class="mini">Leave it empty if you don't assign posts. Numbered posts like <b>Typist 1</b> and <b>Typist 2</b> are treated as one rotation called Typist.</span></div>
+        ${(W.posts||"").trim()? `
+        <div class="field"><label>How long does someone hold a post?</label>
+          <select id="wpspan">
+            <option value="day" ${W.postSpan==="day"?"selected":""}>All day — one post each</option>
+            <option value="half" ${W.postSpan==="half"?"selected":""}>Half a day, then everyone moves</option>
+            <option value="2h" ${W.postSpan==="2h"?"selected":""}>Every 2 hours</option>
+            <option value="3h" ${W.postSpan==="3h"?"selected":""}>Every 3 hours</option>
+            <option value="4h" ${W.postSpan==="4h"?"selected":""}>Every 4 hours</option>
+          </select>
+          <span class="mini">${W.postSpan==="day"
+            ? "Each person keeps one post for their whole shift."
+            : "The day is split into blocks and people swap posts at each change — the day sheet prints the times, so everyone can see where they are and when."}</span></div>
+        <div class="field"><label>Numbered posts — one rotation or separate?</label>
+          <select id="wpfam">
+            <option value="1" ${W.postFam==="1"?"selected":""}>Share one rotation — a turn on Typist 1 counts as a turn on Typist</option>
+            <option value="0" ${W.postFam==="0"?"selected":""}>Rotate separately — every post counted on its own</option>
+          </select>
+          <span class="mini">${W.postFam==="1"
+            ? "Whoever typed yesterday is less likely to be typing today, on either number. This is what most floors want."
+            : "Posts are drawn independently, so the same person can be on Typist 1 today and Typist 2 tomorrow."}</span></div>
+        <div class="field"><label>When someone on a post goes to lunch</label>
+          <select id="wprelief">
+            <option value="family" ${W.postRelief==="family"?"selected":""}>Someone from the same rotation steps in</option>
+            <option value="any" ${W.postRelief==="any"?"selected":""}>Whoever is free steps in</option>
+            <option value="none" ${W.postRelief==="none"?"selected":""}>Nobody — the post can sit empty while they eat</option>
+          </select>
+          <span class="mini">${W.postRelief==="none"
+            ? "Nothing is flagged at meal times — fine when a post can simply pause."
+            : "The day sheet names the reliever beside every meal, and flags any meal nobody can cover."}</span></div>`:""}
+      </div>`;
     if(k==="rules") return `
       <div class="stack">
         <p class="whead">Four things the scheduler will never break. Your meal and rest break law is already handled — this is the rest.</p>
@@ -7969,6 +8244,10 @@ function wizard(firstRun){
             <div class="ln"><span>Cover you asked for</span><b>${W.fillMode==="full"?"a floor — everyone fully scheduled":"exactly that many"}</b></div>
             <div class="ln"><span>Handing it out</span><b>${W.sendOut?"emailed or texted from here":"however you do it now"}</b></div>
             ${W.fillMode==="full"? `<div class="ln"><span>${esc(W.topUpLabel||"Project time")}</span><b>${W.projectShape==="chunk"?"in blocks":"wherever it fits"}, ${W.projectShare==="best"?"stacked on your best":"shared round"}</b></div>`:""}
+            ${(W.posts||"").trim()? `<div class="ln"><span>Posts</span><b>${(W.posts||"").split(/\n/).filter(x=>x.trim()).length} on the floor${W.postSpan==="day"?", held all day":", rotating "+(W.postSpan==="half"?"at midday":"every "+W.postSpan.replace("h"," hours"))}</b></div>`:""}
+            ${W.hols? `<div class="ln"><span>Holidays</span><b>${(()=>{const C=holidayCandidates();
+              const c=C.filter(h=>W.hols[h.key]==="closed").length, l=C.filter(h=>W.hols[h.key]==="reduced").length, nn=C.filter(h=>W.hols[h.key]==="normal").length;
+              return (c+l+nn)? [c?c+" closed":"", l?l+" lighter":"", nn?nn+" normal":""].filter(Boolean).join(", ") : "none tracked";})()}</b></div>`:""}
             <div class="ln"><span>Busy days</span><b>${esc(DAYS.filter((d,i)=>(W.dayLoad[i]||0)>0).map((d,i)=>d).join(", ")||"none marked")}</b></div>
             <div class="ln"><span>Requests on file</span><b>${W.reqs.length}</b></div>
             <div class="ln"><span>Drafting</span><b>${W.weeks} week${W.weeks===1?"":"s"}</b></div>
@@ -8089,8 +8368,15 @@ function wizard(firstRun){
     });
     const whr=r.querySelector("#whrush"); if(whr) whr.onchange=()=>{ W.holidayRush=whr.value; };
     const wwk=r.querySelector("#wwkend"); if(wwk) wwk.onchange=()=>{ W.weekendDesire=wwk.value; };
-    const whm=r.querySelector("#whmode"); if(whm) whm.onchange=()=>{ W.holidayMode=whm.value; paint(); };
     const wvc=r.querySelector("#wvac"); if(wvc) wvc.onchange=()=>{ W.vacations=wvc.value==="1"; };
+    r.querySelectorAll("[data-hol]").forEach(sel=>sel.onchange=()=>{ W.hols=W.hols||{}; W.hols[sel.dataset.hol]=sel.value; paint(); });
+    const wp=r.querySelector("#wposts");
+    if(wp){ wp.addEventListener("blur",()=>{ const v=wp.value;
+      if(v===W.posts) return; W.posts=v; setTimeout(paint,0); }); }   /* never redraw mid-blur */
+    ["wpspan","wpfam","wprelief"].forEach(id=>{ const el=r.querySelector("#"+id);
+      if(el) el.onchange=()=>{ if(id==="wpspan") W.postSpan=el.value; if(id==="wpfam") W.postFam=el.value; if(id==="wprelief") W.postRelief=el.value; paint(); }; });
+    r.querySelectorAll("[data-hall]").forEach(b2=>b2.onclick=()=>{ W.hols=W.hols||{};
+      holidayCandidates().forEach(h=>{ W.hols[h.key]=b2.dataset.hall; }); paint(); });
     r.querySelectorAll(".daytog").forEach(btn=>btn.onclick=()=>{
       const k=btn.dataset.k, d=+btn.dataset.d;
       W.dayOff=W.dayOff||{}; const cur=W.dayOff[k]||[];
@@ -8169,6 +8455,7 @@ function wizard(firstRun){
     r.querySelectorAll(".wpt").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].type=i.value; });
     r.querySelectorAll(".wph").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
     r.querySelectorAll(".wmn").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
+    const wpx=r.querySelector("#wposts"); if(wpx) W.posts=wpx.value;
     r.querySelectorAll(".wneed").forEach(i=>{ W.perShift[i.dataset.s+":"+i.dataset.r]=+i.value||0; });
     if(g("#wbud")) W.budget=+g("#wbud").value||0;
   }
@@ -8267,8 +8554,42 @@ function wizard(firstRun){
     N.rules.sendOut=!!W.sendOut;
     N.dayLoad=(W.dayLoad||[0,1,0,-1,0,1,0]).slice();
     N.rules.holidayRush=W.holidayRush||"none";
-    N.holidays.mode=W.holidayMode||"same";
+    N.holidays.mode="same";
     N.vacations.on=!!W.vacations;
+    /* posts on the floor — numbered names group themselves into one rotation */
+    const postLines=(W.posts||"").split(/\n/).map(x=>x.trim()).filter(Boolean);
+    if(postLines.length){
+      N.rules.stationSpan=W.postSpan||"day";
+      N.rules.stationFamilies=W.postFam!=="0";
+      N.stations=postLines.map(nm=>({id:uid("st"), kind:"station", name:nm, note:"", desire:0,
+        roleId:null, linkedTo:null, assignTo:"any", days:[], off:false, double:false,
+        critical:W.postRelief!=="none", reliefFrom:W.postRelief==="family"?"family":"",
+        family:"", from:"", to:"", slots:[], holdAllDay:false}));
+    }
+    /* the holidays they actually keep, each with how they run it */
+    if(W.hols){
+      const roleIds=N.roles.map(r=>r.id);
+      const open=t2m(W.open||"09:00"), close=t2m(W.close||"17:00");
+      const lightFrom=Math.max(open, 600), lightTo=Math.min(close, 960);
+      const lightHours=(lightTo>lightFrom)? m2t(lightFrom)+"-"+m2t(lightTo) : m2t(open)+"-"+m2t(close);
+      N.holidays.list = holidayCandidates()
+        .filter(h=>W.hols[h.key] && W.hols[h.key]!=="skip")
+        .map(h=>{
+          const mode=W.hols[h.key];
+          const need={};
+          if(mode!=="closed") roleIds.slice(0,2).forEach(rid=>{ need[rid]=1; });
+          return {id:uid("h"), name:h.name, date:h.date, hmode:mode,
+                  hours: mode==="closed"? "" : mode==="reduced"? lightHours : (m2t(open)+"-"+m2t(close)),
+                  need};
+        });
+      /* a lighter pattern for the "fewer people" days: about half a normal day, from real shifts */
+      if(N.holidays.list.some(h=>h.hmode==="reduced")){
+        const busiest=[0,1,2,3,4,5,6].filter(d=>!N.hours[d].closed)
+          .sort((a,b)=>(N.demand[b]||[]).reduce((t,r)=>t+(r.count||1),0)-(N.demand[a]||[]).reduce((t,r)=>t+(r.count||1),0))[0];
+        N.holidays.demand=((N.demand[busiest]||[]).map(r=>({shiftId:r.shiftId, roleId:r.roleId,
+          count:Math.max(1, Math.floor((r.count||1)/2))})));
+      }
+    }
     N.priority.mode=W.priority; N.priority.order=N.employees.map(e=>e.id); N.priority.strength=2;
     N.dayDesire = W.hoursPreset==="wkday"? [0,1,1,1,1,0,0] : [-1,1,1,1,1,0,-1];
     if(W.hoursPreset!=="wkday"){ const wv=W.weekendDesire==="wanted"?1:W.weekendDesire==="neutral"?0:-1; N.dayDesire[0]=wv; N.dayDesire[6]=wv; }
@@ -8785,17 +9106,40 @@ function vStations(){
   const roster=S.employees.filter(e=>e.active);
   return `
   <div class="stack">
-    <div class="banner info"><div><b>Stations are where people stand, not when they work.</b> Once the week is drafted, each day's staff get handed a station — and because some are better than others, they rotate. Two stations can be linked so a pair swaps at the middle of the day, and administrative duties can fall automatically to whoever opens or closes.</div></div>
+    <div class="banner info"><div><b>Stations are where people stand, not when they work.</b> They never appear on the weekly schedule — only on the day sheet. Every time you draft a week, each day's staff are handed posts automatically: fairly, with a coin-flip between equal claims, so nobody draws the same post day after day.</div></div>
 
     <div class="card"><div class="body spread" style="padding:12px 14px">
       <div class="row">
         <span class="lab" style="margin:0">Whose turn it is</span>
-        <select data-bind="rules.stationRotation" style="min-width:230px">
+        <select data-bind="rules.stationRotation" style="min-width:230px" data-rot="1">
           <option value="fair" ${S.rules.stationRotation==="fair"?"selected":""}>Take turns — whoever's had fewest good ones</option>
           <option value="seniority" ${S.rules.stationRotation==="seniority"?"selected":""}>Follow the shift-priority ladder</option>
           <option value="none" ${S.rules.stationRotation==="none"?"selected":""}>Don't rotate — first on, first assigned</option>
         </select>
       </div>
+      <div class="row">
+        <span class="lab" style="margin:0">How long someone holds a post</span>
+        <select data-bind="rules.stationSpan" style="min-width:230px">
+          <option value="day" ${(S.rules.stationSpan||"day")==="day"?"selected":""}>All day — one post per person</option>
+          <option value="half" ${S.rules.stationSpan==="half"?"selected":""}>Half a day, then everyone moves</option>
+          <option value="2h" ${S.rules.stationSpan==="2h"?"selected":""}>Every 2 hours</option>
+          <option value="3h" ${S.rules.stationSpan==="3h"?"selected":""}>Every 3 hours</option>
+          <option value="4h" ${S.rules.stationSpan==="4h"?"selected":""}>Every 4 hours</option>
+        </select>
+      </div>
+      <div class="mini" style="margin:-4px 0 8px">${(S.rules.stationSpan||"day")==="day"
+        ? "Each person keeps one post for their whole shift. The day sheet lists it beside their name."
+        : "The open hours are split into blocks and people move between posts at each change. The day sheet prints the times — post it and everyone can see where they are, and when."}</div>
+      <div class="row">
+        <span class="lab" style="margin:0">Numbered posts</span>
+        <select data-bind="rules.stationFamilies" style="min-width:230px">
+          <option value="1" ${S.rules.stationFamilies!==false?"selected":""}>Share one rotation (Typist 1 + Typist 2 = Typist)</option>
+          <option value="0" ${S.rules.stationFamilies===false?"selected":""}>Rotate separately — every post on its own</option>
+        </select>
+      </div>
+      <div class="mini" style="margin:-4px 0 8px">${S.rules.stationFamilies!==false
+        ? "A turn on Typist 1 counts as a turn on Typist, so that person is less likely to draw Typist 2 tomorrow. Posts group by their name — anything ending in a number joins its family automatically."
+        : "Every post is counted on its own. A turn on Typist 1 says nothing about Typist 2, so someone can be typing two days running on different numbers."}</div>
       <div class="row">
         <button class="btn sm" id="stashuffle">Reassign this week</button>
         <button class="btn primary sm" id="stanew">Add a station</button>
@@ -8811,7 +9155,11 @@ function vStations(){
           <td><strong>${esc(st.name)}</strong>${st.note?`<div class="mini">${esc(st.note)}</div>`:""}</td>
           <td><span class="chip ${(st.desire||0)>0?"ok":(st.desire||0)<0?"warn":""}">${DESIRE_LABEL[st.desire||0]}</span></td>
           <td>${st.roleId? esc(roleName(st.roleId)) : '<span class="mini">anyone on shift</span>'}</td>
-          <td>${st.linkedTo? `<span class="chip acc">${esc((stationById(st.linkedTo)||{name:"—"}).name)}</span><div class="mini">they swap at midday</div>` : '<span class="mini">—</span>'}
+          <td>${(()=>{const f=stFamily(st); const fam=f? (stationFamilies()[f]||[]) : [];
+              return fam.length>1? `<span class="chip acc">${esc(f)} rotation</span><div class="mini">${fam.length} posts share turns</div>`
+                : st.linkedTo? `<span class="chip acc">${esc((stationById(st.linkedTo)||{name:"—"}).name)}</span><div class="mini">they swap at midday</div>`
+                : '<span class="mini">on its own</span>';})()}
+            ${(st.from||st.to)? `<div class="mini mono">${esc(st.from||"open")}–${esc(st.to||"close")}</div>`:""}
             ${st.double? '<div class="mini">takes a second person when someone is spare</div>':""}</td>
           <td class="mono" style="font-size:11px">${(!st.days||!st.days.length)? "every day" : DSHORT.map((d,i)=>st.days.includes(i)?d[0]:"·").join("")}</td>
           <td><button class="btn sm" data-editsta="${st.id}">Edit</button></td></tr>`).join("")}
@@ -8858,7 +9206,8 @@ WIRE.stations = root=>{
 function stationModal(id, kind){
   const st = id? JSON.parse(JSON.stringify(stationById(id)))
     : {id:uid("st"), name:"", kind:kind||"station", desire:0, roleId:null, linkedTo:null,
-       assignTo:"opener", days:[], note:"", off:false, double:false, critical:false, reliefFrom:null};
+       assignTo:"opener", days:[], note:"", off:false, double:false, critical:false, reliefFrom:"family",
+       family:"", from:"", to:"", slots:[], holdAllDay:false};
   const isAdmin = st.kind==="admin";
   const others=(S.stations||[]).filter(x=>x.kind!=="admin" && x.id!==st.id);
   modal(id? "Edit "+st.name : isAdmin? "New administrative duty" : "New station", `
@@ -8890,10 +9239,23 @@ function stationModal(id, kind){
         <label class="switch"><input type="checkbox" id="stcrit" ${st.critical?"checked":""}> Must never sit empty — needs cover during meal breaks</label>
         <div class="field" id="streliefwrap" style="display:${st.critical?"":"none"};margin-left:28px"><label>Who steps in while they eat</label>
           <select id="strelief">
+            <option value="family" ${st.reliefFrom==="family"?"selected":""}>Someone from the same rotation (Typist covers Typist)</option>
             <option value="" ${!st.reliefFrom?"selected":""}>Whoever is free at the time</option>
             ${others.map(o=>`<option value="${o.id}" ${st.reliefFrom===o.id?"selected":""}>Someone from ${esc(o.name)}</option>`).join("")}
           </select>
-          <span class="mini">The break sheet names the reliever next to each meal, and flags any meal nobody can cover.</span></div>`}
+          <span class="mini">The day sheet names the reliever next to each meal, and flags any meal nobody can cover. "Same rotation" means the posts that share this one's name — the usual arrangement, since they already know the job.</span></div>`}
+      ${isAdmin? "" : `
+      <div class="grid2">
+        <div class="field"><label>Must be staffed from</label><input type="time" id="stfrom" value="${esc(st.from||"")}">
+          <span class="mini">Leave both blank if it just runs whenever you're open.</span></div>
+        <div class="field"><label>…until</label><input type="time" id="stto" value="${esc(st.to||"")}"></div>
+      </div>
+      <div class="field"><label>Who's eligible by shift</label><select id="stslot">
+        <option value="">Anyone on the floor</option>
+        ${S.shifts.map(sh=>`<option value="${sh.id}" ${(st.slots||[]).includes(sh.id)?"selected":""}>Only the ${esc(sh.label)} shift</option>`).join("")}
+      </select>
+        <span class="mini">Lock a post to one shift when only those hours make sense for it.</span></div>
+      <label class="switch"><input type="checkbox" id="sthold" ${st.holdAllDay?"checked":""}> One person holds this all day, even when the floor rotates</label>`}
       <div class="field"><label>Which days</label><select id="stdaysel">
         <option value="all" ${(!st.days||!st.days.length)?"selected":""}>Every day</option>
         <option value="custom" ${(st.days&&st.days.length)?"selected":""}>Pick my own…</option></select>
@@ -8923,6 +9285,11 @@ function stationModal(id, kind){
           critical: isAdmin? false : !!(r.querySelector("#stcrit")||{}).checked,
           reliefFrom: isAdmin? null : (((r.querySelector("#strelief")||{}).value)||null),
           assignTo: isAdmin? r.querySelector("#stass").value : "any",
+          family: st.family||"",
+          from: isAdmin? "" : ((r.querySelector("#stfrom")||{}).value||""),
+          to:   isAdmin? "" : ((r.querySelector("#stto")||{}).value||""),
+          slots: isAdmin? [] : (((r.querySelector("#stslot")||{}).value)? [r.querySelector("#stslot").value] : []),
+          holdAllDay: isAdmin? false : !!(r.querySelector("#sthold")||{}).checked,
           days: dsel.value==="custom"? [...r.querySelectorAll("#stcd input:checked")].map(x=>+x.dataset.d) : [],
           off: r.querySelector("#stoff").checked };
         S.stations=S.stations||[];
@@ -8956,9 +9323,10 @@ function stationModal(id, kind){
 /* ============================================================
    View: Holiday poll
    ============================================================ */
+function holStaffed(){ return (S.holidays.list||[]).filter(h=>holMode(h)!=="closed"); }
 function holidaySlots(){
   const slots=[];
-  S.holidays.list.forEach(h=>{
+  holStaffed().forEach(h=>{
     Object.keys(h.need||{}).forEach(rid=>{
       for(let i=0;i<(h.need[rid]||0);i++) slots.push({holidayId:h.id, roleId:rid});
     });
@@ -9239,14 +9607,17 @@ function vHolidays(){
 
     <div class="card">
       <header><h3>Holidays you need covered</h3><span class="hint">${slots.length} shift${slots.length===1?"":"s"} to fill across ${H.length} day${H.length===1?"":"s"}</span>
+        <button class="btn sm" id="addstd">Add the usual holidays</button>
         <button class="btn primary sm" id="addhol">Add holiday</button></header>
       <div class="scroll">${H.length? `<table>
-        <thead><tr><th>Holiday</th><th style="width:120px">Date</th><th style="width:130px">Hours</th><th>Coverage needed</th><th style="width:80px"></th></tr></thead>
+        <thead><tr><th>Holiday</th><th style="width:120px">Date</th><th style="width:130px">How you run it</th><th>Coverage needed</th><th style="width:80px"></th></tr></thead>
         <tbody>${H.map(h=>`<tr>
           <td><strong>${esc(h.name)}</strong></td>
           <td class="mono">${esc(prettyDate(h.date))}<div class="mini">${DSHORT[parseYmd(h.date).getDay()]}</div></td>
-          <td class="mono">${esc(h.hours||"—")}</td>
-          <td>${Object.keys(h.need||{}).filter(k=>h.need[k]).map(k=>`<span class="chip">${h.need[k]} × ${esc(roleName(k))}</span> `).join("")||'<span class="mini">nobody needed</span>'}</td>
+          <td><span class="chip ${holMode(h)==="closed"?"":"acc"}">${esc(HMODE_LABEL[holMode(h)])}</span>
+            ${holMode(h)!=="closed"&&h.hours? `<div class="mini mono">${esc(h.hours)}</div>`:""}</td>
+          <td>${holMode(h)==="closed"? '<span class="mini">closed — nobody scheduled</span>'
+            : (Object.keys(h.need||{}).filter(k=>h.need[k]).map(k=>`<span class="chip">${h.need[k]} × ${esc(roleName(k))}</span> `).join("")||'<span class="mini">nobody needed</span>')}</td>
           <td><button class="btn sm" data-edithol="${h.id}">Edit</button></td></tr>`).join("")}
         </tbody></table>`:`<div class="empty"><strong>No holidays listed</strong>Add the days you have to staff.</div>`}
       </div>
@@ -9381,6 +9752,23 @@ function vHolidays(){
 
 WIRE.holidays = root=>{
   root.querySelector("#addhol").onclick=()=>holModal(null);
+  const as=root.querySelector("#addstd");
+  if(as) as.onclick=()=>{
+    const have=new Set((S.holidays.list||[]).map(h=>h.date));
+    const roleIds=S.roles.map(r=>r.id);
+    let added=0;
+    holidayCandidates().forEach(h=>{
+      if(have.has(h.date)) return;
+      const mode=h.common;                       /* closed / fewer people / normal, editable after */
+      const need={}; if(mode!=="closed") roleIds.slice(0,2).forEach(rid=>{ need[rid]=1; });
+      S.holidays.list.push({id:uid("h"), name:h.name, date:h.date, hmode:mode,
+        hours: mode==="closed"? "" : mode==="reduced"? "10:00-16:00" : "", need});
+      added++;
+    });
+    S.holidays.list.sort((a,b)=>a.date.localeCompare(b.date));
+    S.holidays.result=null; save(); render();
+    toast(added? added+" holidays added — set how you run each one":"They're all on the list already");
+  };
   const hr=root.querySelector("#holrush"); if(hr) hr.onchange=()=>{ S.rules.holidayRush=hr.value; save(); toast(hr.value==="none"?"Holiday rush off":"Rush days now count busier when drafting"); };
   const hm=root.querySelector("#holmode"); if(hm) hm.onchange=()=>{ S.holidays.mode=hm.value; save(); render(); };
   const ha=root.querySelector("#hdadd"); if(ha) ha.onclick=()=>{
@@ -9423,7 +9811,13 @@ function holModal(id){
         <div class="field"><label>Holiday</label><input type="text" id="hn" value="${esc(h.name)}" placeholder="Thanksgiving"></div>
         <div class="field"><label>Date</label><input type="date" id="hd" value="${esc(h.date)}"></div>
         <div class="field"><label>Hours open</label><input type="text" id="hh" value="${esc(h.hours||"")}" placeholder="10:00-14:00"></div>
+        <div class="field"><label>How you run this day</label><select id="hm">
+          <option value="closed" ${holMode(h)==="closed"?"selected":""}>Closed — nobody scheduled</option>
+          <option value="reduced" ${holMode(h)==="reduced"?"selected":""}>Open, fewer people</option>
+          <option value="normal" ${holMode(h)==="normal"?"selected":""}>Open, normal hours</option>
+        </select></div>
       </div>
+      <div class="help" id="hmhelp"></div>
       <div class="field"><label>Coverage needed</label>
         ${S.roles.length? S.roles.map(r=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin-bottom:6px">
           <span class="tag" style="--sc:${r.color}">${esc(r.name)}</span>
@@ -9435,13 +9829,23 @@ function holModal(id){
       r.querySelector("#savehol").onclick=()=>{
         const name=r.querySelector("#hn").value.trim();
         if(!name){ toast("Name the holiday"); return; }
-        const need={}; r.querySelectorAll(".hneed").forEach(i=>{ const v=+i.value||0; if(v) need[i.dataset.r]=v; });
-        const rec={id:h.id,name,date:r.querySelector("#hd").value,hours:r.querySelector("#hh").value.trim(),need};
+        const hmode=r.querySelector("#hm").value;
+        const need={}; if(hmode!=="closed") r.querySelectorAll(".hneed").forEach(i=>{ const v=+i.value||0; if(v) need[i.dataset.r]=v; });
+        const rec={id:h.id,name,date:r.querySelector("#hd").value,hours:r.querySelector("#hh").value.trim(),need,hmode};
         const i=S.holidays.list.findIndex(x=>x.id===h.id);
         if(i>=0) S.holidays.list[i]=rec; else S.holidays.list.push(rec);
         S.holidays.list.sort((a,b)=>a.date.localeCompare(b.date));
         S.holidays.result=null; save(); closeModal(); render();
       };
+      const hmSel=r.querySelector("#hm"), hmHelp=r.querySelector("#hmhelp");
+      const hmLine=()=>{ const v=hmSel.value;
+        hmHelp.textContent = v==="closed"
+          ? "Nothing is drafted on this day and it stays out of the holiday poll — nobody is asked to rank it."
+          : v==="reduced"
+            ? "This day drafts from your lighter holiday pattern (set on this page) instead of the usual weekday, and it goes into the holiday poll."
+            : "This day drafts exactly like the weekday it lands on, and it goes into the holiday poll.";
+      };
+      hmSel.onchange=hmLine; hmLine();
       const d=r.querySelector("#delhol");
       if(d) d.onclick=()=>{ S.holidays.list=S.holidays.list.filter(x=>x.id!==h.id);
         S.holidays.responses.forEach(x=>{ x.rank=(x.rank||[]).filter(y=>y!==h.id); x.cant=(x.cant||[]).filter(y=>y!==h.id); });
@@ -9737,7 +10141,7 @@ function buildPollFile(){
   const payload = {
     org: S.org.name||"Our team",
     site: S.org.site||"",
-    holidays: S.holidays.list.map(h=>({name:h.name,date:h.date,hours:h.hours||""})),
+    holidays: holStaffed().map(h=>({name:h.name,date:h.date,hours:h.hours||""})),
     staff: S.employees.filter(e=>e.active).map(e=>({id:e.id,name:e.name}))
   };
   const data = b64e(JSON.stringify(payload));
@@ -9810,7 +10214,7 @@ function buildPollFile(){
   return P.join("\n");
 }
 function pollEmailText(){
-  const H=S.holidays.list;
+  const H=holStaffed();
   return "Subject: Ranking the holidays — please reply by [date]\n\n"+
   "Hi all,\n\n"+
   "We have to keep "+(S.org.name||"the department")+" staffed on the holidays below, and I'd rather split them by what people actually prefer than by seniority or a hat draw.\n\n"+
@@ -10115,6 +10519,10 @@ const KB=[
   a:"On iPhone: open weeksolved.com in Safari, tap the Share button (the square with the arrow), scroll down, tap 'Add to Home Screen', then Add. On Android: open it in Chrome, tap the three-dot menu, tap 'Add to home screen'. You get a real app icon that opens full screen — same account, same data, nothing to install."},
  {t:"Working before opening or after closing", k:"hours open close prep before after doors staffing window overnight stock cleanup setup", go:null,
   a:"The hours you set are staffing hours — the window shifts can be placed in — not your door hours. If a crew preps before you open to the public or closes down after, set the day to start earlier and end later, then add a shift covering that stretch. To change them, re-run the setup questions (Help & FAQ → Change what setup decided)."},
+ {t:"Stations and how the rotation works", k:"station post typist checker rotation family bucket daily sheet where people stand rotate two hours", go:"stations",
+  a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Typist 1, Typist 2) share one rotation by default, so a turn on either counts as a turn on Typist and that person is less likely to draw it again; you can switch to counting every post separately under Stations. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
+ {t:"Which holidays we close for", k:"holiday closed open christmas eve thanksgiving new year observe list closures skeleton", go:"holidays",
+  a:"Setup asks about every common US holiday and you answer each one: Doesn't apply, Closed, Open with fewer people, or Open normal hours. Closed days are never scheduled and never appear in the holiday poll. 'Fewer people' days draft from a lighter holiday pattern (about half your usual cover, editable on the Holidays page). 'Normal hours' days draft like the weekday they land on. Change any of it any time on the Holidays page, and 'Add the usual holidays' fills the standard list in one tap."},
  {t:"Different cover on holidays", k:"holiday coverage different closed cover staffing skeleton crew reduced hours draft", go:"holidays",
   a:"On the Holidays page, 'What runs on the holiday itself?' has three answers: draft the holiday like the weekday it lands on; give holidays their own cover — one pattern you build like an eighth day of the week, used on every listed holiday; or closed, so nothing is drafted at all. Set it in setup or change it any time."},
  {t:"Is this legal advice?", k:"legal advice lawyer liability responsible sued law compliance guarantee promise", go:"rules",
