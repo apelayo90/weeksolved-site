@@ -843,7 +843,7 @@ function blankState(){
     dayLoad:[0,0,0,0,0,0,0],          /* how busy the business is, Sun..Sat */
     priority:{ mode:"seniority", order:[], strength:2, applyTo:"desirable",
                seed:1, ledgerFrom:"posted", adjust:{} },
-    rules:{ minRestH:10, maxConsecDays:6, noClopen:true, maxShiftH:12, preferLong:false, perDiem:"ask",
+    rules:{ minRestH:10, maxConsecDays:6, noClopen:true, maxShiftH:12, preferLong:false, perDiem:"ask", holidayRush:"none",
             breakMode:"assigned", restMode:"assigned", staggerMeals:true,
             projectShape:"chunk", projectShare:"fair", projectMinH:4,
             sendOut:false,
@@ -1198,7 +1198,7 @@ function sendModal(ws){
    opened it so you can tell who is reporting what. Treat it as a polite
    "invited testers only" sign, never as security.
    ============================================================ */
-const ACCESS = {"on":true,"until":"","codes":[{"id":"T01","h":"0m0fvkz0tkdanb0jef3g8103ca1l","days":30},{"id":"T02","h":"08p5qqr07js6421py7lxq12805kr","days":30},{"id":"T03","h":"16cv7r215rlb7y0tl29rp1iswqs3","days":30},{"id":"T04","h":"0eh6isu0e5ggf607jzn7910d5a70","days":30},{"id":"T05","h":"1pimatr0p52oop03diri60z08lcp","days":30},{"id":"T06","h":"0m0mnx413tcg4w0zgqwry0ipitvg","days":30},{"id":"T07","h":"0stotoj1kaz05d08uvjk90chc2lk","days":30},{"id":"T08","h":"00vazw00xbc65d04sabe51dpaqez","days":30},{"id":"T09","h":"1xm4nt11nbb6tr00clw8l1im7vsp","days":30},{"id":"T10","h":"0n92n4b18znbme0ete67c02xtwwx","days":30},{"id":"T11","h":"1ko6sqp01iaxg31dkdh3z12q9qxb","days":30},{"id":"T12","h":"1btxlvq0a1mqqr1r4680u04nlmot","days":30}]};   /* replaced when a tester build is cut */
+const ACCESS = {"on":true,"until":"","codes":[{"id":"LIFE","h":"0ua80ad1xs959l1rsl7jh02ol8nd","days":36500,"life":true},{"id":"T01","h":"0m0fvkz0tkdanb0jef3g8103ca1l","days":30},{"id":"T02","h":"08p5qqr07js6421py7lxq12805kr","days":30},{"id":"T03","h":"16cv7r215rlb7y0tl29rp1iswqs3","days":30},{"id":"T04","h":"0eh6isu0e5ggf607jzn7910d5a70","days":30},{"id":"T05","h":"1pimatr0p52oop03diri60z08lcp","days":30},{"id":"T06","h":"0m0mnx413tcg4w0zgqwry0ipitvg","days":30},{"id":"T07","h":"0stotoj1kaz05d08uvjk90chc2lk","days":30},{"id":"T08","h":"00vazw00xbc65d04sabe51dpaqez","days":30},{"id":"T09","h":"1xm4nt11nbb6tr00clw8l1im7vsp","days":30},{"id":"T10","h":"0n92n4b18znbme0ete67c02xtwwx","days":30},{"id":"T11","h":"1ko6sqp01iaxg31dkdh3z12q9qxb","days":30},{"id":"T12","h":"1btxlvq0a1mqqr1r4680u04nlmot","days":30}]};   /* replaced when a tester build is cut */
 const PASSKEY = "dowel.pass";
 /* a stable 128-bit fingerprint of a code — enough that a code can't be read
    off the page, not a substitute for a server checking it */
@@ -1217,10 +1217,11 @@ function codeHash(str){
 }
 function accessOk(){
   if(!ACCESS.on) return true;
-  if(ACCESS.until && ymd(new Date()) > ACCESS.until) return false;
   try{
-    const raw=localStorage.getItem(PASSKEY); if(!raw) return false;
-    const p=JSON.parse(raw);
+    const raw=localStorage.getItem(PASSKEY);
+    const p=raw? JSON.parse(raw) : null;
+    if(p && p.life && p.id) return ACCESS.codes.some(c=>c.id===p.id);  /* founding pass: no end date, ever */
+    if(ACCESS.until && ymd(new Date()) > ACCESS.until) return false;
     if(!p || !p.id || !p.exp) return false;
     if(ymd(new Date()) > p.exp) return false;
     return ACCESS.codes.some(c=>c.id===p.id);
@@ -1256,7 +1257,8 @@ function gateScreen(msg){
     const d=new Date(); d.setDate(d.getDate()+(hit.days||30));
     let exp=ymd(d);
     if(ACCESS.until && exp>ACCESS.until) exp=ACCESS.until;
-    try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp, at:Date.now()})); }catch(e){}
+    if(hit.life) exp="9999-12-31";
+    try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp, life:!!hit.life, at:Date.now()})); }catch(e){}
     location.reload();
   };
   go.onclick=tryIt;
@@ -1311,9 +1313,10 @@ async function cloudEnter(){
   }
   const p=prof.data()||{};
   window.TESTER_ID=p.codeId||"";
+  window.TESTER_LIFE=!!p.life;
   const expMs=(p.activated||0)+(p.days||30)*86400000;
   const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
-  if(Date.now()>expMs || Date.now()>hardEnd){ expiredScreen(); return; }
+  if(!p.life && (Date.now()>expMs || Date.now()>hardEnd)){ expiredScreen(); return; }
 
   WKHASH={};
   const remote=await cloudFetchAll(uid);
@@ -1405,7 +1408,7 @@ async function cloudSignup(code,email,pass){
   const h=codeHash((code||"").trim());
   const hit=ACCESS.codes.find(c=>c.h===h);
   if(!hit) throw {message:"That access code isn't recognized. Check it and try again."};
-  if(ACCESS.until && ymd(new Date())>ACCESS.until) throw {message:"This test has ended."};
+  if(!hit.life && ACCESS.until && ymd(new Date())>ACCESS.until) throw {message:"This test has ended."};
   SIGNING_UP=true;
   try{
     const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
@@ -1417,8 +1420,8 @@ async function cloudSignup(code,email,pass){
       throw {message:"That code has already been used to create an account. Each code works once."};
     }
     await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
-      .set({codeId:hit.id, days:hit.days||30, activated:Date.now(), email:email.trim()});
-    try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:ymd(new Date(Date.now()+(hit.days||30)*86400000)), at:Date.now()})); }catch(e){}
+      .set({codeId:hit.id, days:hit.days||30, life:!!hit.life, activated:Date.now(), email:email.trim()});
+    try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:hit.life?"9999-12-31":ymd(new Date(Date.now()+(hit.days||30)*86400000)), life:!!hit.life, at:Date.now()})); }catch(e){}
   } finally { SIGNING_UP=false; }
   await cloudEnter();
 }
@@ -2261,7 +2264,7 @@ function topUpPass(ws, assignments, state, dates){
        Otherwise: busiest days first, then whichever day is thinnest. */
     const days=dates.slice().sort((x,y)=>
       (chunk? nextTo(x.date)-nextTo(y.date) : 0) ||
-      dayLoad(y.dow)-dayLoad(x.dow) ||
+      dateLoad(y.date,y.dow)-dateLoad(x.date,x.dow) ||
       assignments.filter(a=>a.date===x.date).length - assignments.filter(a=>a.date===y.date).length);
 
     /* Chunked: the longest shift they can take, so it's a half or whole day rather
@@ -2921,7 +2924,7 @@ function groupOpen(slots){
   const g={};
   slots.forEach(sl=>{ const k=sl.shiftId+"|"+(sl.roleId||""); (g[k]=g[k]||[]).push(sl); });
   return Object.keys(g).map(k=>({shiftId:k.split("|")[0], roleId:k.split("|")[1]||null,
-    slots:g[k].sort((a,b)=> dayLoad(b.dow)-dayLoad(a.dow) || a.date.localeCompare(b.date))}));
+    slots:g[k].sort((a,b)=> dateLoad(b.date,b.dow)-dateLoad(a.date,a.dow) || a.date.localeCompare(b.date))}));
 }
 
 function fixModal(ws){
@@ -3258,12 +3261,26 @@ function assignStationsWeek(ws){
 const LOAD_LABEL={"-2":"Very quiet","-1":"Quiet","0":"Normal","1":"Busy","2":"Busiest"};
 const LOAD_SHORT={"-2":"− −","-1":"−","0":"·","1":"+","2":"+ +"};
 function dayLoad(dow){ return (S.dayLoad && typeof S.dayLoad[dow]==="number")? S.dayLoad[dow] : 0; }
+/* Some places spike the day before a holiday, the day after, or both — set in
+   setup or on the Holidays page. A rush day counts one step busier. */
+function holRush(){ return (S.rules && S.rules.holidayRush) || "none"; }
+function holAdj(dateStr){
+  const r=holRush(); if(r==="none"||!dateStr) return null;
+  const L=(S.holidays&&S.holidays.list)||[];
+  if(L.some(h=>h.date===dateStr)) return null;              /* the holiday itself has its own staffing */
+  if((r==="before"||r==="both")){ const h=L.find(h=>h.date===addDays(dateStr,1));  if(h) return {side:"before", name:h.name}; }
+  if((r==="after" ||r==="both")){ const h=L.find(h=>h.date===addDays(dateStr,-1)); if(h) return {side:"after",  name:h.name}; }
+  return null;
+}
+function dateLoad(dateStr,dow){ const a=holAdj(dateStr); return Math.max(-2, Math.min(2, dayLoad(dow)+(a?1:0))); }
 /* Cover asked for on a day, as a share of the busiest day's cover. */
 function coverOn(dow, ws){ return expandDemand(dow, ws).length; }
 function loadMismatch(ws){
   const open=[0,1,2,3,4,5,6].filter(d=>!S.hours[d].closed);
   if(open.length<2) return [];
-  const rows=open.map(d=>({d, load:dayLoad(d), cover:coverOn(d,ws)}));
+  const W=weekDates(ws);
+  const rows=open.map(d=>{ const wd=W.find(x=>x.dow===d);
+    return {d, date:wd&&wd.date, load:wd? dateLoad(wd.date,d) : dayLoad(d), cover:coverOn(d,ws)}; });
   const out=[];
   rows.forEach(a=>rows.forEach(b=>{
     if(a.d>=b.d) return;
@@ -3310,7 +3327,7 @@ function loadProposals(ws){
     out.push({
       busy:x.busy, quiet:x.quiet, gap:x.gap, shiftId:best.shiftId, roleId:best.roleId,
       title:"Move one "+who.toLowerCase()+" from "+DAYS[x.quiet.d]+" to "+DAYS[x.busy.d],
-      detail:DAYS[x.busy.d]+" is "+(LOAD_LABEL[dayLoad(x.busy.d)]||"").toLowerCase()+
+      detail:DAYS[x.busy.d]+" is "+((holAdj(x.busy.date)? "the day "+holAdj(x.busy.date).side+" "+holAdj(x.busy.date).name : (LOAD_LABEL[dayLoad(x.busy.d)]||"").toLowerCase()))+
         " and asks for "+x.busy.cover+" shift"+(x.busy.cover===1?"":"s")+"; "+DAYS[x.quiet.d]+" is "+
         (LOAD_LABEL[dayLoad(x.quiet.d)]||"").toLowerCase()+" and asks for "+x.quiet.cover+". "+
         "This takes one "+best.sh.label+" off "+DAYS[x.quiet.d]+" and puts it on "+DAYS[x.busy.d]+
@@ -4729,7 +4746,7 @@ function vSettings(){
         sel("org.trackCost", [[0,"Just hours, no money"],[1,"Show me what it costs"]], S.org.trackCost?1:0))}
       ${S.org.trackCost? setRow("Weekly labor budget", "", `<input type="number" step="50" min="0" data-bind="org.budget" value="${S.org.budget||0}" style="width:130px">`) : ""}
       ${(typeof cloudOn==="function"&&cloudOn()&&FB&&FB.user)? setRow("Your account", "Signed in as "+esc(FB.user.email||"")+" — the board saves to this account and follows you between devices",
-        `<span class="chip acc" style="margin-right:8px">Free — tester program</span><button class="btn sm" id="setsignout">Sign out</button>`) : ""}
+        `<span class="chip acc" style="margin-right:8px">${window.TESTER_LIFE?"Free for life — founding account":"Free — tester program"}</span><button class="btn sm" id="setsignout">Sign out</button>`) : ""}
       ${setRow("Track PTO balances", S.org.trackPto? "Each profile carries a balance and an accrual rule; approved time off draws it down" : "No balances anywhere — time off is just dates",
         sel("org.trackPto", [[0,"Don't track balances"],[1,"Track PTO balances"]], S.org.trackPto?1:0))}
       ${setRow("Who gets paid for holidays", S.employees.filter(e=>e.active&&e.holidayPay).length+" of "+S.employees.filter(e=>e.active).length+" — set per person on their profile", "", "holidays")}
@@ -6114,7 +6131,7 @@ function vWeek(){
         return `<div class="dcard ${h.closed?"shut":""} ${open?"open":""}">
           <button class="dhead" data-togday="${d.dow}" aria-expanded="${open}">
             <div class="dl"><strong>${DAYS[d.dow]}</strong> <span class="mini">${esc(prettyDate(d.date))}</span>
-              ${dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}
+              ${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}
               <div class="mini">${h.closed?"Closed":
                 (on.length? esc(on.slice(0,3).map(a=>(empById(a.empId)||{name:"?"}).name.split(" ")[0]).join(", "))+(on.length>3?" +"+(on.length-3):"") : "nobody on")}</div></div>
             <div class="dr">${h.closed? '<span class="mini">Closed</span>'
@@ -6172,7 +6189,7 @@ function vWeek(){
         ${dates.map(d=>{
           const h=S.hours[d.dow];
           return `<div class="hcell ${h.closed?"closed":""}">
-            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
+            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
             <div class="dd">${h.closed?"Closed":m2disp(t2m(h.open))+"–"+m2disp(t2m(h.close))}</div>
             ${covStrip(d)}
             <div style="margin-top:4px"><button class="btn sm ghost" data-openday="${d.dow}" style="padding:2px 6px;font-size:11px">Day sheet →</button></div>
@@ -7267,7 +7284,7 @@ function wizard(firstRun){
     step:0, biz:"other",
     name:S.org.name||"", site:S.org.site||"", juris:S.org.jurisdiction||"CA",
     hoursPreset:"same", open:"09:00", close:"17:00",
-    dayLoad:[0,1,0,-1,0,1,0],
+    dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none",
     satOpen:"10:00", satClose:"16:00", satClosed:false,
     sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
     dayOff:{},                      /* "b:i" -> [dow…] they can never work */
@@ -7382,6 +7399,16 @@ function wizard(firstRun){
             <span class="mini" style="width:90px;text-align:right">${LOAD_LABEL[W.dayLoad[i]||0]}</span>
           </div>`).join("")}</div>
         <div class="help">It never changes your numbers on its own — it decides where an extra pair of hands goes when you have one to spare, and tells you when the busiest day has thinner cover than a quiet one.</div>
+        <div class="desrow" style="margin-top:6px">
+          <strong style="font-family:Archivo,sans-serif;font-size:13px">Around a holiday, does it get busier?</strong>
+          <select id="whrush" style="margin-left:auto">
+            <option value="none" ${W.holidayRush==="none"?"selected":""}>No change</option>
+            <option value="before" ${W.holidayRush==="before"?"selected":""}>The day before</option>
+            <option value="after" ${W.holidayRush==="after"?"selected":""}>The day after</option>
+            <option value="both" ${W.holidayRush==="both"?"selected":""}>Both</option>
+          </select>
+        </div>
+        <div class="help">Pharmacies often rush the day before a closure and the morning after. Pick it and those days count one step busier whenever a holiday you've listed is next to them.</div>
       </div>`;
     if(k==="buckets") return `
       <div class="stack">
@@ -7758,6 +7785,7 @@ function wizard(firstRun){
       const i=+g.dataset.busy;
       g.querySelectorAll("button").forEach(b=>b.onclick=()=>{ W.dayLoad[i]=+b.dataset.v; collect(); paint(); });
     });
+    const whr=r.querySelector("#whrush"); if(whr) whr.onchange=()=>{ W.holidayRush=whr.value; };
     r.querySelectorAll(".daytog").forEach(btn=>btn.onclick=()=>{
       const k=btn.dataset.k, d=+btn.dataset.d;
       W.dayOff=W.dayOff||{}; const cur=W.dayOff[k]||[];
@@ -7932,6 +7960,7 @@ function wizard(firstRun){
     N.rules.projectShare=W.projectShare||"fair";
     N.rules.sendOut=!!W.sendOut;
     N.dayLoad=(W.dayLoad||[0,1,0,-1,0,1,0]).slice();
+    N.rules.holidayRush=W.holidayRush||"none";
     N.priority.mode=W.priority; N.priority.order=N.employees.map(e=>e.id); N.priority.strength=2;
     N.dayDesire = W.hoursPreset==="wkday"? [0,1,1,1,1,0,0] : [-1,1,1,1,1,0,-1];
     /* requests entered during setup */
@@ -8718,6 +8747,18 @@ function vHolidays(){
           <td><button class="btn sm" data-edithol="${h.id}">Edit</button></td></tr>`).join("")}
         </tbody></table>`:`<div class="empty"><strong>No holidays listed</strong>Add the days you have to staff.</div>`}
       </div>
+      <div class="body" style="border-top:1px solid var(--line)">
+        <div class="row" style="gap:10px;align-items:center;flex-wrap:wrap">
+          <div><strong style="font-size:13px">Around a holiday, does it get busier?</strong>
+            <div class="mini">Rush days count one step busier — spare hands land there first, and thin cover gets flagged.</div></div>
+          <select id="holrush" style="margin-left:auto">
+            <option value="none" ${holRush()==="none"?"selected":""}>No change</option>
+            <option value="before" ${holRush()==="before"?"selected":""}>The day before</option>
+            <option value="after" ${holRush()==="after"?"selected":""}>The day after</option>
+            <option value="both" ${holRush()==="both"?"selected":""}>Both</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -8812,6 +8853,7 @@ function vHolidays(){
 
 WIRE.holidays = root=>{
   root.querySelector("#addhol").onclick=()=>holModal(null);
+  const hr=root.querySelector("#holrush"); if(hr) hr.onchange=()=>{ S.rules.holidayRush=hr.value; save(); toast(hr.value==="none"?"Holiday rush off":"Rush days now count busier when drafting"); };
   root.querySelectorAll("[data-edithol]").forEach(b=>b.onclick=()=>holModal(b.dataset.edithol));
   root.querySelectorAll("[data-delresp]").forEach(b=>b.onclick=()=>{
     S.holidays.responses=S.holidays.responses.filter(r=>r.empId!==b.dataset.delresp); save(); render(); });
@@ -9323,6 +9365,8 @@ const KB=[
   a:"Your board is yours alone: it's stored under your account and no other user can read it — that's enforced by the database itself, not just the app. Nothing about your schedule appears anywhere public, and nothing leaves the app unless you send it."},
  {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
   a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
+ {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
+  a:"On the Holidays page (or in setup), say whether business spikes the day before a holiday, after, or both. Those days then count one step busier: spare hands are steered there first, drafts fill them first, and thin cover next to a holiday gets flagged. It never adds shifts on its own."},
  {t:"Is this legal advice?", k:"legal advice lawyer liability responsible sued law compliance guarantee promise", go:"rules",
   a:"No. Weeksolved applies published state break rules to help you schedule, and flags problems it can see — but it's a scheduling tool, not a law firm. You review every schedule before it goes up, and responsibility for complying with the laws that apply to your business stays with you. When something's unusual (waivers, union agreements, local ordinances), check with a professional."},
  {t:"Report a problem", k:"bug problem report broken error wrong crash issue feedback", go:null,
