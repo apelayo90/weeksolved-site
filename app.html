@@ -418,6 +418,7 @@ tr:last-child td{border-bottom:0}
 
 .fixgrp{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;background:var(--surface2)}
 .fixopt{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:9px 11px;flex-wrap:wrap}
+.fixopt .chip{white-space:normal;max-width:100%;text-align:left;line-height:1.35}
 .fixopt strong{font-size:13px}
 .fixk{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:99px;flex:none;
   background:var(--sunken);color:var(--muted)}
@@ -1297,6 +1298,9 @@ modal("A few new questions from the latest update", `
           <option value="24" ${S.rules.remindH===24?"selected":""}>The day before</option>
         </select>
         <span class="mini">New: the alarm rides along inside the calendar file, so it goes off on their own phone. Nothing for them to install, nothing for you to send.</span></div>
+      <div class="help">Also new, no answer needed: <b>an open shift can now be offered to the team</b>. Cover the gaps
+        writes you a one-page file and the message to go with it \u2014 your people tick what they\u2019d take and send back a
+        short code. No accounts, no app for them, and every rule is checked again before anyone lands on the schedule.</div>
       <div class="help">Also new, no answer needed: <b>your account now lists the devices it has been opened on</b>, under
         Settings \u2014 with a way to sign the others out, and an optional emailed confirmation the first time a new device
         signs in. <b>Every change to a posted schedule is now recorded</b> \u2014 what changed, when, and who was told \u2014 kept
@@ -1817,6 +1821,7 @@ if(!s.rules.mealClose || !s.rules.mealClose.from) s.rules.mealClose=Object.assig
 if(!s.rules.topUpLabel) s.rules.topUpLabel="Project time";
 if(!s.rules.stationRotation) s.rules.stationRotation="fair";
 if(!s.rules.stationSpan) s.rules.stationSpan="day";
+Object.keys(s.weeks||{}).forEach(k=>{ if(s.weeks[k].offer===undefined) s.weeks[k].offer=null; });
 if(typeof s.rules.remindH!=="number") s.rules.remindH=12;
 if(typeof s.rules.auditKeep!=="number") s.rules.auditKeep=730;
 if(!Array.isArray(s.audit)) s.audit=[];
@@ -3265,6 +3270,250 @@ return Object.keys(g).map(k=>({shiftId:k.split("|")[0], roleId:k.split("|")[1]||
 slots:g[k].sort((a,b)=> dateLoad(b.date,b.dow)-dateLoad(a.date,a.dow) || a.date.localeCompare(b.date))}));
 }
 
+ 
+function slotKey(sl){ return sl.date+"|"+sl.shiftId+"|"+(sl.roleId||""); }
+function offerToken(){ return Math.random().toString(36).slice(2,8).toUpperCase(); }
+
+function openOffer(ws){ const wk=peekWeek(ws||S.currentWeek); return (wk&&wk.offer)||null; }
+
+function offerEligible(sl, ws){
+ 
+return optionsFor(sl, ws)
+.filter(o=>["free","percall","extra","overtime"].includes(o.kind))
+.map(o=>({empId:o.emp.id, kind:o.kind}));
+}
+
+function makeOffer(ws, slots){
+const wk=getWeek(ws||S.currentWeek);
+const token=offerToken();
+wk.offer={token, at:Date.now(), slots:slots.map(sl=>({date:sl.date, dow:sl.dow, shiftId:sl.shiftId, roleId:sl.roleId||null})), claims:[]};
+logIt("post","Offered "+slots.length+" open shift"+(slots.length===1?"":"s")+" for the week of "+prettyDate(ws)+" to the team");
+save();
+return wk.offer;
+}
+
+function buildOfferFile(ws){
+const off=openOffer(ws); if(!off) return "";
+const payload={
+org:S.org.name||"Our team", site:S.org.site||"", token:off.token,
+week:prettyDate(ws),
+shifts: off.slots.map((sl,i)=>{
+const sh=shiftById(sl.shiftId)||{label:"Shift"};
+const [a,b]=shiftMinutes(sh);
+return {i, day:DAYS[sl.dow], date:prettyFull(sl.date), ymd:sl.date,
+label:sh.label, role:roleName(sl.roleId)||"", time:m2disp(a)+" to "+m2disp(b),
+hours:Math.round((b-a)/6)/10};
+}),
+staff: S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name}))
+};
+const data=b64e(JSON.stringify(payload));
+return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
+'<meta name="viewport" content="width=device-width,initial-scale=1">',
+'<title>Shifts going spare \u2014 '+esc(payload.org)+'</title>',
+'<style>:root{--g:#eaedeb;--s:#fff;--i:#18211f;--m:#697773;--l:#d2d8d6;--a:#1c6a66;--as:#dcebe9}',
+'@media(prefers-color-scheme:dark){:root{--g:#101514;--s:#191f1e;--i:#e7ecea;--m:#8d9b97;--l:#2c3634;--a:#4cb3a9;--as:#173432}}',
+'*{box-sizing:border-box}body{margin:0;background:var(--g);color:var(--i);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px 14px 60px}',
+'.w{max-width:620px;margin:0 auto}h1{font-size:21px;margin:0 0 4px}.sub{color:var(--m);font-size:13.5px;margin-bottom:18px}',
+'.card{background:var(--s);border:1px solid var(--l);border-radius:9px;padding:16px;margin-bottom:14px}',
+'label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--m);font-weight:700;margin-bottom:6px}',
+'select{width:100%;font:inherit;color:inherit;background:var(--s);border:1px solid var(--l);border-radius:6px;padding:9px 10px}',
+'.sh{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--l);border-radius:8px;padding:11px;margin-bottom:8px;cursor:pointer}',
+'.sh input{margin-top:3px;flex:none;width:18px;height:18px}',
+'.sh b{display:block;font-size:14.5px}.sh .d{color:var(--m);font-size:13px}',
+'.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
+'.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}',
+'.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
+'.hide{display:none}</style></head><body><div class="w">',
+'<h1>Shifts going spare</h1><div class="sub" id="sub"></div>',
+'<div class="card"><div class="step">How this works</div><div class="hint">These shifts are open. Tick any you\u2019d be happy to work, and you\u2019ll get a short code \u2014 send it back and your manager will confirm. Ticking is not a commitment until they confirm, and if two people want the same shift only one can have it.</div></div>',
+'<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
+'<div class="card"><div class="step">Step 2 \u2014 which would you take?</div><div id="list"></div></div>',
+'<div class="card"><div class="step">Step 3</div><button class="go" id="mk">Get my reply code</button>',
+'<div id="out" class="hide"><div class="hint" style="margin-top:12px">Send this code back to your manager.</div>',
+'<div class="code" id="cd"></div><button class="go" id="cp" style="background:var(--s);color:var(--a);border:1px solid var(--a)">Copy the code</button></div></div>',
+'<div class="hint">Nothing is sent anywhere by this page \u2014 the code is the only thing that leaves, and you send it yourself.</div>',
+'</div><script>',
+'var D=JSON.parse(decodeURIComponent(escape(atob("'+data+'"))));',
+'document.getElementById("sub").textContent=D.org+(D.site?" \u00b7 "+D.site:"")+" \u00b7 week of "+D.week;',
+'var who=document.getElementById("who");',
+'who.innerHTML="<option value=\'\'>Pick your name\u2026</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+s.name+"</option>";}).join("")+"<option value=\'__other\'>My name isn\u2019t listed</option>";',
+'var L=document.getElementById("list");',
+'D.shifts.forEach(function(sh){var el=document.createElement("label");el.className="sh";',
+'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+sh.day+", "+sh.date+"</b><span class=d>"+sh.label+" \u00b7 "+sh.time+" \u00b7 "+sh.hours+" hours"+(sh.role?" \u00b7 "+sh.role:"")+"</span></span>";',
+'L.appendChild(el);});',
+'document.getElementById("mk").onclick=function(){',
+'var k=who.value;if(!k){alert("Pick your name first.");return;}',
+'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;}',
+'var picked=[];L.querySelectorAll("input:checked").forEach(function(c){picked.push(c.value);});',
+'if(!picked.length){alert("Tick at least one shift, or just tell your manager you can\u2019t take any.");return;}',
+'var raw="OS1|"+D.token+"|"+k+"|"+picked.join(",");',
+'var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
+'document.getElementById("cd").textContent=code;document.getElementById("out").className="";',
+'document.getElementById("out").scrollIntoView({behavior:"smooth"});};',
+'document.getElementById("cp").onclick=function(){var t=document.getElementById("cd").textContent;',
+'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){document.getElementById("cp").textContent="Copied \u2713";});}',
+'else{var r=document.createRange();r.selectNode(document.getElementById("cd"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");document.getElementById("cp").textContent="Copied \u2713";}};',
+'<\/script></body></html>'].join("\n");
+}
+
+function offerEmailText(ws){
+const off=openOffer(ws); if(!off) return "";
+const rows=off.slots.map(sl=>{
+const sh=shiftById(sl.shiftId)||{label:"Shift"};
+const [a,b]=shiftMinutes(sh);
+return "  \u2022 "+DAYS[sl.dow]+", "+prettyFull(sl.date)+" \u2014 "+sh.label+", "+m2disp(a)+" to "+m2disp(b);
+});
+return "Subject: Shifts going spare \u2014 week of "+prettyDate(ws)+"\n\n"+
+"Hi all,\n\nThese shifts are open next week:\n\n"+rows.join("\n")+"\n\n"+
+"Attached is a one-page form \u2014 open it on your phone, tick anything you\u2019d take, and it gives you a short code. Reply with the code and I\u2019ll confirm.\n\n"+
+"Ticking isn\u2019t a commitment until I confirm, and if two people want the same shift only one can have it \u2014 so no hard feelings either way.\n\nThanks!";
+}
+
+function offerModal(ws){
+ws=ws||S.currentWeek;
+const slots=openSlots(ws);
+if(!slots.length){ toast("Nothing is open this week"); return; }
+const rows=slots.map((sl,i)=>{
+const sh=shiftById(sl.shiftId)||{label:"Shift"};
+const [a,b]=shiftMinutes(sh);
+const elig=offerEligible(sl, ws);
+const clean=elig.filter(x=>x.kind!=="overtime").length;
+return `<label class="setrow" style="cursor:pointer">
+      <div class="sq" style="display:flex;gap:10px;align-items:flex-start">
+        <input type="checkbox" class="ofsl" value="${i}" checked style="margin-top:3px;flex:none">
+        <span style="min-width:0"><strong>${esc(DAYS[sl.dow])}, ${esc(prettyDate(sl.date))}</strong>
+          <div class="mini">${esc(sh.label)} \u00b7 ${esc(m2disp(a))}\u2013${esc(m2disp(b))}${sl.roleId? " \u00b7 "+esc(roleName(sl.roleId)):""}</div>
+          <div class="mini">${elig.length
+? clean+" could take it without anything being bent"+(elig.length>clean? ", "+(elig.length-clean)+" more on overtime":"")
+: "<span style='color:var(--warn)'>nobody qualified is free \u2014 worth asking anyway</span>"}</div></span>
+      </div></label>`;
+}).join("");
+modal("Offer these to the team", `
+    <div class="stack">
+      <p class="whead">A one-page file goes out to whoever you send it to. They tick what they\u2019d take and send back a short code \u2014 nothing lands on the schedule until you confirm it here.</p>
+      <div class="card"><div class="setbody">${rows}</div></div>
+      <div class="help">Nobody needs an account or an app. Ticking isn\u2019t a commitment on their side either \u2014 you still decide, and every limit gets checked again before anyone is placed.</div>
+    </div>`,
+`<button class="btn" data-close>Not now</button><button class="btn primary" id="ofgo">Make the file</button>`,
+r=>{
+r.querySelector("#ofgo").onclick=()=>{
+const pick=[...r.querySelectorAll(".ofsl:checked")].map(c=>slots[+c.value]);
+if(!pick.length){ toast("Tick at least one shift"); return; }
+makeOffer(ws, pick);
+closeModal(true);
+offerSendModal(ws);
+};
+});
+}
+
+function offerSendModal(ws){
+const off=openOffer(ws); if(!off) return;
+modal("Send it out", `
+    <div class="stack">
+      <div class="help">Two things go to your team: the file, and a message. Save the file, then attach it to an email or drop it in the group chat with the message below.</div>
+      <div class="row"><button class="btn primary" id="ofsave">Save the file</button>
+        <button class="btn" id="ofmail">Copy the message</button></div>
+      <div class="field"><label>The message</label><textarea id="oftxt" style="min-height:150px">${esc(offerEmailText(ws))}</textarea></div>
+      <div class="help">When replies come back, open <b>Cover the gaps</b> and press <b>Enter a reply code</b>. Codes from this offer carry the tag <span class="mono">${esc(off.token)}</span> \u2014 an older offer\u2019s code won\u2019t be accepted.</div>
+    </div>`,
+`<button class="btn" data-close>Done</button><button class="btn" id="ofclaim">Enter a reply code</button>`,
+r=>{
+r.querySelector("#ofsave").onclick=()=>saveFile("shifts-going-spare.html", buildOfferFile(ws));
+r.querySelector("#ofmail").onclick=()=>copyText(r.querySelector("#oftxt").value,"Message copied");
+r.querySelector("#ofclaim").onclick=()=>{ closeModal(true); claimModal(ws); };
+});
+}
+
+ 
+function readClaim(ws, code){
+const off=openOffer(ws);
+if(!off) return {err:"There\u2019s no open offer for this week."};
+let raw="";
+try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn\u2019t look like a reply code \u2014 check it was copied whole."}; }
+const bits=raw.split("|");
+if(bits[0]!=="OS1") return {err:"That\u2019s a code for something else, not an open shift."};
+if(bits[1]!==off.token) return {err:"That code is from an earlier offer. Ask them to open the newest file you sent."};
+const who=bits[2]||"";
+const idx=(bits[3]||"").split(",").map(Number).filter(n=>!isNaN(n));
+let emp=empById(who);
+if(!emp) emp=S.employees.find(e=>e.active && e.name.trim().toLowerCase()===who.trim().toLowerCase());
+if(!emp) return {err:"No one on your roster is called \u201c"+who+"\u201d. Add them under Team first, or ask them to pick their name from the list."};
+if(!emp.active) return {err:esc(emp.name)+" isn\u2019t on the active roster."};
+const items=idx.map(i=>{
+const sl=off.slots[i];
+if(!sl) return null;
+const still=openSlots(ws).some(o=>slotKey(o)===slotKey(sl));
+const opt=still? optionsFor(sl,ws).find(o=>o.emp.id===emp.id) : null;
+return {sl, still, opt};
+}).filter(Boolean);
+if(!items.length) return {err:"That code didn\u2019t name any of the shifts in this offer."};
+return {emp, items};
+}
+
+function claimModal(ws, prefill){
+ws=ws||S.currentWeek;
+modal("A reply came back", `
+    <div class="stack">
+      <div class="field"><label>Paste their reply code</label>
+        <textarea id="clcode" style="min-height:80px;font-family:'IBM Plex Mono',monospace;font-size:11.5px">${esc(prefill||"")}</textarea></div>
+      <div id="clout"></div>
+    </div>`,
+`<button class="btn" data-close>Close</button><button class="btn primary" id="clread">Read it</button>`,
+r=>{
+const out=r.querySelector("#clout");
+const show=()=>{
+const res=readClaim(ws, r.querySelector("#clcode").value);
+if(res.err){ out.innerHTML=`<div class="banner crit"><div>${res.err}</div></div>`; return; }
+out.innerHTML=`<div class="stack">
+          <div class="banner info"><div><b>${esc(res.emp.name)}</b> would take ${res.items.length} shift${res.items.length===1?"":"s"}.</div></div>
+          ${res.items.map((it,i)=>{
+const sh=shiftById(it.sl.shiftId)||{label:"Shift"};
+const [a,b]=shiftMinutes(sh);
+const head=`<strong>${esc(DAYS[it.sl.dow])}, ${esc(prettyDate(it.sl.date))}</strong>
+              <div class="mini">${esc(sh.label)} \u00b7 ${esc(m2disp(a))}\u2013${esc(m2disp(b))}</div>`;
+if(!it.still) return `<div class="setrow"><div class="sq">${head}
+              <div class="mini"><span class="chip">already covered</span> someone else has this now \u2014 nothing to do.</div></div><div class="sc"></div></div>`;
+if(!it.opt) return `<div class="setrow"><div class="sq">${head}
+              <div class="mini"><span class="chip crit">can\u2019t be placed</span> ${esc(whyNot(res.emp, it.sl, ws))}</div></div><div class="sc"></div></div>`;
+const warn=it.opt.kind==="overtime"? "warn" : it.opt.kind==="extra"? "" : "ok";
+return `<div class="setrow"><div class="sq">${head}
+              <div class="mini"><span class="chip ${warn}">${esc(it.opt.title)}</span> ${esc(it.opt.why)}</div></div>
+              <div class="sc"><button class="btn sm primary" data-clgo="${i}">Give it to them</button></div></div>`;
+}).join("")}
+        </div>`;
+out.querySelectorAll("[data-clgo]").forEach(btn=>btn.onclick=()=>{
+const it=res.items[+btn.dataset.clgo];
+const fresh=optionsFor(it.sl,ws).find(o=>o.emp.id===res.emp.id);
+if(!fresh){ toast("That one can\u2019t be filled any more"); show(); return; }
+fresh.apply();
+const off=openOffer(ws);
+if(off){ off.claims=off.claims||[]; off.claims.push({empId:res.emp.id, key:slotKey(it.sl), at:Date.now()}); }
+logIt("change", res.emp.name+" claimed the open "+((shiftById(it.sl.shiftId)||{}).label||"shift")+" on "+prettyDate(it.sl.date));
+save(); render();
+toast(res.emp.name+" is on it \u2014 "+prettyDate(it.sl.date));
+show();
+});
+};
+r.querySelector("#clread").onclick=show;
+if(prefill) show();
+});
+}
+
+ 
+function whyNot(e, sl, ws){
+const sh=shiftById(sl.shiftId); if(!sh) return "that shift no longer exists";
+const [a,b]=shiftMinutes(sh);
+if(sl.roleId && !e.roleIds.includes(sl.roleId)) return "they\u2019re not in the "+roleName(sl.roleId)+" group";
+if(onTimeOff(e.id, sl.date)) return "they have time off that day";
+if(!availOk(e, sl.dow, a, b)) return DAYS[sl.dow]+" is a day they don\u2019t work";
+if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return "they\u2019re already on the schedule that day";
+const lim=effLimits(e, ws);
+const mins=empWeekMinutes(e.id, ws)+paidEstimate(a,b);
+if(lim.maxH && mins/60 > lim.maxH) return "it would put them at "+fmtHrs(mins)+", past their "+lim.maxH+"h cap";
+if(empLicensed(e) && e.licExp && e.licExp < sl.date) return "their "+(e.licLabel||"license")+" has expired";
+return "a rule you set blocks it \u2014 Cover the gaps spells out which";
+}
+
 function fixModal(ws){
 ws = ws||S.currentWeek;
 const slots=openSlots(ws);
@@ -3309,8 +3558,14 @@ modal("Cover the gaps", `
       <p class="whead">${slots.length} shift${slots.length===1?"":"s"} couldn't be filled by the rules as they stand. Only the best ways out are shown, least disruptive first — pick one and it's done, locked so the next draft doesn't undo it.</p>
       ${body}
     </div>`,
-`<button class="btn" data-close>Leave them open</button>`,
+`<button class="btn" data-close>Leave them open</button>
+     ${openOffer(ws)? `<button class="btn" id="fixclaim">Enter a reply code</button>`:""}
+     <button class="btn" id="fixoffer">${openOffer(ws)?"Offer again":"Offer them to the team"}</button>`,
 r=>{
+const fo=r.querySelector("#fixoffer");
+if(fo) fo.onclick=()=>{ closeModal(true); offerModal(ws); };
+const fc=r.querySelector("#fixclaim");
+if(fc) fc.onclick=()=>{ closeModal(true); claimModal(ws); };
 r.querySelectorAll("[data-fixgo]").forEach(btn=>btn.onclick=()=>{
 const [gi,oi,di]=btn.dataset.fixgo.split(":").map(Number);
 const g=groups[gi];
@@ -10891,6 +11146,10 @@ a:"Every answer from the setup questions lives in Settings, changeable any time.
 a:"Settings → backup gives you a file with the whole board. Restore it on any copy of the app to carry everything over. With an account this is belt-and-braces — sync already keeps your devices matching."},
 {t:"Busy and quiet days", k:"busy quiet day load move suggestion mismatch", go:"home",
 a:"Tell it which days run hot and the app checks your coverage against that — if Wednesday asks for more people than busy Monday, it proposes a specific one-tap fix like moving one technician's shift, never a vague warning."},
+{t:"Offering an open shift to the team", k:"open shift offer spare cover claim pick up extra volunteer gap fill", go:"week",
+a:"When a shift can't be filled, Cover the gaps offers to send it out. You get a one-page file — save it, attach it to an email or drop it in the group chat with the message it writes for you. Your team open it, tick what they'd take, and it gives them a short code to send back. Nobody needs an account or an app, and ticking commits them to nothing until you confirm."},
+{t:"A reply code came back", k:"reply code claim paste open shift confirm give shift accept", go:"week",
+a:"Cover the gaps → Enter a reply code. Paste what they sent and you'll see exactly what they're offering to take, with each shift checked again against every rule — hours, turnaround, availability, licenses, the lot. A shift someone else already took shows as covered, and one that would break a limit says which limit and can't be given. Nothing is ever placed quietly: you press the button for each one."},
 {t:"Devices on your account", k:"device login sign in sessions sharing password security signed out everywhere account", go:"settings",
 a:"Settings → Your account lists every browser your login has been opened in, when it was last used, and roughly where. Remove one you don't recognise, or sign every other device out at once — and change your password at the same time if you want to be certain. You'll also get a quiet note if the account is in use in several places at the same time. One account covers one location: a second site works far better on its own login, since two rosters on one account overwrite each other's week."},
 {t:"Confirming a new device", k:"two step 2fa verification email code new device confirm login", go:"settings",
@@ -11455,6 +11714,8 @@ items.push({t:(S.rules.fillMode==="full"?"Schedule only the cover I asked for":"
 run:()=>{ S.rules.fillMode = S.rules.fillMode==="full"? "demand":"full"; save();
 const r=generateSchedule(); render(); toast(r.filled+" shifts drafted"); }});
 items.push({t:"Cover the open shifts", kind:"action", run:()=>fixModal(S.currentWeek)});
+if(openSlots(S.currentWeek).length) items.push({t:"Offer the open shifts to the team", kind:"action", run:()=>offerModal(S.currentWeek)});
+if(openOffer(S.currentWeek)) items.push({t:"Enter a reply code for an open shift", kind:"action", run:()=>claimModal(S.currentWeek)});
 items.push({t:"Rotate this week's stations", kind:"action", run:()=>{ assignStationsWeek(S.currentWeek); render(); toast("Stations handed out again"); }});
 items.push({t:"Decide which request to decline", kind:"action", run:()=>requestConflictModal(S.currentWeek)});
 items.push({t:"Change what shape this week runs", kind:"action", run:()=>weekPatternModal(S.currentWeek)});
