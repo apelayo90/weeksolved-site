@@ -1220,6 +1220,55 @@ function codeHash(str){
   }
   return h.map(x=>(x>>>0).toString(36).padStart(7,"0")).join("");
 }
+/* Existing accounts keep everything across updates — state carries defaults for
+   anything new. When an update adds settings worth an answer, bump UPDREV and
+   updModal() offers just those questions, once, with a skip that keeps defaults. */
+const UPDREV=1;
+function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
+function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
+function updModal(){
+  const wkOpen = !(S.hours[0].closed && S.hours[6].closed);
+  const wd=(S.dayDesire[0]<0&&S.dayDesire[6]<0)?"unwanted":(S.dayDesire[0]>0&&S.dayDesire[6]>0)?"wanted":"neutral";
+  modal("A few new questions from the latest update", `
+    <div class="stack">
+      <div class="help">Everything you set up is untouched — schedules, team, rules all carry over.
+        The update added three settings that were answered with safe defaults. Adjust them here in one go, or skip and keep the defaults.</div>
+      <div class="field"><label>Around a holiday, does it get busier?</label>
+        <select id="u_rush">
+          <option value="none" ${holRush()==="none"?"selected":""}>No change</option>
+          <option value="before" ${holRush()==="before"?"selected":""}>The day before</option>
+          <option value="after" ${holRush()==="after"?"selected":""}>The day after</option>
+          <option value="both" ${holRush()==="both"?"selected":""}>Both</option>
+        </select></div>
+      <div class="field"><label>What runs on the holiday itself?</label>
+        <select id="u_hmode">
+          <option value="same" ${(S.holidays.mode||"same")==="same"?"selected":""}>Same cover as that weekday</option>
+          <option value="custom" ${S.holidays.mode==="custom"?"selected":""}>Its own cover — set on the Holidays page</option>
+          <option value="closed" ${S.holidays.mode==="closed"?"selected":""}>Closed — draft nothing</option>
+        </select></div>
+      ${wkOpen? `<div class="field"><label>Weekends — wanted or not?</label>
+        <select id="u_wkend">
+          <option value="unwanted" ${wd==="unwanted"?"selected":""}>Most want them off — rotate them fairly</option>
+          <option value="wanted" ${wd==="wanted"?"selected":""}>People like working them</option>
+          <option value="neutral" ${wd==="neutral"?"selected":""}>No different from other days</option>
+        </select></div>`:""}
+      <div class="help">Also new, no answer needed: guaranteed minimum hours now sit next to the cap on every profile
+        (yours were kept as they were), and the hours you set are treated as staffing hours — start earlier or end
+        later under the setup questions if crews work before opening or after closing.</div>
+    </div>`,
+    `<button class="btn" id="u_skip">Skip — keep the defaults</button>
+     <button class="btn primary" id="u_save">Save</button>`,
+    (r)=>{
+      r.querySelector("#u_save").onclick=()=>{
+        S.rules.holidayRush=r.querySelector("#u_rush").value;
+        S.holidays.mode=r.querySelector("#u_hmode").value;
+        const wsel=r.querySelector("#u_wkend");
+        if(wsel){ const v=wsel.value==="wanted"?1:wsel.value==="neutral"?0:-1; S.dayDesire[0]=v; S.dayDesire[6]=v; }
+        closeModal(true); updDone(); toast("Saved — the next draft uses the new settings");
+      };
+      r.querySelector("#u_skip").onclick=()=>{ closeModal(true); updDone(); };
+    });
+}
 function accessOk(){
   if(!ACCESS.on) return true;
   try{
@@ -4428,6 +4477,8 @@ function vHome(){
   <div class="stack home">
     ${ACCESS.on && !(S.ui&&S.ui.repTip)? `<div class="hnotice"><span>Spot something wrong while testing? The <b>⚑ Report</b> button up top sends it straight to the fix list — ten seconds, no email needed.</span>
       <button class="btn sm" id="reptipok" style="flex:none">Got it</button></div>`:""}
+    ${updDue()? `<div class="hnotice"><span><b>Weeksolved was updated.</b> A few new settings arrived — your setup and team are untouched.</span>
+      <button class="btn sm primary" id="updgo" style="flex:none">Review — 1 min</button></div>`:""}
     ${S.sample? `<div class="hnotice"><span>This is a <b>sample business</b> — poke around freely, then make it yours.</span>
       <button class="btn sm primary" id="homesetup" style="flex:none">Set up my business</button></div>`:""}
     ${bugDue()? `<div class="hnotice"><span>${bugsSince((S.support||{}).lastSent||0).length} problem report${bugsSince((S.support||{}).lastSent||0).length===1?"":"s"} ready to go out as one note.</span>
@@ -4561,6 +4612,7 @@ WIRE.home = root=>{
   on("#hsetup2",()=>wizard());
   on("#homesetup",()=>wizard());
   on("#reptipok",()=>{ S.ui=S.ui||{}; S.ui.repTip=true; save(); render(); });
+  on("#updgo",()=>updModal());
   on("#hdraft",()=>draftModal());
   on("#hpost",()=>{ const wk=getWeek(); wk.published=true; wk.publishedAt=Date.now(); snapWeek(wk);
     wk.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted and locked"); });
@@ -7261,8 +7313,8 @@ const BIZ_TYPES=[
   {id:"other",    t:"Something else",         d:"Start from a clean slate",               roles:["Staff","Lead"],                           open:"09:00", close:"17:00", hours:"same",  shifts:"openclose"}
 ];
 const HOURS_PRESETS=[
-  {id:"same",  t:"The same hours every day",      d:"One open and close, seven days a week."},
-  {id:"wkend", t:"Weekdays, shorter on weekends", d:"Full hours Monday to Friday, a shorter Saturday and Sunday."},
+  {id:"same",  t:"The same hours every day",      d:"One start and end, seven days a week."},
+  {id:"wkend", t:"Weekdays, shorter on weekends", d:"Full staffing hours Monday to Friday, a shorter Saturday and Sunday."},
   {id:"wkday", t:"Weekdays only",                 d:"Closed Saturday and Sunday."},
   {id:"always",t:"Around the clock",              d:"Open 24 hours, every day."}
 ];
@@ -7322,7 +7374,7 @@ function wizard(firstRun){
   const STEPS=[
     {k:"biz",     t:"What kind of place is this?"},
     {k:"where",   t:"Where do you operate?"},
-    {k:"hours",   t:"When are you open?"},
+    {k:"hours",   t:"When do you need people in?"},
     {k:"busy",    t:"Which days are busy?"},
     {k:"buckets", t:"How do you group your people?"},
     {k:"count",   t:"How many people do you schedule?"},
@@ -7370,11 +7422,13 @@ function wizard(firstRun){
       </div>`;
     if(k==="hours") return `
       <div class="stack">
-        <p class="whead">Roughly how does your week run? Any single day can be fine-tuned afterwards.</p>
+        <p class="whead">This is the window people can be <b>scheduled to work</b> — not your door hours.
+          If crews prep before you open to the public or close down after, start earlier and end later here;
+          shifts can only ever be placed inside this window. Any single day can be fine-tuned afterwards.</p>
         <div class="wopts">${HOURS_PRESETS.map(x=>opt("hoursPreset",x.id,W.hoursPreset,x.t,x.d)).join("")}</div>
         ${W.hoursPreset!=="always"? `<div class="grid2">
-          <div class="field"><label>${W.hoursPreset==="wkend"?"Monday to Friday, open":"Open"}</label><input type="time" id="wo" value="${W.open}"></div>
-          <div class="field"><label>${W.hoursPreset==="wkend"?"Monday to Friday, close":"Close"}</label><input type="time" id="wc" value="${W.close}"></div>
+          <div class="field"><label>${W.hoursPreset==="wkend"?"Mon–Fri, first start":"First start of the day"}</label><input type="time" id="wo" value="${W.open}"></div>
+          <div class="field"><label>${W.hoursPreset==="wkend"?"Mon–Fri, last end":"Last end of the day"}</label><input type="time" id="wc" value="${W.close}"></div>
         </div>
         ${W.hoursPreset==="wkend"? `
         <div class="sep"></div>
@@ -7384,16 +7438,16 @@ function wizard(firstRun){
             <div class="row" style="justify-content:space-between"><strong style="font-family:Archivo,sans-serif;font-size:13px">Saturday</strong>
               <label class="switch" style="font-size:12px"><input type="checkbox" id="wsatx" ${W.satClosed?"checked":""}> closed</label></div>
             <div class="grid2" style="margin-top:6px">
-              <div class="field"><label>Open</label><input type="time" id="wsato" value="${W.satOpen}" ${W.satClosed?"disabled":""}></div>
-              <div class="field"><label>Close</label><input type="time" id="wsatc" value="${W.satClose}" ${W.satClosed?"disabled":""}></div>
+              <div class="field"><label>First start</label><input type="time" id="wsato" value="${W.satOpen}" ${W.satClosed?"disabled":""}></div>
+              <div class="field"><label>Last end</label><input type="time" id="wsatc" value="${W.satClose}" ${W.satClosed?"disabled":""}></div>
             </div>
           </div>
           <div class="dcol">
             <div class="row" style="justify-content:space-between"><strong style="font-family:Archivo,sans-serif;font-size:13px">Sunday</strong>
               <label class="switch" style="font-size:12px"><input type="checkbox" id="wsunx" ${W.sunClosed?"checked":""}> closed</label></div>
             <div class="grid2" style="margin-top:6px">
-              <div class="field"><label>Open</label><input type="time" id="wsuno" value="${W.sunOpen}" ${W.sunClosed?"disabled":""}></div>
-              <div class="field"><label>Close</label><input type="time" id="wsunc" value="${W.sunClose}" ${W.sunClosed?"disabled":""}></div>
+              <div class="field"><label>First start</label><input type="time" id="wsuno" value="${W.sunOpen}" ${W.sunClosed?"disabled":""}></div>
+              <div class="field"><label>Last end</label><input type="time" id="wsunc" value="${W.sunClose}" ${W.sunClosed?"disabled":""}></div>
             </div>
           </div>
         </div>
@@ -7688,7 +7742,7 @@ function wizard(firstRun){
           <div class="personcard"><h4>${esc(W.name||"Your business")}</h4>
             <div class="ln"><span>Kind of place</span><b>${esc((BIZ_TYPES.find(x=>x.id===W.biz)||{}).t||"—")}</b></div>
             <div class="ln"><span>Break rules</span><b>${esc((LAW[W.juris]||LAW.NONE).name)}</b></div>
-            <div class="ln"><span>Open</span><b>${esc((HOURS_PRESETS.find(x=>x.id===W.hoursPreset)||{}).t.toLowerCase())}</b></div>
+            <div class="ln"><span>Staffing hours</span><b>${esc((HOURS_PRESETS.find(x=>x.id===W.hoursPreset)||{}).t.toLowerCase())}</b></div>
             <div class="ln"><span>Buckets</span><b>${esc(W.buckets.slice(0,W.bucketCount).filter(Boolean).join(", ")||"one")}</b></div>
             <div class="ln"><span>Shifts</span><b>${esc((cur.shifts.map((x,i)=>(W.shifts[i]&&W.shifts[i].label)||x.label).concat(
               W.hoursPreset==="wkend"&&cur.shifts.length? [
@@ -8015,7 +8069,7 @@ function wizard(firstRun){
     N.requests = W.reqs.map(r=>({id:uid("q"), empId:(N.employees[r.pi]||{}).id, kind:r.kind, hard:!!r.hard,
       from:r.from, to:r.to, shiftId:(N.shifts[r.shiftIdx]||{}).id||null, time:r.time, num:r.num,
       note:"", status:"open", at:Date.now()})).filter(r=>r.empId);
-    N.setupDone=true; N.sample=false; N.templates=[]; N.horizon=W.weeks||1; N.ui={advanced:false};
+    N.setupDone=true; N.sample=false; N.templates=[]; N.horizon=W.weeks||1; N.ui={advanced:false, updSeen:UPDREV};
     N.currentWeek = addDays(weekStartOf(ymd(new Date()), N.org.weekStart), 7);
     S=N; priorityRefresh(); save(); closeModal(true);
     if(S.shifts.length && S.employees.length){
@@ -9447,6 +9501,8 @@ const KB=[
   a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
  {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
   a:"On the Holidays page (or in setup), say whether business spikes the day before a holiday, after, or both. Those days then count one step busier: spare hands are steered there first, drafts fill them first, and thin cover next to a holiday gets flagged. It never adds shifts on its own."},
+ {t:"Working before opening or after closing", k:"hours open close prep before after doors staffing window overnight stock cleanup setup", go:null,
+  a:"The hours you set are staffing hours — the window shifts can be placed in — not your door hours. If a crew preps before you open to the public or closes down after, set the day to start earlier and end later, then add a shift covering that stretch. To change them, re-run the setup questions (Help & FAQ → Change what setup decided)."},
  {t:"Different cover on holidays", k:"holiday coverage different closed cover staffing skeleton crew reduced hours draft", go:"holidays",
   a:"On the Holidays page, 'What runs on the holiday itself?' has three answers: draft the holiday like the weekday it lands on; give holidays their own cover — one pattern you build like an eighth day of the week, used on every listed holiday; or closed, so nothing is drafted at all. Set it in setup or change it any time."},
  {t:"Is this legal advice?", k:"legal advice lawyer liability responsible sued law compliance guarantee promise", go:"rules",
