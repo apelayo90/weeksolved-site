@@ -2189,7 +2189,18 @@ async function cloudSignup(code,email,pass){
   try{
     const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
     FB.user=cred.user;
-    try{ await FB.db.doc("codes/"+h).set({uid:cred.user.uid, id:hit.id, at:Date.now()}); }
+    /* One row per code, created once and never editable. It is what stops a
+       code being shared, and it is the only place a tester's sign-up is
+       recorded. Coarse only: the time zone their browser reports and the
+       browser string. No IP lookup, no location permission, nothing precise.
+       The tester agreement says this happens. Testing builds only. */
+    try{ await FB.db.doc("codes/"+h).set({
+      uid:cred.user.uid, id:hit.id, at:Date.now(),
+      email:String(email||"").trim().slice(0,120),
+      tz:(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||"").slice(0,60); }catch(e){ return ""; } })(),
+      loc:String((navigator.languages&&navigator.languages[0])||navigator.language||"").slice(0,20),
+      ua:String(navigator.userAgent||"").slice(0,180)
+    }); }
     catch(e){
       await cred.user.delete().catch(()=>{});
       await FB.auth.signOut().catch(()=>{});
@@ -5234,12 +5245,15 @@ function offerSendModal(ws){
       <div class="help">Two things go to your team: the file, and a message. Save the file, then attach it to an email or drop it in the group chat with the message below.</div>
       <div class="row"><button class="btn primary" id="ofsave">Save the file</button>
         <button class="btn" id="ofmail">Copy the message</button></div>
+      ${handOutRow("ofh")}
       <div class="field"><label>The message</label><textarea id="oftxt" style="min-height:150px">${esc(offerEmailText(ws))}</textarea></div>
       <div class="help">When replies come back, open <b>Cover the gaps</b> and press <b>Enter a reply code</b>. Codes from this offer carry the tag <span class="mono">${esc(off.token)}</span> \u2014 an older offer\u2019s code won\u2019t be accepted.</div>
     </div>`,
     `<button class="btn" data-close>Done</button><button class="btn" id="ofclaim">Enter a reply code</button>`,
     r=>{
       r.querySelector("#ofsave").onclick=()=>saveFile("shifts-going-spare.html", buildOfferFile(ws));
+      wireHandOut(r, "ofh", ()=>({ file: buildOfferFile(ws), title:"Shifts going spare",
+        what:"the open-shift form", subject:"Shifts going spare", msg:(r.querySelector("#oftxt")||{}).value||offerEmailText(ws) }));
       r.querySelector("#ofmail").onclick=()=>copyText(r.querySelector("#oftxt").value,"Message copied");
       r.querySelector("#ofclaim").onclick=()=>{ closeModal(true); claimModal(ws); };
     });
@@ -5547,6 +5561,7 @@ function askModal(){
       <div class="field"><label>The message to go with it</label>
         <textarea id="akmsg" style="min-height:150px">${esc(live? askMessageText() : "")}</textarea>
         <span class="mini">Edit it however you like — it is only text.</span></div>
+      <div class="field"><label>Getting it to your team</label>${handOutRow("akh")}</div>
     </div>`,
     `<button class="btn" data-close>Close</button>
      <button class="btn" id="akread">Read a reply</button>
@@ -5564,6 +5579,9 @@ function askModal(){
         toast("Form downloaded — send it however your team already hears from you");
         render();
       };
+      wireHandOut(r, "akh", ()=>({ file: askOpen()? buildAskFile() : "", title:"What do you need?",
+        what:"the request form", subject:"What do you need for the schedule?",
+        msg:(r.querySelector("#akmsg")||{}).value||askMessageText() }));
       r.querySelector("#akread").onclick=()=>{ closeModal(true); askReadModal(); };
       if(!live && !msg.value){ /* show them what it will say before they commit */
         msg.value="Hi all,\n\nI’m putting the schedule together. Press “Make the form” and this fills in properly.";
@@ -5653,6 +5671,8 @@ const TM_PAGE_JS = [
 'if(!D.roles.length) document.getElementById("rolewrap").className="card hide";',
 'if(!D.shifts.length){document.getElementById("shiftwrap").className="card hide";}',
 'if(!D.lic) document.getElementById("licwrap").className="card hide";',
+'else{ document.getElementById("lick").innerHTML="<option value=\'\'>Not sure \\u2014 leave it</option>"+D.licKinds.map(function(k){return "<option value=\'"+k.k+"\'>"+esc(k.t)+"</option>";}).join("");',
+' document.getElementById("licj").innerHTML="<option value=\'\'>Not sure \\u2014 leave it</option>"+D.licJurs.map(function(j){return "<option value=\'"+j.k+"\'"+(j.k===D.licJurDefault?" selected":"")+">"+esc(j.t)+"</option>";}).join("")+"<option value=\'__fed\'>A federal employer \\u2014 VA, IHS, military</option><option value=\'__other\'>Somewhere else</option>";}',
 'document.getElementById("hrs").innerHTML="<option value=\'\'>No preference</option>"+D.hours.map(function(h){return "<option value=\'"+h+"\'>around "+h+" hours a week</option>";}).join("");',
 'document.getElementById("mk").onclick=function(){',
 ' var name=(document.getElementById("nm").value||"").trim();',
@@ -5668,7 +5688,7 @@ const TM_PAGE_JS = [
 '   picked("rk"), av.join(","), picked("ps"), picked("as"), picked("po"),',
 '   (document.getElementById("op").checked?1:0)+"."+(document.getElementById("cl").checked?1:0),',
 '   document.getElementById("hrs").value||"",',
-'   clean(document.getElementById("lic").value).slice(0,40)+"."+(document.getElementById("licx").value||""),',
+'   clean(document.getElementById("lic").value).slice(0,40)+"."+(document.getElementById("licx").value||"")+"."+((document.getElementById("lick")||{}).value||"")+"."+((document.getElementById("licj")||{}).value||""),',
 '   clean(document.getElementById("note").value).slice(0,140)].join("|");',
 ' var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
 ' document.getElementById("cd").textContent=code;document.getElementById("out").className="";',
@@ -5698,6 +5718,9 @@ function buildIntakeFile(){
   const lic = !!(S.rules && S.rules.licenses) || S.employees.some(e=>e.licLabel);
   const payload={
     org:S.org.name||"Our team", site:S.org.site||"", token:T.token, lic:lic,
+    licKinds: LIC_TYPES.map(t=>({k:t.k, t:t.t})),
+    licJurs: Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)).map(k=>({k:k, t:LIC_DIR[k].n})),
+    licJurDefault: (LIC_DIR[S.org.jurisdiction||""]? S.org.jurisdiction : ""),
     days: DAYS.slice(),
     roles: S.roles.map(r=>r.name),
     shifts: S.shifts.map(s=>s.label+" · "+m2disp(t2m(s.start))+"–"+m2disp(t2m(s.end))),
@@ -5744,7 +5767,10 @@ function buildIntakeFile(){
     '<div class="hint" style="margin-bottom:10px">Tick anything you are qualified and signed off to do. Your manager checks these against their own records.</div>',
     '<div id="roles"></div></div>',
     '<div class="card" id="licwrap"><div class="step">Licence or certification</div>',
-    '<label class="f">What it is</label><input type="text" id="lic" placeholder="e.g. Pharmacy Technician">',
+    '<label class="f">What kind is it?</label><select id="lick"></select>',
+    '<label class="f">Which state issued it?</label><select id="licj"></select>',
+    '<div class="hint" style="margin-top:6px">The state that <b>issued</b> it, which may not be the state you work in \u2014 if you work for a federal employer, or hold a licence from somewhere you used to live, say where it actually came from.</div>',
+    '<label class="f">What it is called</label><input type="text" id="lic" placeholder="e.g. Pharmacy Technician">',
     '<label class="f">Expires</label><input type="date" id="licx">',
     '<div class="hint" style="margin-top:10px">So your manager can warn you before it lapses. Leave blank if you would rather they took it from your file.</div></div>',
     '<div class="card"><div class="step">When you can work</div>',
@@ -5805,6 +5831,8 @@ function readIntake(code){
     canOpen:oc[0]!=="0", canClose:oc[1]!=="0",
     hours: /^\d+$/.test(f[11]||"")? +f[11] : null,
     licLabel:(licBits[0]||"").trim(), licExp:/^\d{4}-\d{2}-\d{2}$/.test(licBits[1]||"")? licBits[1] : "",
+    licKind: LIC_TYPES.some(t=>t.k===(licBits[2]||""))? licBits[2] : "",
+    licJur: (LIC_DIR[licBits[3]||""] || licBits[3]==="__fed" || licBits[3]==="__other")? licBits[3] : "",
     note:(f[13]||"").trim() };
 }
 function m2hhmm(m){ m=Math.max(0,Math.min(1439,m|0)); return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
@@ -5818,6 +5846,7 @@ function intakeModal(){
       <div class="field"><label>The message to go with it</label>
         <textarea id="tmmsg" style="min-height:150px">${esc(intakeMessageText())}</textarea>
         <span class="mini">Edit it however you like — it is only text.</span></div>
+      <div class="field"><label>Getting it to your team</label>${handOutRow("tmh")}</div>
     </div>`,
     `<button class="btn" data-close>Close</button>
      <button class="btn" id="tmread">Read a reply</button>
@@ -5829,6 +5858,9 @@ function intakeModal(){
         toast("Form downloaded — send it however your team already hears from you");
         render();
       };
+      wireHandOut(r, "tmh", ()=>({ file: buildIntakeFile(), title:"About you",
+        what:"the starter form", subject:"A few details for the schedule",
+        msg:(r.querySelector("#tmmsg")||{}).value||intakeMessageText() }));
       r.querySelector("#tmread").onclick=()=>{ closeModal(true); intakeReadModal(); };
     });
 }
@@ -5863,7 +5895,10 @@ function intakeReadModal(prefill){
           ${line("Days they'd like off", v.offIdx.length? v.offIdx.map(d=>DAYS[d]).join(", ") : "")}
           ${line("Open / close", (v.canOpen?"happy to open":"would rather not open")+" · "+(v.canClose?"happy to close":"would rather not close"))}
           ${line("Hours they'd like", v.hours? "around "+v.hours+" a week" : "")}
-          ${v.licLabel||v.licExp? line("Licence", esc(v.licLabel)+(v.licExp? " · expires "+esc(prettyDate(v.licExp)) : "")) : ""}
+          ${v.licLabel||v.licExp||v.licKind||v.licJur? line("Licence",
+            [v.licKind? esc(licTypeName(v.licKind)) : "", esc(v.licLabel),
+             v.licJur? ("issued in "+esc(v.licJur==="__fed"? "— they said a federal employer" : v.licJur==="__other"? "— somewhere else" : (LIC_DIR[v.licJur]||{n:v.licJur}).n)) : "",
+             v.licExp? "expires "+esc(prettyDate(v.licExp)) : ""].filter(Boolean).join(" · ")) : ""}
           ${v.note? line("They added", "“"+esc(v.note)+"”") : ""}
           <div class="help">Hours they'd like and days they'd rather have off are preferences: Weeksolved records them and leans that way, and neither one is treated as a rule. Their hour cap, employment type and everything else contractual stay yours to set under Team.</div>
           <button class="btn primary" id="tmsave">${v.existing? "Update "+esc(v.name) : "Add "+esc(v.name)+" to the team"}</button>
@@ -5889,6 +5924,8 @@ function intakeReadModal(prefill){
           e.canOpen=v.canOpen; e.canClose=v.canClose;
           if(v.licLabel) e.licLabel=v.licLabel;
           if(v.licExp) e.licExp=v.licExp;
+          if(v.licKind) e.licKind=v.licKind;
+          if(v.licJur) e.licJur=v.licJur;
           /* Their own words, kept as words. Nothing here becomes a rule. */
           const said=[]; 
           if(v.hours) said.push("would like around "+v.hours+"h a week");
@@ -5906,6 +5943,329 @@ function intakeReadModal(prefill){
       r.querySelector("#tmgo").onclick=show;
       if(prefill) show();
     });
+}
+
+/* ============================================================
+   Where to check a licence.
+   A link here is a convenience, never a verification. Weeksolved
+   never fetches any of these, never reads a result, and never
+   records an answer — it opens the board's own page and gets out
+   of the way. The manager looks, and the manager decides.
+   Two rules govern the table below:
+     • Every URL was checked against the board's own site. Where
+       the search tool itself could not be confirmed, the entry
+       points at the state's own page that hosts the search — one
+       more click, and it does not rot when a board changes
+       software vendor.
+     • Where nothing could be confirmed, there is no entry. A
+       wrong link is worse than no link, so the app says plainly
+       that it does not have one.
+   ============================================================ */
+const LIC_TYPES=[
+  {k:"pharmacist", t:"Pharmacist"},
+  {k:"pharmtech",  t:"Pharmacy technician"},
+  {k:"rn",         t:"Registered nurse (RN)"},
+  {k:"lpn",        t:"Practical / vocational nurse (LPN, LVN)"},
+  {k:"np",         t:"Nurse practitioner / APRN"},
+  {k:"physician",  t:"Physician / physician assistant"},
+  {k:"dentist",    t:"Dentist"},
+  {k:"dentalhyg",  t:"Dental hygienist"},
+  {k:"vet",        t:"Veterinarian"},
+  {k:"vettech",    t:"Veterinary technician"},
+  {k:"labsci",     t:"Clinical laboratory scientist"},
+  {k:"pt",         t:"Physical therapist"},
+  {k:"rt",         t:"Respiratory therapist"},
+  {k:"radtech",    t:"Radiologic technologist"},
+  {k:"cosmo",      t:"Cosmetologist / barber"},
+  {k:"security",   t:"Security guard"},
+  {k:"other",      t:"Something else \u2014 not on this list"}
+];
+const licTypeName = k => (LIC_TYPES.find(x=>x.k===k)||{}).t || "";
+/* c:"*" means the portal covers most professions in that state. A portal that
+   names the profession explicitly always wins over a "*" one. */
+const LIC_DIR={
+AL:{n:"Alabama",p:[
+ {l:"Alabama Board of Nursing licence lookup",u:"https://abn.alabama.gov/applications/LicenseLookup.aspx",c:["rn","lpn"],note:"RN and LPN only \u2014 the Board handles nurse practitioner checks by email, not here."},
+ {l:"Alabama Board of Medical Examiners",u:"https://dashboard.albme.gov/Verification/search.aspx",c:["physician"]}]},
+AK:{n:"Alaska",p:[
+ {l:"Alaska Professional Licensing search",u:"https://www.commerce.alaska.gov/web/cbpl/ProfessionalLicensing/ProfessionalLicenseSearch.aspx",c:"*"}]},
+AZ:{n:"Arizona",p:[
+ {l:"Arizona Board of Pharmacy lookup",u:"https://azbop.igovsolution.net/online/Lookups/AZIndividual_Lookup.aspx",c:["pharmacist","pharmtech"],note:"Asks you to type a code from an image before it will search."}]},
+AR:{n:"Arkansas",p:[
+ {l:"Arkansas State Medical Board",u:"https://armedicalboard.adh.arkansas.gov/public/verify/default.aspx",c:["physician"]},
+ {l:"Arkansas State Board of Pharmacy roster search",u:"https://arbopharmv7prod.glsuite.us/glsuiteweb/clients/arbopharm/public/verification/search.aspx",c:["pharmacist","pharmtech"]},
+ {l:"Arkansas cosmetology licence lookup",u:"https://www.adhcosmo.arkansas.gov/LicenseLookupIndividual",c:["cosmo"]}]},
+CA:{n:"California",p:[
+ {l:"California DCA licence search",u:"https://search.dca.ca.gov/",c:"*",note:"One search covering around thirty California boards \u2014 pharmacy, nursing, medical, dental, veterinary, physical therapy, respiratory care, cosmetology and security guards."},
+ {l:"CDPH Laboratory Field Services",u:"https://www.cdph.ca.gov/Programs/OSPHLD/LFS/Pages/licensesearch.aspx",c:["labsci"],note:"Lab personnel sit with Public Health, not the DCA search."}]},
+CO:{n:"Colorado",p:[
+ {l:"Colorado DORA \u2014 Check a Licence",u:"https://dora.colorado.gov/check-a-license",c:"*"}]},
+CT:{n:"Connecticut",p:[
+ {l:"eLicense Connecticut lookup",u:"https://www.elicense.ct.gov/Lookup/LicenseLookup.aspx",c:"*",note:"Covers over 850 credential types across the health and consumer-protection boards."}]},
+DE:{n:"Delaware",p:[
+ {l:"DELPROS \u2014 Verify a Licence",u:"https://delpros.delaware.gov/OH_VerifyLicense",c:"*",note:"Matches exactly \u2014 a partial name will find nothing."}]},
+DC:{n:"District of Columbia",p:[
+ {l:"DC Health licence verification",u:"https://app.hpla.doh.dc.gov/Physician%20Profile%20Lookup/Search.aspx",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"],note:"The page is titled for physicians but covers every DC health board."},
+ {l:"DC licensing and consumer protection search",u:"https://govservices.dcra.dc.gov/oplaportal/Home/GetLicenseSearchDetails",c:["cosmo","security","vet"]}]},
+FL:{n:"Florida",p:[
+ {l:"Florida Health Care Provider licence search",u:"https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"]},
+ {l:"Florida DBPR licensee search",u:"https://www.myfloridalicense.com/wl11.asp?mode=0&SID=",c:["vet","cosmo"]}]},
+GA:{n:"Georgia",p:[
+ {l:"Georgia Composite Medical Board",u:"https://gateway.medicalboard.georgia.gov/verification/search.aspx",c:["physician","rt"]},
+ {l:"Georgia Secretary of State licensee search",u:"https://goals.sos.ga.gov/GASOSOneStop/s/licensee-search",c:"*",note:"The entry point for Georgia's professional boards."}]},
+HI:{n:"Hawaii",p:[
+ {l:"Hawaii DCCA public licence search",u:"https://mypvl.dcca.hawaii.gov/public-license-search/",c:"*"}]},
+ID:{n:"Idaho",p:[
+ {l:"Idaho DOPL licence search",u:"https://dopl.idaho.gov/license-search/",c:"*",note:"A list of searches by profession rather than one search box \u2014 pick the profession from the page."}]},
+IL:{n:"Illinois",p:[
+ {l:"Illinois IDFPR \u2014 Check a Licence",u:"https://idfpr.illinois.gov/checklicense.html",c:"*"}]},
+IN:{n:"Indiana",p:[
+ {l:"Indiana PLA licence verification",u:"https://mylicense.in.gov/everification/Search.aspx",c:"*",note:"Real time, and the Agency calls it an original source. A * works as a wildcard in the name fields."}]},
+IA:{n:"Iowa",p:[
+ {l:"Iowa \u2014 Find a Record or Licence",u:"https://dial.iowa.gov/i-need/records",c:"*",note:"Iowa runs several separate lookups; this state page lists them all with what each one covers."},
+ {l:"Iowa Board of Pharmacy lookup",u:"https://ibop.igovsolution.net/online/Lookups/Lookup_Individual.aspx",c:["pharmacist","pharmtech"],note:"Asks you to type a code from an image before it will search."}]},
+KS:{n:"Kansas",p:[
+ {l:"Kansas licence verification portal",u:"https://prolicenseverify.ks.gov/",c:"*"},
+ {l:"Kansas Board of Nursing verification",u:"https://www.kansas.gov/ksbn-verifications/search/records",c:["rn","lpn","np"]},
+ {l:"Kansas Board of Healing Arts search",u:"https://www.kansas.gov/ssrv-ksbhada/search.html",c:["physician","pt","rt","radtech"]},
+ {l:"Kansas Dental Board verification",u:"https://www.kansas.gov/dental-verification/index.do",c:["dentist","dentalhyg"]}]},
+KY:{n:"Kentucky",p:[
+ {l:"Kentucky Occupations and Professions verification",u:"https://oop.ky.gov/",c:["vet"],note:"Covers veterinary and a number of other boards, but not nursing, medicine, pharmacy or dentistry \u2014 those are separate."}]},
+LA:{n:"Louisiana",p:[
+ {l:"Louisiana State Board of Medical Examiners",u:"https://www.lsbme.la.gov/content/verifications",c:["physician"]},
+ {l:"Louisiana Physical Therapy Board",u:"https://www.laptboard.org/index.cfm/pt-search",c:["pt"]},
+ {l:"Louisiana State Board of Dentistry",u:"https://www.member-base.net/lsbdweb/licenseverification.htm",c:["dentist","dentalhyg"]},
+ {l:"Louisiana Board of Cosmetology",u:"http://www.lsbc.louisiana.gov/Public/Default.aspx",c:["cosmo"]},
+ {l:"Louisiana Board of Practical Nurse Examiners",u:"https://www.lsbpne.la.gov/licensure/verification-of-licensure/",c:["lpn"],note:"Louisiana splits RNs and LPNs across two boards."}]},
+ME:{n:"Maine",p:[
+ {l:"Maine Professional Licensing",u:"https://www.maine.gov/pfr/professionallicensing/",c:"*"},
+ {l:"Maine Board of Licensure in Medicine",u:"https://www.maine.gov/md/licensure/license-verification",c:["physician"]}]},
+MD:{n:"Maryland",p:[
+ {l:"Maryland Board of Nursing lookup",u:"https://mdchart.health.maryland.gov/CHART/s/license-lookup",c:["rn","lpn","np"]},
+ {l:"Maryland Board of Physicians search",u:"https://www.mbp.state.md.us/bpqapp/",c:["physician","rt","radtech"]},
+ {l:"Maryland Board of Pharmacy verification",u:"https://mdbop.mylicense.com/Verification/",c:["pharmacist","pharmtech"]},
+ {l:"Maryland Board of Dental Examiners",u:"https://mdbod.mylicense.com/Verification/Search.aspx",c:["dentist","dentalhyg"]},
+ {l:"Maryland cosmetology public query",u:"https://www.dllr.state.md.us/cgi-bin/ElectronicLicensing/OP_search/OP_search.cgi?calling_app=COS%3A%3ACOS_qselect",c:["cosmo"]}]},
+MA:{n:"Massachusetts",p:[
+ {l:"Massachusetts Check a Health Licence",u:"https://checkahealthlicense.mass.gov/search",c:["pharmacist","pharmtech","rn","lpn","np","dentist","dentalhyg","labsci","pt","rt","radtech"]},
+ {l:"Massachusetts physician profiles",u:"https://profiles.ehs.state.ma.us/ProfilesV3",c:["physician"]},
+ {l:"Massachusetts ePLACE licensee check",u:"https://elicensing21.mass.gov/CitizenAccess/GeneralProperty/PropertyLookUp.aspx?isLicensee=Y",c:["vet"]},
+ {l:"Massachusetts occupational licence search",u:"https://occupationallicensingandpermitting.mass.gov/madol/s/license-search-page",c:["cosmo"]}]},
+MI:{n:"Michigan",p:[
+ {l:"Michigan LARA \u2014 find or verify a licensed professional",u:"https://www.michigan.gov/lara/i-need-to/find-or-verify-a-licensed-professional-or-business",c:"*"}]},
+MN:{n:"Minnesota",p:[
+ {l:"Minnesota Board of Nursing verification",u:"https://mn.gov/boards/nursing/verify-a-license/license-and-permit-verification/license-permit-verification.jsp",c:["rn","lpn","np"]},
+ {l:"Minnesota Board of Medical Practice",u:"https://mn.gov/boards/medical-practice/consumers/find-practitioner/index.jsp",c:["physician","rt"]},
+ {l:"Minnesota Board of Pharmacy verification",u:"https://mn.gov/boards/pharmacy/verify.jsp",c:["pharmacist","pharmtech"]},
+ {l:"Minnesota Board of Dentistry verification",u:"https://mn.gov/boards/dentistry/public/verify-license.jsp",c:["dentist","dentalhyg"]}]},
+MS:{n:"Mississippi",p:[
+ {l:"Mississippi Board of Nursing verification",u:"https://gateway.licensure.msbn.ms.gov/Verification/search.aspx",c:["rn","lpn","np"]},
+ {l:"Mississippi Board of Medical Licensure",u:"https://gateway.msbml.ms.gov/verification/search.aspx",c:["physician","radtech"]}]},
+MO:{n:"Missouri",p:[
+ {l:"Missouri Division of Professional Registration search",u:"https://pr.mo.gov/licensee-search-division.asp",c:"*",note:"Active licences only, refreshed nightly."}]},
+MT:{n:"Montana",p:[
+ {l:"Montana \u2014 look up a licensed individual",u:"https://boards.bsd.dli.mt.gov/_global-pages/additional-license-information/lookup-individual",c:"*"}]},
+NE:{n:"Nebraska",p:[
+ {l:"Nebraska DHHS licence search",u:"https://www.nebraska.gov/LISSearch/search.cgi",c:"*",note:"Needs JavaScript switched on."}]},
+NV:{n:"Nevada",p:[]},
+NH:{n:"New Hampshire",p:[
+ {l:"New Hampshire OPLC licence lookup",u:"https://www.oplc.nh.gov/license-lookup",c:"*"}]},
+NJ:{n:"New Jersey",p:[
+ {l:"New Jersey Consumer Affairs licence verification",u:"https://newjersey.mylicense.com/verification/",c:"*",note:"Security guards are licensed by the State Police and are not in this system."}]},
+NM:{n:"New Mexico",p:[
+ {l:"New Mexico \u2014 verify a licence",u:"https://www.rld.nm.gov/about-us/public-information-hub/verify-a-license/",c:"*"}]},
+NY:{n:"New York",p:[
+ {l:"NYSED Office of the Professions verification",u:"https://eservices.nysed.gov/professions/verification-search",c:["pharmacist","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt"],note:"New York does not register pharmacy technicians."},
+ {l:"NY Department of State licensee search",u:"https://appext20.dos.ny.gov/lcns_public/lic_name_search_frm",c:["security"]},
+ {l:"NY appearance enhancement licensees",u:"https://dos.ny.gov/appearance-enhancement-licensee-search",c:["cosmo"],note:"Published as a list to browse rather than a search box."},
+ {l:"NY registered radiologic technologists",u:"https://health.ny.gov/professionals/doctors/radiological/index.htm",c:["radtech"],note:"Lists by first letter rather than a search box."}]},
+NC:{n:"North Carolina",p:[
+ {l:"NC Board of Nursing verification",u:"https://portal.ncbon.com/licenseverification/search.aspx",c:["rn","lpn","np"]},
+ {l:"NC Medical Board licensee search",u:"https://portal.ncmedboard.org/verification/search.aspx",c:["physician"]},
+ {l:"NC Board of Pharmacy verification",u:"https://portal.ncbop.org/verification/search.aspx",c:["pharmacist","pharmtech"]}]},
+ND:{n:"North Dakota",p:[
+ {l:"North Dakota Board of Medicine verification",u:"https://www.ndbom.org/public/find_verify/verify.asp",c:["physician"]},
+ {l:"North Dakota Board of Pharmacy verification",u:"https://www.nodakpharmacy.com/verify.asp",c:["pharmacist","pharmtech"]}]},
+OH:{n:"Ohio",p:[
+ {l:"eLicense Ohio lookup",u:"https://elicense.ohio.gov/oh_verifylicense",c:"*",note:"Covers about two dozen Ohio boards. Security guards are elsewhere."},
+ {l:"Ohio private investigation and security registrants",u:"https://services.dps.ohio.gov/PISGS/mvc/Registrant",c:["security"]}]},
+OK:{n:"Oklahoma",p:[
+ {l:"Oklahoma Board of Pharmacy search",u:"http://lv.pharmacy.ok.gov/osbpinquire/RegSearch.asp",c:["pharmacist","pharmtech"]},
+ {l:"Oklahoma Medical Board search",u:"https://www.okmedicalboard.org/search",c:["physician","pt","rt","radtech"]},
+ {l:"Oklahoma Board of Dentistry verification",u:"https://oklahoma.gov/dentistry/license-verification.html",c:["dentist","dentalhyg"]}]},
+OR:{n:"Oregon",p:[
+ {l:"Oregon Medical Board licensee search",u:"https://omb.oregon.gov/clients/ormb/public/verification.aspx",c:["physician"]},
+ {l:"Oregon Board of Pharmacy verification",u:"https://orbop.mylicense.com/verification/Search.aspx",c:["pharmacist","pharmtech"]}]},
+PA:{n:"Pennsylvania",p:[
+ {l:"PALS licence verification",u:"https://www.pals.pa.gov/#!/page/search",c:"*"}]},
+RI:{n:"Rhode Island",p:[
+ {l:"Rhode Island Department of Health verification",u:"https://healthri.mylicense.com/verification/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"]}]},
+SC:{n:"South Carolina",p:[
+ {l:"South Carolina LLR licensee lookup",u:"https://verify.llronline.com/LicLookup/LookupMain.aspx",c:"*",note:"Needs cookies and pop-ups allowed."}]},
+SD:{n:"South Dakota",p:[
+ {l:"South Dakota Board of Pharmacy lookup",u:"https://sdbop.igovsolution.net/online/Lookups/Lookup_Individual.aspx",c:["pharmacist","pharmtech"],note:"Asks you to type a code from an image before it will search."},
+ {l:"South Dakota Board of Medical and Osteopathic Examiners",u:"https://www.sdbmoe.gov/sdbmoe-licensee-lookup/",c:["physician","rt"]},
+ {l:"South Dakota Board of Nursing verification",u:"https://www.sdbon.org/NurseLookup.asp",c:["rn","lpn","np"]}]},
+TN:{n:"Tennessee",p:[
+ {l:"Tennessee health related boards verification",u:"https://internet.health.tn.gov/Licensure/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"],note:"Asks you to type a code from an image before it will search."},
+ {l:"Tennessee Commerce and Insurance \u2014 verify a licence",u:"https://verify.tn.gov/",c:["cosmo","security"]}]},
+TX:{n:"Texas",p:[
+ {l:"Texas Medical Board \u2014 look up a licence",u:"https://www.tmb.texas.gov/resources/for-the-public/look-up-a-license",c:["physician","radtech","rt"]},
+ {l:"Texas State Board of Pharmacy database search",u:"https://www.pharmacy.texas.gov/dbsearch/default.asp",c:["pharmacist","pharmtech"]},
+ {l:"Texas State Board of Dental Examiners search",u:"https://tsbde.texas.gov/resources/public-license-search",c:["dentist","dentalhyg"]},
+ {l:"Texas Board of Veterinary Medical Examiners lookup",u:"https://veterinary.texas.gov/enforcement/licensee-look-up/",c:["vet","vettech"]},
+ {l:"Texas Online Private Security public search",u:"https://tops.portal.texas.gov/psp-self-service/search/index",c:["security"],note:"Asks you to pass a robot check before it will search."}]},
+UT:{n:"Utah",p:[
+ {l:"Utah DOPL licence lookup",u:"https://secure.utah.gov/llv/search/index.html",c:"*",note:"One search for health professions, trades, cosmetology, security and veterinary."}]},
+VT:{n:"Vermont",p:[
+ {l:"Vermont \u2014 find a professional",u:"https://sos.vermont.gov/opr/find-a-professional/",c:"*"}]},
+VA:{n:"Virginia",p:[
+ {l:"Virginia Health Professions licence lookup",u:"https://dhp.virginiainteractive.org/lookup/index",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt","radtech"]},
+ {l:"Virginia DPOR licence lookup",u:"https://dporweb.dpor.virginia.gov/LicenseLookup/",c:["cosmo"]},
+ {l:"Virginia private security individual verification",u:"https://www.cms.dcjs.virginia.gov/GLSuiteWeb/Clients/VADCJS/Public/IndividualVerification/Search.aspx",c:["security"]}]},
+WA:{n:"Washington",p:[
+ {l:"Washington provider credential search",u:"https://fortress.wa.gov/doh/providercredentialsearch/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt","radtech"],note:"Health professions only \u2014 cosmetology and security guards sit with Licensing, not Health."}]},
+WV:{n:"West Virginia",p:[
+ {l:"West Virginia Board of Medicine search",u:"https://wvbom.wv.gov/public/search/",c:["physician"]},
+ {l:"West Virginia Board of Pharmacy verification",u:"https://www.wvbop.com/public/verify/index.asp",c:["pharmacist","pharmtech"]},
+ {l:"West Virginia Board of Dentistry verification",u:"https://wvbodv7prod.glsuite.us/GLSuiteWeb/Clients/WVBOD/Public/Verification/Search.aspx",c:["dentist","dentalhyg"]}]},
+WI:{n:"Wisconsin",p:[
+ {l:"Wisconsin DSPS licence lookup",u:"https://license.wi.gov/s/license-lookup",c:"*"}]},
+WY:{n:"Wyoming",p:[
+ {l:"Wyoming Board of Medicine licence lookup",u:"https://wyomedboard.wyo.gov/consumers/license-lookup",c:["physician"]}]}
+};
+/* Compact privileges: the licence lives in the person's home state, so the
+   right place to look is not necessarily where they work. */
+const LIC_COMPACT=[
+ {l:"Physical Therapy Compact \u2014 verify a privilege",u:"https://purchase.ptcompact.org/Verify",c:["pt"]},
+ {l:"EMS Compact \u2014 verify a privilege",u:"https://www.emscompact.gov/ems-personnel/verify-my-status",c:[]}
+];
+/* What the manager sees under the two dropdowns. Every branch of this either
+   offers a link to the board's own page or says plainly that there isn't one.
+   No branch ever reports a licence as valid, current, or checked. */
+/* Chasing a renewal. Two halves, both optional, neither of them automatic:
+   ask them for the new date, then put it in with the board's own page open
+   beside you. Weeksolved sends nothing on its own and checks nothing itself. */
+/* ============================================================
+   Getting a form to the team. Every form Weeksolved writes is a
+   single file that works on a phone, on a laptop, or on paper, and
+   the same four ways of handing it over should be offered every
+   time \u2014 download it, print it, copy the words, or open your own
+   mail or messages app with the addresses filled in. All optional,
+   and nothing ever leaves without the manager pressing something.
+   ============================================================ */
+function printDoc(html, title){
+  const w=window.open("", "_blank");
+  if(!w){ toast("Your browser blocked the print window \u2014 allow pop-ups, or download it and print from there"); return false; }
+  w.document.open(); w.document.write(html); w.document.close();
+  try{ w.document.title=title||"Print"; }catch(e){}
+  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} }, 500);
+  return true;
+}
+function withEmail(){ return S.employees.filter(e=>e.active && (e.email||"").trim()); }
+function withPhone(){ return S.employees.filter(e=>e.active && (e.phone||"").trim()); }
+/* The row of buttons. id is a prefix so several can sit on one page. */
+function handOutRow(id, opts){
+  const em=withEmail().length, ph=withPhone().length;
+  return `<div class="row" style="gap:6px;flex-wrap:wrap">
+      <button class="btn sm" id="${id}print">Print it to hand out</button>
+      <button class="btn sm" id="${id}copy">Copy the message</button>
+      ${em? `<button class="btn sm" id="${id}mail">Email the ${em} with an address</button>`:""}
+      ${ph? `<button class="btn sm" id="${id}text">Text the ${ph} with a mobile</button>`:""}
+    </div>
+    <div class="mini">${(!em&&!ph)? "No emails or mobiles on file yet \u2014 add them under Team and these appear. Printing and copying work either way."
+      : "All optional. Email and text open your own app with it written; nothing is sent by Weeksolved and nothing goes without you pressing send."}</div>`;
+}
+function wireHandOut(root, id, get){
+  const q=x=>root.querySelector("#"+id+x);
+  const P=q("print"); if(P) P.onclick=()=>{ const g=get(); if(!g.file){ toast("Make the form first"); return; }
+    if(printDoc(g.file, g.title)) logIt("post","Printed "+(g.what||"a form")+" to hand out"); save(); };
+  const C=q("copy"); if(C) C.onclick=()=>copyText(get().msg||"", "Copied \u2014 paste it wherever you like");
+  const M=q("mail"); if(M) M.onclick=()=>{ const g=get();
+    mailOutAndSay({to:withEmail().map(e=>e.email.trim()), subject:g.subject||"A form to fill in", body:g.msg||"", kind:"note"}, g.what||"A form"); };
+  const T=q("text"); if(T) T.onclick=()=>{ const g=get(); const list=withPhone();
+    if(!list.length){ toast("No mobile numbers on file"); return; }
+    let i=0; const next=()=>{ if(i>=list.length){ toast("That's everyone"); return; }
+      const e=list[i++];
+      window.open("sms:"+e.phone.replace(/[^0-9+]/g,"")+"?&body="+encodeURIComponent(g.msg||""));
+      toast("Opened "+e.name+" \u2014 "+(list.length-i)+" to go");
+      if(i<list.length) setTimeout(next, 1200); };
+    next(); };
+}
+function licChaseText(e){
+  const what=(e.licLabel||licTypeName(e.licKind)||"licence");
+  const first=(e.name||"there").split(" ")[0];
+  return "Hi "+first+" \u2014 my records have your "+what+" running out on "+prettyFull(e.licExp)+
+    ". If you\u2019ve already renewed it, could you send me the new expiry date (and the licence number if it changed)? "+
+    "If it\u2019s still in hand, no problem, just let me know roughly when you expect it.\n\nThanks!";
+}
+function licChaseModal(id){
+  const e=empById(id); if(!e) return;
+  tellModal("Ask "+(e.name||"them")+" for the new date", licChaseText(e), {
+    emp:e, subject:"Your "+(e.licLabel||licTypeName(e.licKind)||"licence")+" renewal",
+    lead:"Entirely optional \u2014 close this and nothing happens. Weeksolved does not send anything by itself and nothing here is recorded as a notice.",
+    after:()=>{ logIt("change","Asked "+e.name+" for their renewed "+(e.licLabel||"licence")+" date"); save(); }
+  });
+}
+/* They have come back with a date. Put it in with the board's page one tap
+   away \u2014 the manager decides whether to look before saving. */
+function licRenewModal(id){
+  const e=empById(id); if(!e) return;
+  modal("A new date for "+(e.name||"them"), `
+    <div class="stack">
+      <div class="banner info"><div>My record says <b>${esc(e.licLabel||licTypeName(e.licKind)||"their licence")}</b> ${e.licExp? (e.licExp<ymd(new Date())? "expired ":"runs out ")+esc(prettyDate(e.licExp)) : "has no date on file"}. Put the new one in below.</div></div>
+      <div class="field"><label>The new expiry date</label><input type="date" id="lrx" value="${esc(e.licExp||"")}"></div>
+      <div class="field"><label>Licence number, if it changed</label><input type="text" id="lrn" value="${esc(e.licNo||"")}" placeholder="Leave as it is if unchanged"></div>
+      ${licLinkHtml(e.licJur||"", e.licKind||"")}
+      <div class="help">Checking is yours to do or skip. Weeksolved saves the date you type and nothing else \u2014 it does not look the licence up, does not know whether you looked, and records no answer either way.</div>
+    </div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="lrsave">Save the new date</button>`,
+    r=>{
+      r.querySelector("#lrsave").onclick=()=>{
+        const d=r.querySelector("#lrx").value;
+        if(!d){ toast("Put a date in first"); return; }
+        const was=e.licExp||"";
+        e.licExp=d;
+        e.licNo=(r.querySelector("#lrn").value||"").trim().slice(0,40);
+        logIt("change",(e.name||"Someone")+"\u2019s "+(e.licLabel||"licence")+" date updated"+(was? " from "+prettyDate(was):"")+" to "+prettyDate(d));
+        save(); closeModal(); render();
+        toast(d>ymd(new Date())? (e.name||"They")+" is current again \u2014 good until "+prettyDate(d) : "Saved \u2014 note that date is already past");
+      };
+    });
+}
+function licLinkHtml(jur, type){
+  const foot='<div class="mini" style="margin-top:6px">Weeksolved never checks a licence for you and never records an answer \u2014 this only opens the board\u2019s own page. What you find there is yours to read and act on.</div>';
+  if(jur==="__fed") return `<div class="banner info"><div><b>No link for this one, and there shouldn\u2019t be.</b> A federal employer can take a licence issued by any state, wherever the site is \u2014 so the state you are in tells you nothing about which board holds the record. Ask them which state issued it, set it above, and the link will appear. Until then you will need to check it yourself.</div></div>`;
+  if(!jur || !type) return `<div class="help">Say what kind of licence it is and who issued it, and if there is an official page for checking it, a link to that page will appear here.</div>`;
+  if(type==="other") return `<div class="help">Weeksolved has no page on file for this one \u2014 you will need to check it however you normally would. The expiry date above still works: set it and the drafter will not schedule them past it.</div>`;
+  if(jur==="__other") return `<div class="help">Weeksolved only has pages for licences issued in the United States. You will need to check this one yourself. The expiry date above still works.</div>`;
+  const hits=licLinks(jur, type);
+  const J=LIC_DIR[jur]||{n:jur};
+  const comp=LIC_COMPACT.filter(x=>x.c.includes(type));
+  /* Licensed somewhere other than where they work. Common and often perfectly
+     fine \u2014 a compact privilege, a federal employer, a licence held elsewhere.
+     Weeksolved cannot tell which, so it says so and points at the right board
+     rather than the nearest one. */
+  const home=(S.org.jurisdiction||"");
+  const away = home && LIC_DIR[home] && jur!==home;
+  const awayNote = away? `<div class="banner info" style="margin-bottom:8px"><div><b>Issued in ${esc(J.n)}, and you are in ${esc(LIC_DIR[home].n)}.</b>
+      That is common and often perfectly fine \u2014 a compact licence, a federal employer, or simply a licence they hold from elsewhere. Whether it lets them work for you here is a question for you and your own advisers; Weeksolved has no view on it and records no answer. The link below goes to ${esc(J.n)}, which is the board that actually holds the record.</div></div>` : "";
+  if(!hits.length) return awayNote + `<div class="help">Weeksolved does not have a page on file for ${esc(licTypeName(type).toLowerCase())} in ${esc(J.n)} \u2014 rather than send you somewhere that might be wrong, it sends you nowhere. Check it however you normally would; the expiry date above still works.</div>`
+    + (comp.length? comp.map(x=>`<a class="btn sm" href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.l)} \u2197</a>`).join(" ") : "");
+  return awayNote + `<div class="card" style="margin-top:4px"><div class="body">
+    <div class="row" style="flex-wrap:wrap;gap:6px">${hits.map(h=>
+      `<a class="btn sm" href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.l)} \u2197</a>`).join("")}
+      ${comp.map(x=>`<a class="btn sm" href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.l)} \u2197</a>`).join("")}</div>
+    ${hits.filter(h=>h.note).map(h=>`<div class="mini" style="margin-top:6px">${esc(h.note)}</div>`).join("")}
+    ${["rn","lpn","np"].includes(type)? '<div class="mini" style="margin-top:6px">If they hold a multistate licence under the Nurse Licensure Compact, it was issued by the state they live in, not the one they work in \u2014 so set that state above.</div>':""}
+    ${foot}</div></div>`;
+}
+function licLinks(jur, type){
+  const J=LIC_DIR[jur]; if(!J) return [];
+  const named=J.p.filter(x=>Array.isArray(x.c) && x.c.includes(type));
+  if(named.length) return named;
+  const wide=J.p.filter(x=>x.c==="*");
+  return wide;
 }
 
 /* Plain words for why a willing person still can't be placed. */
@@ -9711,7 +10071,7 @@ function vTeam(){
             <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}</td>
             <td>${e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span> `:"";}).join("")}</td>
             <td><span class="chip">${esc(e.type)}</span>${prefsBlank(e)?'<div class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine \u2014 send the starter form if you would like their preferences.">nothing on file \u00b7 open availability</div>':""}${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
-              return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)? (e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>` : e.licExp<=addDays(ymd(new Date()),45)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>`:"")
+              return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)? (e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}` : e.licExp<=addDays(ymd(new Date()),45)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}`:"")
       : `<div class="mini" title="Weeksolved has no date for this, so it cannot warn you about it. It is not a claim that anything is wrong.">no expiry date on file</div>`):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
             <td class="mono">${(()=>{const L=effLimits(e);
               if(L.exactH) return "exactly "+L.exactH+"h";
@@ -9781,6 +10141,8 @@ function vTeam(){
 }
 WIRE.team = root=>{
   { const b=root.querySelector("#tmform"); if(b) b.onclick=()=>intakeModal(); }
+  root.querySelectorAll("[data-licask]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); licChaseModal(b.dataset.licask); });
+  root.querySelectorAll("[data-licnew]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); licRenewModal(b.dataset.licnew); });
   { const bp=root.querySelector("#bulkpat"); if(bp) bp.onclick=()=>bulkPatternModal(); }
   { const ha=root.querySelector("#histadd"); if(ha) ha.onclick=()=>historyModal("timeoff"); }
   { const ot=root.querySelector("#otoffer"); if(ot) ot.onclick=()=>otOfferModal(); }
@@ -10283,6 +10645,14 @@ function prefsBlank(e){
   return av.every(a=>a && a.ok && a.from==="06:00" && a.to==="22:00");
 }
 function prefsBlankCount(){ return S.employees.filter(e=>e.active && prefsBlank(e)).length; }
+/* The two small buttons that show up beside a licence that is running out.
+   They appear only where the warning already is, so nothing new is added to
+   a row that was quiet. */
+function licChaseRow(e){
+  return `<div class="mini" style="margin-top:3px;display:flex;gap:5px;flex-wrap:wrap">
+    <button class="btn sm" data-licask="${esc(e.id)}">Ask for the new date</button>
+    <button class="btn sm" data-licnew="${esc(e.id)}">Put the new date in</button></div>`;
+}
 
 function empModal(id){
   const blankAvail=()=>[0,1,2,3,4,5,6].map(()=>({ok:true,from:"06:00",to:"22:00"}));
@@ -10409,10 +10779,32 @@ function empModal(id){
           : "Leave blank for anyone 18 or over. Used only to keep their shifts inside the law."}</span></div>
       <div class="field"></div>
     </div>`:""}
-    ${(S.roles||[]).some(r=>r.licensed)? `<div class="grid2" id="elicwrap" style="display:${(e.roleIds||[]).some(id=>{const rr=roleById(id);return rr&&rr.licensed;})?"":"none"}">
-      <div class="field"><label>License / certification expires</label><input type="date" id="elic" value="${esc(e.licExp||"")}">
+    ${(S.roles||[]).some(r=>r.licensed)? `<div id="elicwrap" style="display:${(e.roleIds||[]).some(id=>{const rr=roleById(id);return rr&&rr.licensed;})?"":"none"}">
+      <div class="grid2">
+        <div class="field"><label>What kind of licence is it?</label>
+          <select id="elick">
+            <option value="">Not saying \u2014 skip this</option>
+            ${LIC_TYPES.map(t=>`<option value="${t.k}" ${e.licKind===t.k?"selected":""}>${esc(t.t)}</option>`).join("")}
+          </select>
+          <span class="mini">Only used to point you at the right board when you want to check it.</span></div>
+        <div class="field"><label>Who issued it?</label>
+          <select id="elicj">
+            <option value="">Not saying \u2014 skip this</option>
+            ${(()=>{ const cur = e.licJur || (LIC_DIR[S.org.jurisdiction||""]? S.org.jurisdiction : "");
+              return Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)).map(k=>
+              `<option value="${k}" ${cur===k?"selected":""}>${esc(LIC_DIR[k].n)}</option>`).join(""); })()}
+            <option value="__fed" ${e.licJur==="__fed"?"selected":""}>A federal employer \u2014 VA, IHS, military</option>
+            <option value="__other" ${e.licJur==="__other"?"selected":""}>Somewhere else, or I\u2019m not sure</option>
+          </select>
+          <span class="mini">The state that <em>issued</em> the licence, which is not always the state you are in.</span></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Licence number (optional)</label><input type="text" id="elicno" value="${esc(e.licNo||"")}" placeholder="As printed on it"></div>
+        <div class="field"><label>What it is (optional)</label><input type="text" id="elicn" value="${esc(e.licLabel||"")}" placeholder="RPh license \u00b7 CPR certification"></div>
+      </div>
+      <div class="field"><label>Licence or certification expires</label><input type="date" id="elic" value="${esc(e.licExp||"")}">
         <span class="mini">Optional. With a date set, the drafter never schedules them past it and starts warning 30 days out.</span></div>
-      <div class="field"><label>What it is (optional)</label><input type="text" id="elicn" value="${esc(e.licLabel||"")}" placeholder="RPh license · CPR certification"></div>
+      <div id="eliclink"></div>
     </div>`:""}
     ${skillsOn()? `<div class="field"><label>Post training \u2014 how each post is going for them</label>
       <div class="stack" style="gap:5px">${(S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).map(st=>`
@@ -10519,6 +10911,15 @@ function empModal(id){
       if(ea) ea.style.display = tm.value==="rotate"? "" : "none";
     });
   }
+  {
+    const kk=root.querySelector("#elick"), jj=root.querySelector("#elicj"), box=root.querySelector("#eliclink");
+    if(box){
+      const paint=()=>{ box.innerHTML=licLinkHtml(jj.value, kk.value); };
+      kk.addEventListener("change", paint);
+      jj.addEventListener("change", paint);
+      paint();
+    }
+  }
   const lw=root.querySelector("#elicwrap");
     if(lw) root.querySelectorAll("#eroles input").forEach(cb=>cb.addEventListener("change",()=>{
       const on=[...root.querySelectorAll("#eroles input:checked")].some(x=>{const rr=roleById(x.dataset.r);return rr&&rr.licensed;});
@@ -10578,6 +10979,9 @@ function empModal(id){
         })(),
         licExp:((root.querySelector("#elic")||{}).value||"")||(e.licExp&&!root.querySelector("#elic")?e.licExp:""),
         licLabel:(((root.querySelector("#elicn")||{}).value)||(root.querySelector("#elicn")?"":e.licLabel||"")).trim(),
+        licKind: root.querySelector("#elick")? root.querySelector("#elick").value : (e.licKind||""),
+        licJur:  root.querySelector("#elicj")? root.querySelector("#elicj").value : (e.licJur||""),
+        licNo:  (root.querySelector("#elicno")? root.querySelector("#elicno").value : (e.licNo||"")).trim().slice(0,40),
         notes:root.querySelector("#enotes").value.trim(),
         seniority:root.querySelector("#esen").value, active:root.querySelector("#eact").checked,
         rate: root.querySelector("#erate")? (+root.querySelector("#erate").value||0) : (e.rate||0),
@@ -15691,10 +16095,10 @@ function vVacation(){
       <div class="body stack">
         <div class="row" style="gap:8px;flex-wrap:wrap">
           <button class="btn primary" id="vacdl">Download the survey</button>
-          <button class="btn" id="vacmail">Copy the email to send with it</button>
           <button class="btn" id="vaccodes">Paste reply codes</button>
           <button class="btn" id="vachand">Enter one by hand</button>
         </div>
+        ${handOutRow("vach")}
         <div class="help">The form runs on each person's own device and hands them a short code to send back — no accounts, nothing installed. Re-download any time: the fresh copy shows everyone the busy dates so far (no names), so flexible people can aim for quiet weeks. A re-sent code replaces that person's earlier one.</div>
         ${resp.length? `<div class="scroll"><table><thead><tr><th>Who</th><th>Choices</th><th style="width:120px">Sent</th><th style="width:70px"></th></tr></thead>
           <tbody>${resp.map(r=>{ const e=empById(r.empId)||{name:"?"};
@@ -15742,7 +16146,8 @@ WIRE.vacation = root=>{
     setPath(S, el.dataset.vset, v); save(); render();
   });
   root.querySelector("#vacdl").onclick=()=>saveFile("vacation-survey.html", vacPollFile());
-  root.querySelector("#vacmail").onclick=()=>copyText(vacEmailText(),"Email text copied");
+  wireHandOut(root, "vach", ()=>({ file: vacPollFile(), title:"Vacation requests",
+    what:"the vacation survey", subject:"Vacation requests", msg: vacEmailText() }));
   root.querySelector("#vaccodes").onclick=()=>vacPasteModal();
   root.querySelector("#vachand").onclick=()=>vacManualModal();
   const se=root.querySelector("#vacseed"); if(se) se.onclick=()=>{ S.vacations.seed=1000+Math.floor(Math.random()*9000); save(); render(); };
@@ -15991,9 +16396,9 @@ function vHolidays(){
       <div class="body stack">
         <div class="row">
           <button class="btn primary" id="polldl" ${H.length?"":"disabled"}>Download the poll form</button>
-          <button class="btn" id="pollemail" ${H.length?"":"disabled"}>Copy email text</button>
-          <button class="btn" id="pollsms" ${H.length?"":"disabled"}>Copy text-message version</button>
+          <button class="btn" id="pollsms" ${H.length?"":"disabled"}>Copy the text-message version</button>
         </div>
+        ${H.length? handOutRow("polh") : ""}
         <div class="help" style="max-width:78ch">The poll form is a single HTML file that works offline on any phone or laptop — attach it to an email or drop it in a group chat. Whoever fills it out gets a short reply code to send back. Paste the codes below and the ranking is read straight in, so nobody has to trust a link or make an account.</div>
         ${S.employees.filter(e=>e.email||e.phone).length? `<div class="mini">On file: ${S.employees.filter(e=>e.email).length} email${S.employees.filter(e=>e.email).length===1?"":"s"}, ${S.employees.filter(e=>e.phone).length} mobile number${S.employees.filter(e=>e.phone).length===1?"":"s"} — add the rest under Team.</div>`:`<div class="mini">No emails or numbers on file yet — add them under Team so the addresses are ready to paste.</div>`}
       </div>
@@ -16097,7 +16502,8 @@ WIRE.holidays = root=>{
   root.querySelectorAll("[data-delresp]").forEach(b=>b.onclick=()=>{
     S.holidays.responses=S.holidays.responses.filter(r=>r.empId!==b.dataset.delresp); save(); render(); });
   const dl=root.querySelector("#polldl"); if(dl) dl.onclick=()=>saveFile("holiday-poll.html", buildPollFile());
-  const em=root.querySelector("#pollemail"); if(em) em.onclick=()=>copyText(pollEmailText(),"Email text copied");
+  wireHandOut(root, "polh", ()=>({ file: buildPollFile(), title:"Holiday preferences",
+    what:"the holiday poll", subject:"Holiday preferences", msg: pollEmailText() }));
   const sm=root.querySelector("#pollsms"); if(sm) sm.onclick=()=>copyText(pollSmsText(),"Text-message version copied");
   const pc=root.querySelector("#pastecode"); if(pc) pc.onclick=()=>pasteCodeModal();
   const mr=root.querySelector("#manualresp"); if(mr) mr.onclick=()=>manualRespModal();
@@ -16940,6 +17346,8 @@ const KB=[
   a:"On the Requests page, press Ask the team. Weeksolved writes one page — send it however you already talk to your staff. They open it on a phone, add what they need (a day off, a shift they'd prefer, a time they can't start before), and get a short code. Paste the code into Read a reply and you see everything they asked for, with a button to add each one.\n\nNobody signs in and nothing is sent anywhere by the form — the code is the only thing that leaves, and they send it themselves. Nothing lands on the schedule until you press. You set how firm each one is, not them: the form records what they said, the dropdown decides what the scheduler is actually held to."},
  {t:"Starter form for a new hire", k:"starter form new hire onboarding intake about you details contact availability preferences add someone roster setup", go:"team",
   a:"On the Team page, press Starter form. It writes one page a new hire fills in on their phone: contact details, what they're trained for, when they can work, and what they'd prefer. They send back a code; you paste it into Read a reply, look at everything before you keep it, and press once to add or update them.\n\nThe form promises them nothing. It says at the top, and again over the preference sections, that these are preferences rather than promises, that you build the schedule around the business first, and that shifts, posts and rotations are your workplace's decision. Their hours, employment type, rate and start date are never asked — those are yours to set."},
+ {t:"Checking a licence with the issuing board", k:"license licence verify check board state link lookup issuing jurisdiction compact federal VA out of state", go:"team",
+  a:"On someone's file, say what kind of licence it is and which state issued it. If there is an official page for checking that licence, a link to it appears underneath. It opens the board's own site in a new tab.\n\nThat is all it does. Weeksolved never opens the page for you, never reads a result, and never records an answer \u2014 so nothing in the app ever says a licence is valid, current or checked. You look, and you decide. The only thing Weeksolved watches is the expiry date you typed in.\n\nThe state that matters is the one that ISSUED the licence, not the one you are in. Those are often different and that is normal: a federal employer such as the VA can take a licence from any state whatever state the site is in, a nurse on a compact licence holds it in the state they live in, and plenty of people simply keep a licence from somewhere they used to live. Set the issuing state and the link goes to the right board. If you pick a federal employer, you get no link at all \u2014 there is no board to send you to, and a link to the wrong one would be worse than none.\n\nWhere Weeksolved has no page on file for that state and licence, it says so plainly rather than guessing. Whether a licence from elsewhere lets someone work for you here is a question for you and your own advisers; the app has no view on it and keeps no record of one."},
  {t:"Expired licenses and drafting", k:"license licence expired expiry lapsed block draft schedule certification registration renew warn stop", go:"team",
   a:"If someone is in a role you marked as licensed and you have put an expiry date on their file, the drafter will not give them a shift dated after that date. That is not a setting and cannot be switched off — it is the one thing the scheduler simply refuses to do.\n\nWhen you press Draft, anything expiring inside the stretch is put in front of you first: who, what date, and whether it takes out the whole stretch or only part of it. You can open their file and put the new date in, or carry on and have the week built around it. If the renewal came through and you just have not typed it yet, fixing it there is the quickest route.\n\nNothing happens for anyone with no license details on file. A blank is not treated as a problem — Weeksolved has no date, so it makes no claim either way, and those people are scheduled normally."},
  {t:"Someone has no preferences on file", k:"blank preferences empty availability open nothing on file new person default flag", go:"team",

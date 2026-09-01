@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each account reads and writes only its own schedule data
+    match /users/{uid}/board/{doc} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /users/{uid}/weeks/{doc} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // The access record: created once at signup, then frozen.
+    match /users/{uid}/meta/profile {
+      allow read, create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.codeId == resource.data.codeId
+        && request.resource.data.days == resource.data.days
+        && request.resource.data.activated == resource.data.activated
+        && request.resource.data.life == resource.data.life;
+    }
+
+    // The device list, and the "sign out everywhere" note they all watch
+    match /users/{uid}/devices/{d} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /users/{uid}/meta/kick {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Agreeing to the terms: one document per acceptance, written once and never
+    // altered or removed — by them or by us. A record that can be edited later is
+    // not a record, and this is the thing that would have to stand up if anyone
+    // ever argued they had not agreed.
+    match /users/{uid}/terms/{t} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['v','hash','at','ua'])
+        && request.resource.data.v is string && request.resource.data.v.size() <= 24
+        && request.resource.data.hash is string && request.resource.data.hash.size() <= 64
+        && request.resource.data.at is number
+        && request.resource.data.ua is string && request.resource.data.ua.size() <= 200;
+      // deliberately no update, no delete
+    }
+
+    // Access codes: claimed exactly once, never readable, never reassignable,
+    // and shaped so a signed-in stranger cannot squat the space or write junk.
+    match /codes/{code} {
+      // Created once, by the person it belongs to, and never editable or
+      // deletable afterwards. That is what makes a code single-use: a second
+      // sign-up with the same code fails at this rule, not in the app.
+      // The extra fields are coarse on purpose - the time zone the browser
+      // reports and the browser string, both size-capped. No IP, no location.
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['at','id','uid','email','tz','loc','ua'])
+        && request.resource.data.id is string && request.resource.data.id.size() <= 16
+        && request.resource.data.at is number
+        && (!('email' in request.resource.data) || (request.resource.data.email is string && request.resource.data.email.size() <= 120))
+        && (!('tz'    in request.resource.data) || (request.resource.data.tz    is string && request.resource.data.tz.size()    <= 60))
+        && (!('loc'   in request.resource.data) || (request.resource.data.loc   is string && request.resource.data.loc.size()   <= 20))
+        && (!('ua'    in request.resource.data) || (request.resource.data.ua    is string && request.resource.data.ua.size()    <= 180));
+      // Readable only by the person who created it and by the one read-only
+      // account used for the digest. Nobody else can enumerate who is testing.
+      allow read: if request.auth != null
+        && (resource.data.uid == request.auth.uid
+            || request.auth.uid == "nfCJd9AaEUSRkIBp7tptY8mijqE3");
+    }
+
+    // Problem reports: filed as yourself, every field size-capped on the way in
+    // AND on the way back out, so a small report cannot be inflated later.
+    // Reading is closed. A tester can read back their own reports; the only other
+    // account that can see them is the one purpose-made for the twice-weekly
+    // digest, which can do nothing else anywhere in this database.
+    match /reports/{r} {
+      allow read: if request.auth != null
+        && (resource.data.uid == request.auth.uid
+            || request.auth.uid == "nfCJd9AaEUSRkIBp7tptY8mijqE3");
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.note is string && request.resource.data.note.size() <= 500
+        && request.resource.data.ctx  is string && request.resource.data.ctx.size()  <= 400
+        && request.resource.data.kind is string && request.resource.data.kind.size() <= 24
+        && request.resource.data.tester is string && request.resource.data.tester.size() <= 16;
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.note is string && request.resource.data.note.size() <= 500
+        && request.resource.data.ctx  is string && request.resource.data.ctx.size()  <= 400;
+    }
+  }
+}
