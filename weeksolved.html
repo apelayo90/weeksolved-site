@@ -2344,6 +2344,9 @@ function migrate(o){
   if(typeof s.org.trackPto!=="boolean") s.org.trackPto=false;
   if(s.rules.perDiem!=="auto") s.rules.perDiem="ask";
   if(!Array.isArray(s.callouts)) s.callouts=[];
+  if(s.ask && (typeof s.ask!=="object" || !s.ask.token || !s.ask.ws)) delete s.ask;
+  if(s.ask && !Array.isArray(s.ask.seen)) s.ask.seen=[];
+  if(s.intake && (typeof s.intake!=="object" || !s.intake.token)) delete s.intake;
   if(!s.rules.projectShape) s.rules.projectShape="chunk";
   if(!s.rules.projectShare) s.rules.projectShare="fair";
   if(typeof s.rules.projectMinH!=="number") s.rules.projectMinH=4;
@@ -4813,10 +4816,12 @@ function buildOfferFile(ws){
     '.sh b{display:block;font-size:14.5px}.sh .d{color:var(--m);font-size:13px}',
     '.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
     '.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}',
+    '.pnote{background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.55;margin-bottom:14px}',
     '.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
     '.hide{display:none}</style></head><body><div class="w">',
     '<h1>Shifts going spare</h1><div class="sub" id="sub"></div>',
-    '<div class="card"><div class="step">How this works</div><div class="hint">These shifts are open. Tick any you\u2019d be happy to work, and you\u2019ll get a short code \u2014 send it back and your manager will confirm. Ticking is not a commitment until they confirm, and if two people want the same shift only one can have it.</div></div>',
+    '<div class="pnote"><b>Before you start.</b> Ticking a shift is telling your manager you would take it, not being given it. Nothing is agreed, guaranteed or owed until they confirm, and who gets a shift is their decision and your workplace\u2019s rules, not this form.</div>',
+    '<div class="card"><div class="step">How this works</div><div class="hint">These shifts are open. Tick any you\u2019d be happy to work, and you\u2019ll get a short code \u2014 send it back and your manager will confirm. If two people want the same shift only one can have it.</div></div>',
     '<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
     '<div class="card"><div class="step">Step 2 \u2014 which would you take?</div><div id="list"></div></div>',
     '<div class="card"><div class="step">Step 3</div><button class="go" id="mk">Get my reply code</button>',
@@ -5275,6 +5280,590 @@ function claimModal(ws, prefill){
         });
       };
       r.querySelector("#clread").onclick=show;
+      if(prefill) show();
+    });
+}
+
+/* The staff page's own script. Kept as one string so the app never has to
+   escape a script tag inside a template literal. */
+const ASK_PAGE_JS = [
+'var D=JSON.parse(decodeURIComponent(escape(atob("__DATA__"))));',
+'var picked=[];',
+'document.getElementById("sub").textContent=D.org+(D.site?" \\u00b7 "+D.site:"")+" \\u00b7 "+D.span+(D.by?" \\u00b7 reply by "+D.by:"");',
+'var who=document.getElementById("who");',
+'who.innerHTML="<option value=\'\'>Pick your name\\u2026</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("")+"<option value=\'__other\'>My name isn\\u2019t listed</option>";',
+'function esc(t){return String(t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
+'var fk=document.getElementById("fk"), fw=document.getElementById("fw"), fx=document.getElementById("fx"),',
+'    fxrow=document.getElementById("fxrow"), fn=document.getElementById("fn");',
+'fk.innerHTML=D.kinds.map(function(k,i){return "<option value=\'"+i+"\'>"+esc(k.t)+" \\u2014 "+esc(k.hint)+"</option>";}).join("");',
+'fw.innerHTML=D.days.map(function(d,i){return "<option value=\'"+i+"\'>"+esc(d.l)+"</option>";}).join("")+"<option value=\'W\'>The whole stretch</option>";',
+'var hard=0;',
+'function setHard(v){hard=v;document.getElementById("fh1").setAttribute("aria-pressed",v?"true":"false");document.getElementById("fh0").setAttribute("aria-pressed",v?"false":"true");}',
+'document.getElementById("fh1").onclick=function(){setHard(1);};',
+'document.getElementById("fh0").onclick=function(){setHard(0);};',
+'function paintKind(){',
+' var k=D.kinds[+fk.value]||{};',
+' if(k.shift){ fxrow.className="row"; fx.innerHTML=D.shifts.map(function(s){return "<option value=\'"+s.i+"\'>"+esc(s.l)+"</option>";}).join(""); }',
+' else if(k.time){ fxrow.className="row"; fx.innerHTML=D.times.map(function(t){return "<option value=\'"+t.m+"\'>"+esc(t.l)+"</option>";}).join(""); }',
+' else if(k.num){ fxrow.className="row"; fx.innerHTML=D.hours.map(function(h){return "<option value=\'"+h+"\'>no more than "+h+" hours</option>";}).join(""); }',
+' else fxrow.className="row hide";',
+' fw.parentNode.className = k.num? "row hide" : "row";',
+'}',
+'fk.onchange=paintKind; paintKind();',
+'function label(p){',
+' var k=D.kinds[p.k]||{}, when = p.w==="W"? "the whole stretch" : (D.days[+p.w]||{}).l;',
+' var x="";',
+' if(k.shift){ var s=D.shifts.filter(function(z){return z.i===+p.x;})[0]; x = s? " \\u00b7 "+s.l : ""; }',
+' else if(k.time){ var t=D.times.filter(function(z){return z.m===+p.x;})[0]; x = t? " \\u00b7 "+t.l : ""; }',
+' else if(k.num){ x=" \\u00b7 no more than "+p.x+" hours"; }',
+' return {t:k.t+x, d:(k.num? "for this stretch" : when)+" \\u00b7 "+(p.f? "I really can\\u2019t" : "I\\u2019d prefer not")+(p.n? " \\u00b7 \\u201c"+p.n+"\\u201d" : "")};',
+'}',
+'function paintList(){',
+' var L=document.getElementById("list");',
+' L.innerHTML=picked.map(function(p,i){var m=label(p);',
+'  return "<div class=item><div style=\'display:flex;gap:8px;align-items:flex-start\'><span style=flex:1><b>"+esc(m.t)+"</b><span class=d>"+esc(m.d)+"</span></span>"+',
+'   "<button class=x data-rm="+i+" title=Remove>\\u00d7</button></div></div>";}).join("");',
+' L.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=function(){picked.splice(+b.dataset.rm,1);paintList();document.getElementById("out").className="hide";};});',
+'}',
+'document.getElementById("fadd").onclick=function(){',
+' var k=D.kinds[+fk.value]||{};',
+' if(picked.length>=12){alert("Twelve is as many as one code can carry. Send this one, then start another.");return;}',
+' var p={k:+fk.value, w:k.num? "W" : fw.value, x:(k.shift||k.time||k.num)? fx.value : "", f:hard, n:(fn.value||"").slice(0,60)};',
+' picked.push(p); fn.value=""; setHard(0); paintList();',
+' document.getElementById("out").className="hide";',
+'};',
+'document.getElementById("mk").onclick=function(){',
+' var w=who.value; if(!w){alert("Pick your name first.");return;}',
+' if(w==="__other"){w=prompt("Type your full name exactly as your manager has it:"); if(!w)return;}',
+' if(!picked.length){alert("Add at least one thing above \\u2014 or just tell your manager you have nothing this time.");return;}',
+' var body=picked.map(function(p){return [p.k,p.w,p.x,p.f,(p.n||"").replace(/[|;~]/g," ")].join("~");}).join(";");',
+' var raw="RQ1|"+D.token+"|"+w+"|"+body;',
+' var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
+' document.getElementById("cd").textContent=code; document.getElementById("out").className="";',
+' document.getElementById("out").scrollIntoView({behavior:"smooth"});',
+'};',
+'document.getElementById("cp").onclick=function(){var t=document.getElementById("cd").textContent;',
+' if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){document.getElementById("cp").textContent="Copied \\u2713";});}',
+' else{var r=document.createRange();r.selectNode(document.getElementById("cd"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");document.getElementById("cp").textContent="Copied \\u2713";}};',
+'paintList();'
+].join("\n");
+/* ============================================================
+   Asking the team what they need, without giving anyone an account.
+   The manager makes a one-page file, sends it however they already
+   talk to their staff, and each person sends back a short code.
+   Nothing is applied by the code: every request that comes back is
+   reviewed by the manager and added by hand, exactly like one they
+   typed in themselves.
+   ============================================================ */
+/* The staff-facing list is deliberately shorter than REQ_KINDS. A cap on
+   somebody else's hours is a manager's decision, and "just a note" invites
+   an essay, so neither is offered here. */
+const ASK_KINDS=[
+  {k:"off",    t:"I need the day off",         hint:"Don’t schedule me at all"},
+  {k:"avoid",  t:"I’d rather not work",   hint:"Only if there’s no other way"},
+  {k:"want",   t:"I’d like to work",      hint:"Give me the day if it fits"},
+  {k:"shift",  t:"I’d prefer this shift",  hint:"A preference, on one date", shift:true},
+  {k:"noshift",t:"I’d rather not this shift", hint:"A preference, on one date", shift:true},
+  {k:"late",   t:"I can’t start before",  hint:"Class, school run, second job", time:true},
+  {k:"early",  t:"I have to leave by",         hint:"Out the door at a set time", time:true},
+  {k:"maxh",   t:"I’d like fewer hours",  hint:"For this stretch only", num:true}
+];
+function askOpen(){ return S.ask||null; }
+function makeAsk(ws, weeks){
+  S.ask={ token:offerToken(), at:Date.now(), ws:ws, weeks:weeks||1, seen:[] };
+  logIt("post","Sent the team a request form for "+(weeks>1? weeks+" weeks from ":"the week of ")+prettyDate(ws));
+  save();
+  return S.ask;
+}
+function askDays(ws, weeks){
+  const out=[]; const n=Math.max(1,Math.min(8,weeks||1))*7;
+  for(let i=0;i<n;i++){ const d=addDays(ws,i); out.push({ymd:d, dow:parseYmd(d).getDay()}); }
+  return out;
+}
+function askTimes(){
+  const out=[]; for(let m=300;m<=1380;m+=30) out.push({m, t:m2disp(m)});
+  return out;
+}
+function buildAskFile(){
+  const A=askOpen(); if(!A) return "";
+  const days=askDays(A.ws, A.weeks);
+  const payload={
+    org:S.org.name||"Our team", site:S.org.site||"", token:A.token,
+    span: A.weeks>1? prettyDate(A.ws)+" to "+prettyDate(addDays(A.ws, A.weeks*7-1)) : "the week of "+prettyFull(A.ws),
+    by: S.ask.by||"",
+    kinds: ASK_KINDS.map(k=>({k:k.k, t:k.t, hint:k.hint, shift:!!k.shift, time:!!k.time, num:!!k.num})),
+    days: days.map(d=>({y:d.ymd, l:DAYS[d.dow]+", "+prettyDate(d.ymd)})),
+    shifts: S.shifts.map((s,i)=>({i, l:s.label+" · "+m2disp(t2m(s.start))+"–"+m2disp(t2m(s.end))})),
+    times: askTimes().map(x=>({m:x.m, l:x.t})),
+    hours: [4,8,12,16,20,24,28,32,36,40],
+    staff: S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name}))
+  };
+  const data=b64e(JSON.stringify(payload));
+  return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<title>What do you need? — '+esc(payload.org)+'</title>',
+    '<style>:root{--g:#eaedeb;--s:#fff;--i:#18211f;--m:#697773;--l:#d2d8d6;--a:#1c6a66;--as:#dcebe9}',
+    '@media(prefers-color-scheme:dark){:root{--g:#101514;--s:#191f1e;--i:#e7ecea;--m:#8d9b97;--l:#2c3634;--a:#4cb3a9;--as:#173432}}',
+    '*{box-sizing:border-box}body{margin:0;background:var(--g);color:var(--i);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px 14px 60px}',
+    '.w{max-width:620px;margin:0 auto}h1{font-size:21px;margin:0 0 4px}.sub{color:var(--m);font-size:13.5px;margin-bottom:18px}',
+    '.card{background:var(--s);border:1px solid var(--l);border-radius:9px;padding:16px;margin-bottom:14px}',
+    'label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--m);font-weight:700;margin-bottom:6px}',
+    'select,input[type=text]{width:100%;font:inherit;color:inherit;background:var(--s);border:1px solid var(--l);border-radius:6px;padding:9px 10px}',
+    '.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
+    '.gh{background:var(--s);color:var(--a);border:1px solid var(--a)}',
+    '.row{display:flex;gap:8px;align-items:center;margin-top:8px}.row>*{flex:1}',
+    '.item{border:1px solid var(--l);border-radius:8px;padding:11px;margin-bottom:8px;background:var(--s)}',
+    '.item b{display:block;font-size:14.5px}.item .d{color:var(--m);font-size:13px}',
+    '.x{flex:none;width:36px;padding:9px;border:1px solid var(--l);background:var(--s);color:var(--m);border-radius:6px;cursor:pointer;font-size:16px}',
+    '.seg{display:flex;gap:6px}.seg button{flex:1;padding:10px;border:1px solid var(--l);background:var(--s);color:var(--i);border-radius:7px;font:inherit;cursor:pointer}',
+    '.seg button[aria-pressed=true]{background:var(--as);border-color:var(--a);color:var(--a);font-weight:700}',
+    '.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}',
+    '.pnote{background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.55;margin-bottom:14px}',
+    '.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
+    '.hide{display:none}.warn{color:#8d5c0f;font-size:12.5px;margin-top:6px}</style></head><body><div class="w">',
+    '<h1>What do you need?</h1><div class="sub" id="sub"></div>',
+    '<div class="pnote"><b>Before you start.</b> These are preferences, not promises. Your manager builds the schedule around what the business needs first, so nothing you ask for here is agreed, guaranteed or owed to you — and how shifts, posts and rotations are shared out is set by your workplace, not by this form. Asking just means they know what you need when there is room to allow it.</div>',
+    '<div class="card"><div class="step">How this works</div><div class="hint">Add anything you need for these dates — a day off, a shift you’d prefer, a time you can’t start before. When you’re done you get a short code: send that back and your manager will read it.<br><br>Your manager reads every one and decides, the same as if you’d texted them.</div></div>',
+    '<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
+    '<div class="card"><div class="step">Step 2 — what do you need?</div><div id="list"></div>',
+    '<div id="form">',
+    '<div class="row" style="margin-top:0"><select id="fk"></select></div>',
+    '<div class="row"><select id="fw"></select></div>',
+    '<div class="row hide" id="fxrow"><select id="fx"></select></div>',
+    '<div class="row"><input type="text" id="fn" maxlength="60" placeholder="Why, in a few words (optional)"></div>',
+    '<div class="seg" style="margin-top:8px"><button id="fh1" aria-pressed="false">I really can’t</button><button id="fh0" aria-pressed="true">I’d prefer not</button></div>',
+    '<button class="go gh" id="fadd" style="margin-top:10px">Add this</button></div></div>',
+    '<div class="card"><div class="step">Step 3</div><button class="go" id="mk">Get my code</button>',
+    '<div id="out" class="hide"><div class="hint" style="margin-top:12px">Send this code back to your manager.</div>',
+    '<div class="code" id="cd"></div><button class="go gh" id="cp">Copy the code</button></div></div>',
+    '<div class="hint">Nothing is sent anywhere by this page — the code is the only thing that leaves, and you send it yourself. It holds only what you picked above.</div>',
+    '</div><script>'].join("\n")+"\n"+ASK_PAGE_JS.replace("__DATA__", data)+"\n<\/script></body></html>";
+}
+function askMessageText(){
+  const A=askOpen(); if(!A) return "";
+  return "Subject: What do you need for "+(A.weeks>1? prettyDate(A.ws)+" to "+prettyDate(addDays(A.ws,A.weeks*7-1)) : "the week of "+prettyDate(A.ws))+"?\n\n"+
+    "Hi all,\n\nI’m putting the schedule together. Attached is a one-page form — open it on your phone, add anything you need "+
+    "(a day off, a shift you’d like, a time you can’t start before), and it gives you a short code. Reply with the code.\n\n"+
+    (A.by? "Please get it back to me by "+prettyFull(A.by)+".\n\n" : "")+
+    "Asking isn’t the same as it being granted — I read every one and do what I can.\n\nThanks!";
+}
+/* A reply coming back in. Nothing is written here: this only reads the code and
+   says what it holds. The manager adds each line themselves. */
+function readAsk(code){
+  const A=askOpen();
+  if(!A) return {err:"You haven’t sent a request form out yet."};
+  let raw="";
+  try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn’t look like a reply code — check it was copied whole."}; }
+  const bits=raw.split("|");
+  if(bits[0]!=="RQ1") return {err:"That’s a code for something else, not a request form."};
+  if(bits[1]!==A.token) return {err:"That code is from an earlier form. Ask them to open the newest one you sent."};
+  const who=bits[2]||"";
+  let emp=empById(who);
+  if(!emp) emp=S.employees.find(e=>e.active && e.name.trim().toLowerCase()===who.trim().toLowerCase());
+  if(!emp) return {err:"No one on your roster is called “"+who+"”. Add them under Team first, or ask them to pick their name from the list."};
+  if(!emp.active) return {err:emp.name+" isn’t on the active roster."};
+  const days=askDays(A.ws, A.weeks);
+  const items=(bits[3]||"").split(";").map(seg=>{
+    const f=seg.split("~"); if(f.length<4) return null;
+    const K=ASK_KINDS[+f[0]]; if(!K) return null;
+    const it={kind:K.k, K, hard:f[3]==="1", note:(f[4]||"").trim().slice(0,60)};
+    if(K.num){ it.from=A.ws; it.to=addDays(A.ws, A.weeks*7-1); it.num=Math.max(1,Math.min(80,+f[2]||0)); }
+    else if(f[1]==="W"){ it.from=A.ws; it.to=addDays(A.ws, A.weeks*7-1); }
+    else { const d=days[+f[1]]; if(!d) return null; it.from=d.ymd; it.to=d.ymd; }
+    if(K.shift){ const sh=S.shifts[+f[2]]; if(!sh) return null; it.shiftId=sh.id; }
+    if(K.time){ it.min=Math.max(0,Math.min(1439,+f[2]||0)); }
+    return it;
+  }).filter(Boolean);
+  if(!items.length) return {err:"That code didn’t hold any requests — it may have been cut short in the message."};
+  return {emp, items};
+}
+/* Has this exact request already been put in? Twelve people re-sending the
+   same code should not put twelve copies on the board. */
+function askDupe(empId, it){
+  return (S.requests||[]).some(r=>r.empId===empId && r.kind===it.kind && r.from===it.from && r.to===it.to &&
+    (it.shiftId? r.shiftId===it.shiftId : true) && (it.min!=null? r.min===it.min : true) && (it.num!=null? r.hours===it.num : true));
+}
+function askDetail(it){
+  if(it.kind==="shift"||it.kind==="noshift"){ const sh=shiftById(it.shiftId)||{label:"a shift"};
+    return sh.label+" · "+m2disp(t2m(sh.start))+"–"+m2disp(t2m(sh.end)); }
+  if(it.kind==="late") return "not before "+m2disp(it.min);
+  if(it.kind==="early") return "away by "+m2disp(it.min);
+  if(it.kind==="maxh") return "no more than "+it.num+" hours";
+  return "";
+}
+function askModal(){
+  const ws=S.currentWeek, weeks=S.horizon||1;
+  const A=askOpen();
+  const live = A && A.ws===ws && A.weeks===weeks;
+  modal("Ask the team", `
+    <div class="stack">
+      <div class="banner info"><div><b>One page, no accounts, no app.</b> Weeksolved writes a single file. Send it however you already talk to your team — email, text, a printout with a QR code, whatever they use. They open it on a phone, tick what they need and get a short code back. You paste the code in here, read what they asked for, and add the ones you’re granting. Nothing lands on the schedule unless you put it there.</div></div>
+      <div class="field"><label>What stretch are you asking about?</label>
+        <div class="help">${weeks>1? "The "+weeks+" weeks from "+esc(prettyFull(ws))+"." : "The week of "+esc(prettyFull(ws))+"."} Change it with the week picker and the horizon setting.</div></div>
+      <div class="field"><label>Ask them to reply by (optional)</label>
+        <input type="date" id="akby" value="${esc((A&&A.by)||addDays(ws,-3))}">
+        <span class="mini">Printed on the form and in the message. Nothing happens at the deadline — it is there so people know.</span></div>
+      ${live? `<div class="banner ok"><div><b>A form is already out</b> for this stretch, sent ${esc(new Date(A.at).toLocaleString([],{dateStyle:"medium",timeStyle:"short"}))}. Making a new one retires the old codes — anything already sent back on the old form will be refused, so read those first.</div></div>`:""}
+      <div class="field"><label>The message to go with it</label>
+        <textarea id="akmsg" style="min-height:150px">${esc(live? askMessageText() : "")}</textarea>
+        <span class="mini">Edit it however you like — it is only text.</span></div>
+    </div>`,
+    `<button class="btn" data-close>Close</button>
+     <button class="btn" id="akread">Read a reply</button>
+     <button class="btn primary" id="akmake">${live?"Download the form again":"Make the form"}</button>`,
+    r=>{
+      const by=r.querySelector("#akby"), msg=r.querySelector("#akmsg");
+      const refresh=()=>{ if(askOpen()) msg.value=askMessageText(); };
+      by.onchange=()=>{ if(askOpen()){ S.ask.by=by.value||""; save(); refresh(); } };
+      r.querySelector("#akmake").onclick=async ()=>{
+        const cur=askOpen();
+        if(!(cur && cur.ws===ws && cur.weeks===weeks)) makeAsk(ws, weeks);
+        S.ask.by=by.value||""; save();
+        refresh();
+        await saveFile("what-do-you-need-"+ws+".html", buildAskFile());
+        toast("Form downloaded — send it however your team already hears from you");
+        render();
+      };
+      r.querySelector("#akread").onclick=()=>{ closeModal(true); askReadModal(); };
+      if(!live && !msg.value){ /* show them what it will say before they commit */
+        msg.value="Hi all,\n\nI’m putting the schedule together. Press “Make the form” and this fills in properly.";
+      }
+    });
+}
+function askReadModal(prefill){
+  modal("A reply came back", `
+    <div class="stack">
+      <div class="field"><label>Paste their reply code</label>
+        <textarea id="akcode" style="min-height:80px;font-family:'IBM Plex Mono',monospace;font-size:11.5px">${esc(prefill||"")}</textarea>
+        <span class="mini">One person's code at a time. Anything else in the message is ignored.</span></div>
+      <div id="akout"></div>
+    </div>`,
+    `<button class="btn" data-close>Close</button><button class="btn primary" id="akgo">Read it</button>`,
+    r=>{
+      const out=r.querySelector("#akout");
+      const show=()=>{
+        const res=readAsk(r.querySelector("#akcode").value);
+        if(res.err){ out.innerHTML=`<div class="banner crit"><div>${esc(res.err)}</div></div>`; return; }
+        const A=askOpen();
+        out.innerHTML=`<div class="stack">
+          <div class="banner info"><div><b>${esc(res.emp.name)}</b> asked for ${res.items.length} thing${res.items.length===1?"":"s"}. Add the ones you’re granting — nothing goes on until you press.</div></div>
+          ${res.items.map((it,i)=>{
+            const dupe=askDupe(res.emp.id, it);
+            const det=askDetail(it);
+            return `<div class="setrow"><div class="sq">
+              <strong>${esc(it.K.t)}</strong>
+              <div class="mini">${it.kind==="maxh"? "for this stretch" : (it.from===it.to? esc(prettyDate(it.from)) : esc(prettyDate(it.from))+" – "+esc(prettyDate(it.to)))}${det? " · "+esc(det):""}
+                · <span class="chip ${it.hard?"warn":""}">${it.hard? "they said they really can’t" : "they said they’d prefer not"}</span></div>
+              ${it.note? `<div class="mini" style="opacity:.85">“${esc(it.note)}”</div>`:""}
+              ${dupe? `<div class="mini"><span class="chip">already on the board</span> nothing to do.</div>`:""}
+            </div><div class="sc">${dupe? "" : `
+              <select class="akfirm" data-i="${i}" style="width:auto">
+                <option value="1" ${it.hard?"selected":""}>Must</option>
+                <option value="0" ${it.hard?"":"selected"}>If possible</option>
+              </select>
+              <button class="btn sm primary" data-akadd="${i}">Add it</button>`}</div></div>`;
+          }).join("")}
+          <div class="help">The firmness is yours to set, not theirs. What they picked is shown above as what they said; the dropdown is what the scheduler will actually be held to.</div>
+        </div>`;
+        out.querySelectorAll("[data-akadd]").forEach(btn=>btn.onclick=()=>{
+          const i=+btn.dataset.akadd, it=res.items[i];
+          const sel=out.querySelector('.akfirm[data-i="'+i+'"]');
+          const rec={ id:uid("q"), empId:res.emp.id, kind:it.kind, hard:(sel? sel.value==="1" : it.hard),
+                      from:it.from, to:it.to, note:it.note||"", src:"form", status:"" };
+          if(it.shiftId) rec.shiftId=it.shiftId;
+          if(it.min!=null) rec.min=it.min;
+          if(it.num!=null) rec.hours=it.num;
+          S.requests=S.requests||[];
+          S.requests.push(rec);
+          if(A){ A.seen=A.seen||[]; if(!A.seen.includes(res.emp.id)) A.seen.push(res.emp.id); }
+          logIt("change","Added "+res.emp.name+"’s request from the form — "+it.K.t.toLowerCase());
+          save(); render();
+          toast("Added — "+res.emp.name);
+          show();
+        });
+      };
+      r.querySelector("#akgo").onclick=show;
+      if(prefill) show();
+    });
+}
+
+/* The intake page's own script, kept as one string for the same reason. */
+const TM_PAGE_JS = [
+'var D=JSON.parse(decodeURIComponent(escape(atob("__DATA__"))));',
+'function esc(t){return String(t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
+'document.getElementById("sub").textContent=D.org+(D.site?" \\u00b7 "+D.site:"");',
+'function opts(list,sel){return list.map(function(t,i){return "<option value=\'"+i+"\'"+(i===sel?" selected":"")+">"+esc(t)+"</option>";}).join("");}',
+'var TL=D.times.map(function(t){return t.l;});',
+'/* availability, one row a day */',
+'var AV=document.getElementById("av");',
+'AV.innerHTML=D.days.map(function(d,i){',
+' return "<div class=day><label class=sw><input type=checkbox class=dok data-d="+i+" checked> <b>"+esc(d)+"</b></label>"+',
+'  "<div class=row><select class=df data-d="+i+">"+opts(TL,D.defFrom)+"</select><span class=to>to</span><select class=dt data-d="+i+">"+opts(TL,D.defTo)+"</select></div></div>";',
+'}).join("");',
+'function paintAv(){AV.querySelectorAll(".dok").forEach(function(c){',
+' var row=c.closest(".day").querySelector(".row"); row.style.opacity=c.checked?"1":".35";',
+' row.querySelectorAll("select").forEach(function(s){s.disabled=!c.checked;});});}',
+'AV.querySelectorAll(".dok").forEach(function(c){c.onchange=paintAv;}); paintAv();',
+'function boxes(el,list,cls){el.innerHTML=list.map(function(t,i){',
+' return "<label class=sw><input type=checkbox class="+cls+" value="+i+"> <span>"+esc(t)+"</span></label>";}).join("")||"<span class=hint>Nothing to pick.</span>";}',
+'boxes(document.getElementById("roles"),D.roles,"rk");',
+'boxes(document.getElementById("pshift"),D.shifts,"ps");',
+'boxes(document.getElementById("ashift"),D.shifts,"as");',
+'boxes(document.getElementById("poff"),D.days,"po");',
+'if(!D.roles.length) document.getElementById("rolewrap").className="card hide";',
+'if(!D.shifts.length){document.getElementById("shiftwrap").className="card hide";}',
+'if(!D.lic) document.getElementById("licwrap").className="card hide";',
+'document.getElementById("hrs").innerHTML="<option value=\'\'>No preference</option>"+D.hours.map(function(h){return "<option value=\'"+h+"\'>around "+h+" hours a week</option>";}).join("");',
+'document.getElementById("mk").onclick=function(){',
+' var name=(document.getElementById("nm").value||"").trim();',
+' if(!name){alert("Please put your name in \\u2014 your manager needs it to match you up.");document.getElementById("nm").focus();return;}',
+' var av=[];',
+' for(var i=0;i<7;i++){var ok=AV.querySelector(".dok[data-d=\'"+i+"\']").checked?1:0;',
+'  av.push(ok+"."+AV.querySelector(".df[data-d=\'"+i+"\']").value+"."+AV.querySelector(".dt[data-d=\'"+i+"\']").value);}',
+' function picked(cls){var o=[];document.querySelectorAll("."+cls+":checked").forEach(function(c){o.push(c.value);});return o.join(".");}',
+' var clean=function(t){return String(t||"").replace(/[|~]/g," ").trim();};',
+' var raw=["TM1",D.token,clean(name),',
+'   clean(document.getElementById("em").value).slice(0,60),',
+'   clean(document.getElementById("ph").value).slice(0,24),',
+'   picked("rk"), av.join(","), picked("ps"), picked("as"), picked("po"),',
+'   (document.getElementById("op").checked?1:0)+"."+(document.getElementById("cl").checked?1:0),',
+'   document.getElementById("hrs").value||"",',
+'   clean(document.getElementById("lic").value).slice(0,40)+"."+(document.getElementById("licx").value||""),',
+'   clean(document.getElementById("note").value).slice(0,140)].join("|");',
+' var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
+' document.getElementById("cd").textContent=code;document.getElementById("out").className="";',
+' document.getElementById("out").scrollIntoView({behavior:"smooth"});};',
+'document.getElementById("cp").onclick=function(){var t=document.getElementById("cd").textContent;',
+' if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){document.getElementById("cp").textContent="Copied \\u2713";});}',
+' else{var r=document.createRange();r.selectNode(document.getElementById("cd"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");document.getElementById("cp").textContent="Copied \\u2713";}};'
+].join("\n");
+/* ============================================================
+   The starter form. One page a new hire (or the whole team, once)
+   fills in so the manager isn't typing everyone's details out of
+   a stack of emails. It collects facts and preferences only —
+   nothing here decides anything. What shifts, posts and rotations
+   a person ends up on is the workplace's decision, and the form
+   says so in as many words.
+   ============================================================ */
+const TM_NOTGUARANTEED = "Everything below is a preference, not a promise. Your manager builds the schedule around what the business needs first, so nothing you pick here is agreed, guaranteed or owed to you — and how shifts, posts and rotations are shared out is set by your workplace, not by this form. It just saves your manager typing it all in, and means they know what you would like when there is room to allow it.";
+function makeIntake(){
+  S.intake={ token:offerToken(), at:Date.now() };
+  logIt("post","Made a starter form for the team");
+  save();
+  return S.intake;
+}
+function intakeOpen(){ return S.intake||null; }
+function buildIntakeFile(){
+  const T=intakeOpen()||makeIntake();
+  const lic = !!(S.rules && S.rules.licenses) || S.employees.some(e=>e.licLabel);
+  const payload={
+    org:S.org.name||"Our team", site:S.org.site||"", token:T.token, lic:lic,
+    days: DAYS.slice(),
+    roles: S.roles.map(r=>r.name),
+    shifts: S.shifts.map(s=>s.label+" · "+m2disp(t2m(s.start))+"–"+m2disp(t2m(s.end))),
+    times: askTimes().map(x=>({m:x.m, l:x.t})),
+    defFrom: askTimes().findIndex(x=>x.m===360),
+    defTo: askTimes().findIndex(x=>x.m===1320),
+    hours: [8,12,16,20,24,28,32,36,40]
+  };
+  if(payload.defFrom<0) payload.defFrom=0;
+  if(payload.defTo<0) payload.defTo=payload.times.length-1;
+  const data=b64e(JSON.stringify(payload));
+  return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<title>About you — '+esc(payload.org)+'</title>',
+    '<style>:root{--g:#eaedeb;--s:#fff;--i:#18211f;--m:#697773;--l:#d2d8d6;--a:#1c6a66;--as:#dcebe9}',
+    '@media(prefers-color-scheme:dark){:root{--g:#101514;--s:#191f1e;--i:#e7ecea;--m:#8d9b97;--l:#2c3634;--a:#4cb3a9;--as:#173432}}',
+    '*{box-sizing:border-box}body{margin:0;background:var(--g);color:var(--i);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px 14px 60px}',
+    '.w{max-width:620px;margin:0 auto}h1{font-size:21px;margin:0 0 4px}.sub{color:var(--m);font-size:13.5px;margin-bottom:18px}',
+    '.card{background:var(--s);border:1px solid var(--l);border-radius:9px;padding:16px;margin-bottom:14px}',
+    '.card.hide{display:none}',
+    'label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--m);font-weight:700;margin:12px 0 6px}',
+    'label.f:first-child{margin-top:0}',
+    'select,input[type=text],input[type=email],input[type=tel],input[type=date]{width:100%;font:inherit;color:inherit;background:var(--s);border:1px solid var(--l);border-radius:6px;padding:9px 10px}',
+    '.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
+    '.gh{background:var(--s);color:var(--a);border:1px solid var(--a)}',
+    '.row{display:flex;gap:8px;align-items:center}.row select{flex:1}.to{color:var(--m);font-size:13px;flex:none}',
+    '.day{border:1px solid var(--l);border-radius:8px;padding:10px;margin-bottom:7px}',
+    '.sw{display:flex;gap:8px;align-items:center;margin-bottom:6px;cursor:pointer}',
+    '.sw input{width:18px;height:18px;flex:none;margin:0}',
+    '#roles label.sw,#pshift label.sw,#ashift label.sw,#poff label.sw{display:inline-flex;border:1px solid var(--l);border-radius:7px;padding:6px 10px;margin:0 6px 6px 0}',
+    '.note{background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.55;margin-bottom:14px}',
+    '.code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}',
+    '.pnote{background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.55;margin-bottom:14px}',
+    '.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
+    '.hide{display:none}</style></head><body><div class="w">',
+    '<h1>About you</h1><div class="sub" id="sub"></div>',
+    '<div class="note"><b>Before you start.</b> '+esc(TM_NOTGUARANTEED)+'</div>',
+    '<div class="card"><div class="step">Who you are</div>',
+    '<label class="f">Your name</label><input type="text" id="nm" placeholder="First Last">',
+    '<label class="f">Email (optional)</label><input type="email" id="em" placeholder="name@example.com">',
+    '<label class="f">Mobile (optional)</label><input type="tel" id="ph" placeholder="(555) 010-0100">',
+    '<div class="hint" style="margin-top:10px">Contact details are only used to send you your schedule. Leave them blank if you would rather your manager used what they already have.</div></div>',
+    '<div class="card" id="rolewrap"><div class="step">What you are trained for</div>',
+    '<div class="hint" style="margin-bottom:10px">Tick anything you are qualified and signed off to do. Your manager checks these against their own records.</div>',
+    '<div id="roles"></div></div>',
+    '<div class="card" id="licwrap"><div class="step">Licence or certification</div>',
+    '<label class="f">What it is</label><input type="text" id="lic" placeholder="e.g. Pharmacy Technician">',
+    '<label class="f">Expires</label><input type="date" id="licx">',
+    '<div class="hint" style="margin-top:10px">So your manager can warn you before it lapses. Leave blank if you would rather they took it from your file.</div></div>',
+    '<div class="card"><div class="step">When you can work</div>',
+    '<div class="hint" style="margin-bottom:10px">Untick a day you cannot work at all. On the days you can, set the earliest you could start and the latest you could finish. This is what you are <em>able</em> to do, not what you want — there is a place for that below.</div>',
+    '<div id="av"></div></div>',
+    '<div class="card" id="shiftwrap"><div class="step">Shifts you would prefer</div>',
+    '<div class="hint" style="margin-bottom:10px">A preference only. Which shifts you actually get is your workplace’s decision.</div>',
+    '<label class="f">I would rather work these</label><div id="pshift"></div>',
+    '<label class="f">I would rather not work these</label><div id="ashift"></div></div>',
+    '<div class="card"><div class="step">Other preferences</div>',
+    '<label class="f">Days I would rather have off</label><div id="poff"></div>',
+    '<label class="f">Opening and closing</label>',
+    '<label class="sw"><input type="checkbox" id="op" checked> <span>I am happy to open</span></label>',
+    '<label class="sw"><input type="checkbox" id="cl" checked> <span>I am happy to close</span></label>',
+    '<label class="f">Hours I would like</label><select id="hrs"></select>',
+    '<label class="f">Anything else worth knowing</label><input type="text" id="note" maxlength="140" placeholder="In a sentence">',
+    '</div>',
+    '<div class="card"><div class="step">Last step</div><button class="go" id="mk">Get my code</button>',
+    '<div id="out" class="hide"><div class="hint" style="margin-top:12px">Send this code back to your manager. It is long — copy the whole thing.</div>',
+    '<div class="code" id="cd"></div><button class="go gh" id="cp">Copy the code</button></div></div>',
+    '<div class="hint">Nothing is sent anywhere by this page — the code is the only thing that leaves, and you send it yourself. It holds only what you filled in above.</div>',
+    '</div><script>'].join("\n")+"\n"+TM_PAGE_JS.replace("__DATA__", data)+"\n<\/script></body></html>";
+}
+function intakeMessageText(){
+  return "Subject: A few details for the schedule\n\n"+
+    "Hi,\n\nAttached is a one-page form — open it on your phone and fill in your details, when you can work, and anything you’d prefer. "+
+    "It gives you a code at the end; reply with the code and I’ll put it in.\n\n"+
+    "It’s preferences, not promises — I build the schedule around what the business needs first, so nothing on the form is agreed or owed. "+
+    "It just means I know what you’d like when there’s room to allow it.\n\nThanks!";
+}
+/* Reads an intake code. Writes nothing: the manager reviews and presses. */
+function readIntake(code){
+  const T=intakeOpen();
+  if(!T) return {err:"You haven’t made a starter form yet."};
+  let raw="";
+  try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn’t look like a reply code — check it was copied whole."}; }
+  const f=raw.split("|");
+  if(f[0]!=="TM1") return {err:"That’s a code for something else, not a starter form."};
+  if(f[1]!==T.token) return {err:"That code is from an earlier form. Ask them to open the newest one you sent."};
+  const name=(f[2]||"").trim();
+  if(!name) return {err:"That code has no name on it."};
+  const times=askTimes();
+  const idx=s=>(s||"").split(".").filter(x=>/^\d+$/.test(x)).map(Number);
+  const av=(f[6]||"").split(",").map(seg=>{
+    const b=seg.split(".");
+    const fi=+b[1], ti=+b[2];
+    const from=times[fi]? times[fi].m : 360, to=times[ti]? times[ti].m : 1320;
+    return {ok:b[0]==="1", from:m2hhmm(Math.min(from,to)), to:m2hhmm(Math.max(from,to,Math.min(from,to)+30))};
+  });
+  while(av.length<7) av.push({ok:true, from:"06:00", to:"22:00"});
+  const oc=(f[10]||"1.1").split(".");
+  const licBits=(f[12]||"").split(".");
+  const existing=S.employees.find(e=>e.name.trim().toLowerCase()===name.toLowerCase());
+  return { name, existing:existing||null,
+    email:(f[3]||"").trim(), phone:(f[4]||"").trim(),
+    roleIdx:idx(f[5]), avail:av.slice(0,7),
+    prefIdx:idx(f[7]), avoidIdx:idx(f[8]), offIdx:idx(f[9]).filter(d=>d>=0&&d<7),
+    canOpen:oc[0]!=="0", canClose:oc[1]!=="0",
+    hours: /^\d+$/.test(f[11]||"")? +f[11] : null,
+    licLabel:(licBits[0]||"").trim(), licExp:/^\d{4}-\d{2}-\d{2}$/.test(licBits[1]||"")? licBits[1] : "",
+    note:(f[13]||"").trim() };
+}
+function m2hhmm(m){ m=Math.max(0,Math.min(1439,m|0)); return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+function intakeModal(){
+  const T=intakeOpen();
+  modal("Starter form", `
+    <div class="stack">
+      <div class="banner info"><div><b>Stop typing everyone's details in.</b> Weeksolved writes one page. Send it to a new hire — or once to the whole team — and they fill in their contact details, what they're trained for, when they can work, and what they'd prefer. They send back a code, you read it here, and you decide what to keep. Nobody signs in.</div></div>
+      <div class="banner ok"><div><b>It promises them nothing.</b> The form says plainly, at the top and again over the preference sections, that these are preferences rather than promises, that the schedule is built around what the business needs first, and that shifts, posts and rotations are your workplace's decision. Nothing on it is agreed or owed just because somebody ticked it.</div></div>
+      ${T? `<div class="mini">A form is already out, made ${esc(new Date(T.at).toLocaleString([],{dateStyle:"medium",timeStyle:"short"}))}. Making a new one retires the old codes, so read anything already sent back first.</div>`:""}
+      <div class="field"><label>The message to go with it</label>
+        <textarea id="tmmsg" style="min-height:150px">${esc(intakeMessageText())}</textarea>
+        <span class="mini">Edit it however you like — it is only text.</span></div>
+    </div>`,
+    `<button class="btn" data-close>Close</button>
+     <button class="btn" id="tmread">Read a reply</button>
+     <button class="btn primary" id="tmmake">${T? "Download it again" : "Make the form"}</button>`,
+    r=>{
+      r.querySelector("#tmmake").onclick=async ()=>{
+        if(!intakeOpen()) makeIntake();
+        await saveFile("about-you.html", buildIntakeFile());
+        toast("Form downloaded — send it however your team already hears from you");
+        render();
+      };
+      r.querySelector("#tmread").onclick=()=>{ closeModal(true); intakeReadModal(); };
+    });
+}
+function intakeReadModal(prefill){
+  modal("A starter form came back", `
+    <div class="stack">
+      <div class="field"><label>Paste their reply code</label>
+        <textarea id="tmcode" style="min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:11.5px">${esc(prefill||"")}</textarea>
+        <span class="mini">One person's code at a time. These are longer than the other codes — make sure the whole thing came through.</span></div>
+      <div id="tmout"></div>
+    </div>`,
+    `<button class="btn" data-close>Close</button><button class="btn primary" id="tmgo">Read it</button>`,
+    r=>{
+      const out=r.querySelector("#tmout");
+      const show=()=>{
+        const v=readIntake(r.querySelector("#tmcode").value);
+        if(v.err){ out.innerHTML=`<div class="banner crit"><div>${esc(v.err)}</div></div>`; return; }
+        const roles=v.roleIdx.map(i=>S.roles[i]).filter(Boolean);
+        const pref=v.prefIdx.map(i=>S.shifts[i]).filter(Boolean);
+        const avoid=v.avoidIdx.map(i=>S.shifts[i]).filter(Boolean);
+        const line=(lab,val)=>`<div class="setrow"><div class="sq"><strong>${esc(lab)}</strong><div class="mini">${val||"<span style='opacity:.6'>not given</span>"}</div></div><div class="sc"></div></div>`;
+        out.innerHTML=`<div class="stack">
+          <div class="banner ${v.existing?"warn":"info"}"><div>${v.existing
+            ? `<b>${esc(v.name)}</b> is already on your roster. Saving this overwrites their contact details, availability and preferences with what is below. Their hours, employment type, rate, start date and anything else you set stay exactly as they are.`
+            : `<b>${esc(v.name)}</b> is not on your roster yet. Saving adds them, with sensible defaults for everything the form does not ask about — you can change any of it afterwards.`}</div></div>
+          ${line("Email", esc(v.email))}
+          ${line("Mobile", esc(v.phone))}
+          ${line("Trained for", roles.length? roles.map(x=>esc(x.name)).join(", ") : (S.roles.length? "nothing ticked" : ""))}
+          ${line("Can work", v.avail.map((a,i)=>a.ok? DSHORT[i]+" "+m2disp(t2m(a.from))+"–"+m2disp(t2m(a.to)) : DSHORT[i]+" no").join(" · "))}
+          ${line("Would prefer", pref.length? pref.map(x=>esc(x.label)).join(", ") : "")}
+          ${line("Would rather not", avoid.length? avoid.map(x=>esc(x.label)).join(", ") : "")}
+          ${line("Days they'd like off", v.offIdx.length? v.offIdx.map(d=>DAYS[d]).join(", ") : "")}
+          ${line("Open / close", (v.canOpen?"happy to open":"would rather not open")+" · "+(v.canClose?"happy to close":"would rather not close"))}
+          ${line("Hours they'd like", v.hours? "around "+v.hours+" a week" : "")}
+          ${v.licLabel||v.licExp? line("Licence", esc(v.licLabel)+(v.licExp? " · expires "+esc(prettyDate(v.licExp)) : "")) : ""}
+          ${v.note? line("They added", "“"+esc(v.note)+"”") : ""}
+          <div class="help">Hours they'd like and days they'd rather have off are preferences: Weeksolved records them and leans that way, and neither one is treated as a rule. Their hour cap, employment type and everything else contractual stay yours to set under Team.</div>
+          <button class="btn primary" id="tmsave">${v.existing? "Update "+esc(v.name) : "Add "+esc(v.name)+" to the team"}</button>
+        </div>`;
+        out.querySelector("#tmsave").onclick=()=>{
+          const roleIds=v.roleIdx.map(i=>S.roles[i]).filter(Boolean).map(x=>x.id);
+          const prefIds=v.prefIdx.map(i=>S.shifts[i]).filter(Boolean).map(x=>x.id);
+          const avoidIds=v.avoidIdx.map(i=>S.shifts[i]).filter(Boolean).map(x=>x.id);
+          let e=v.existing;
+          const fresh=!e;
+          if(fresh){
+            e={id:uid("e"), name:v.name, roleIds:[], type:"FT", hoursMode:"range", minH:0, maxH:40, maxD:5,
+               holidayPay:true, holidayPayH:8, onCall:false, cycle:null,
+               avail:[], prefShiftIds:[], avoidShiftIds:[], prefDaysOff:[], canOpen:true, canClose:true,
+               notes:"", seniority:ymd(new Date()), active:true, rate:0};
+            S.employees.push(e);
+          }
+          if(v.email) e.email=v.email;
+          if(v.phone) e.phone=v.phone;
+          if(roleIds.length) e.roleIds=roleIds;
+          e.avail=v.avail.map(a=>({ok:!!a.ok, from:a.from, to:a.to}));
+          e.prefShiftIds=prefIds; e.avoidShiftIds=avoidIds; e.prefDaysOff=v.offIdx.slice();
+          e.canOpen=v.canOpen; e.canClose=v.canClose;
+          if(v.licLabel) e.licLabel=v.licLabel;
+          if(v.licExp) e.licExp=v.licExp;
+          /* Their own words, kept as words. Nothing here becomes a rule. */
+          const said=[]; 
+          if(v.hours) said.push("would like around "+v.hours+"h a week");
+          if(v.note) said.push(v.note);
+          if(said.length){
+            const stamp="From their starter form: "+said.join(" · ");
+            e.notes = e.notes? (e.notes.split("\n").filter(l=>l.indexOf("From their starter form:")!==0).concat([stamp]).join("\n")) : stamp;
+          }
+          logIt("change", (fresh? "Added " : "Updated ")+e.name+" from a starter form");
+          save(); render();
+          toast(fresh? e.name+" added to the team" : e.name+" updated");
+          closeModal();
+        };
+      };
+      r.querySelector("#tmgo").onclick=show;
       if(prefill) show();
     });
 }
@@ -9062,7 +9651,8 @@ function vTeam(){
   return `
   <div class="stack">
     <div class="card">
-      <header><h3>Team</h3><span class="hint">Hours, availability, and what each person would rather work.${
+      <header><h3>Team</h3><button class="btn sm" id="tmform">Starter form</button>${(()=>{const n=prefsBlankCount();
+        return n? `<span class="chip" title="They can still be scheduled \u2014 nothing on file means available whenever you are open.">${n} with nothing on file</span>` : "";})()}<span class="hint">Hours, availability, and what each person would rather work.${
         staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places used":""}</span>
         ${otLedgerOn() && S.employees.length? `<button class="btn sm" id="otoffer">Offer overtime</button>`:""}
         ${S.employees.length? `<button class="btn sm" id="histadd">Add past time off, callouts or requests</button>`:""}
@@ -9080,7 +9670,7 @@ function vTeam(){
           return `<tr${e.active?"":' style="opacity:.5"'}>
             <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}</td>
             <td>${e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span> `:"";}).join("")}</td>
-            <td><span class="chip">${esc(e.type)}</span>${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
+            <td><span class="chip">${esc(e.type)}</span>${prefsBlank(e)?'<div class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine \u2014 send the starter form if you would like their preferences.">nothing on file \u00b7 open availability</div>':""}${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
               return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)&&e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>` : e.licExp<=addDays(ymd(new Date()),45)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>`:""):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
             <td class="mono">${(()=>{const L=effLimits(e);
               if(L.exactH) return "exactly "+L.exactH+"h";
@@ -9149,6 +9739,7 @@ function vTeam(){
   </div>`;
 }
 WIRE.team = root=>{
+  { const b=root.querySelector("#tmform"); if(b) b.onclick=()=>intakeModal(); }
   { const bp=root.querySelector("#bulkpat"); if(bp) bp.onclick=()=>bulkPatternModal(); }
   { const ha=root.querySelector("#histadd"); if(ha) ha.onclick=()=>historyModal("timeoff"); }
   { const ot=root.querySelector("#otoffer"); if(ot) ot.onclick=()=>otOfferModal(); }
@@ -9634,6 +10225,24 @@ function historyModal(kind){
       };
     });
 }
+/* Somebody added straight onto the roster and never asked about. Blank is a
+   perfectly good answer — it means available whenever the business is open —
+   so this is a quiet piece of information, never a warning and never a chore.
+   The default availability window is what the Add someone form starts with;
+   anyone still sitting on exactly that, with nothing else expressed, has not
+   told us anything yet. */
+function prefsBlank(e){
+  if(!e) return false;
+  if((e.prefShiftIds||[]).length) return false;
+  if((e.avoidShiftIds||[]).length) return false;
+  if((e.prefDaysOff||[]).length) return false;
+  if(e.canOpen===false || e.canClose===false) return false;
+  const av=e.avail||[];
+  if(av.length!==7) return false;
+  return av.every(a=>a && a.ok && a.from==="06:00" && a.to==="22:00");
+}
+function prefsBlankCount(){ return S.employees.filter(e=>e.active && prefsBlank(e)).length; }
+
 function empModal(id){
   const blankAvail=()=>[0,1,2,3,4,5,6].map(()=>({ok:true,from:"06:00",to:"22:00"}));
   const e = id? JSON.parse(JSON.stringify(empById(id))) :
@@ -9643,7 +10252,7 @@ function empModal(id){
      notes:"",seniority:ymd(new Date()),active:true,rate:0};
   modal(id?"Edit "+e.name:"Add someone", `
   <div class="stack">
-    <div class="mini">Fields marked * are required — everything else can stay blank and be filled in whenever.</div>
+    <div class="mini">Fields marked * are required — everything else can stay blank and be filled in whenever. Leave the preferences alone and this person is simply available whenever you're open, which is a perfectly good way to run a roster.</div>
     <div class="grid2">
       <div class="field"><label>Name *</label><input type="text" id="en" value="${esc(e.name)}" placeholder="First Last"></div>
       <div class="field"><label>Employment type</label><select id="et">${Object.keys(TYPES).map(k=>`<option value="${k}" ${e.type===k?"selected":""}>${TYPES[k]}</option>`).join("")}</select></div>
@@ -14085,6 +14694,18 @@ function vRequests(){
   <div class="stack">
     <div class="banner info"><div><b>The inbox, turned into rules.</b> Work down your emails and messages, punch each one in here, then draft. Anything marked <b>must</b> the scheduler will not break; anything marked <b>if possible</b> it leans towards and tells you afterwards whether it managed. Your standing rules — hours, roles, coverage, breaks, priority — stay set, so this is the only thing that changes week to week.</div></div>
 
+    ${S.employees.some(e=>e.active)? (()=>{ const A=askOpen();
+      const live = A && A.ws===ws && A.weeks===weeks;
+      const back = live? (A.seen||[]).length : 0;
+      const team = S.employees.filter(e=>e.active).length;
+      return `<div class="card">
+        <header><h3>Ask the team</h3>
+          <span class="hint">${live? back+" of "+team+" answered" : "No accounts, no app \u2014 one page they open on a phone"}</span>
+          ${live? `<button class="btn sm" id="qaskread">Read a reply</button>`:""}
+          <button class="btn sm ${live?"":"primary"}" id="qask">${live? "The form" : "Make a form"}</button></header>
+        ${live? "" : `<div class="body"><div class="help">Rather than punching in every text and email yourself, send your team one page. They tick what they need \u2014 a day off, a shift they\u2019d like, a time they can\u2019t start before \u2014 and send back a short code. You read it here and add the ones you\u2019re granting. Nobody signs in and nothing lands on the schedule unless you put it there.</div></div>`}
+      </div>`; })() : ""}
+
     ${!S.employees.some(e=>e.active)? `<div class="card"><header><h3>Add a request</h3></header>
       <div class="body"><div class="empty"><strong>No one on the roster</strong>Requests belong to people — add your team first, then punch requests in here.
         <div style="margin-top:10px"><button class="btn sm primary" data-go="team">Go to Team</button></div></div></div></div>` : `<div class="card">
@@ -14239,6 +14860,8 @@ function reqDetail(r){
   return k.hint;
 }
 WIRE.requests = root=>{
+  { const b=root.querySelector("#qask"); if(b) b.onclick=()=>askModal();
+    const b2=root.querySelector("#qaskread"); if(b2) b2.onclick=()=>askReadModal(); }
   let hard=1;
   const kSel=root.querySelector("#qk"), extra=root.querySelector("#qextra");
   if(!kSel){ wireReqTables(root); return; }   /* empty-roster state: no form on the page */
@@ -15793,16 +16416,18 @@ function vacPollFile(){
     '.pick{border:1px solid var(--l);border-radius:8px;padding:10px;margin-bottom:8px}',
     '.pick .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}',
     '.no{width:26px;height:26px;border-radius:6px;background:var(--a);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}',
-    '.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g2>*{min-width:0}',
     '.warn{font-size:12px;color:var(--c);margin-top:6px;min-height:14px}',
     '.busy{font-size:12px;color:var(--w);margin-top:6px}',
     '.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
     '.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}',
+    '.pnote{background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.55;margin-bottom:14px}',
     '.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
     '.hide{display:none}.hm{display:flex;gap:2px;flex-wrap:wrap;margin-top:8px}',
     '.hm i{width:11px;height:11px;border-radius:2px;background:var(--l);display:inline-block}',
     '.hm i.h1{background:#d9c48a}.hm i.h2{background:#c98a4b}.hm i.h3{background:#ab382c}</style></head><body><div class="w">',
     '<h1>Vacation requests</h1><div class="sub" id="sub"></div>',
+    '<div class="pnote"><b>Before you start.</b> These are preferences, not promises. Your manager builds the schedule around what the business needs first, so nothing you pick here is agreed, guaranteed or owed to you — and how time off, shifts and rotations are shared out is set by your workplace, not by this form. Putting your choices in tells them what you would like when there is room to allow it.</div>',
     '<div class="card"><div class="step">How this works</div><div class="hint">List up to <b id="mx"></b> stretches of time off, best first. Your manager runs everyone’s requests together and grants the most it can — first choices first. '+
       'Dates lots of people already want are marked <b>busy</b>; if you’re flexible, picking quieter dates raises everyone’s odds — including yours.'+
       '<span id="dl"></span></div></div>',
@@ -15895,10 +16520,12 @@ function buildPollFile(){
     '.bt:active{transform:translateY(1px)}.bt.x{width:auto;padding:0 9px;font-size:12px;font-weight:600}',
     '.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer}',
     '.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;line-height:1.5;margin:10px 0}',
+    '.pnote{background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.55;margin-bottom:14px}',
     '.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
     '.hide{display:none}</style></head><body><div class="w">',
     '<h1>Holiday preferences</h1>',
     '<div class="sub" id="sub"></div>',
+    '<div class="pnote"><b>Before you start.</b> These are preferences, not promises. Your manager builds the schedule around what the business needs first, so nothing you pick here is agreed, guaranteed or owed to you — and how holidays, shifts and rotations are shared out is set by your workplace, not by this form. Putting your order in tells them what you would like when there is room to allow it.</div>',
     '<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
     '<div class="card"><div class="step">Step 2</div>',
     '<div class="hint" style="margin-bottom:12px">Put these in order. <b>Top = the holiday you\'d least mind working.</b> Bottom = the one you most want off. Tap <b>can\'t</b> only if you truly cannot work that day at all.</div>',
@@ -16268,6 +16895,12 @@ const KB=[
   a:"Your board is yours alone: it's stored under your account and no other user can read it — that's enforced by the database itself, not just the app. Nothing about your schedule appears anywhere public, and nothing leaves the app unless you send it.\n\nYour people's details are the same. Names, phone numbers, pay rates, accrued time off, licence dates, notes, the lot — never sold, never handed to anyone for their own purposes, never used to train anything. That is written into the Terms as a promise we owe you, not just a policy we could rewrite. It leaves your account three ways only: you send it, our database provider stores it so the app can exist, or a court order compels it — and then we tell you first unless a judge forbids it."},
  {t:"Do you share my staff's names or pay?", k:"share sell disclose staff names pay rate contact phone email confidential private third party sold train ai", go:null,
   a:"No. Nothing that identifies one of your people — name, phone, email, hourly rate, time-off balance, licence dates, your notes, or their schedule history — is sold, rented, published, given to anyone for their own purposes, or used to train a model. Section 3.1 of the Terms says so in writing. The only ways it goes anywhere: you send it, our database provider holds it to run the service, or valid legal process compels it.\n\nAlso worth knowing: none of it is required. Weeksolved drafts a full week with nothing but first names. Contact details and rates are there if they help you — leave them blank and everything still works."},
+ {t:"Ask the team what they need", k:"request form survey ask team availability preferences intake day off collect gather poll code reply", go:"requests",
+  a:"On the Requests page, press Ask the team. Weeksolved writes one page — send it however you already talk to your staff. They open it on a phone, add what they need (a day off, a shift they'd prefer, a time they can't start before), and get a short code. Paste the code into Read a reply and you see everything they asked for, with a button to add each one.\n\nNobody signs in and nothing is sent anywhere by the form — the code is the only thing that leaves, and they send it themselves. Nothing lands on the schedule until you press. You set how firm each one is, not them: the form records what they said, the dropdown decides what the scheduler is actually held to."},
+ {t:"Starter form for a new hire", k:"starter form new hire onboarding intake about you details contact availability preferences add someone roster setup", go:"team",
+  a:"On the Team page, press Starter form. It writes one page a new hire fills in on their phone: contact details, what they're trained for, when they can work, and what they'd prefer. They send back a code; you paste it into Read a reply, look at everything before you keep it, and press once to add or update them.\n\nThe form promises them nothing. It says at the top, and again over the preference sections, that these are preferences rather than promises, that you build the schedule around the business first, and that shifts, posts and rotations are your workplace's decision. Their hours, employment type, rate and start date are never asked — those are yours to set."},
+ {t:"Someone has no preferences on file", k:"blank preferences empty availability open nothing on file new person default flag", go:"team",
+  a:"That's fine, and it costs you nothing. Anyone with nothing on file is treated as available whenever you're open, and the scheduler uses them normally. The Team page just shows a quiet 'nothing on file' note against them and a count in the header, so you know who you've never asked — not because anything is wrong. Press Starter form if you'd like to collect it, or leave it: plenty of rosters run perfectly well with nobody's preferences entered at all."},
  {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
   a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
  {t:"Vacation calendar", k:"vacation calendar survey draw ranked longer time off season annual pto request weeks", go:"vacation",
