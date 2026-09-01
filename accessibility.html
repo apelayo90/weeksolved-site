@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accessibility — Weeksolved</title>
+<meta name="description" content="How Weeksolved is built to be usable with a keyboard, a screen reader, or larger text — and what has not been done.">
+<link rel="canonical" href="https://weeksolved.com/accessibility.html">
+<meta name="theme-color" content="#1c6a66">
+<style>
+:root{--bg:#f2f5f4;--surface:#fff;--ink:#18211f;--ink2:#3c4a47;--muted:#5d6966;--line:#d2d8d6;--accent:#1c6a66;--warn-soft:#f6ead4;--warn:#8d5c0f}
+@media (prefers-color-scheme: dark){:root{--bg:#101514;--surface:#191f1e;--ink:#e7ecea;--ink2:#c2ccc9;--muted:#8d9b97;--line:#2c3634;--accent:#4cb3a9;--warn-soft:#33260f;--warn:#d9a441}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:800px;margin:0 auto;padding:0 20px 60px}
+header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px}
+.brand{font-weight:800;font-size:18px}
+header.top a{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:600;font-size:13.5px}
+h1{font-size:28px;letter-spacing:-.02em;margin:22px 0 4px}
+.eff{color:var(--muted);font-size:13px;margin-bottom:26px}
+h2{font-size:19px;margin:34px 0 8px;letter-spacing:-.01em;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15.5px;margin:22px 0 6px;letter-spacing:-.005em}
+h4{font-size:14px;margin:16px 0 4px;color:var(--ink)}
+p,li,td,th{color:var(--ink2);font-size:14px}
+ul,ol{padding-left:22px}
+li{margin-bottom:5px}
+a{color:var(--accent)}
+strong{color:var(--ink)}
+code{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+pre code{border:0;background:none;padding:0;font-size:12.5px;line-height:1.5}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+table{border-collapse:collapse;width:100%;margin:12px 0;display:block;overflow-x:auto}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+   font-weight:700;padding:7px 9px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+/* A warranty disclaimer is only enforceable if a reasonable person would notice
+   it. That is judged on the rendered page, so it is built to be noticed here. */
+blockquote{margin:16px 0;padding:14px 16px;background:var(--warn-soft);border:2px solid var(--warn);
+  border-radius:8px}
+blockquote p{color:var(--ink);font-weight:600}
+blockquote strong{font-weight:800}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inline-block}
+.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 26px}
+.toc h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.toc a{display:inline-block;margin:0 14px 4px 0;font-size:13px;text-decoration:none}
+@media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
+</style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
+<h1>Accessibility</h1>
+<nav class="toc"><h4>On this page</h4><a href="#the-standard-we-build-to">The standard we build to</a><a href="#what-has-actually-been-done">What has actually been done</a><a href="#what-has-not-been-done-and-we-would-rather-say-so">What has not been done, and we would rather say so</a><a href="#if-something-does-not-work">If something does not work</a></nav>
+<p><strong>Last reviewed 1 September 2026.</strong></p>
+<p>Weeksolved is built to be usable by people who cannot see the screen, cannot use a
+mouse, need larger text, or rely on assistive technology. This page says what has
+been done, what has not, and how to tell us when we have got it wrong.</p>
+<h2 id="the-standard-we-build-to">The standard we build to</h2>
+<p><strong>WCAG 2.2 Level AA.</strong></p>
+<p>We chose 2.2 rather than an older version deliberately. Section 508 of the
+Rehabilitation Act still points at WCAG 2.0 AA; the Department of Justice's Title II
+rule for state and local government (compliance dates in April 2027 and April 2028)
+requires 2.1 AA; the Department of Health and Human Services' Section 504 rule
+requires the same; and New York State requires 2.2 AA from January 2027. WCAG 2.2 is
+a superset of all of them, so building to it satisfies every one at once rather than
+making our customers check which version we happened to pick.</p>
+<h2 id="what-has-actually-been-done">What has actually been done</h2>
+<p>These are measured results across every page of the application, in both light and
+dark appearance, at widths from 320 pixels upward:</p>
+<ul>
+<li><strong>Contrast.</strong> Every piece of text meets the 4.5:1 minimum, and every control
+  boundary and focus ring meets 3:1. Nineteen failures were found and all nineteen
+  were fixed.</li>
+<li><strong>Tables.</strong> Every column and row header is associated with its cells, and every
+  table announces what it is rather than "table, six columns". Sixty-three unassociated
+  headers were fixed.</li>
+<li><strong>Forms.</strong> Every field has a real label. A placeholder is never used as the only
+  label, because it disappears the moment somebody types and voice control cannot see it.</li>
+<li><strong>Keyboard.</strong> Everything is reachable and operable without a mouse, every focusable
+  element shows a visible focus ring, dialogs trap focus while open and hand it back
+  to the button that opened them when they close, and Escape closes them.</li>
+<li><strong>Reflow.</strong> No page scrolls sideways at 320 pixels, which is the same as a 1280-pixel
+  window at 400% zoom. Wide tables scroll inside their own container and that container
+  is reachable by keyboard.</li>
+<li><strong>Text spacing.</strong> Nothing clips or overlaps when line height, letter spacing and word
+  spacing are forced wider, which is what a reader stylesheet does.</li>
+<li><strong>Target size.</strong> Every control meets the 24×24 pixel minimum, apart from links inside
+  a sentence and controls whose label is the target — both of which the standard exempts.</li>
+<li><strong>Status messages.</strong> Confirmations and warnings are announced without moving focus,
+  from a live region that exists before the message does.</li>
+<li><strong>Landmarks and titles.</strong> A skip link, a real main landmark, and a page title that
+  changes when you move between pages so a screen reader says where you have landed.</li>
+<li><strong>Motion.</strong> Animation is removed for anyone whose system asks for reduced motion.</li>
+</ul>
+<p>You can also change <strong>text size</strong> and <strong>spacing</strong> yourself, in Settings, on any device.
+It scales the whole layout together rather than only the type, so nothing overlaps, and
+it does not affect what prints.</p>
+<h2 id="what-has-not-been-done-and-we-would-rather-say-so">What has not been done, and we would rather say so</h2>
+<ul>
+<li><strong>No independent audit.</strong> Everything above was tested by us. An outside expert has
+  not reviewed this product.</li>
+<li><strong>No Accessibility Conformance Report (VPAT).</strong> If you need one for procurement, ask
+  us. We will commission an independent audit and produce one; we will not write one
+  ourselves and call it independent.</li>
+<li><strong>No screen-reader testing by a person who uses one daily.</strong> Behaviour has been
+  verified programmatically and by keyboard. That catches a great deal, and it does not
+  replace someone who actually lives with a screen reader telling us what is awkward.</li>
+<li><strong>Automated checking finds only part of the problem.</strong> Depending on how it is counted,
+  automated tools catch somewhere between a fifth and a half of what the standard requires.
+  We are not going to pretend that a clean automated report is the same as an accessible
+  product.</li>
+<li><strong>Printed output and exported PDFs</strong> have not been separately assessed against
+  PDF/UA. Every report is also available as CSV, which is the more accessible format,
+  and we would rather point you there than overstate the PDFs.</li>
+</ul>
+<h2 id="if-something-does-not-work">If something does not work</h2>
+<p>Tell us and we will fix it. This is a small company, which cuts both ways: there is no
+ticket queue between you and the person who can change the code.</p>
+<p>Email <strong>weeksolved@gmail.com</strong> with what you were trying to do, what happened, and what
+you were using — the browser, and any assistive technology. We will acknowledge quickly,
+tell you honestly whether it is a quick fix or a long one, and come back to you when it
+is done.</p>
+<p>If you are evaluating Weeksolved for a public agency, a university, or anywhere with a
+procurement accessibility requirement, say so in that email. It moves the question to
+the front of the queue rather than into it.</p>
+<footer><a href="/">Home</a><a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/accessibility.html">Accessibility</a><a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>

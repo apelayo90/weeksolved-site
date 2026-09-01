@@ -81,8 +81,14 @@ footer a:hover{color:var(--accent)}
   <div class="card"><p style="margin:0"><b>Your account is an island.</b> Data is partitioned per account and enforced at the database layer: your schedules are readable and writable by your login and no one else's. Sign-in is handled by Google's identity service; passwords are never stored by us in any readable form.</p></div>
   <div class="card"><p style="margin:0"><b>We never see a card number.</b> When paid plans open, checkout and billing run entirely on our payment partner's PCI-compliant systems, acting as merchant of record. Card details go to them, never to us, and never touch our infrastructure.</p></div>
   <div class="card"><p style="margin:0"><b>No staff contact data is required.</b> Weeksolved works without collecting employee emails or phone numbers at all — schedules can go out by print, export, or calendar file. If you do add contact details, they stay inside your account like everything else.</p></div>
-  <div class="card"><p style="margin:0"><b>Your data leaves when you say so.</b> Everything exports to Excel and PDF whenever you want it. Close your account and ask us to delete your data, and it's removed from production systems — the <a href="/privacy.html">privacy policy</a> has the details.</p></div>
-  <div class="card"><p style="margin:0"><b>No ads, no trackers, no selling data.</b> The product is the business. Your schedule data is used to draw your schedule — nothing else.</p></div>
+  <div class="card"><p style="margin:0"><b>Your data leaves when you say so.</b> Everything exports to Excel and PDF whenever you want it. Close your account and ask us to delete your data, and it comes out of the live database straight away. Backups are kept for 14 days and then expire, so a deleted account disappears from those within a fortnight rather than instantly &mdash; the <a href="/privacy.html">privacy policy</a> has the details.</p></div>
+
+  <div class="card"><p style="margin:0"><b>Backed up daily, and recoverable to the minute.</b> Daily backups are kept for 14 days, and seven days of point-in-time history mean a mistake can be undone to the moment before it happened rather than to whenever last night's copy ran.</p></div>
+
+  <div class="card"><p style="margin:0"><b>We can reach the database. We'd rather say so.</b> Like the operator of any hosted service, we can open the Google Cloud console behind Weeksolved. We don't read customer schedules in the ordinary running of the business, and we'd only look to fix a fault you'd reported or where the law required it. Anyone claiming their staff cannot technically reach a hosted database is describing end-to-end encryption, which this is not &mdash; and if that matters to your business, staying signed out keeps everything in your own browser.</p></div>
+  <div class="card"><p style="margin:0"><b>No ads, no trackers, no selling data.</b> The product is the business. Your schedule data is used to draw your schedule &mdash; nothing else. It is never sold, never shared for advertising, and never used to train an AI model.</p></div>
+
+  <div class="card"><p style="margin:0"><b>Three files come from somewhere else, and we'll name them.</b> Opening Weeksolved fetches typefaces from Google Fonts, the sign-in library from Google, and the PDF library from Cloudflare's public CDN. None of them receive your schedule or your staff &mdash; they serve a file &mdash; but a request carries an IP address, so we won't pretend the page contacts nobody. Block all three at your firewall and Weeksolved still opens, still drafts a week and still places every break; you lose the designed typefaces, PDF export and signing in. If your organisation needs a build that fetches nothing at all, ask and we'll cut you one.</p></div>
 
   <h2>Found something?</h2>
   <p>We're a small company, which cuts both ways — no security theater, and no ticket queue between you and a fix. If you believe you've found a vulnerability, email <a href="mailto:weeksolved@gmail.com">weeksolved@gmail.com</a> with the details and you'll reach the person who can fix it. We'll acknowledge quickly, keep you posted, and credit you if you'd like.</p>
@@ -92,7 +98,7 @@ footer a:hover{color:var(--accent)}
   <nav>
     <a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a>
     <a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a>
-    <a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/refunds.html">Refunds</a>
+    <a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/accessibility.html">Accessibility</a><a href="/refunds.html">Refunds</a>
   </nav>
   <div>Weeksolved, operated by Alberto Pelayo · weeksolved@gmail.com</div>
 </footer>
