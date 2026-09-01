@@ -255,7 +255,11 @@ tr:last-child td{border-bottom:0}
 .week .erow:hover{background:var(--surface2)}
 .week .ecell{border-left:1px solid var(--line);padding:5px;min-height:56px;display:flex;flex-direction:column;gap:4px}
 .week .name{padding:8px 10px;display:flex;flex-direction:column;gap:2px;justify-content:center;min-width:0}
-.week .name .nm{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* A long hyphenated surname is not an edge case, and a name that reads
+   "Noor Van Der Berg-Hutchi\u2026" on the sheet somebody is handed is a bad look.
+   Two lines, then ellipsis, and the full name is always in the tooltip. */
+.week .name .nm{font-weight:600;font-size:13px;overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;line-clamp:2;overflow-wrap:anywhere;line-height:1.25}
 .week .name .meta{font-size:10.5px;color:var(--muted);display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .week .name .bar{height:3px;border-radius:2px;background:var(--sunken);overflow:hidden;margin-top:3px}
 .week .name .bar i{display:block;height:100%;background:var(--accent)}
@@ -386,8 +390,10 @@ tr:last-child td{border-bottom:0}
 .devrow{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .devrow:last-child{border-bottom:0}
 .setrow:last-child{border-bottom:0}
-.setrow .sq{flex:1;min-width:220px}
-.setrow .sq strong{font-size:13.5px;font-weight:600;display:block}
+/* A fixed 220px floor is wider than the pane on a small phone, which pushed the
+   name under an overflow:hidden ancestor and cut it in half. */
+.setrow .sq{flex:1;min-width:min(220px,100%)}
+.setrow .sq strong{font-size:13.5px;font-weight:600;display:block;overflow-wrap:anywhere}
 .setrow .sq .mini{max-width:64ch;margin-top:2px}
 .setrow .sc{display:flex;gap:8px;align-items:center;flex:none}
 .setrow .sc select,.setrow .sc input{min-width:150px}
@@ -571,7 +577,10 @@ tr:last-child td{border-bottom:0}
 .rung.over{box-shadow:inset 0 0 0 2px var(--accent)}
 .rung .rank{width:26px;height:26px;border-radius:6px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;flex:none}
 .rung .who{flex:1;min-width:0}
-.rung .who strong{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Two lines before it gives up, and the whole name in the tooltip either way \u2014
+   a seniority ladder that shows half a surname is no use to the person reading it. */
+.rung .who strong{font-size:13.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  line-clamp:2;overflow:hidden;overflow-wrap:anywhere;line-height:1.25}
 .rung .tally{display:flex;gap:5px;flex:none}
 .rung .grip{color:var(--faint);flex:none;letter-spacing:2px}
 .dmark{font-weight:800;margin-right:3px;opacity:.85}
@@ -8904,7 +8913,7 @@ const pct=e.maxH?clamp(mins/(e.maxH*60),0,1):0;
 const over = e.maxH && mins>e.maxH*60+1, under = e.minH && mins<e.minH*60-1 && e.type!=="PRN";
 return `<div class="erow">
           <div class="name">
-            <div class="nm">${esc(e.name)}</div>
+            <div class="nm" title="${esc(e.name)}">${esc(e.name)}</div>
             <div class="meta"><span class="mono">${fmtHrs(mins)}</span>${_sp? ` <span class="mini">(${fmtHrs(payHours(e.id,ws,"before"))} + ${fmtHrs(payHours(e.id,ws,"after"))})</span>`:""} · ${esc(e.type)}${cyclesOn()&&cycleLabel(e)? " · "+esc(cycleLabel(e)):""}
               ${e.roleIds.slice(0,2).map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span>`:"";}).join("")}</div>
             <div class="bar"><i style="width:${pct*100}%;background:${over?"var(--crit)":under?"var(--warn)":"var(--accent)"}"></i></div>
@@ -10079,7 +10088,8 @@ return [
 "h1{font-size:17px;margin:0 0 2px}.sub{color:#697773;font-size:11.5px;margin-bottom:10px}",
 "table{border-collapse:collapse;width:100%;table-layout:fixed}",
 "th{text-align:left;background:#1c6a66;color:#fff;padding:5px 6px;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}",
-"td{padding:5px 6px;border-bottom:1px solid #d2d8d6;font-size:11px;vertical-align:top;word-wrap:break-word}",
+"td{padding:5px 6px;border-bottom:1px solid #d2d8d6;font-size:11px;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere}",
+"th{overflow-wrap:anywhere}",
 "tr:nth-child(even) td{background:#f6f8f7}",
 ".nm{font-weight:700}.tot{color:#697773;font-size:10px}",
 ".off{color:#a9b3b0}.wr{background:repeating-linear-gradient(transparent,transparent 15px,#e4e9e7 15px,#e4e9e7 16px)}",
@@ -10529,9 +10539,13 @@ const css=[
 "h1{font-size:18px;margin:0 0 2px}h2{font-size:14px;margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid #1c6a66}",
 "h3{font-size:11.5px;margin:14px 0 5px;color:#3c4a47}",
 ".sub{color:#697773;font-size:11px;margin-bottom:16px}",
-"table{border-collapse:collapse;width:100%;margin-bottom:6px}",
-"th{text-align:left;background:#1c6a66;color:#fff;padding:5px 7px;font-size:9px;text-transform:uppercase;letter-spacing:.04em}",
-"td{padding:4px 7px;border-bottom:1px solid #d9dedc;font-size:10.5px;vertical-align:top}",
+ 
+"table{border-collapse:collapse;width:100%;margin-bottom:6px;table-layout:fixed}",
+"th{text-align:left;background:#1c6a66;color:#fff;padding:5px 7px;font-size:9px;text-transform:uppercase;letter-spacing:.04em;overflow-wrap:anywhere}",
+"td{padding:4px 7px;border-bottom:1px solid #d9dedc;font-size:10.5px;vertical-align:top;overflow-wrap:anywhere}",
+ 
+"table.wide{font-size:9px}table.wide th{font-size:7.5px;padding:3px 4px}table.wide td{font-size:9px;padding:3px 4px}",
+"table.xwide{font-size:8px}table.xwide th{font-size:7px;padding:2px 3px}table.xwide td{font-size:8px;padding:2px 3px}",
 "tr:nth-child(even) td{background:#f6f8f7}",
 "td.num{text-align:right;font-variant-numeric:tabular-nums}",
 "th:first-child{width:auto}",
@@ -10546,7 +10560,11 @@ const head='<div class="sheet"><h1>'+esc(S.org.name||"Reports")+'</h1>'+
 return '<!doctype html><html><head><meta charset="utf-8"><title>'+esc(S.org.name||"Reports")+' reports</title>'+
 '<style>'+css+'</style></head><body>'+head+
 keys.map(k=>buildReport(k, from, to, O)).join("")+
-'<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>';
+'<script>window.onload=function(){' +
+'var T=document.querySelectorAll("table");' +
+'for(var i=0;i<T.length;i++){var n=T[i].querySelectorAll("thead th").length;' +
+'if(n>=12) T[i].className+=" xwide"; else if(n>=8) T[i].className+=" wide";}' +
+'setTimeout(function(){window.print()},400)};<\/script></body></html>';
 }
  
  
@@ -10944,10 +10962,21 @@ weeks:nWeeks, pack:r.querySelector("#prpack").value==="1",
 copies: cop.value==="n"? (+r.querySelector("#prn").value||1) : 1
 });
 const sheets=(html.match(/class="sheet"/g)||[]).length;
+ 
+const send=()=>{
 saveFile((what.value==="week"? "week-":"day-sheets-")+useWs+".html", html);
 logIt("post","Printed "+(what.value==="week"?"the week":"day sheets")+" \u2014 "+sheets+" page"+(sheets===1?"":"s"));
 save(); closeModal();
 toast(sheets+" page"+(sheets===1?"":"s")+" ready \u2014 open the file and it prints itself");
+};
+if(sheets>60){
+closeModal(true);
+confirmModal("That is "+sheets+" sheets",
+"One copy each across "+roster+" people adds up quickly. Nothing is wrong with it \u2014 just worth knowing before the printer starts.",
+send, "Print all "+sheets);
+return;
+}
+send();
 };
 });
 }
@@ -12417,7 +12446,7 @@ return `
 const l=L[id]||{good:0,bad:0};
 return `<div class="rung" data-id="${id}" ${dragable?'draggable="true"':""}>
               <span class="rank">${i+1}</span>
-              <div class="who"><strong>${esc(e.name)}</strong>
+              <div class="who"><strong title="${esc(e.name)}">${esc(e.name)}</strong>
                 <div class="mini">${esc(tenureLabel(e))} in · ${esc(e.type)} · ${e.roleIds.map(roleAbbr).join("/")||"no role"}</div></div>
               <div class="tally">${hasHistory
 ? `<span class="chip ${l.good?"ok":""}" title="Wanted shifts received across the weeks being counted">${l.good} wanted</span>
