@@ -408,6 +408,21 @@ tr:last-child td{border-bottom:0}
 .legend .tup{margin:0 4px 0 0}
 
 .wklist{display:flex;flex-direction:column}
+/* Swipe a row aside to uncover what you can do with it. The buttons are still
+   there for everyone who doesn't swipe — this is a shortcut, never the only way. */
+.swipe{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.swipe:last-child{border-bottom:0}
+.swipeback{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;gap:8px;
+  padding:0 14px;background:var(--crit-soft)}
+.swipefront{position:relative;background:var(--surface);transform:translateX(0);
+  transition:transform .18s cubic-bezier(.2,.8,.3,1);touch-action:pan-y}
+.swipe.dragging .swipefront{transition:none}
+.swipe .swipefront > .wkrow{border-bottom:0}
+.swipehint{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;
+  color:var(--muted);opacity:.55;pointer-events:none}
+.swipe.open .swipehint{display:none}
+@media(prefers-reduced-motion:reduce){ .swipefront{transition:none} }
+@media(hover:hover) and (pointer:fine){ .swipehint{display:none} }
 .wkrow{display:flex;gap:16px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;
   transition:background .12s;flex-wrap:wrap;text-align:left}
 .wkrow *{text-align:left}
@@ -6132,6 +6147,8 @@ function render(){
 WAS_PHONE = isPhone();
 const keepY = (LAST_VIEW===VIEW)? window.scrollY : null;
 LAST_VIEW=VIEW;
+initSwipe();
+closeSwipe();
 renderNav();
 renderTabs();
 const t=TITLES[VIEW]||["",""];
@@ -9055,7 +9072,7 @@ const row=(ws)=>{
 const st=weekStats(ws), state=weekState(ws), wk=S.weeks[ws]||{};
 const daysOut=Math.round((parseYmd(ws)-parseYmd(today))/86400000/7);
 const isNow = ws===S.currentWeek;
-return `<div class="wkrow ${state} ${isNow?"here":""}" data-open="${ws}">
+const inner = `<div class="wkrow ${state} ${isNow?"here":""}" data-open="${ws}">
       <div class="wkwhen">
         <strong>${prettyDate(ws)} – ${prettyDate(addDays(ws,6))}</strong>
         <div class="mini">${daysOut===0?"this week":daysOut===1?"next week":daysOut<0?Math.abs(daysOut)+" weeks ago":"in "+daysOut+" weeks"}${patternFor(ws)? " · "+esc(patternName(ws)) : ""}</div>
@@ -9081,6 +9098,10 @@ return `<div class="wkrow ${state} ${isNow?"here":""}" data-open="${ws}">
         <button class="btn sm ghost" data-wkmenu="${ws}">⋯</button>
       </div>
     </div>`;
+ 
+return state==="draft"
+? swipeRow(inner, `<button class="btn sm danger" data-wkdiscard="${ws}">Discard</button>`)
+: inner;
 };
 
 const monthMode=(S.ui&&S.ui.schedView)==="month";
@@ -14362,6 +14383,76 @@ let t="system"; try{ t=localStorage.getItem("dowel.theme")||"system"; }catch(e){
 applyTheme(t);
 const g=$("#themetog");
 if(g) g.querySelectorAll("button").forEach(b=>b.onclick=()=>applyTheme(b.dataset.t));
+}
+
+ 
+ 
+let SWIPE_OPEN=null, SWIPE_ATE_CLICK=false;
+function closeSwipe(){
+if(!SWIPE_OPEN) return;
+const el=SWIPE_OPEN; SWIPE_OPEN=null;
+el.classList.remove("open");
+const f=el.querySelector(".swipefront"); if(f) f.style.transform="translateX(0)";
+}
+function initSwipe(){
+if(initSwipe._done) return; initSwipe._done=true;
+let el=null, front=null, back=null, x0=0, y0=0, dx=0, wide=0, axis=null;
+const EDGE=26;                     
+document.addEventListener("touchstart", ev=>{
+if(ev.touches.length!==1) return;
+const t=ev.touches[0];
+const row=ev.target.closest? ev.target.closest(".swipe") : null;
+if(SWIPE_OPEN && SWIPE_OPEN!==row) closeSwipe();
+if(!row) return;
+if(t.clientX < EDGE) return;
+if(ev.target.closest(".swipeback")) return;       
+el=row; front=row.querySelector(".swipefront"); back=row.querySelector(".swipeback");
+if(!front||!back){ el=null; return; }
+wide=Math.min(back.offsetWidth||120, Math.round(row.offsetWidth*0.6));
+x0=t.clientX; y0=t.clientY; dx=0; axis=null;
+}, {passive:true});
+document.addEventListener("touchmove", ev=>{
+if(!el || ev.touches.length!==1) return;
+const t=ev.touches[0];
+const mx=t.clientX-x0, my=t.clientY-y0;
+if(axis===null){
+if(Math.abs(mx)<6 && Math.abs(my)<6) return;
+axis = Math.abs(mx) > Math.abs(my)*1.4 ? "x" : "y";
+if(axis==="x") el.classList.add("dragging");
+}
+if(axis!=="x"){ el=null; return; }                
+const base = el.classList.contains("open")? -wide : 0;
+dx = clamp(base+mx, -wide, 0);
+front.style.transform="translateX("+dx+"px)";
+if(ev.cancelable) ev.preventDefault();            
+}, {passive:false});
+const finish=()=>{
+if(!el) return;
+el.classList.remove("dragging");
+const open = dx < -wide*0.4;
+front.style.transform="translateX("+(open? -wide : 0)+"px)";
+el.classList.toggle("open", open);
+SWIPE_OPEN = open? el : null;
+if(Math.abs(dx)>8) SWIPE_ATE_CLICK=true;          
+el=null;
+};
+document.addEventListener("touchend", finish, {passive:true});
+document.addEventListener("touchcancel", ()=>{ if(el){ el.classList.remove("dragging"); closeSwipe(); el=null; } }, {passive:true});
+ 
+document.addEventListener("click", ev=>{
+ 
+if(ev.target.closest && ev.target.closest(".swipeback")){ SWIPE_ATE_CLICK=false; return; }
+if(SWIPE_ATE_CLICK){ SWIPE_ATE_CLICK=false; ev.stopPropagation(); ev.preventDefault(); return; }
+if(SWIPE_OPEN) closeSwipe();
+}, true);
+window.addEventListener("scroll", ()=>closeSwipe(), {passive:true});
+}
+ 
+function swipeRow(inner, actions){
+return `<div class="swipe">
+    <div class="swipeback">${actions}</div>
+    <div class="swipefront">${inner}<span class="swipehint">\u2039 swipe</span></div>
+  </div>`;
 }
 
  
