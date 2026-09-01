@@ -1,0 +1,18 @@
+name = "weeksolved-mail"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+# The address people see it come from. Must be on a domain you have verified with Resend.
+MAIL_FROM = "schedules@weeksolved.com"
+# Your Firebase project, so a token from anyone else's project is refused.
+FIREBASE_PROJECT_ID = "weeksolved-54472"
+# Only the real site may call this.
+ALLOWED_ORIGINS = "https://weeksolved.com,https://www.weeksolved.com"
+
+# Counts each account's sending against a daily ceiling.
+# Create with:  npx wrangler kv namespace create MAILKV
+# then paste the id it prints in below.
+# [[kv_namespaces]]
+# binding = "MAILKV"
+# id = "paste-the-id-here"

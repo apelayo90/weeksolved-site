@@ -1410,6 +1410,7 @@ inp.focus();
 
  
 const CLOUD = {"apiKey":"AIzaSyD5BrMfKjRf0mzdjaj7tlohjYqqaTKGEao","authDomain":"weeksolved-54472.firebaseapp.com","projectId":"weeksolved-54472","storageBucket":"weeksolved-54472.firebasestorage.app","messagingSenderId":"332039926756","appId":"1:332039926756:web:f5a561eb23d2783eb78df1"};
+const MAILAPI = "";    
 let FB=null, CLOUD_REV=0, cloudPushTimer=null, cloudUnsub=null, SIGNING_UP=false, SHELL=null;
 function cloudOn(){ return !!(CLOUD && CLOUD.apiKey && window.firebase); }
 
@@ -1864,6 +1865,9 @@ if(!Array.isArray(s.rules.askOrder)) s.rules.askOrder=[];
 if(!s.rules.sheetNotes) s.rules.sheetNotes="lines";            
 s.fww = Object.assign({on:false, city:"", staff:0, sites:1, asked:false}, s.fww||{});
 s.org.pay = Object.assign({type:"none", anchor:""}, s.org.pay||{});
+s.mail = Object.assign({mode:"client", endpoint:"", replyTo:"", lastErr:""}, s.mail||{});
+ 
+if(typeof MAILAPI==="string" && MAILAPI && !s.mail.endpoint){ s.mail.endpoint=MAILAPI; s.mail.mode="server"; }
 s.employees.forEach(e=>{ if(e.clopenOk===undefined) e.clopenOk=null; });    
 if(typeof s.rules.remindH!=="number") s.rules.remindH=12;
 if(typeof s.rules.auditKeep!=="number") s.rules.auditKeep=730;
@@ -2930,7 +2934,9 @@ r=>{
 const val=()=>r.querySelector("#tmtxt").value;
 r.querySelector("#tmcopy").onclick=()=>{ copyText(val(),"Copied \u2014 paste it wherever you like"); if(opts.after) opts.after("copy"); };
 const em=r.querySelector("#tmmail");
-if(em) em.onclick=()=>{ window.open("mailto:"+encodeURIComponent(canMail)+"?subject="+encodeURIComponent(opts.subject||"A note about your schedule")+"&body="+encodeURIComponent(val()));
+if(em) em.onclick=()=>{
+mailOutAndSay({to:[canMail], subject:opts.subject||"A note about your schedule", body:val(), kind:"note"},
+"A note to "+(to.name||"them"));
 closeModal(); if(opts.after) opts.after("email"); };
 const tx=r.querySelector("#tmtext");
 if(tx) tx.onclick=()=>{ window.open("sms:"+canText.replace(/[^0-9+]/g,"")+"?&body="+encodeURIComponent(val()));
@@ -6463,6 +6469,18 @@ return c.length+" this week"+(noCon? ", "+noCon+" without it agreed in writing":
 (S.org.jurisdiction==="WA"? ", and never under two days, which is what Seattle\u2019s rules require for extra hours":""),
 sel("rules.askHours", [[0,"Judge it by how soon the shift is"],[2,"2 hours"],[6,"6 hours"],[12,"12 hours"],[24,"A day"],[48,"Two days"],[72,"Three days"]], S.rules.askHours||0))}
       ${setRow("When nobody answers in time", "It counts as a no, so you can stop waiting and try someone else. Nothing is held against them, and if they answer late you can still give them the shift as long as it\u2019s open.", "")}
+      ${setRow("How email leaves Weeksolved", mailServerReady()
+? "Straight from Weeksolved \u2014 your mail app never opens. Replies come back to "+esc(mailReplyTo()||"you")+"."
+: "Weeksolved writes the message and opens your own mail app with it ready, so it comes from your address. "+
+"<b>Sending it straight from here \u2014 without your mail app opening at all \u2014 arrives in January.</b>",
+`<select data-set="mail.mode">
+          <option value="client" ${mailServerReady()?"":"selected"}>Open my mail app</option>
+          <option value="server" ${mailServerReady()?"selected":""} ${(S.mail.endpoint||"").trim()?"":"disabled"}>Send it straight from Weeksolved${(S.mail.endpoint||"").trim()?"":" \u2014 coming January"}</option>
+        </select>`)}
+      ${(S.mail.endpoint||"").trim()? setRow("Replies come back to", "Staff hit reply and it reaches this address. Leave it blank and the account\u2019s own email is used.",
+`<input type="email" data-bind="mail.replyTo" value="${esc(S.mail.replyTo||"")}" data-rerender="no" placeholder="${esc((FB&&FB.user&&FB.user.email)||"you@example.com")}" style="min-width:210px">`) : ""}
+      ${S.mail.lastErr? setRow("Last time it didn\u2019t send", esc(S.mail.lastErr)+" \u2014 nothing went out, and you were offered your mail app instead.",
+`<button class="btn sm" id="setmailclr">Clear</button>`) : ""}
       ${setRow("Messages to staff about their requests (optional)", msgOn()
 ? "On \u2014 a Tell them button on every request, and declining one offers the message straight away. Nothing is ever sent for you: \u201cDon\u2019t send\u201d is always the first button, and you can edit every word first."
 : "Off \u2014 no message is ever offered. Turn it on and you get a ready-written note when you approve or decline, which you can change, send, or throw away.",
@@ -6661,6 +6679,8 @@ if(typeof cloudOn==="function" && cloudOn() && FB && FB.user && Date.now()-(WIRE
 WIRE._devAt=Date.now();
 deviceFetch().then(()=>{ if(VIEW==="settings") render(); });
 }
+const mc=root.querySelector("#setmailclr");
+if(mc) mc.onclick=()=>{ S.mail.lastErr=""; save(); render(); };
 const gfe=root.querySelector("#setgfe");
 if(gfe) gfe.onclick=()=>{
 const pool=S.employees.filter(e=>e.active);
@@ -9772,6 +9792,76 @@ keys.map(k=>buildReport(k, from, to, O)).join("")+
 '<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>';
 }
  
+ 
+function mailServerReady(){ return !!(S.mail && S.mail.mode==="server" && (S.mail.endpoint||"").trim()); }
+function mailFromName(){ return (S.org.name||"Weeksolved").slice(0,60); }
+function mailReplyTo(){
+return ((S.mail&&S.mail.replyTo)||"").trim() || ((FB&&FB.user&&FB.user.email)||"").trim() || "";
+}
+ 
+async function mailOut(msg){
+const to=(msg.to||[]).map(x=>String(x||"").trim()).filter(Boolean);
+if(!to.length) return {sent:0, failed:[], via:"none", why:"nobody had an email address"};
+if(!mailServerReady()){
+ 
+const q="?bcc="+encodeURIComponent(to.join(","))+
+"&subject="+encodeURIComponent(msg.subject||"")+
+"&body="+encodeURIComponent(msg.body||"");
+window.open("mailto:"+q);
+return {sent:to.length, failed:[], via:"client"};
+}
+let token="";
+try{ token = FB && FB.user? await FB.user.getIdToken() : ""; }catch(e){}
+try{
+const res=await fetch(S.mail.endpoint.replace(/\/+$/,"")+"/send", {
+method:"POST",
+headers:{"Content-Type":"application/json", "Authorization":"Bearer "+token},
+body:JSON.stringify({
+to, subject:msg.subject||"", text:msg.body||"",
+fromName:mailFromName(), replyTo:mailReplyTo(),
+kind:msg.kind||"note"
+})
+});
+const j=await res.json().catch(()=>({}));
+if(!res.ok || j.ok===false){
+S.mail.lastErr=(j && j.error)||("the sender answered "+res.status);
+save();
+return {sent:0, failed:to, via:"server", why:S.mail.lastErr};
+}
+S.mail.lastErr=""; save();
+return {sent:j.sent||to.length, failed:j.failed||[], via:"server"};
+}catch(e){
+S.mail.lastErr=e.message||"couldn't reach the sender";
+save();
+return {sent:0, failed:to, via:"server", why:S.mail.lastErr};
+}
+}
+ 
+async function mailOutAndSay(msg, whatItWas){
+const r=await mailOut(msg);
+if(r.via==="client"){ toast("Your mail app is opening with it written"); return r; }
+if(r.via==="none"){ toast("Nobody on that list has an email address"); return r; }
+if(r.sent && !r.failed.length){
+logIt("send", whatItWas+" emailed to "+r.sent+" "+(r.sent===1?"person":"people"));
+save(); toast("Sent to "+r.sent+" "+(r.sent===1?"person":"people"));
+return r;
+}
+ 
+modal("That didn\u2019t send", `
+    <div class="stack">
+      <div class="banner crit"><div><b>Weeksolved couldn\u2019t send it \u2014 ${esc(r.why||"the sender didn\u2019t answer")}.</b>
+        Nothing has gone out, so nobody has been told twice.</div></div>
+      <div class="help">You can open your own mail app with the same message and send it from there instead.</div>
+    </div>`,
+`<button class="btn" data-close>Leave it</button><button class="btn primary" id="mfback">Open my mail app</button>`,
+rr=>{ rr.querySelector("#mfback").onclick=()=>{
+window.open("mailto:?bcc="+encodeURIComponent((msg.to||[]).join(","))+
+"&subject="+encodeURIComponent(msg.subject||"")+"&body="+encodeURIComponent(msg.body||""));
+closeModal();
+}; });
+return r;
+}
+
 function sendableFor(kind, empId){
 const e=empById(empId); if(!e) return "";
 const first=(e.name||"there").split(" ")[0];
@@ -9863,7 +9953,8 @@ if(who.value!=="all"){
 const hit=pool.find(x=>x.e.id===who.value); if(!hit) return;
 if(how.value==="email"){
 if(!(hit.e.email||"").trim()){ toast("No email on "+hit.e.name+"\u2019s profile"); return; }
-window.open("mailto:"+encodeURIComponent(hit.e.email)+"?subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(txt.value));
+mailOutAndSay({to:[hit.e.email], subject:subj, body:txt.value, kind:kind}, label+" for "+hit.e.name);
+closeModal(); return;
 } else {
 if(!(hit.e.phone||"").trim()){ toast("No mobile on "+hit.e.name+"\u2019s profile"); return; }
 window.open("sms:"+hit.e.phone.replace(/[^0-9+]/g,"")+"?&body="+encodeURIComponent(txt.value));
@@ -9873,10 +9964,23 @@ save(); closeModal(); return;
 }
 if(how.value==="email"){
 if(!withMail.length){ toast("Nobody has an email address on file"); return; }
-window.open("mailto:?bcc="+encodeURIComponent(withMail.map(x=>x.e.email).join(","))+
-"&subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(txt.value));
-logIt("send","Sent "+label.toLowerCase()+" to "+withMail.length+" people");
-save(); closeModal(); return;
+closeModal();
+ 
+if(mailServerReady()){
+(async()=>{
+let sent=0, failed=[];
+for(const x of withMail){
+const r=await mailOut({to:[x.e.email], subject:subj, body:x.txt, kind:kind});
+sent+=r.sent||0; if(r.failed&&r.failed.length) failed.push(x.e.name);
+}
+if(sent) logIt("send","Emailed "+label.toLowerCase()+" to "+sent+" "+(sent===1?"person":"people"));
+save();
+toast(failed.length? sent+" sent, "+failed.length+" didn\u2019t go" : "Sent to "+sent+" "+(sent===1?"person":"people"));
+})();
+} else {
+mailOutAndSay({to:withMail.map(x=>x.e.email), subject:subj, body:txt.value, kind:kind}, label);
+}
+return;
 }
  
 if(!withPhone.length){ toast("Nobody has a mobile on file"); return; }
