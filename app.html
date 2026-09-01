@@ -1094,8 +1094,10 @@ weekDates(ws).forEach(d=>{
 const on=wk.assignments.filter(a=>a.date===d.date).sort((x,y)=>x.startMin-y.startMin);
 L.push(DAYS[d.dow]+" "+prettyDate(d.date)+(S.hours[d.dow].closed? "  — closed":""));
 if((wk.dayNotes||{})[d.date]) L.push("   NOTE: "+wk.dayNotes[d.date]);
-(wk.assignments||[]).filter(a=>a.date===d.date && shiftNote(ws,d.date,a.empId))
-.forEach(a=>L.push("   "+((empById(a.empId)||{}).name||"")+": "+shiftNote(ws,d.date,a.empId)));
+(wk.assignments||[]).filter(a=>a.date===d.date && shiftNote(ws,d.date,a.empId,a.startMin))
+.forEach(a=>L.push("   "+((empById(a.empId)||{}).name||"")+": "+shiftNote(ws,d.date,a.empId,a.startMin)));
+(wk.assignments||[]).filter(a=>a.date===d.date && a.mentor)
+.forEach(a=>L.push("   "+((empById(a.empId)||{}).name||"")+" is training with "+((empById(a.mentor)||{}).name||"")));
 if(!on.length){ L.push("   nobody scheduled"); }
 else on.forEach(a=>{
 const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
@@ -1235,7 +1237,7 @@ h[k]=(h[k]<<13|h[k]>>>19)>>>0;
 return h.map(x=>(x>>>0).toString(36).padStart(7,"0")).join("");
 }
  
-const UPDREV=5;
+const UPDREV=6;
 function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
 function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
 function updModal(){
@@ -1298,6 +1300,18 @@ modal("A few new questions from the latest update", `
           <option value="24" ${S.rules.remindH===24?"selected":""}>The day before</option>
         </select>
         <span class="mini">New: the alarm rides along inside the calendar file, so it goes off on their own phone. Nothing for them to install, nothing for you to send.</span></div>
+      <div class="field"><label>Anyone still learning the job?</label>
+        <select id="u_tr">
+          <option value="cover" ${traineeExtra()?"":"selected"}>No, or they count as normal cover</option>
+          <option value="extra" ${traineeExtra()?"selected":""}>Yes \u2014 schedule them on top of my cover</option>
+        </select>
+        <span class="mini">New: an \u201cIn training\u201d employment type. As an extra pair of hands they never fill a gap, never work alone, and the day sheet names who they\u2019re with. Give them a finish date and the profile moves itself on.</span></div>
+      <div class="field"><label>Do you employ anyone under 18?</label>
+        <select id="u_min">
+          <option value="0" ${S.rules.minorsOn?"":"selected"}>No</option>
+          <option value="1" ${S.rules.minorsOn?"selected":""}>Yes \u2014 keep their hours inside the law</option>
+        </select>
+        <span class="mini">New: put a date of birth on anyone still at school and the drafter holds them to their age\u2019s limits \u2014 hours on a school day, hours a week, and how late they may finish.</span></div>
       <div class="help">Also new, no answer needed: <b>an open shift can now be offered to the team</b>. Cover the gaps
         writes you a one-page file and the message to go with it \u2014 your people tick what they\u2019d take and send back a
         short code. No accounts, no app for them, and every rule is checked again before anyone lands on the schedule.</div>
@@ -1322,6 +1336,8 @@ if(wsel){ const v=wsel.value==="wanted"?1:wsel.value==="neutral"?0:-1; S.dayDesi
 S.vacations.on = r.querySelector("#u_vac").value==="1";
 const sp=r.querySelector("#u_span"); if(sp) S.rules.stationSpan=sp.value;
 const rm=r.querySelector("#u_rem"); if(rm) S.rules.remindH=+rm.value||0;
+const mn=r.querySelector("#u_min"); if(mn) S.rules.minorsOn=mn.value==="1";
+const tr=r.querySelector("#u_tr"); if(tr) S.rules.traineeCover=tr.value;
 r.querySelectorAll("[data-uhol]").forEach(sel=>{
 const h=S.holidays.list.find(x=>x.id===sel.dataset.uhol);
 if(h){ h.hmode=sel.value; if(sel.value==="closed") h.need={}; }
@@ -1397,6 +1413,7 @@ if(S.sample && !(S.ui&&S.ui.wizOffered)){
 S.ui=S.ui||{}; S.ui.wizOffered=true; save();
 setTimeout(()=>wizard(true), 600);
 }
+if(typeof traineeGraduate==="function") traineeGraduate();
 loaded = true;
 lastJSON = JSON.stringify(S);
 initTheme(); initRail();
@@ -1521,10 +1538,12 @@ DEVLIST=(sn.docs||[]).map(d=>Object.assign({id:d.id}, d.data()||{}))
 return DEVLIST;
 }
 const DEV_LIVE_MS=20*60*1000;
-function devLive(list){ const t=Date.now(); return (list||DEVLIST).filter(d=>t-(d.last||0)<DEV_LIVE_MS); }
+function devLive(list){ const t=Date.now();
+ 
+return (list||DEVLIST).filter(d=>{ const age=t-(d.last||0); return age>=-DEV_LIVE_MS && age<DEV_LIVE_MS; }); }
 function devAgo(ms){
 if(!ms) return "never";
-const m=Math.floor((Date.now()-ms)/60000);
+const m=Math.max(0, Math.floor((Date.now()-ms)/60000));
 if(m<2) return "right now";
 if(m<60) return m+" minutes ago";
 const h=Math.floor(m/60);
@@ -1822,6 +1841,19 @@ if(!s.rules.topUpLabel) s.rules.topUpLabel="Project time";
 if(!s.rules.stationRotation) s.rules.stationRotation="fair";
 if(!s.rules.stationSpan) s.rules.stationSpan="day";
 Object.keys(s.weeks||{}).forEach(k=>{ if(s.weeks[k].offer===undefined) s.weeks[k].offer=null; });
+if(typeof s.rules.minorsOn!=="boolean") s.rules.minorsOn=false;
+s.msg = Object.assign({on:false, tpl:{}}, s.msg||{});
+s.msg.tpl = Object.assign({}, MSG_DEFAULT, s.msg.tpl||{});
+if(!s.org.school) s.org.school={from:"", to:"", days:[1,2,3,4,5]};
+s.employees.forEach(e=>{ if(e.birth===undefined) e.birth="";
+if(e.trainUntil===undefined) e.trainUntil="";
+if(e.trainBecomes===undefined) e.trainBecomes="";
+if(e.trainType===undefined) e.trainType="FT";
+if(!e.trainPlan) e.trainPlan={mode:"random", stations:[], each:3, done:{}}; });
+if(!s.rules.traineeCover) s.rules.traineeCover="extra";
+if(typeof s.rules.askHours!=="number") s.rules.askHours=0;    
+if(!Array.isArray(s.rules.askOrder)) s.rules.askOrder=[];     
+if(!s.rules.sheetNotes) s.rules.sheetNotes="lines";            
 if(typeof s.rules.remindH!=="number") s.rules.remindH=12;
 if(typeof s.rules.auditKeep!=="number") s.rules.auditKeep=730;
 if(!Array.isArray(s.audit)) s.audit=[];
@@ -2159,7 +2191,7 @@ return p? p.name : "Standard week";
  
 function matchDemand(slots, list){
 const want = slots.map(s=>({shiftId:s.shiftId, roleId:s.roleId||null, sh:s.sh, used:null}));
-const left = list.slice();
+const left = list.filter(coversFloor);
 want.filter(w=>w.roleId).forEach(w=>{
 const i = left.findIndex(a=>a.shiftId===w.shiftId && (a.roleId||null)===w.roleId);
 if(i>=0){ w.used=left[i]; left.splice(i,1); }
@@ -2348,8 +2380,16 @@ case "late":  { const bad=hit.filter(a=>a.startMin < t2m(r.time));
 return bad.length? {ok:false, say:"Starts at "+m2disp(bad[0].startMin)+" on "+DSHORT[bad[0].dow]} : {ok:true, say:"Nothing starts too early"}; }
 case "early": { const bad=hit.filter(a=>a.endMin > t2m(r.time));
 return bad.length? {ok:false, say:"Runs to "+m2disp(bad[0].endMin)+" on "+DSHORT[bad[0].dow]} : {ok:true, say:"Out in time every day"}; }
-case "maxh":  { const mins=hit.reduce((t,a)=>t+paidMinutes(a),0);
-return mins <= r.num*60+1? {ok:true, say:fmtHrs(mins)+" of "+r.num+"h"} : {ok:false, say:fmtHrs(mins)+", over the "+r.num+"h they asked for"}; }
+case "maxh":  {
+ 
+const byWeek={};
+hit.forEach(a=>{ const k=weekStartOf(a.date, S.org.weekStart); byWeek[k]=(byWeek[k]||0)+paidMinutes(a); });
+const over=Object.keys(byWeek).filter(k=>byWeek[k] > r.num*60+1);
+if(!over.length){
+const worst=Math.max.apply(null,[0].concat(Object.values(byWeek)));
+return {ok:true, say:fmtHrs(worst)+" of "+r.num+"h in their busiest week"};
+}
+return {ok:false, say:fmtHrs(byWeek[over[0]])+" in the week of "+prettyDate(over[0])+", over the "+r.num+"h they asked for"}; }
 default: return {ok:null, say:"Noted"};
 }
 }
@@ -2386,11 +2426,14 @@ if(!h || !holPolled(h)) return;
 const e=empById(rrow.empId); if(!e||!e.active) return;
 if(onTimeOff(e.id, d.date)) return;                        
 if(assignments.some(a=>a.empId===e.id && a.date===d.date)) return;    
+if(e.licExp && d.date>e.licExp && empLicensed(e)) return;              
 let aMin=null,bMin=null;
 const m=/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec((h.hours||"").trim());
 if(m){ aMin=(+m[1])*60+(+m[2]); bMin=(+m[3])*60+(+m[4]); }
 else { const hr=S.hours[d.dow]; if(hr && !hr.closed){ aMin=t2m(hr.open); bMin=t2m(hr.close); } else { aMin=600; bMin=840; } }
 if(bMin<=aMin) bMin=aMin+240;
+ 
+if(minorsOn() && minorBlock(e, d.date, d.dow, aMin, bMin, 0, ws)) return;
 const match=S.shifts.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===aMin&&y===bMin; });
 const a={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:match? match.id:null,
 startMin:aMin, endMin:bMin, roleId:rrow.roleId||e.roleIds[0]||null, locked:true, holAssign:h.id};
@@ -2489,6 +2532,9 @@ wk.assignments = assignments.sort((x,y)=> x.date.localeCompare(y.date) || x.star
 wk.generatedAt = Date.now();
 wk.unfilled = unfilled;
  
+if(traineeExtra()) placeTrainees(ws);
+
+ 
 if(S.rules.perDiem==="auto" && unfilled.length && S.employees.some(e=>e.active && e.onCall)){
 const still=[];
 unfilled.forEach(u=>{
@@ -2505,6 +2551,8 @@ wk.unfilled = still;
 } else wk.perDiemUsed=0;
 if((S.stations||[]).length){ const T=seedTally(ws);
 dates.forEach(({date})=>{ clearAdmin(date,ws); assignStations(date,ws,T); }); }
+ 
+dates.forEach(({date})=>assignMentors(date,ws));
 return {filled:assignments.length-kept.length, unfilled:wk.unfilled, perDiem:wk.perDiemUsed||0};
 }
 
@@ -2691,6 +2739,10 @@ note("they're already on "+state[e.id].days.size+" days, their limit"); return; 
 S.shifts.forEach(sh=>{
 const [aMin,bMin]=shiftMinutes(sh);
 if(!availOk(e,d.dow,aMin,bMin)){ note("that shift falls outside the hours they can work"); return; }
+{
+const mb=minorsOn()? minorBlock(e, d.date, d.dow, aMin, bMin, state[e.id].min, null) : null;
+if(mb){ note("they\u2019re under 18 and it\u2019s "+mb); return; }
+}
 if(L.maxShiftH && (bMin-aMin) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
 if(L.maxH && state[e.id].min + paidEstimate(aMin,bMin) > L.maxH*60+1){
 note("another shift would take them past their "+L.maxH+"h cap"); return; }
@@ -2727,6 +2779,239 @@ const best=Object.keys(tally).sort((a,b)=>tally[b]-tally[a])[0];
 return best || "nothing left in your shift pool fits without breaking a limit";
 }
 
+ 
+ 
+const MSG_DEFAULT = {
+approved: "Hi {name} \u2014 your request for {dates} is good, you're off. Nothing else needed.",
+declined: "Hi {name} \u2014 sorry, I can't make {dates} work this time; we'd be short on the floor. Happy to look at other dates if you have any flexibility.",
+missed:   "Hi {name} \u2014 I couldn't fit {dates} into the schedule this time. You're on the week as posted \u2014 come and find me if that's a problem.",
+offer:    "Hi {name} \u2014 {shift} on {date} ({time}) is going spare. Want it? Reply {yes} to take it or {no} to pass, {by}.{group}",
+changed:  "Hi {name} \u2014 small change to the posted week: {change}. Sorry for the short notice."
+};
+function msgOn(){ return !!(S.msg && S.msg.on); }
+function msgTpl(kind){ return ((S.msg&&S.msg.tpl)||{})[kind] || MSG_DEFAULT[kind] || ""; }
+function msgFill(kind, vars){
+let t=msgTpl(kind);
+Object.keys(vars||{}).forEach(k=>{ t=t.split("{"+k+"}").join(vars[k]==null?"":String(vars[k])); });
+return t.replace(/\{[a-z]+\}/g,"").replace(/[ \t]{2,}/g," ").trim();
+}
+ 
+function tellModal(title, text, opts){
+opts=opts||{};
+const to=opts.emp||{};
+const canMail=(to.email||"").trim(), canText=(to.phone||"").trim();
+modal(title, `
+    <div class="stack">
+      ${opts.lead? `<div class="help">${opts.lead}</div>`:""}
+      <div class="field"><label>The message${to.name? " to "+esc(to.name):""}</label>
+        <textarea id="tmtxt" style="min-height:130px">${esc(text)}</textarea>
+        <span class="mini">Change any of it before it goes. Nothing is sent until you press one of the buttons below.</span></div>
+      ${(!canMail && !canText && to.name)? `<div class="help">No email or mobile on ${esc(to.name)}\u2019s profile \u2014 copy it and send it however you normally would.</div>`:""}
+    </div>`,
+`<button class="btn" data-close>Don\u2019t send</button>
+     <button class="btn" id="tmcopy">Copy it</button>
+     ${canMail? `<button class="btn primary" id="tmmail">Email it</button>`:""}
+     ${canText? `<button class="btn ${canMail?"":"primary"}" id="tmtext">Text it</button>`:""}`,
+r=>{
+const val=()=>r.querySelector("#tmtxt").value;
+r.querySelector("#tmcopy").onclick=()=>{ copyText(val(),"Copied \u2014 paste it wherever you like"); if(opts.after) opts.after("copy"); };
+const em=r.querySelector("#tmmail");
+if(em) em.onclick=()=>{ window.open("mailto:"+encodeURIComponent(canMail)+"?subject="+encodeURIComponent(opts.subject||"A note about your schedule")+"&body="+encodeURIComponent(val()));
+closeModal(); if(opts.after) opts.after("email"); };
+const tx=r.querySelector("#tmtext");
+if(tx) tx.onclick=()=>{ window.open("sms:"+canText.replace(/[^0-9+]/g,"")+"?&body="+encodeURIComponent(val()));
+closeModal(); if(opts.after) opts.after("text"); };
+});
+}
+ 
+function reqMsgFor(r, ws){
+const e=empById(r.empId)||{name:"there"};
+const dates=(r.from===r.to || !r.to)? prettyFull(r.from) : prettyFull(r.from)+" to "+prettyFull(r.to);
+const kind = r.status==="declined"? "declined"
+: ((reqOutcome(r, ws||S.currentWeek, 1)||{}).ok===false)? "missed" : "approved";
+return {kind, emp:e, text:msgFill(kind, {name:(e.name||"there").split(" ")[0], dates})};
+}
+function tellAboutRequest(r, ws){
+const m=reqMsgFor(r, ws);
+const title=m.kind==="approved"? "Tell them it\u2019s approved"
+: m.kind==="declined"? "Tell them it\u2019s declined" : "Tell them it didn\u2019t fit";
+tellModal(title, m.text, {emp:m.emp, subject:"Your time-off request",
+lead:"Entirely optional \u2014 close this and nothing happens.",
+after:()=>{ r.told=Date.now();
+logIt("req","Told "+m.emp.name+" their request was "+(m.kind==="approved"?"approved":m.kind==="declined"?"declined":"not able to fit"));
+save(); render(); }});
+}
+
+const MINOR_FED = {sd:3, sw:18, nd:8, nw:40, from:"07:00", to:"19:00", summerTo:"21:00"};
+const MINOR_STATE = {
+CA:{ a16:{sd:4, sw:48, nd:8, nw:48, from:"05:00", to:"22:00"} },
+WA:{ a14:{sw:16}, a16:{sd:4, sw:20, nd:8, nw:48, from:"07:00", to:"22:00"} },
+CO:{ a14:{from:"05:00", to:"21:30"} },
+OR:{}, NY:{}, IL:{}, NV:{}, FED:{}, NONE:{}
+};
+function minorsOn(){ return !!(S.rules && S.rules.minorsOn); }
+
+ 
+function twoTrainings(){
+return `<div class="banner info"><div>
+    <b>Two different things, both called training. Here is the difference in one line each.</b>
+    <div style="margin-top:6px"><b>In training</b> \u2014 about the <b>person</b>. Are they counted as one of your staff yet, or an extra pair of hands on top of your cover? Set on their profile, under employment type.</div>
+    <div style="margin-top:4px"><b>Post training</b> \u2014 about <b>one post</b>. Who could use more time on the checking bench, who is comfortable there alone. Only steers which post someone is handed on the day. Never changes anyone\u2019s hours.</div>
+    <div class="mini" style="margin-top:6px">A brand-new hire is usually both: <i>In training</i> so they don\u2019t count as cover, and \u201ccould use more time here\u201d on the posts they haven\u2019t learned. A ten-year veteran who has never worked the drive-through is only the second.</div>
+  </div></div>`;
+}
+function isTrainee(e, date){
+if(!e || e.type!=="TRAIN") return false;
+if(e.trainUntil && date && date > e.trainUntil) return false;    
+return true;
+}
+function traineeExtra(){ return (S.rules.traineeCover||"extra")==="extra"; }
+ 
+function traineeGraduate(){
+const today=ymd(new Date());
+let moved=0;
+S.employees.forEach(e=>{
+if(e.type!=="TRAIN" || !e.trainUntil || e.trainUntil>=today) return;
+e.type = e.trainType||"FT";
+if(e.trainBecomes && !(e.roleIds||[]).includes(e.trainBecomes)) e.roleIds=[e.trainBecomes].concat(e.roleIds||[]);
+logIt("req", e.name+" finished training on "+prettyDate(e.trainUntil)+" \u2014 now "+(TYPES[e.type]||e.type)+
+(e.trainBecomes? " and counted as "+roleName(e.trainBecomes) : ""));
+e.trainUntil=""; moved++;
+});
+if(moved) save();
+return moved;
+}
+ 
+function trainPlan(e){
+const P=e && e.trainPlan;
+if(!P || !P.mode) return {mode:"random", stations:[], each:3, done:{}};
+return {mode:P.mode, stations:P.stations||[], each:P.each||3, done:P.done||{}};
+}
+ 
+ 
+function trainDone(e){
+const done={};
+if(!e) return done;
+Object.keys(S.weeks||{}).forEach(k=>{
+(S.weeks[k].assignments||[]).forEach(a=>{
+if(a.empId!==e.id || !a.station) return;
+done[a.station]=(done[a.station]||0)+1;
+});
+});
+return done;
+}
+function trainWants(e, date){
+if(!isTrainee(e, date||ymd(new Date()))) return null;
+const P=trainPlan(e);
+if(P.mode==="random" || !P.stations.length) return null;
+if(P.mode==="focus") return P.stations[0]||null;
+const done=trainDone(e);
+for(const id of P.stations){                  
+if((done[id]||0) < P.each) return id;
+}
+return null;                                   
+}
+function trainProgress(e){
+const P=trainPlan(e);
+if(P.mode==="random" || !P.stations.length) return "";
+if(P.mode==="focus"){
+const st=stationById(P.stations[0]);
+return st? "Always on "+st.name+" while training" : "";
+}
+const done=trainDone(e);
+const parts=P.stations.map(id=>{
+const st=stationById(id); if(!st) return null;
+return st.name+" "+Math.min(done[id]||0, P.each)+"/"+P.each;
+}).filter(Boolean);
+return parts.join(" \u00b7 ");
+}
+
+ 
+function coversFloor(a){
+if(!a) return false;
+if(a.topUp) return false;
+if(traineeExtra() && a.trainee) return false;
+return true;
+}
+function laborDay(y){ return ymd(nthDow(y, 8, 1, 1)); }         
+function inSummerWindow(date){
+const y=+date.slice(0,4);
+return date >= y+"-06-01" && date <= laborDay(y);
+}
+function ageOnDate(e, date){
+if(!e || !e.birth) return null;
+const b=parseYmd(e.birth), d=parseYmd(date);
+if(isNaN(b) || isNaN(d)) return null;
+let a=d.getFullYear()-b.getFullYear();
+const m=d.getMonth()-b.getMonth();
+if(m<0 || (m===0 && d.getDate()<b.getDate())) a--;
+return a;
+}
+function minorBand(e, date){
+const a=ageOnDate(e, date);
+if(a===null || a>=18) return null;
+return a>=16? "a16" : "a14";       
+}
+function tighter(base, over){
+const r=Object.assign({}, base);
+Object.keys(over||{}).forEach(k=>{
+const v=over[k];
+if(v==null) return;
+if(k==="from") r.from = v>r.from? v : r.from;                  
+else if(k==="to" || k==="summerTo") r[k] = v<r[k]? v : r[k];   
+else r[k] = (typeof r[k]==="number")? Math.min(r[k], v) : v;
+});
+return r;
+}
+function minorRule(band, date){
+const st=MINOR_STATE[S.org.jurisdiction]||{};
+if(band==="a14") return tighter(MINOR_FED, st.a14||{});
+ 
+const s16=st.a16;
+if(!s16) return null;
+return Object.assign({}, s16);
+}
+function schoolDayOn(date){
+const sc=(S.org.school)||{};
+if(!sc.from || !sc.to) return false;                  
+if(date < sc.from || date > sc.to) return false;
+const d=parseYmd(date).getDay();
+if(!(sc.days||[1,2,3,4,5]).includes(d)) return false;
+if((S.holidays.list||[]).some(h=>h.date===date)) return false;
+return true;
+}
+function schoolWeekOn(ws){ return weekDates(ws).some(d=>schoolDayOn(d.date)); }
+
+ 
+function minorBlock(e, date, dow, aMin, bMin, minsSoFar, ws){
+if(!minorsOn()) return null;
+const a=ageOnDate(e, date);
+if(a===null || a>=18) return null;
+if(a<14) return "under 14 — not employable in this kind of work";
+const band=minorBand(e, date);
+const R=minorRule(band, date);
+if(!R) return null;                           
+const sd=schoolDayOn(date), sw=schoolWeekOn(ws||weekStartOf(date, S.org.weekStart));
+const hrs=paidEstimate(aMin,bMin)/60;       
+const dayCap = sd? R.sd : R.nd;
+if(dayCap && hrs > dayCap+0.001)
+return "over the "+dayCap+"-hour limit for a "+(sd?"school day":"non-school day")+" at "+a;
+const weekCap = sw? R.sw : R.nw;
+if(weekCap && (minsSoFar+paidEstimate(aMin,bMin))/60 > weekCap+0.001)
+return "past the "+weekCap+"-hour limit for a "+(sw?"school week":"non-school week")+" at "+a;
+const from=R.from, to=(R.summerTo && inSummerWindow(date))? R.summerTo : R.to;
+if(from && aMin < t2m(from))
+return "starts before "+m2disp(t2m(from))+", the earliest they may work at "+a;
+if(to && bMin > t2m(to))
+return "runs past "+m2disp(t2m(to))+", the latest they may work at "+a;
+if(sd && band==="a14") {
+ 
+return null;    
+}
+return null;
+}
+function minorsListed(){ return S.employees.filter(e=>e.active && e.birth && ageOnDate(e, ymd(new Date()))<18); }
+
 function hardOk(e, slot, date, dow, state, assignments){
 if(!e.active) return false;
 if(e.onCall && !slot._allowOnCall) return false;    
@@ -2737,6 +3022,8 @@ if(!availOk(e,dow,aMin,bMin)) return false;
 if(onTimeOff(e.id,date)) return false;
 if(e.licExp && date>e.licExp && empLicensed(e)) return false;    
 if(!cycleWorksOn(e,date)) return false;              
+if(minorsOn() && minorBlock(e, date, dow, aMin, bMin, (state[e.id]||{min:0}).min, null)) return false;
+if(traineeExtra() && isTrainee(e, date) && !slot._allowTrainee) return false;    
 const st = state[e.id], lim = effLimits(e, date);
 if(st.byDate[date] && st.byDate[date].length) return false;            
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return false;  
@@ -2954,6 +3241,52 @@ return null;
 
 
  
+ 
+function placeTrainees(ws){
+ws = ws||S.currentWeek;
+const wk=getWeek(ws);
+const learners=S.employees.filter(e=>e.active && e.type==="TRAIN");
+if(!learners.length) return;
+const days=weekDates(ws).filter(d=>!S.hours[d.dow].closed);
+learners.forEach(e=>{
+const lim=effLimits(e, ws);
+const wantDays=Math.min(lim.maxD||5, 5);
+ 
+let placed=weekDates(ws).filter(d=>wk.assignments.some(a=>a.empId===e.id && a.date===d.date)).length;
+ 
+const order=days.slice().sort((a,b)=>
+wk.assignments.filter(x=>x.date===b.date).length - wk.assignments.filter(x=>x.date===a.date).length);
+for(const d of order){
+if(placed>=wantDays) break;
+if(!isTrainee(e, d.date)) continue;                  
+if(wk.assignments.some(a=>a.empId===e.id && a.date===d.date)) continue;
+if(onTimeOff(e.id, d.date)) continue;
+if(!cycleWorksOn(e, d.date)) continue;
+ 
+let best=null, bestOverlap=-1;
+S.shifts.forEach(sh=>{
+const [a0,b0]=shiftMinutes(sh);
+if(!availOk(e, d.dow, a0, b0)) return;
+if(minorsOn() && minorBlock(e, d.date, d.dow, a0, b0, empWeekMinutes(e.id, ws), ws)) return;
+if(lim.maxShiftH && (b0-a0) > lim.maxShiftH*60) return;
+if(lim.maxH && empWeekMinutes(e.id, ws)+paidEstimate(a0,b0) > lim.maxH*60+1) return;
+if((S.requests||[]).length && reqBlocks(e, d.date, a0, b0, empWeekMinutes(e.id, ws))) return;
+if(vetoed(e.id, d.date, sh.id)) return;            
+const overlap=wk.assignments.filter(x=>x.date===d.date && x.startMin < b0 && x.endMin > a0).length;
+if(overlap>bestOverlap){ bestOverlap=overlap; best=sh; }
+});
+if(!best || bestOverlap<1) continue;       
+const [aM,bM]=shiftMinutes(best);
+const rec={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:best.id,
+startMin:aM, endMin:bM, roleId:(e.roleIds||[])[0]||null, trainee:true};
+applyBreaks(rec);
+wk.assignments.push(rec);
+placed++;
+}
+});
+wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
+}
+
 function openSlots(ws){
 ws = ws||S.currentWeek;
 const wk=peekWeek(ws), out=[];
@@ -2984,6 +3317,8 @@ const days=empDays(e.id,ws);
 
  
 if(!availOk(e,slot.dow,aMin,bMin)) return;                  
+if(minorBlock(e, slot.date, slot.dow, aMin, bMin, empWeekMinutes(e.id,ws), ws)) return;    
+if(traineeExtra() && isTrainee(e, slot.date)) return;    
 if(!cycleWorksOn(e,slot.date)) return;                      
 if(onTimeOff(e.id,slot.date)) return;                       
 if(lim.maxShiftH && (bMin-aMin) > lim.maxShiftH*60) return; 
@@ -3249,6 +3584,18 @@ save(); closeModal(); redoModal(ws);
  
 function placeInSlot(e, slot, ws, opts){
 opts=opts||{};
+if(traineeExtra() && isTrainee(e, slot.date) && !opts.allowTrainee){
+toast(e.name+" is still learning \u2014 they're an extra pair of hands, not cover for this");
+return;
+}
+if(minorsOn() && !opts.minorOverride){
+const sh0=shiftById(slot.shiftId);
+if(sh0){
+const [a0,b0]=shiftMinutes(sh0);
+const mb=minorBlock(e, slot.date, slot.dow, a0, b0, empWeekMinutes(e.id, ws||S.currentWeek), ws);
+if(mb){ toast(e.name+" is "+ageOnDate(e, slot.date)+" \u2014 that shift is "+mb); return; }
+}
+}
 const sh=shiftById(slot.shiftId); if(!sh) return;
 const [aMin,bMin]=shiftMinutes(sh);
 const wk=getWeek(ws||S.currentWeek);
@@ -3369,6 +3716,256 @@ return "Subject: Shifts going spare \u2014 week of "+prettyDate(ws)+"\n\n"+
 "Ticking isn\u2019t a commitment until I confirm, and if two people want the same shift only one can have it \u2014 so no hard feelings either way.\n\nThanks!";
 }
 
+ 
+function askCode(){
+const A="ACDEFHJKMNPQRTVWXY3479";
+let c=""; for(let i=0;i<4;i++) c+=A[Math.floor(Math.random()*A.length)];
+return c;
+}
+ 
+function askWindowH(dateStr){
+const fixed=S.rules.askHours||0;
+if(fixed) return fixed;
+const hoursAway=(parseYmd(dateStr)-new Date())/3600000;
+let h = hoursAway<=36? 2 : hoursAway<=96? 12 : 24;
+if(S.org.jurisdiction==="WA") h=Math.max(h, 48);    
+return h;
+}
+function askDeadline(ask){ return (ask.at||0) + askWindowH(ask.date)*3600000; }
+function askExpired(ask){ return !ask.answer && Date.now() > askDeadline(ask); }
+function askLeft(ask){
+const ms=askDeadline(ask)-Date.now();
+if(ms<=0) return "no reply in time";
+const m=Math.round(ms/60000);
+if(m<60) return m+" min left to reply";
+const h=Math.round(m/60);
+return h+" hour"+(h===1?"":"s")+" left to reply";
+}
+function weekAsks(ws){ const wk=getWeek(ws||S.currentWeek); wk.asks=wk.asks||[]; return wk.asks; }
+function makeAsk(ws, empId, sl, wave){
+const asks=weekAsks(ws);
+const existing=asks.find(a=>a.empId===empId && a.key===slotKey(sl) && !a.answer);
+if(existing){ if(wave) existing.wave=wave; return existing; }
+let code=askCode(), guard=0;
+while(asks.some(a=>a.code===code) && guard++<50) code=askCode();
+const rec={code, empId, key:slotKey(sl), date:sl.date, shiftId:sl.shiftId, roleId:sl.roleId||null,
+at:0, wave:wave||1, answer:""};        
+asks.push(rec); return rec;
+}
+ 
+function askRound(ws, sl, wave){
+return weekAsks(ws).filter(a=>a.key===slotKey(sl) && (a.wave||1)===wave);
+}
+function askRoundState(ws, sl, wave){
+const list=askRound(ws, sl, wave);
+if(!list.length) return "empty";
+if(list.some(a=>a.answer==="yes")) return "won";
+if(!list.some(a=>a.at)) return "unsent";
+if(list.every(a=>a.answer==="no" || askExpired(a))) return "settled";
+return "waiting";
+}
+function askWaves(ws, sl){
+const ns=[...new Set(weekAsks(ws).filter(a=>a.key===slotKey(sl)).map(a=>a.wave||1))];
+return ns.sort((a,b)=>a-b);
+}
+ 
+function askCurrentWave(ws, sl){
+const waves=askWaves(ws, sl);
+for(const w of waves){
+const st=askRoundState(ws, sl, w);
+if(st==="won") return w;
+if(st!=="settled") return w;
+}
+return waves[waves.length-1]||1;
+}
+function askMessage(ws, ask){
+const e=empById(ask.empId)||{name:"there"};
+const sh=shiftById(ask.shiftId)||{label:"Shift"};
+const [a,b]=shiftMinutes(sh);
+return msgFill("offer", {
+name:(e.name||"there").split(" ")[0],
+shift:sh.label, date:prettyFull(ask.date),
+time:m2disp(a)+" to "+m2disp(b),
+yes:"YES-"+ask.code, no:"NO-"+ask.code,
+by:(function(){ const h=askWindowH(ask.date);
+return h<=4? "within "+h+" hours" : h<=24? "by this time tomorrow" : "within "+Math.round(h/24)+" days"; })(),
+group:(function(){
+const n=weekAsks(ws).filter(a=>a.key===ask.key && (a.wave||1)===(ask.wave||1)).length;
+return n>1? " I\u2019ve asked a few people, so it\u2019s first come first served \u2014 the first clear yes gets it." : "";
+})()
+});
+}
+ 
+function readAsks(ws, text){
+const asks=weekAsks(ws);
+const found=[];
+const re=/\b(Y|YES|N|NO)\s*[-\u2013\u2014_ ]?\s*([ACDEFHJKMNPQRTVWXY3479]{4})\b/gi;
+let m;
+while((m=re.exec(String(text||"")))){
+const yes=/^y/i.test(m[1]);
+const rec=asks.find(a=>a.code.toUpperCase()===m[2].toUpperCase());
+if(!rec) { found.push({unknown:m[2]}); continue; }
+if(found.some(f=>f.rec===rec)) continue;
+found.push({rec, yes});
+}
+return found;
+}
+function askOrderOf(empId){
+const hit=(S.rules.askOrder||[]).find(x=>x.empId===empId);
+return hit? hit.w : null;
+}
+function askModal(ws, slot){
+ws=ws||S.currentWeek;
+const slots=slot? [slot] : openSlots(ws);
+if(!slots.length){ toast("Nothing is open this week"); return; }
+const sl=slots[0];
+const sh=shiftById(sl.shiftId)||{label:"Shift"};
+const cands=offerEligible(sl, ws).map(x=>({e:empById(x.empId), kind:x.kind})).filter(x=>x.e);
+const kindWord=k=>k==="overtime"? "would go into overtime"
+: k==="percall"? "per diem \u2014 this is what they\u2019re for"
+: k==="extra"? "an extra shift, inside their limits" : "breaks no rules at all";
+modal("Who should be asked, and in what order", `
+    <div class="stack">
+      <p class="whead">${esc(sh.label)} on ${esc(DAYS[sl.dow])}, ${esc(prettyDate(sl.date))}.</p>
+      <div class="help">Put people in rounds. <b>Round 1 goes out first.</b> If nobody in it says yes \u2014 or the time runs out \u2014 round 2 becomes available, and so on.
+        Put <b>several people in the same round</b> and they are all asked together, first come first served, and their message says so.
+        Leave someone on \u201cDon\u2019t ask\u201d to skip them.</div>
+      ${cands.length? `<div class="row" style="gap:6px;flex-wrap:wrap">
+          <button class="btn sm" data-quick="prn">All per diem into round 1</button>
+          <button class="btn sm" data-quick="pt">All part-timers into round 1</button>
+          <button class="btn sm" data-quick="clear">Clear</button>
+        </div>
+        <div class="card"><div class="setbody">${cands.map((c)=>`
+        <div class="setrow"><div class="sq"><strong>${esc(c.e.name)}</strong>
+          <div class="mini">${esc(TYPES[c.e.type]||c.e.type||"")} \u00b7 ${esc(kindWord(c.kind))}</div></div>
+          <div class="sc"><select class="askw" data-emp="${esc(c.e.id)}">
+            <option value="0" ${askOrderOf(c.e.id)===0?"selected":""}>Don\u2019t ask</option>
+            ${[1,2,3,4,5,6].map(n=>{
+const saved=askOrderOf(c.e.id);
+const on = saved!=null? (saved===n) : (n===1 && c.kind!=="overtime");
+return `<option value="${n}" ${on?"selected":""}>Round ${n}</option>`;
+}).join("")}
+          </select></div></div>`).join("")}</div></div>`
+: `<div class="banner warn"><div>Nobody on your roster can take this one without a rule being bent. You can still offer it to everyone \u2014 close this and use Offer to the team.</div></div>`}
+      <div class="help">Nothing is sent by Weeksolved. You get each message written and ready, and you paste their replies back here.
+      <b>Fully automatic texting \u2014 a reply of Y updating the schedule on its own \u2014 is coming when we open in January.</b></div>
+    </div>`,
+`<button class="btn" data-close>Not now</button>
+     <button class="btn" id="asksave">Remember this order</button>
+     <button class="btn primary" id="askgo">Write the messages</button>`,
+r=>{
+r.querySelector("#asksave").onclick=()=>{
+S.rules.askOrder=[...r.querySelectorAll(".askw")].map(x=>({empId:x.dataset.emp, w:+x.value}));
+save(); toast("Saved \u2014 the next shift starts from this order");
+};
+r.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>{
+const q=b.dataset.quick;
+r.querySelectorAll(".askw").forEach(selEl=>{
+const e=empById(selEl.dataset.emp)||{};
+if(q==="clear") selEl.value="0";
+else if(q==="prn") selEl.value = e.type==="PRN"? "1" : "0";
+else if(q==="pt")  selEl.value = e.type==="PT"?  "1" : "0";
+});
+});
+r.querySelector("#askgo").onclick=()=>{
+const picks=[...r.querySelectorAll(".askw")].map(x=>({id:x.dataset.emp, w:+x.value})).filter(x=>x.w>0);
+if(!picks.length){ toast("Put at least one person in a round"); return; }
+picks.forEach(x=>makeAsk(ws, x.id, sl, x.w));
+const rounds=[...new Set(picks.map(x=>x.w))].length;
+logIt("post","Lined up "+picks.length+" "+(picks.length===1?"person":"people")+" across "+rounds+" round"+(rounds===1?"":"s")+
+" for the open "+((shiftById(sl.shiftId)||{}).label||"shift")+" on "+prettyDate(sl.date));
+save(); closeModal(true); askSendModal(ws, sl);
+};
+});
+}
+function askSendModal(ws, sl, wave){
+const waves=askWaves(ws, sl);
+const cur = wave || askCurrentWave(ws, sl);
+const asks=askRound(ws, sl, cur);
+const state=askRoundState(ws, sl, cur);
+const nextWave=waves.find(w=>w>cur);
+modal("Round "+cur+" of "+waves.length, `
+    <div class="stack">
+      ${waves.length>1? `<div class="row" style="gap:6px;flex-wrap:wrap">${waves.map(w=>{
+const st=askRoundState(ws, sl, w);
+return `<button class="btn sm ${w===cur?"primary":""}" data-askwave="${w}">Round ${w}${
+st==="won"? " \u2713" : st==="settled"? " \u2014 no" : st==="unsent"? " \u2014 not sent" : ""}</button>`;
+}).join("")}</div>`:""}
+      ${state==="won"? `<div class="banner ok"><div><b>Covered.</b> Someone in this round said yes, so the later rounds aren\u2019t needed.</div></div>`:""}
+      ${state==="settled" && nextWave? `<div class="banner warn"><div><b>Nobody in round ${cur} took it.</b> Round ${nextWave} is ready when you are.</div>
+        <button class="btn sm" id="asknext" style="flex:none;margin-left:auto">Go to round ${nextWave}</button></div>`:""}
+      <div class="help">One message each. Send them however you normally do \u2014 the code in each is what tells Weeksolved who replied.
+        ${asks.length>1? `<div style="margin-top:6px"><b>All ${asks.length} are asked together \u2014 first come first served</b>, and their messages say so.</div>`:""}
+        ${asks.length? `<div style="margin-top:6px"><b>They have ${esc(String(askWindowH(asks[0].date)))} hours to answer.</b>
+        After that it counts as a no and you can move on \u2014 but a late yes is still accepted if the shift is still open.
+        ${S.org.jurisdiction==="WA"? "Set to two days because Seattle\u2019s rules give people that long to accept extra hours." : "Judged by how soon the shift is; change it in Settings."}</div>`:""}</div>
+      ${asks.map((a,i)=>{
+const e=empById(a.empId)||{name:"?"};
+return `<div class="setrow"><div class="sq" style="flex:1 1 100%">
+          <strong>${esc(e.name)}</strong> <span class="chip acc mono">${esc(a.code)}</span>
+          ${a.answer? `<span class="chip ${a.answer==="yes"?"ok":"warn"}">${a.answer==="yes"?"said yes":"said no"}</span>`
+: askExpired(a)? `<span class="chip">no reply in time \u2014 treated as a no</span>`
+: `<span class="chip">${esc(askLeft(a))}</span>`}
+          <div class="mini" style="margin-top:4px">${esc(askMessage(ws, a))}</div>
+          <div class="row" style="gap:6px;margin-top:6px">
+            <button class="btn sm" data-askcopy="${i}">Copy</button>
+            ${(e.phone||"").trim()? `<button class="btn sm" data-asktext="${i}">Text it</button>`:""}
+            ${(e.email||"").trim()? `<button class="btn sm" data-askmail="${i}">Email it</button>`:""}
+          </div></div></div>`;
+}).join("")}
+      <div class="field"><label>Paste their replies here \u2014 one, or the whole thread</label>
+        <textarea id="askin" style="min-height:90px" placeholder="YES-K7M4"></textarea>
+        <span class="mini">Paste as many as you like at once. Weeksolved finds every code in what you paste.</span></div>
+      <div id="askout"></div>
+    </div>`,
+`<button class="btn" data-close>Close</button><button class="btn primary" id="askread">Read the replies</button>`,
+r=>{
+r.querySelectorAll("[data-askwave]").forEach(b=>b.onclick=()=>{ closeModal(true); askSendModal(ws, sl, +b.dataset.askwave); });
+const nx=r.querySelector("#asknext");
+if(nx) nx.onclick=()=>{ closeModal(true); askSendModal(ws, sl, nextWave); };
+const startClock=()=>{ let any=false;
+asks.forEach(a=>{ if(!a.at){ a.at=Date.now(); any=true; } });
+if(any){ logIt("post","Round "+cur+" sent to "+asks.length+" "+(asks.length===1?"person":"people")); save(); } };
+r.querySelectorAll("[data-askcopy]").forEach(b=>b.onclick=()=>{ copyText(askMessage(ws, asks[+b.dataset.askcopy]),"Copied"); startClock(); });
+r.querySelectorAll("[data-asktext]").forEach(b=>b.onclick=()=>{
+const a=asks[+b.dataset.asktext], e=empById(a.empId)||{};
+window.open("sms:"+(e.phone||"").replace(/[^0-9+]/g,"")+"?&body="+encodeURIComponent(askMessage(ws,a)));
+startClock();
+});
+r.querySelectorAll("[data-askmail]").forEach(b=>b.onclick=()=>{
+const a=asks[+b.dataset.askmail], e=empById(a.empId)||{};
+window.open("mailto:"+encodeURIComponent(e.email||"")+"?subject="+encodeURIComponent("A shift going spare")+"&body="+encodeURIComponent(askMessage(ws,a)));
+startClock();
+});
+r.querySelector("#askread").onclick=()=>{
+const out=r.querySelector("#askout");
+const found=readAsks(ws, r.querySelector("#askin").value);
+if(!found.length){ out.innerHTML=`<div class="banner warn"><div>No codes in that. A reply should look like <span class="mono">YES-K7M4</span>.</div></div>`; return; }
+const lines=[];
+let placedAny=false;
+found.forEach(f=>{
+if(f.unknown){ lines.push(`<div class="mini">Code ${esc(f.unknown)} isn\u2019t one of these \u2014 ignored.</div>`); return; }
+const e=empById(f.rec.empId)||{name:"?"};
+f.rec.answer = f.yes? "yes" : "no";
+if(!f.yes){ lines.push(`<div class="setrow"><div class="sq"><strong>${esc(e.name)}</strong> <span class="chip warn">passed</span></div><div class="sc"></div></div>`); return; }
+const late=askExpired(f.rec);
+const still=openSlots(ws).some(o=>slotKey(o)===f.rec.key);
+if(!still){ lines.push(`<div class="setrow"><div class="sq"><strong>${esc(e.name)}</strong> <span class="chip">already covered</span> <div class="mini">someone else has it now</div></div><div class="sc"></div></div>`); return; }
+const target={date:f.rec.date, dow:parseYmd(f.rec.date).getDay(), shiftId:f.rec.shiftId, roleId:f.rec.roleId};
+const opt=optionsFor(target, ws).find(o=>o.emp.id===e.id);
+if(!opt){ lines.push(`<div class="setrow"><div class="sq"><strong>${esc(e.name)}</strong> <span class="chip crit">can\u2019t be placed</span><div class="mini">${esc(whyNot(e, target, ws))}</div></div><div class="sc"></div></div>`); return; }
+opt.apply();
+logIt("change", e.name+" said yes to the open "+((shiftById(f.rec.shiftId)||{}).label||"shift")+" on "+prettyDate(f.rec.date));
+placedAny=true;
+lines.push(`<div class="setrow"><div class="sq"><strong>${esc(e.name)}</strong> <span class="chip ok">on it</span>${late? ` <span class="chip">answered late \u2014 taken anyway</span>`:""}<div class="mini">${esc(opt.why)}</div></div><div class="sc"></div></div>`);
+});
+save();
+out.innerHTML=`<div class="stack">${lines.join("")}</div>`;
+if(placedAny) render();
+};
+});
+}
+
 function offerModal(ws){
 ws=ws||S.currentWeek;
 const slots=openSlots(ws);
@@ -3434,7 +4031,9 @@ const bits=raw.split("|");
 if(bits[0]!=="OS1") return {err:"That\u2019s a code for something else, not an open shift."};
 if(bits[1]!==off.token) return {err:"That code is from an earlier offer. Ask them to open the newest file you sent."};
 const who=bits[2]||"";
-const idx=(bits[3]||"").split(",").map(Number).filter(n=>!isNaN(n));
+const idx=(bits[3]||"").split(",")
+.filter(x=>/^\d+$/.test(x.trim()))           
+.map(Number);
 let emp=empById(who);
 if(!emp) emp=S.employees.find(e=>e.active && e.name.trim().toLowerCase()===who.trim().toLowerCase());
 if(!emp) return {err:"No one on your roster is called \u201c"+who+"\u201d. Add them under Team first, or ask them to pick their name from the list."};
@@ -3507,6 +4106,10 @@ if(sl.roleId && !e.roleIds.includes(sl.roleId)) return "they\u2019re not in the 
 if(onTimeOff(e.id, sl.date)) return "they have time off that day";
 if(!availOk(e, sl.dow, a, b)) return DAYS[sl.dow]+" is a day they don\u2019t work";
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return "they\u2019re already on the schedule that day";
+{
+const mb=minorBlock(e, sl.date, sl.dow, a, b, empWeekMinutes(e.id,ws), ws);
+if(mb) return "they\u2019re "+ageOnDate(e, sl.date)+" and it\u2019s "+mb;
+}
 const lim=effLimits(e, ws);
 const mins=empWeekMinutes(e.id, ws)+paidEstimate(a,b);
 if(lim.maxH && mins/60 > lim.maxH) return "it would put them at "+fmtHrs(mins)+", past their "+lim.maxH+"h cap";
@@ -3560,8 +4163,11 @@ modal("Cover the gaps", `
     </div>`,
 `<button class="btn" data-close>Leave them open</button>
      ${openOffer(ws)? `<button class="btn" id="fixclaim">Enter a reply code</button>`:""}
+     <button class="btn" id="fixask">Ask people one by one</button>
      <button class="btn" id="fixoffer">${openOffer(ws)?"Offer again":"Offer them to the team"}</button>`,
 r=>{
+const fa=r.querySelector("#fixask");
+if(fa) fa.onclick=()=>{ closeModal(true); askModal(ws); };
 const fo=r.querySelector("#fixoffer");
 if(fo) fo.onclick=()=>{ closeModal(true); offerModal(ws); };
 const fc=r.querySelector("#fixclaim");
@@ -3674,7 +4280,7 @@ function stationsOn(dow){ return activeStations().filter(x=>!x.days || !x.days.l
 
  
  
-const SKILL_LEVEL={0:"Still learning", 1:"Can work it", 2:"Signed off — can train others"};
+const SKILL_LEVEL={0:"Could use more time here", 1:"Comfortable on their own", 2:"Can show someone else how"};
 function skillsOn(){ return !!(S.rules&&S.rules.skillsOn) && (S.stations||[]).length>0; }
 function skillOf(e, stationId){
 if(!e || !e.skills) return 1;
@@ -3843,6 +4449,11 @@ const mine=(rec.byStation[st.id]||0);
 const bal=(rec.good||0)-(rec.bad||0);
  
 let skillPen=0;
+ 
+{
+const want=trainWants(x.e, date);
+if(want) skillPen += (want===st.id)? -5000 : 5000;
+}
 if(skillBias.dir){
 const lvl=skillOf(x.e, st.id);
 if(skillBias.dir>0){
@@ -4000,10 +4611,40 @@ function clearAdmin(date, ws){
 getWeek(ws||S.currentWeek).assignments.filter(a=>a.date===date).forEach(a=>{ if(!a.stationLocked) delete a.admin; });
 }
 let STATION_PASS=false;
+ 
+function assignMentors(date, ws){
+const wk=peekWeek(ws||S.currentWeek);
+const list=wk.assignments.filter(a=>a.date===date);
+const learners=list.filter(a=>a.trainee || isTrainee(empById(a.empId), date));
+learners.forEach(a=>{ delete a.mentor; });
+if(!learners.length) return;
+const others=list.filter(a=>!(a.trainee || isTrainee(empById(a.empId), date)))
+.map(a=>({a, e:empById(a.empId)})).filter(x=>x.e);
+if(!others.length) return;
+learners.forEach(a=>{
+const overlap=others.filter(x=>x.a.startMin < a.endMin && x.a.endMin > a.startMin);
+if(!overlap.length) return;
+const myFam=a.station? stFamily(stationById(a.station)) : "";
+const rank=x=>{
+let sc=0;
+if(a.station && x.a.station===a.station) sc -= 100;                  
+else if(myFam && x.a.station && stFamily(stationById(x.a.station))===myFam) sc -= 60;
+if(a.roleId && (x.e.roleIds||[]).includes(a.roleId)) sc -= 20;       
+if(a.station){ const lv=skillOf(x.e, a.station); sc -= lv*15; }      
+if(x.e.type==="FT") sc -= 5;
+const mins=Math.min(x.a.endMin, a.endMin)-Math.max(x.a.startMin, a.startMin);
+sc -= mins/120;                                                      
+return sc;
+};
+overlap.sort((x,y)=>rank(x)-rank(y) || x.e.name.localeCompare(y.e.name));
+a.mentor=overlap[0].e.id;
+});
+}
+
 function assignStationsWeek(ws){
 ws=ws||S.currentWeek;
 const T=seedTally(ws);
-weekDates(ws).forEach(({date})=>{ clearAdmin(date,ws); assignStations(date,ws,T); });
+weekDates(ws).forEach(({date})=>{ clearAdmin(date,ws); assignStations(date,ws,T); assignMentors(date,ws); });
 save();
 }
 
@@ -4339,14 +4980,22 @@ ${lines.join("\n")}</textarea></div>`,
 r=>{ r.querySelector("#rpcopy").onclick=()=>copyText(r.querySelector("#rptxt").value,"Copied"); });
 }
  
-function shiftNote(ws, date, empId){
-const wk=peekWeek(ws||S.currentWeek);
-return ((wk&&wk.shiftNotes)||{})[date+"|"+empId]||"";
+ 
+function noteKey(date, empId, startMin){
+return date+"|"+empId+(startMin==null || isNaN(startMin)? "" : "|"+startMin);
 }
-function setShiftNote(ws, date, empId, txt){
+function shiftNote(ws, date, empId, startMin){
+const wk=peekWeek(ws||S.currentWeek);
+const m=(wk&&wk.shiftNotes)||{};
+const exact=m[noteKey(date, empId, startMin)];
+if(exact!=null) return exact;
+return m[date+"|"+empId]||"";
+}
+function setShiftNote(ws, date, empId, txt, startMin){
 const wk=getWeek(ws||S.currentWeek);
 wk.shiftNotes=wk.shiftNotes||{};
-const k=date+"|"+empId;
+const k=noteKey(date, empId, startMin);
+delete wk.shiftNotes[date+"|"+empId];         
 if(String(txt||"").trim()) wk.shiftNotes[k]=String(txt).trim().slice(0,160);
 else delete wk.shiftNotes[k];
 }
@@ -4358,7 +5007,7 @@ auditPrune();
 function auditPrune(){
 const keep=S.rules.auditKeep||0;
 if(keep>0){ const cut=Date.now()-keep*86400000; S.audit=S.audit.filter(x=>x.at>=cut); }
-if(S.audit.length>1500) S.audit=S.audit.slice(-1500);    
+if(S.audit.length>6000) S.audit=S.audit.slice(-6000);    
 }
 function auditPost(ws, choice){
 const wk=peekWeek(ws);
@@ -4560,7 +5209,8 @@ if(lim.canBeAlone===false){
 mine.forEach(a=>{
 const day=dayList(a.date, ws);
 for(let t=a.startMin;t<a.endMin;t+=30){
-if(onDutyAt(day,t,null)===1 && t>=a.startMin && t<a.endMin){
+ 
+if(onDutyAt(day,t,null)===1 && onDutyAt(day.filter(x=>x.empId===e.id),t,null)===1){
 push("crit","Left on their own — "+e.name,
 DSHORT[a.dow]+" around "+m2disp(t)+", and "+(lim.aloneGroup||"their group")+" is set never to work alone.", {date:a.date,empId:e.id});
 break;
@@ -5572,10 +6222,59 @@ sel("rules.sendOut", [[1,"On"],[0,"Off"]], sendOn()?1:0))}
 const on=S.employees.filter(e=>e.active);
 const em=on.filter(e=>(e.email||"").trim()).length, ph=on.filter(e=>(e.phone||"").trim()).length;
 return em+" of "+on.length+" have an email, "+ph+" have a mobile — add them on each profile";})(), "", "team") : ""}
+      ${(S.employees.some(e=>e.active&&e.type==="TRAIN") || skillsOn())? `<div class="setrow"><div class="sq" style="flex:1 1 100%">${twoTrainings()}</div></div>` : ""}
+      ${setRow("How long people get to answer about a shift", S.rules.askHours
+? "Always "+S.rules.askHours+" hours, whatever the shift"
+: "Judged by how soon the shift is \u2014 2 hours for tomorrow, 12 for this week, a day for anything further out"+
+(S.org.jurisdiction==="WA"? ", and never under two days, which is what Seattle\u2019s rules require for extra hours":""),
+sel("rules.askHours", [[0,"Judge it by how soon the shift is"],[2,"2 hours"],[6,"6 hours"],[12,"12 hours"],[24,"A day"],[48,"Two days"],[72,"Three days"]], S.rules.askHours||0))}
+      ${setRow("When nobody answers in time", "It counts as a no, so you can stop waiting and try someone else. Nothing is held against them, and if they answer late you can still give them the shift as long as it\u2019s open.", "")}
+      ${setRow("Messages to staff about their requests (optional)", msgOn()
+? "On \u2014 a Tell them button on every request, and declining one offers the message straight away. Nothing is ever sent for you: \u201cDon\u2019t send\u201d is always the first button, and you can edit every word first."
+: "Off \u2014 no message is ever offered. Turn it on and you get a ready-written note when you approve or decline, which you can change, send, or throw away.",
+`<select data-set="msg.on"><option value="0" ${msgOn()?"":"selected"}>Off</option><option value="1" ${msgOn()?"selected":""}>On</option></select>`)}
+      ${msgOn()? setRow("What those messages say", "Rewrite them once and every message follows. {name} and {dates} fill themselves in.",
+`<button class="btn sm" id="settpl">Edit the wording</button>`) : ""}
+      ${setRow("People still learning the job (optional)", (()=>{
+const t=S.employees.filter(e=>e.active && e.type==="TRAIN");
+if(!t.length) return "Nobody is marked as in training. Set someone\u2019s employment type to \u201cIn training\u201d and they show up here.";
+return t.length+" in training: "+esc(t.map(x=>x.name.split(" ")[0]+(x.trainUntil? " until "+prettyDate(x.trainUntil):"")).join(", "));
+})(),
+`<select data-set="rules.traineeCover">
+          <option value="extra" ${traineeExtra()?"selected":""}>An extra pair of hands</option>
+          <option value="cover" ${traineeExtra()?"":"selected"}>Counts as one of the team</option>
+        </select>`)}
+      ${setRow("What that means", traineeExtra()
+? "They are scheduled on top of the cover you need, on your busiest days and never on the floor alone \u2014 so a gap is never filled by someone still learning."
+: "They are scheduled like anyone else and count towards your coverage. Use this once they can hold a post on their own.",
+"", "team")}
+      ${setRow("Under-18 hour limits (optional)", minorsOn()
+? (()=>{const m=minorsListed();
+return m.length? m.length+" on the roster: "+esc(m.map(x=>x.name.split(" ")[0]+" ("+ageOnDate(x,ymd(new Date()))+")").join(", "))
+: "On \u2014 add a date of birth on anyone under 18 and their shifts stay inside the law automatically";})()
+: "Off \u2014 turn it on if you employ anyone under 18 and the drafter will keep their hours, days and finish times lawful",
+`<select data-set="rules.minorsOn"><option value="0" ${minorsOn()?"":"selected"}>Off</option><option value="1" ${minorsOn()?"selected":""}>On</option></select>`)}
+      ${minorsOn()? setRow("Your local school year", (S.org.school&&S.org.school.from)
+? "Term runs "+esc(prettyDate(S.org.school.from))+" to "+esc(prettyDate(S.org.school.to))+" \u2014 school days are Mon to Fri, minus any holiday you\u2019ve listed"
+: "Not set \u2014 without term dates every day counts as a non-school day, which is the more generous limit. Set it so school-day limits actually apply.",
+`<input type="date" data-bind="org.school.from" value="${esc((S.org.school||{}).from||"")}" data-rerender="no" style="max-width:150px">
+         <input type="date" data-bind="org.school.to" value="${esc((S.org.school||{}).to||"")}" data-rerender="no" style="max-width:150px">`) : ""}
+      ${minorsOn()? setRow("What the law says where you are", (()=>{
+const R14=minorRule("a14", ymd(new Date())), R16=minorRule("a16", ymd(new Date()));
+const line=(n,R)=>R? n+": "+R.sd+"h on a school day, "+R.nd+"h otherwise, "+R.sw+"h a school week, until "+m2disp(t2m(R.to)) : n+": no hour limits in "+esc(law().name);
+return esc(line("14\u201315", R14))+" \u00b7 "+esc(line("16\u201317", R16));
+})(),
+"", "org") : ""}
       ${setRow("Remind people before a shift (optional)", S.rules.remindH
 ? "Their own phone reminds them "+(S.rules.remindH===1?"an hour":S.rules.remindH+" hours")+" before \u2014 the alarm rides along in the calendar file, so nothing has to be installed and nothing has to be sent"
 : "Off \u2014 the calendar file carries the shift but sets no alarm",
 sel("rules.remindH", [[0,"No reminder"],[1,"1 hour before"],[2,"2 hours before"],[3,"3 hours before"],[12,"12 hours before"],[24,"The day before"],[48,"Two days before"]], S.rules.remindH||0))}
+      ${setRow("Room to write on the printed day sheet", (S.rules.sheetNotes||"lines")==="off"
+? "No notes column \u2014 the sheet is as tight as it can be"
+: (S.rules.sheetNotes==="wide"
+? "A wide ruled column beside each person, and eight lines at the foot"
+: "A ruled column beside each person, and five lines at the foot"),
+sel("rules.sheetNotes", [["lines","A column to write in, plus lines at the foot"],["wide","Give me more room"],["off","No writing space"]], S.rules.sheetNotes||"lines"))}
       ${setRow("Notes on a single shift (optional)", "A line just for one person on one day \u2014 truck arriving, a hand-over, training. Type it on the day sheet under their name; it prints, exports and travels with their calendar file.", "", "day")}
       ${setRow("The daily sheet", "Always generated with every schedule — hour by hour, with meals, breaks and anything that needs covering", "", "day")}
       ${setRow("Posts on the floor (optional)", (S.stations||[]).length? (S.stations||[]).filter(x=>x.kind!=="admin").length+" posts, "+(S.stations||[]).filter(x=>x.kind==="admin").length+" duties — handed out on the day sheet only" : "none — the day sheet still prints, it just doesn't name posts", "", "stations")}
@@ -5636,11 +6335,13 @@ sel("ui.advanced", [[0,"Keep it simple"],[1,"Show everything"]], advanced()?1:0)
       ${setRow("Keep the record of changes for", (S.audit||[]).length
 ? (S.audit||[]).length+" entries on file \u2014 who changed what after a schedule went up, and who was told"
 : "Nothing recorded yet \u2014 entries start the first time you change a posted schedule",
-sel("rules.auditKeep", [[90,"90 days"],[365,"A year"],[730,"Two years"],[0,"Keep everything"]], S.rules.auditKeep||0)+
+sel("rules.auditKeep", [[90,"90 days"],[365,"A year"],[730,"Two years"],[0,"As long as it fits (about 6,000 entries)"]], S.rules.auditKeep||0)+
 ` <button class="btn sm" data-go="analytics">See it →</button>`)}
       ${setRow("Your data", "A backup restores this whole board on any device",
 `<button class="btn sm" id="setbak">Download a backup</button><button class="btn sm" id="setrestore">Restore</button>`)}
-      ${setRow("Start over", "Clears the roster, rules, schedules and requests", `<button class="btn sm danger" id="setclear">Clear everything</button>`)}
+      ${setRow("Start over", "Wipes everything and takes you straight back to the setup questions, exactly as if the account were new. Useful for a practice run.",
+`<button class="btn sm danger" id="setreset">Reset and start the questions again</button>`)}
+      ${setRow("Empty the board", "Clears the roster, rules, schedules and requests and leaves you on a blank board, without re-asking anything", `<button class="btn sm danger" id="setclear">Clear everything</button>`)}
     </div></div>
   </div>`;
 }
@@ -5648,8 +6349,8 @@ WIRE.settings = root=>{
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm"];
-const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH","rules.remindH","rules.auditKeep"];
+const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","msg.on"];
+const numPaths=["org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
 if(path==="priority.mode" && v==="custom" && !(S.priority.order||[]).length) S.priority.order=priorityOrder();
@@ -5726,6 +6427,45 @@ if(typeof cloudOn==="function" && cloudOn() && FB && FB.user && Date.now()-(WIRE
 WIRE._devAt=Date.now();
 deviceFetch().then(()=>{ if(VIEW==="settings") render(); });
 }
+const tpl=root.querySelector("#settpl");
+if(tpl) tpl.onclick=()=>modal("What your messages say", `
+    <div class="stack">
+      <div class="help">These are yours to change. <span class="mono">{name}</span> becomes their first name and <span class="mono">{dates}</span> the dates they asked for. Leave any of them blank to go back to the standard wording.</div>
+      ${[["approved","When a request works out"],["declined","When you decline one"],["missed","When it couldn\u2019t be fitted in"]].map(([k,lab])=>
+`<div class="field"><label>${esc(lab)}</label><textarea data-tpl="${k}" style="min-height:70px">${esc(msgTpl(k))}</textarea></div>`).join("")}
+    </div>`,
+`<button class="btn" data-close>Cancel</button><button class="btn" id="tplreset">Back to standard</button><button class="btn primary" id="tplsave">Save the wording</button>`,
+r=>{
+r.querySelector("#tplsave").onclick=()=>{
+S.msg=S.msg||{on:true, tpl:{}};
+r.querySelectorAll("[data-tpl]").forEach(t=>{
+const v=t.value.trim();
+S.msg.tpl[t.dataset.tpl] = v || MSG_DEFAULT[t.dataset.tpl];
+});
+save(); closeModal(); render(); toast("Wording saved");
+};
+r.querySelector("#tplreset").onclick=()=>{
+S.msg=S.msg||{on:true, tpl:{}};
+S.msg.tpl=Object.assign({}, MSG_DEFAULT);
+save(); closeModal(); render(); toast("Back to the standard wording");
+};
+});
+const rst=root.querySelector("#setreset");
+if(rst) rst.onclick=()=>modal("Reset everything and start over?",
+`<p>This wipes the roster, shifts, cover, rules, schedules, requests, holidays and every setting \u2014 then re-opens the setup questions from the first one, exactly as a brand-new account sees them.</p>
+     <p class="help">There is no undo. Take a backup first if there is anything here you want to keep.</p>`,
+`<button class="btn" data-close>Keep my data</button>
+     <button class="btn sm" id="rsbak">Back it up first</button>
+     <button class="btn danger" id="rsgo2">Reset and start the questions</button>`,
+r=>{
+r.querySelector("#rsbak").onclick=()=>saveFile("weeksolved-backup.json", JSON.stringify(S,null,2));
+r.querySelector("#rsgo2").onclick=()=>{
+S=blankState();
+S.currentWeek=addDays(weekStartOf(ymd(new Date()),S.org.weekStart),7);
+priorityRefresh(); save(); closeModal(true); go("home");
+setTimeout(()=>wizard(), 250);
+};
+});
 const cl=root.querySelector("#setclear");
 if(cl) cl.onclick=()=>modal("Clear everything?",
 `<p>This removes the roster, buckets, shifts, cover, rules, schedules, requests and holidays, and leaves you an empty board. There's no undo.</p>`,
@@ -5971,7 +6711,7 @@ save(); closeModal(); render();
 }
 
  
-const TYPES={FT:"Full time",PT:"Part time",PRN:"Per diem / PRN",TEMP:"Temp / seasonal"};
+const TYPES={FT:"Full time",PT:"Part time",PRN:"Per diem / PRN",TEMP:"Temp / seasonal",TRAIN:"In training \u2014 learning the job"};
 function vTeam(){
 const ws=S.currentWeek;
 return `
@@ -6319,18 +7059,61 @@ modal(id?"Edit "+e.name:"Add someone", `
       ${DAYS.map((d,i)=>`<label class="switch" style="border:1px solid var(--line);padding:4px 8px;border-radius:6px;font-size:12px">
         <input type="checkbox" data-d="${i}" ${(e.prefDaysOff||[]).includes(i)?"checked":""}> ${DSHORT[i]}</label>`).join("")}</div>
       <span class="mini">A preference, not a block — the scheduler avoids these unless it has no other way to cover.</span></div>
+    ${e.type==="TRAIN"? `<div class="card" style="margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px">
+      <div class="lab" style="margin-bottom:8px">While they\u2019re learning the job</div>
+      <div class="grid2">
+        <div class="field"><label>Training finishes on (optional)</label>
+          <input type="date" id="etru" value="${esc(e.trainUntil||"")}">
+          <span class="mini">On this date their profile moves itself on \u2014 nothing for you to remember.</span></div>
+        <div class="field"><label>Then they become</label>
+          <select id="etrt">${Object.keys(TYPES).filter(k=>k!=="TRAIN").map(k=>`<option value="${k}" ${(e.trainType||"FT")===k?"selected":""}>${esc(TYPES[k])}</option>`).join("")}</select></div>
+      </div>
+      ${(S.roles||[]).length? `<div class="field"><label>And count as (optional)</label>
+        <select id="etrb"><option value="">No change to their groups</option>
+          ${S.roles.map(rr=>`<option value="${rr.id}" ${e.trainBecomes===rr.id?"selected":""}>${esc(rr.name)}</option>`).join("")}</select>
+        <span class="mini">A technician training to be a pharmacist would pick Pharmacist here.</span></div>`:""}
+      ${(S.stations||[]).length? `<div class="field"><label>Posts they need time on</label>
+        <select id="etrm">
+          <option value="random" ${trainPlan(e).mode==="random"?"selected":""}>No preference \u2014 wherever they\u2019re needed</option>
+          <option value="focus" ${trainPlan(e).mode==="focus"?"selected":""}>One post until they have it</option>
+          <option value="rotate" ${trainPlan(e).mode==="rotate"?"selected":""}>Rotate through a few, so many shifts each</option>
+        </select></div>
+        <div id="etrwrap" style="display:${trainPlan(e).mode==="random"?"none":""}">
+          <div class="field"><label>Which post${trainPlan(e).mode==="rotate"?"s":""}</label>
+            <div class="row" style="flex-wrap:wrap;gap:6px">${(S.stations||[]).filter(x=>x.kind!=="admin").map(st=>
+`<label class="switch" style="border:1px solid var(--line);border-radius:7px;padding:5px 9px">
+                 <input type="checkbox" class="etrst" value="${esc(st.id)}" ${trainPlan(e).stations.includes(st.id)?"checked":""}> ${esc(st.name)}</label>`).join("")}</div></div>
+          <div class="field" id="etreachwrap" style="display:${trainPlan(e).mode==="rotate"?"":"none"}">
+            <label>How many shifts on each before moving on</label>
+            <select id="etreach">${[1,2,3,4,5,6,8,10].map(n=>`<option value="${n}" ${trainPlan(e).each===n?"selected":""}>${n} shift${n===1?"":"s"}</option>`).join("")}</select></div>
+          ${trainProgress(e)? `<span class="mini">So far: ${esc(trainProgress(e))}</span>`:""}
+        </div>`:""}
+      <div class="help" style="margin-top:8px">This is about <b>${esc((e.name||"they").split(" ")[0])} as a whole</b> \u2014 whether they count as cover yet. It is not the same as the post-by-post training record further down, which is only about which posts suit them on the day.</div>
+    </div>`:""}
+    ${minorsOn()? `<div class="grid2">
+      <div class="field"><label>Date of birth (only if they\u2019re under 18)</label>
+        <input type="date" id="edob" value="${esc(e.birth||"")}">
+        <span class="mini">${e.birth
+? (ageOnDate(e, ymd(new Date()))<18
+? "Age "+ageOnDate(e, ymd(new Date()))+" \u2014 the under-18 hour limits apply to them"
+: "Age "+ageOnDate(e, ymd(new Date()))+" \u2014 no limits apply, you can clear this")
+: "Leave blank for anyone 18 or over. Used only to keep their shifts inside the law."}</span></div>
+      <div class="field"></div>
+    </div>`:""}
     ${(S.roles||[]).some(r=>r.licensed)? `<div class="grid2" id="elicwrap" style="display:${(e.roleIds||[]).some(id=>{const rr=roleById(id);return rr&&rr.licensed;})?"":"none"}">
       <div class="field"><label>License / certification expires</label><input type="date" id="elic" value="${esc(e.licExp||"")}">
         <span class="mini">Optional. With a date set, the drafter never schedules them past it and starts warning 30 days out.</span></div>
       <div class="field"><label>What it is (optional)</label><input type="text" id="elicn" value="${esc(e.licLabel||"")}" placeholder="RPh license · CPR certification"></div>
     </div>`:""}
-    ${skillsOn()? `<div class="field"><label>Trained on</label>
+    ${skillsOn()? `<div class="field"><label>Post training \u2014 how each post is going for them</label>
       <div class="stack" style="gap:5px">${(S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).map(st=>`
         <div class="desrow"><strong style="font-size:12.5px;min-width:0;flex:1">${esc(st.name)}</strong>
           <select class="eskill" data-st="${esc(st.id)}" style="margin-left:auto;max-width:210px">
             ${[1,0,2].map(v=>`<option value="${v}" ${skillOf(e,st.id)===v?"selected":""}>${esc(SKILL_LEVEL[v])}</option>`).join("")}
           </select></div>`).join("")}</div>
-      <span class="mini">A record of training, not a rating of the person — it only ever affects which post they're handed, never their hours, and it never appears on anything staff see. Set it on one post of a rotation and its siblings follow.</span></div>`:""}
+      <span class="mini"><b>Only you can see this.</b> It never appears on the schedule, the day sheet, a printout, an export, or anything sent to staff \u2014 there is no trace of it anywhere they can reach.
+      It is a note about <b>training and development on each post</b>, not a judgement of the person: "could use more time here" covers someone fully trained who still wants support on that post, not just a new starter.
+      It only ever nudges which post they are handed on the day \u2014 never their hours, their pay, or how many shifts they get. Set it on one post of a rotation and its siblings follow.</span></div>`:""}
     ${ptoOn()? `<div class="field"><label>PTO</label><div class="grid3" style="align-items:end">
       <div class="field"><label class="mini">Balance now (hours)</label><input type="number" step="0.5" id="eptob" value="${(e.pto&&e.pto.bal)||0}"></div>
       <div class="field"><label class="mini">As of</label><input type="date" id="eptoa" value="${esc((e.pto&&e.pto.anchor)||ymd(new Date()))}"></div>
@@ -6386,6 +7169,21 @@ const paintHP=()=>{ root.querySelector("#ehphwrap").style.display = hp.value==="
 hp.onchange=paintHP; paintHP();
 const pp=root.querySelector("#eptop");
 if(pp) pp.onchange=()=>{ root.querySelector("#eptorw").style.display = pp.value==="none"?"none":""; };
+{
+const et=root.querySelector("#et");
+if(et) et.addEventListener("change",()=>{
+const cur=root.querySelector("#etrm");
+e.type=et.value;
+if(!cur && et.value==="TRAIN"){ save(); closeModal(true); setTimeout(()=>empModal(e.id),0); }
+else if(cur && et.value!=="TRAIN"){ save(); closeModal(true); setTimeout(()=>empModal(e.id),0); }
+});
+const tm=root.querySelector("#etrm");
+if(tm) tm.addEventListener("change",()=>{
+const w=root.querySelector("#etrwrap"), ea=root.querySelector("#etreachwrap");
+if(w) w.style.display = tm.value==="random"? "none" : "";
+if(ea) ea.style.display = tm.value==="rotate"? "" : "none";
+});
+}
 const lw=root.querySelector("#elicwrap");
 if(lw) root.querySelectorAll("#eroles input").forEach(cb=>cb.addEventListener("change",()=>{
 const on=[...root.querySelectorAll("#eroles input:checked")].some(x=>{const rr=roleById(x.dataset.r);return rr&&rr.licensed;});
@@ -6428,6 +7226,18 @@ prefDaysOff:[...root.querySelectorAll("#epoff input:checked")].map(x=>+x.dataset
 canOpen:true,canClose:true,
 pto: root.querySelector("#eptob")? {bal:+root.querySelector("#eptob").value||0, anchor:root.querySelector("#eptoa").value||ymd(new Date()),
 per:root.querySelector("#eptop").value, rate:+root.querySelector("#eptor").value||0} : (e.pto||null),
+birth:((root.querySelector("#edob")||{}).value||"")||(root.querySelector("#edob")?"":e.birth||""),
+trainUntil:((root.querySelector("#etru")||{}).value||"")||(root.querySelector("#etru")?"":e.trainUntil||""),
+trainType:((root.querySelector("#etrt")||{}).value)||e.trainType||"FT",
+trainBecomes:(root.querySelector("#etrb")? root.querySelector("#etrb").value : (e.trainBecomes||"")),
+trainPlan:(function(){
+const m=root.querySelector("#etrm");
+if(!m) return e.trainPlan||{mode:"random", stations:[], each:3, done:{}};
+return {mode:m.value,
+stations:[...root.querySelectorAll(".etrst:checked")].map(c=>c.value),
+each:+((root.querySelector("#etreach")||{}).value||3),
+done:(e.trainPlan&&e.trainPlan.done)||{}};
+})(),
 licExp:((root.querySelector("#elic")||{}).value||"")||(e.licExp&&!root.querySelector("#elic")?e.licExp:""),
 licLabel:(((root.querySelector("#elicn")||{}).value)||(root.querySelector("#elicn")?"":e.licLabel||"")).trim(),
 notes:root.querySelector("#enotes").value.trim(),
@@ -7373,7 +8183,11 @@ a.roleId=r.querySelector("#ar").value||null;
 a.empId=r.querySelector("#am").value;
 a.locked=r.querySelector("#al").checked;
 applyBreaks(a);
-r.querySelectorAll(".bm").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]){ a.breaks.meals[i].start=t2m(inp.value); a.breaks.meals[i].end=a.breaks.meals[i].start+a.breaks.meals[i].len; a.breaks.meals[i].late=a.breaks.meals[i].start>a.breaks.meals[i].deadline; } });
+r.querySelectorAll(".bm").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]){ { let v=t2m(inp.value);
+ 
+while(v < a.startMin) v+=1440;
+a.breaks.meals[i].start=v; }
+a.breaks.meals[i].end=a.breaks.meals[i].start+a.breaks.meals[i].len; a.breaks.meals[i].late=a.breaks.meals[i].start>a.breaks.meals[i].deadline; } });
 r.querySelectorAll(".bw").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]) a.breaks.meals[i].waived=inp.checked; });
 closeModal(); headsUp(()=>{ save(); render(); }, "Saved");
 };
@@ -7775,8 +8589,10 @@ return `<tr>
               ${a.topUp? `<div class="mini"><span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span></div>`:""}
               ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn">${esc(d.name)}</span></div>`).join(""):""}
               ${myRelief.map(x=>`<div class="mini"><span class="chip acc">Covers ${esc(x.station.name)} ${m2disp(x.start)}–${m2disp(x.end)}</span></div>`).join("")}
-              <input type="text" class="snote" data-snote="${esc(a.empId)}" data-rerender="no" maxlength="160"
-                value="${esc(shiftNote(ws, date, a.empId))}" placeholder="Note for this shift…"></td>
+              ${a.mentor? `<div class="mini"><span class="chip acc">Learning \u2014 with ${esc((empById(a.mentor)||{name:"?"}).name)}</span></div>`
+: (a.trainee||isTrainee(e,date))? `<div class="mini"><span class="chip warn">Learning \u2014 nobody free to pair with</span></div>`:""}
+              <input type="text" class="snote" data-snote="${esc(a.empId)}" data-snotestart="${a.startMin}" data-rerender="no" maxlength="160"
+                value="${esc(shiftNote(ws, date, a.empId, a.startMin))}" placeholder="Note for this shift\u2026"></td>
             ${(S.stations||[]).length? `<td>${(a.stationPlan&&a.stationPlan.length)
 ? a.stationPlan.map(b2=>{ const p=stationById(b2.st)||{name:"—"};
 return `<div class="stblk"><span class="mono">${m2disp(b2.from)}–${m2disp(b2.to)}</span>
@@ -7962,8 +8778,9 @@ WIRE.day = root=>{
 root.querySelectorAll("[data-snote]").forEach(el=>el.addEventListener("input",()=>{
 const ws=S.currentWeek;
 const en=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
-setShiftNote(ws, en.date, el.dataset.snote, el.value);
-save();
+setShiftNote(ws, en.date, el.dataset.snote, el.value, +el.dataset.snotestart);
+ 
+clearTimeout(bindSaveTimer); bindSaveTimer=setTimeout(save, 500);
 }));
 root.querySelectorAll("[data-covergap]").forEach(btn=>btn.onclick=()=>{
 const ws=S.currentWeek;
@@ -8133,7 +8950,8 @@ doc.text(wk.dayNotes[entry.date], 78, 76, {maxWidth:doc.internal.pageSize.getWid
 tableY=94;
 }
 doc.autoTable({
-head:[[ "Employee" ].concat((S.stations||[]).length?["Station"]:[]).concat(["Role","In","Out","Meal","Rest breaks","Paid"])],
+head:[[ "Employee" ].concat((S.stations||[]).length?["Station"]:[]).concat(["Role","In","Out","Meal","Rest breaks","Paid"])
+.concat((S.rules.sheetNotes||"lines")!=="off"? ["Notes"]:[])],
 body:list.map(a=>{
 const e=empById(a.empId)||{name:"—"}, b=a.breaks||{meals:[],rests:[],owed:{meals:0,rests:0}};
 const mealTxt = !b.owed.meals? "not owed"
@@ -8145,16 +8963,27 @@ const restTxt = !b.owed.rests? "not owed"
 : b.owed.rests+"×"+(L.rest?L.rest.lengthMin:10)+"m staff-timed";
 const stn=a.station?stationById(a.station):null, stn2=a.station2?stationById(a.station2):null;
 const duties=(a.admin||[]).map(x=>(stationById(x)||{}).name).filter(Boolean);
-const nt=shiftNote(ws, entry.date, a.empId);
-const row=[e.name+(duties.length? "\n"+duties.join(", "):"")+(nt? "\n"+nt:"")];
+const nt=shiftNote(ws, entry.date, a.empId, a.startMin);
+const mn=a.mentor? (empById(a.mentor)||{}).name : "";
+const row=[e.name+(mn? "\ntraining with "+mn : "")+(duties.length? "\n"+duties.join(", "):"")+(nt? "\n"+nt:"")];
 if((S.stations||[]).length) row.push((stn?stn.name:"—")+(stn2?"\nthen "+stn2.name:""));
-return row.concat([roleAbbr(a.roleId), m2disp(a.startMin), m2disp(a.endMin), mealTxt, restTxt, fmtHrs(paidMinutes(a))]);
+return row.concat([roleAbbr(a.roleId), m2disp(a.startMin), m2disp(a.endMin), mealTxt, restTxt, fmtHrs(paidMinutes(a))])
+.concat((S.rules.sheetNotes||"lines")!=="off"? [nt||""]:[]);
 }),
 startY:tableY, styles:{fontSize:8.2,cellPadding:5,lineColor:[210,216,214],lineWidth:.5},
 headStyles:{fillColor:[28,106,102],textColor:255}, alternateRowStyles:{fillColor:[246,248,247]},
 columnStyles:{0:{fontStyle:"bold",cellWidth:104}}, margin:{left:40,right:40}
 });
 let y=doc.lastAutoTable.finalY+20;
+if((S.rules.sheetNotes||"lines")!=="off"){
+const PW=doc.internal.pageSize.getWidth();
+const rows=(S.rules.sheetNotes==="wide")? 8 : 5;
+doc.setFont("helvetica","bold"); doc.setFontSize(8.6); doc.setTextColor(105,119,115);
+doc.text("ANYTHING ELSE ABOUT TODAY", 40, y); y+=10;
+doc.setDrawColor(228,233,231); doc.setLineWidth(0.5);
+for(let i=0;i<rows;i++){ y+=15; doc.line(40, y, PW-40, y); }
+y+=22;
+}
 doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(20,32,30);
 doc.text("Break rules — "+L.name, 40, y); y+=13;
 doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90,102,99);
@@ -8174,11 +9003,15 @@ const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(S.org.
   table{border-collapse:collapse;width:100%;font-size:12.5px}th{text-align:left;background:#1c6a66;color:#fff;padding:7px 9px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
   td{padding:7px 9px;border-bottom:1px solid #d2d8d6}tr:nth-child(even) td{background:#f6f8f7}
   .note{margin-top:20px;font-size:11.5px;color:#697773;border-top:1px solid #d2d8d6;padding-top:12px}
+  td.wr{background:repeating-linear-gradient(transparent,transparent 17px,#e4e9e7 17px,#e4e9e7 18px);min-height:38px}
+  .pad{margin-top:18px;border:1px solid #d2d8d6;border-radius:6px;padding:8px 10px}
+  .pad h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#697773}
+  .pad .rule{height:19px;border-bottom:1px solid #e4e9e7}
   .pen{color:#a8701a}@media print{body{margin:14mm}}</style></head><body>
   <h1>${esc(S.org.name||"Day sheet")}</h1>
   <div class="sub">${esc(prettyFull(entry.date))} · ${S.hours[entry.dow].closed?"Closed":esc(m2disp(t2m(S.hours[entry.dow].open))+"–"+m2disp(t2m(S.hours[entry.dow].close)))}${S.org.site?" · "+esc(S.org.site):""}</div>
   ${(wk.dayNotes||{})[entry.date]? `<div style="border:1px solid #d2d8d6;border-left:3px solid #1c6a66;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:12.5px"><b>Today:</b> ${esc(wk.dayNotes[entry.date])}</div>`:""}
-  <table><thead><tr><th>Employee</th>${(S.stations||[]).length?"<th>Station</th>":""}<th>Role</th><th>In</th><th>Out</th><th>Meal</th><th>Rest breaks</th><th>Paid</th></tr></thead><tbody>
+  <table><thead><tr><th>Employee</th>${(S.stations||[]).length?"<th>Station</th>":""}<th>Role</th><th>In</th><th>Out</th><th>Meal</th><th>Rest breaks</th><th>Paid</th>${(S.rules.sheetNotes||"lines")!=="off"?'<th style="width:'+((S.rules.sheetNotes==="wide")?"230":"150")+'px">Notes</th>':""}</tr></thead><tbody>
   ${list.map(a=>{const e=empById(a.empId)||{name:"—"},b=a.breaks||{meals:[],rests:[],owed:{meals:0,rests:0}};
 const mealTxt=!b.owed.meals?"not owed":S.rules.breakMode==="self"?"staff-timed":S.rules.breakMode==="lengths"?
 b.owed.meals+"×"+(L.meal?L.meal.lengthMin:30)+" min by "+m2disp(b.meals[0].deadline):
@@ -8187,9 +9020,12 @@ const restTxt=!b.owed.rests?"not owed":S.rules.restMode==="assigned"?b.rests.map
 b.owed.rests+"×"+(L.rest?L.rest.lengthMin:10)+" min staff-timed";
 const stn=a.station?stationById(a.station):null, stn2=a.station2?stationById(a.station2):null;
 const duties=(a.admin||[]).map(x=>(stationById(x)||{}).name).filter(Boolean);
-const nt=shiftNote(ws, entry.date, a.empId);
-return `<tr><td><b>${esc(e.name)}</b>${duties.length?"<br><small>"+esc(duties.join(", "))+"</small>":""}${nt?'<br><small style="color:#a8701a">'+esc(nt)+"</small>":""}</td>${(S.stations||[]).length?`<td>${esc(stn?stn.name:"—")}${stn2?"<br><small>then "+esc(stn2.name)+"</small>":""}</td>`:""}<td>${esc(roleAbbr(a.roleId))}</td><td>${m2disp(a.startMin)}</td><td>${m2disp(a.endMin)}</td><td>${esc(mealTxt)}</td><td>${esc(restTxt)}</td><td>${fmtHrs(paidMinutes(a))}</td></tr>`;}).join("")}
+const nt=shiftNote(ws, entry.date, a.empId, a.startMin);
+const mn=a.mentor? (empById(a.mentor)||{}).name : "";
+return `<tr><td><b>${esc(e.name)}</b>${mn?'<br><small><b>Training with '+esc(mn)+"</b></small>":""}${duties.length?"<br><small>"+esc(duties.join(", "))+"</small>":""}${nt?'<br><small style="color:#a8701a">'+esc(nt)+"</small>":""}</td>${(S.stations||[]).length?`<td>${esc(stn?stn.name:"—")}${stn2?"<br><small>then "+esc(stn2.name)+"</small>":""}</td>`:""}<td>${esc(roleAbbr(a.roleId))}</td><td>${m2disp(a.startMin)}</td><td>${m2disp(a.endMin)}</td><td>${esc(mealTxt)}</td><td>${esc(restTxt)}</td><td>${fmtHrs(paidMinutes(a))}</td>${(S.rules.sheetNotes||"lines")!=="off"?'<td class="wr">'+(nt?esc(nt):"")+"</td>":""}</tr>`;}).join("")}
   </tbody></table>
+  ${(S.rules.sheetNotes||"lines")!=="off"? `<div class="pad"><h3>Anything else about today</h3>
+    ${Array.from({length:(S.rules.sheetNotes==="wide")?8:5}).map(()=>`<div class="rule"></div>`).join("")}</div>`:""}
   <div class="note"><b>${esc(L.name)} break rules.</b> ${esc(L.note||"")} ${L.premium?`<span class="pen">${esc(L.premium)}</span>`:""}</div>
   <script>window.onload=function(){setTimeout(function(){window.print()},350)}<\/script></body></html>`;
 saveFile("day-sheet-"+entry.date+".html", html);
@@ -8689,8 +9525,14 @@ return `
 "For staff who don't work the same shape every week — alternating weeks, seven on and seven off, or hours averaged over a pay period.")}
         ${X("xNotice", W.xNotice, "Advance-notice warnings",
 "Some cities make short-notice scheduling a payable penalty. Get a warning if you post a week less than 14 days ahead.")}
-        ${X("xSkills", W.xSkills, "A training record for your posts",
-"Mark who is still learning, who can work a post, and who is signed off to train others — then choose whether that leans on assignments every day, only on busy days, or flips on quiet days to give learners practice. It never affects anyone's hours and staff never see it.")}
+        ${X("xSkills", W.xSkills, "Post training \u2014 who needs more time on what",
+"For each post, note who could use more time on it, who is comfortable alone, and who can show someone else how. Then choose whether that steers the day\u2019s posts always, only on busy days, or flips on quiet days so people get practice. Only you can see it, it never shows on the schedule or anything staff receive, and it never changes anyone\u2019s hours. Different from marking somebody \u201cIn training\u201d, which is about whether they count as cover at all.")}
+        ${X("xMsg", W.xMsg, "Ready-written messages to staff",
+"When you approve or decline someone\u2019s time-off request, get a short note already written, addressed to them. Change any word of it, send it by text or email, or throw it away \u2014 \u201cDon\u2019t send\u201d is always the first button and nothing ever goes out on its own.")}
+        ${X("xTrainee", W.xTrainee, "New hires who aren\u2019t cover yet",
+"For anyone learning the job. Mark them \u201cIn training\u201d and they\u2019re scheduled on top of the cover you need rather than counted as part of it \u2014 so a gap is never filled by someone still finding their feet. They land on your busiest days, never work alone, and the day sheet names who they\u2019re with. Give them a finish date and their profile moves itself on. You can switch them to counting as cover whenever they\u2019re ready.")}
+        ${X("xMinors", W.xMinors, "Under-18 hour limits",
+"If you employ anyone still at school. Put a date of birth on them and the drafter keeps every shift inside the law for their age \u2014 hours on a school day, hours in a school week, and how late they may finish. It never schedules them outside it, and tells you why when it can\u2019t use them.")}
         ${X("xWaiver", W.xWaiver, "Meal waivers where the law allows them",
 "On short shifts some states let a worker waive their meal in writing. Weeksolved marks the shift; it doesn't collect the signature.")}
         <div class="help">Not listed here but always available once you're in: staff groups with their own limits,
@@ -9101,6 +9943,10 @@ N.rules.projectShape=W.projectShape||"chunk";
 N.rules.projectShare=W.projectShare||"fair";
 N.rules.sendOut=!!W.sendOut;
 N.rules.remindH=+W.remindH||0;
+N.rules.minorsOn=!!W.xMinors;
+N.rules.traineeCover = W.xTrainee? "extra" : "cover";
+N.msg = Object.assign({on:false, tpl:Object.assign({}, MSG_DEFAULT)}, N.msg||{});
+N.msg.on = !!W.xMsg;
 N.dayLoad=(W.dayLoad||[0,1,0,-1,0,1,0]).slice();
 N.rules.holidayRush=W.holidayRush||"none";
 N.holidays.mode="same";
@@ -9192,6 +10038,7 @@ return `<tr${r.status==="declined"?' style="opacity:.5"':""}>
       ${showOutcome? `<td>${o? `<span class="chip ${o.ok?"ok":o.ok===false?"warn":""}">${esc(o.say)}</span>` : `<span class="mini">draft the week to see</span>`}</td>`:""}
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" data-reqedit="${r.id}">Edit</button>
+        ${msgOn()? `<button class="btn sm" data-reqtell="${r.id}">${r.told?"Tell again":"Tell them"}</button>`:""}
         ${r.status==="declined"? `<button class="btn sm" data-reqok="${r.id}">Reinstate</button>`
 : `<button class="btn sm" data-reqno="${r.id}">Decline</button>`}
         <button class="btn sm danger" data-reqdel="${r.id}" title="Delete">✕</button></td></tr>`;
@@ -9415,7 +10262,12 @@ wireReqTables(root);
 function wireReqTables(root){
 root.querySelectorAll("[data-reqno]").forEach(b=>b.onclick=()=>{
 const r=(S.requests||[]).find(x=>x.id===b.dataset.reqno);
-if(r){ r.status="declined"; logIt("req","Declined: "+((empById(r.empId)||{}).name||"someone")+", "+prettyDate(r.from)+(r.to&&r.to!==r.from?" to "+prettyDate(r.to):"")); save(); render(); } });
+if(r){ r.status="declined"; logIt("req","Declined: "+((empById(r.empId)||{}).name||"someone")+", "+prettyDate(r.from)+(r.to&&r.to!==r.from?" to "+prettyDate(r.to):""));
+save(); render();
+if(msgOn()) setTimeout(()=>tellAboutRequest(r, S.currentWeek), 120); } });
+root.querySelectorAll("[data-reqtell]").forEach(b=>b.onclick=()=>{
+const r=(S.requests||[]).find(x=>x.id===b.dataset.reqtell);
+if(r) tellAboutRequest(r, S.currentWeek); });
 root.querySelectorAll("[data-reqok]").forEach(b=>b.onclick=()=>{
 const r=(S.requests||[]).find(x=>x.id===b.dataset.reqok);
 if(r){ r.status="open"; logIt("req","Reinstated: "+((empById(r.empId)||{}).name||"someone")+", "+prettyDate(r.from)); save(); render(); } });
@@ -9693,7 +10545,8 @@ return `
 ? "A turn on Typist 1 counts as a turn on Typist, so that person is less likely to draw Typist 2 tomorrow. Posts group by their name — anything ending in a number joins its family automatically."
 : "Every post is counted on its own. A turn on Typist 1 says nothing about Typist 2, so someone can be typing two days running on different numbers."}</div>
       <div class="row">
-        <span class="lab" style="margin:0">Training record <span class="chip">optional</span></span>
+        <span class="lab" style="margin:0">Post training \u2014 who needs more time on what <span class="chip">optional</span></span>
+        ${skillsOn()? twoTrainings() : ""}
         <select data-bind="rules.skillsOn" style="min-width:230px">
           <option value="0" ${S.rules.skillsOn?"":"selected"}>Off — everyone is treated the same</option>
           <option value="1" ${S.rules.skillsOn?"selected":""}>On — track who's trained on what</option>
@@ -9845,7 +10698,7 @@ modal(id? "Edit "+st.name : isAdmin? "New administrative duty" : "New station", 
       </select>
         <span class="mini">Lock a post to one shift when only those hours make sense for it.</span></div>
       <label class="switch"><input type="checkbox" id="sthold" ${st.holdAllDay?"checked":""}> One person holds this all day, even when the floor rotates</label>
-      ${skillsOn()? `<label class="switch"><input type="checkbox" id="stskill" ${st.needSkilled?"checked":""}> Only people trained on it — a learner is never left here alone <span class="chip">optional</span></label>`:""}`}
+      ${skillsOn()? `<label class="switch"><input type="checkbox" id="stskill" ${st.needSkilled?"checked":""}> Only people comfortable on this post \u2014 nobody who needs more time is left here alone <span class="chip">optional</span></label>`:""}`}
       <div class="field"><label>Which days</label><select id="stdaysel">
         <option value="all" ${(!st.days||!st.days.length)?"selected":""}>Every day</option>
         <option value="custom" ${(st.days&&st.days.length)?"selected":""}>Pick my own…</option></select>
@@ -10128,8 +10981,12 @@ return `<div class="mini" style="margin-bottom:4px"><b>${esc(e.name)}</b> — ch
       <div class="row" style="margin-top:12px"><button class="btn primary" id="vacapply">Grant these ${R.grants.length}</button></div>`;
 out.querySelector("#vacapply").onclick=()=>{
 R.grants.forEach(g=>{
+const emp=empById(g.empId)||{};
 S.timeoff.push({id:uid("v"), empId:g.empId, type:"Vacation", start:g.from, end:g.to,
-status:"approved", vac:true, vacPick:g.pick});
+status:"approved", vac:true, vacPick:g.pick,
+ 
+usePto: ptoOn()? true : undefined,
+hoursPerDay: ptoOn()? (effLimits(emp).maxH? Math.min(8, Math.round((effLimits(emp).maxH/5)*10)/10) : 8) : undefined});
 S.vacations.responses=S.vacations.responses.filter(r=>r.empId!==g.empId);
 });
 save(); render();
@@ -10677,7 +11534,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'var who=document.getElementById("who");',
 'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+s.name+"</option>";}).join("")+"<option value=\'__other\'>My name isn’t listed</option>";',
 'function busyLevel(f,t){var mx=0,d=new Date(f+"T00:00:00"),e=new Date(t+"T00:00:00"),g=0;',
-'while(d<=e&&g++<400){var k=d.toISOString().slice(0,10);mx=Math.max(mx,D.heat[k]||0);d.setDate(d.getDate()+1);}return mx;}',
+'while(d<=e&&g++<400){var k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");mx=Math.max(mx,D.heat[k]||0);d.setDate(d.getDate()+1);}return mx;}',
 'function holHit(f,t){for(var i=0;i<D.hol.length;i++){if(D.hol[i]>=f&&D.hol[i]<=t)return D.hol[i];}return null;}',
 'var P=document.getElementById("picks");',
 'for(var i=0;i<D.maxPicks;i++){var el=document.createElement("div");el.className="pick";',
@@ -11118,7 +11975,10 @@ a:"On the Holidays page (or in setup), say whether business spikes the day befor
 a:"On iPhone: open weeksolved.com in Safari, tap the Share button (the square with the arrow), scroll down, tap 'Add to Home Screen', then Add. On Android: open it in Chrome, tap the three-dot menu, tap 'Add to home screen'. You get a real app icon that opens full screen — same account, same data, nothing to install."},
 {t:"Working before opening or after closing", k:"hours open close prep before after doors staffing window overnight stock cleanup setup", go:null,
 a:"The hours you set are staffing hours — the window shifts can be placed in — not your door hours. If a crew preps before you open to the public or closes down after, set the day to start earlier and end later, then add a shift covering that stretch. To change them, re-run the setup questions (Help & FAQ → Change what setup decided)."},
-{t:"Training record (optional)", k:"skill training learning signed off strong weak level qualified competency bias", go:"stations",
+{t:"In training \u2014 a new hire who isn\u2019t cover yet (optional)", k:"trainee new hire in training probation learner extra pair of hands transition graduate mentor", go:"team",
+a:"Set someone\u2019s employment type to \u201cIn training\u201d and you choose one thing: are they an extra pair of hands, or one of the team? As an extra, they are scheduled on top of the cover you need \u2014 a gap is never filled by someone still learning, they land on your busiest days, and they are never on the floor alone. The day sheet names who they are with, so they know who to report to. Give them a finish date and their profile moves itself on that day, to whatever type and group you picked \u2014 a technician training as a pharmacist becomes a pharmacist, on the date, with nothing for you to remember. Each trainee can also have their own plan for posts: one post until they have it, a rotation of a few for a set number of shifts each, or no preference.",
+},
+{t:"Post training \u2014 who needs more time on what (optional)", k:"skill training learning comfortable signed off strong weak level qualified competency bias posts stations", go:"stations",
 a:"Optional and off unless you switch it on under Stations. It records what each person is trained on, post by post — still learning, can work it, or signed off to train others — and nothing else. It only ever affects which post someone is handed on the day sheet; it never changes anyone's hours or pay, and staff never see it. You choose when it applies (every day, only busy days, only when the floor is thin, or busy days for the trained and quiet days for learners to practise) and how strongly it leans (gentle nudge, balanced, strong). A post can also be marked so a learner is never left there alone. Deliberately a training record and not a rating of people — that keeps it useful and fair."},
 {t:"Stations and how the rotation works", k:"station post typist checker rotation family bucket daily sheet where people stand rotate two hours", go:"stations",
 a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Typist 1, Typist 2) share one rotation by default, so a turn on either counts as a turn on Typist and that person is less likely to draw it again; you can switch to counting every post separately under Stations. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
@@ -11146,6 +12006,10 @@ a:"Every answer from the setup questions lives in Settings, changeable any time.
 a:"Settings → backup gives you a file with the whole board. Restore it on any copy of the app to carry everything over. With an account this is belt-and-braces — sync already keeps your devices matching."},
 {t:"Busy and quiet days", k:"busy quiet day load move suggestion mismatch", go:"home",
 a:"Tell it which days run hot and the app checks your coverage against that — if Wednesday asks for more people than busy Monday, it proposes a specific one-tap fix like moving one technician's shift, never a vague warning."},
+{t:"Staff under 18", k:"minor youth teen under 18 school student age child labor hours curfew work permit", go:"settings",
+a:"Switch on Under-18 hour limits in Settings, put a date of birth on anyone still at school, and set your local school year. From then on the drafter keeps every one of their shifts inside the law for their age \u2014 hours on a school day, hours in a school week, and how late they may finish \u2014 and it simply won't use them outside it. Placing one by hand is refused with the reason. Federal law is the floor everywhere and your state can only be stricter, so whichever is tighter is what applies. It doesn't handle work permits or the hazardous-job list \u2014 those stay yours."},
+{t:"Why the app won't give a shift to my teenager", k:"minor blocked under 18 school day three hours cannot schedule teen", go:"week",
+a:"Because it would break an under-18 limit. The three usual reasons: the shift is longer than they may work that day (3 hours on a school day at 14\u201315), it would take them past their weekly limit, or it finishes later than they may work. Cover the gaps names which one. If the shift looks fine to you, check the school-year dates in Settings \u2014 without them every day counts as a non-school day, and with them a term-time Wednesday is a school day."},
 {t:"Offering an open shift to the team", k:"open shift offer spare cover claim pick up extra volunteer gap fill", go:"week",
 a:"When a shift can't be filled, Cover the gaps offers to send it out. You get a one-page file — save it, attach it to an email or drop it in the group chat with the message it writes for you. Your team open it, tick what they'd take, and it gives them a short code to send back. Nobody needs an account or an app, and ticking commits them to nothing until you confirm."},
 {t:"A reply code came back", k:"reply code claim paste open shift confirm give shift accept", go:"week",
@@ -11336,8 +12200,9 @@ const sh=aShift(a);
 const st=a.station? stationById(a.station):null;
 const b=a.breaks||{meals:[]};
 const meals=(b.meals||[]).filter(m=>!m.waived).map(m=>"Meal "+m2disp(m.start)+"\u2013"+m2disp(m.end)).join(", ");
-const note=shiftNote(ws, a.date, a.empId);
-const desc=[roleName(a.roleId), st? "Station: "+st.name:"", meals, note, a.topUp? (S.rules.topUpLabel||"Project time"):""].filter(Boolean).join("\n");
+const note=shiftNote(ws, a.date, a.empId, a.startMin);
+const desc=[roleName(a.roleId), st? "Station: "+st.name:"",
+a.mentor? "Training with "+((empById(a.mentor)||{}).name||"") : "", meals, note, a.topUp? (S.rules.topUpLabel||"Project time"):""].filter(Boolean).join("\n");
 const lead=S.rules.remindH||0;
 L.push("BEGIN:VEVENT",
 "UID:"+a.id+"@weeksolved.com",
