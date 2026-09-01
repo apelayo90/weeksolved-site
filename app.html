@@ -1250,7 +1250,7 @@ function paintAccount(){
 const em=acctEmail();
 const label = em? "Signed in as "+em+" \u2014 tap to sign out or switch account"
 : "Not signed in \u2014 this board is on this device only";
-const initial = em? em.trim()[0].toUpperCase() : "\u2013";
+const initial = (em && em.trim())? em.trim()[0].toUpperCase() : "\u2013";
 const chip=$("#acctchip");
 if(chip){
 const who=$("#acctwho"), av=$("#acctav");
@@ -1713,8 +1713,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "fc300d49";       
-const BUILD_AT = "2026-09-01 19:45 UTC";       
+const BUILD_ID = "dd35ac62";       
+const BUILD_AT = "2026-09-01 20:30 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "32f50d2ca959e00b";
 const TERMS_DATE = "";
@@ -4512,6 +4512,8 @@ if(minorBlock(e, slot.date, slot.dow, aMin, bMin, empWeekMinutes(e.id,ws), ws)) 
 if(traineeExtra() && isTrainee(e, slot.date)) return;    
 if(!cycleWorksOn(e,slot.date)) return;                      
 if(onTimeOff(e.id,slot.date)) return;                       
+ 
+if(empLicensed(e) && e.licExp && slot.date > e.licExp) return;
 if(lim.maxShiftH && (bMin-aMin) > lim.maxShiftH*60) return; 
 
 const reqBlock=reqBlocks(e,slot.date,aMin,bMin,mins);
@@ -4874,16 +4876,17 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<div class="hint">Nothing is sent anywhere by this page \u2014 the code is the only thing that leaves, and you send it yourself.</div>',
 '</div><script>',
 'var D=JSON.parse(decodeURIComponent(escape(atob("'+data+'"))));',
+'function esc(t){return String(t==null?"":t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
 'document.getElementById("sub").textContent=D.org+(D.site?" \u00b7 "+D.site:"")+" \u00b7 week of "+D.week;',
 'var who=document.getElementById("who");',
-'who.innerHTML="<option value=\'\'>Pick your name\u2026</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+s.name+"</option>";}).join("")+"<option value=\'__other\'>My name isn\u2019t listed</option>";',
+'who.innerHTML="<option value=\'\'>Pick your name\u2026</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("")+"<option value=\'__other\'>My name isn\u2019t listed</option>";',
 'var L=document.getElementById("list");',
 'D.shifts.forEach(function(sh){var el=document.createElement("label");el.className="sh";',
-'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+sh.day+", "+sh.date+"</b><span class=d>"+sh.label+" \u00b7 "+sh.time+" \u00b7 "+sh.hours+" hours"+(sh.role?" \u00b7 "+sh.role:"")+"</span></span>";',
+'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" \u00b7 "+esc(sh.time)+" \u00b7 "+sh.hours+" hours"+(sh.role?" \u00b7 "+esc(sh.role):"")+"</span></span>";',
 'L.appendChild(el);});',
 'document.getElementById("mk").onclick=function(){',
 'var k=who.value;if(!k){alert("Pick your name first.");return;}',
-'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;}',
+'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;k=String(k).replace(/[|;~]/g," ").trim().slice(0,60);if(!k)return;}',
 'var picked=[];L.querySelectorAll("input:checked").forEach(function(c){picked.push(c.value);});',
 'if(!picked.length){alert("Tick at least one shift, or just tell your manager you can\u2019t take any.");return;}',
 'var raw="OS1|"+D.token+"|"+k+"|"+picked.join(",");',
@@ -5256,8 +5259,8 @@ const idx=(bits[3]||"").split(",")
 .map(Number);
 let emp=empById(who);
 if(!emp) emp=S.employees.find(e=>e.active && e.name.trim().toLowerCase()===who.trim().toLowerCase());
-if(!emp) return {err:"No one on your roster is called \u201c"+who+"\u201d. Add them under Team first, or ask them to pick their name from the list."};
-if(!emp.active) return {err:esc(emp.name)+" isn\u2019t on the active roster."};
+if(!emp) return {err:"No one on your roster is called \u201c"+String(who).slice(0,60)+"\u201d. Add them under Team first, or ask them to pick their name from the list."};
+if(!emp.active) return {err:emp.name+" isn\u2019t on the active roster."};
 const items=idx.map(i=>{
 const sl=off.slots[i];
 if(!sl) return null;
@@ -5282,7 +5285,7 @@ r=>{
 const out=r.querySelector("#clout");
 const show=()=>{
 const res=readClaim(ws, r.querySelector("#clcode").value);
-if(res.err){ out.innerHTML=`<div class="banner crit"><div>${res.err}</div></div>`; return; }
+if(res.err){ out.innerHTML=`<div class="banner crit"><div>${esc(res.err)}</div></div>`; return; }
 out.innerHTML=`<div class="stack">
           <div class="banner info"><div><b>${esc(res.emp.name)}</b> would take ${res.items.length} shift${res.items.length===1?"":"s"}.</div></div>
           ${res.items.map((it,i)=>{
@@ -5367,7 +5370,7 @@ const ASK_PAGE_JS = [
 '};',
 'document.getElementById("mk").onclick=function(){',
 ' var w=who.value; if(!w){alert("Pick your name first.");return;}',
-' if(w==="__other"){w=prompt("Type your full name exactly as your manager has it:"); if(!w)return;}',
+' if(w==="__other"){w=prompt("Type your full name exactly as your manager has it:"); if(!w)return; w=String(w).replace(/[|;~]/g," ").trim().slice(0,60); if(!w)return;}',
 ' if(!picked.length){alert("Add at least one thing above \\u2014 or just tell your manager you have nothing this time.");return;}',
 ' var body=picked.map(function(p){return [p.k,p.w,p.x,p.f,(p.n||"").replace(/[|;~]/g," ")].join("~");}).join(";");',
 ' var raw="RQ1|"+D.token+"|"+w+"|"+body;',
@@ -5393,7 +5396,7 @@ const ASK_KINDS=[
 {k:"maxh",   t:"I’d like fewer hours",  hint:"For this stretch only", num:true}
 ];
 function askOpen(){ return S.ask||null; }
-function makeAsk(ws, weeks){
+function makeTeamAsk(ws, weeks){
 S.ask={ token:offerToken(), at:Date.now(), ws:ws, weeks:weeks||1, seen:[] };
 logIt("post","Sent the team a request form for "+(weeks>1? weeks+" weeks from ":"the week of ")+prettyDate(ws));
 save();
@@ -5513,7 +5516,7 @@ if(it.kind==="early") return "away by "+m2disp(it.min);
 if(it.kind==="maxh") return "no more than "+it.num+" hours";
 return "";
 }
-function askModal(){
+function teamAskModal(){
 const ws=S.currentWeek, weeks=S.horizon||1;
 const A=askOpen();
 const live = A && A.ws===ws && A.weeks===weeks;
@@ -5540,7 +5543,7 @@ const refresh=()=>{ if(askOpen()) msg.value=askMessageText(); };
 by.onchange=()=>{ if(askOpen()){ S.ask.by=by.value||""; save(); refresh(); } };
 r.querySelector("#akmake").onclick=async ()=>{
 const cur=askOpen();
-if(!(cur && cur.ws===ws && cur.weeks===weeks)) makeAsk(ws, weeks);
+if(!(cur && cur.ws===ws && cur.weeks===weeks)) makeTeamAsk(ws, weeks);
 S.ask.by=by.value||""; save();
 refresh();
 await saveFile("what-do-you-need-"+ws+".html", buildAskFile());
@@ -5656,7 +5659,7 @@ const TM_PAGE_JS = [
 '   picked("rk"), av.join(","), picked("ps"), picked("as"), picked("po"),',
 '   (document.getElementById("op").checked?1:0)+"."+(document.getElementById("cl").checked?1:0),',
 '   document.getElementById("hrs").value||"",',
-'   clean(document.getElementById("lic").value).slice(0,40)+"."+(document.getElementById("licx").value||"")+"."+((document.getElementById("lick")||{}).value||"")+"."+((document.getElementById("licj")||{}).value||""),',
+'   clean(document.getElementById("lic").value).replace(/\\./g," ").slice(0,40)+"."+(document.getElementById("licx").value||"")+"."+((document.getElementById("lick")||{}).value||"")+"."+((document.getElementById("licj")||{}).value||""),',
 '   clean(document.getElementById("note").value).slice(0,140)].join("|");',
 ' var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
 ' document.getElementById("cd").textContent=code;document.getElementById("out").className="";',
@@ -5783,7 +5786,11 @@ return {ok:b[0]==="1", from:m2hhmm(Math.min(from,to)), to:m2hhmm(Math.max(from,t
 });
 while(av.length<7) av.push({ok:true, from:"06:00", to:"22:00"});
 const oc=(f[10]||"1.1").split(".");
-const licBits=(f[12]||"").split(".");
+ 
+const licAll=(f[12]||"").split(".");
+const licBits=(licAll.length>=4)
+? [licAll.slice(0, licAll.length-3).join(" "), licAll[licAll.length-3], licAll[licAll.length-2], licAll[licAll.length-1]]
+: licAll;
 const existing=S.employees.find(e=>e.name.trim().toLowerCase()===name.toLowerCase());
 return { name, existing:existing||null,
 email:(f[3]||"").trim(), phone:(f[4]||"").trim(),
@@ -6177,10 +6184,14 @@ const comp=LIC_COMPACT.filter(x=>x.c.includes(type));
  
 const home=(S.org.jurisdiction||"");
 const away = home && LIC_DIR[home] && jur!==home;
+const hasLink = hits.length>0;
 const awayNote = away? `<div class="banner info" style="margin-bottom:8px"><div><b>Issued in ${esc(J.n)}, and you are in ${esc(LIC_DIR[home].n)}.</b>
-      That is common and often perfectly fine \u2014 a compact licence, a federal employer, or simply a licence they hold from elsewhere. Whether it lets them work for you here is a question for you and your own advisers; Weeksolved has no view on it and records no answer. The link below goes to ${esc(J.n)}, which is the board that actually holds the record.</div></div>` : "";
+      That is common and often perfectly fine \u2014 a compact licence, a federal employer, or simply a licence they hold from elsewhere. Whether it lets them work for you here is a question for you and your own advisers; Weeksolved has no view on it and records no answer. ${hasLink? "Anything below goes to "+esc(J.n)+", which is the board that actually holds the record." : "It is "+esc(J.n)+" that holds the record, so that is where to check."}</div></div>` : "";
 if(!hits.length) return awayNote + `<div class="help">Weeksolved does not have a page on file for ${esc(licTypeName(type).toLowerCase())} in ${esc(J.n)} \u2014 rather than send you somewhere that might be wrong, it sends you nowhere. Check it however you normally would; the expiry date above still works.</div>`
-+ (comp.length? comp.map(x=>`<a class="btn sm" href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.l)} \u2197</a>`).join(" ") : "");
++ (comp.length? `<div class="card" style="margin-top:4px"><div class="body">
+        <div class="mini" style="margin-bottom:6px">There is a compact page for this profession, which is a different thing from the state board:</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap">${comp.map(x=>`<a class="btn sm" href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.l)} \u2197</a>`).join("")}</div>
+        ${foot}</div></div>` : "");
 return awayNote + `<div class="card" style="margin-top:4px"><div class="body">
     <div class="row" style="flex-wrap:wrap;gap:6px">${hits.map(h=>
 `<a class="btn sm" href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.l)} \u2197</a>`).join("")}
@@ -7696,6 +7707,10 @@ const bad=mine.filter(a=>a.date>e.licExp);
 if(bad.length) push("crit","License lapsed — "+e.name.split(" ")[0],
 (e.licLabel||"Their license")+" expired "+prettyDate(e.licExp)+" but they're scheduled "+bad.map(a=>DSHORT[a.dow]).join(", ")+". Renew it or hand those shifts to someone current.",
 {empId:e.id, date:bad[0].date, dow:bad[0].dow});
+else if(e.active && e.licExp < ymd(new Date()))
+push("crit","License expired \u2014 "+e.name.split(" ")[0],
+(e.licLabel||"Their license")+" expired "+prettyDate(e.licExp)+". They are not on this week, and the drafter will not put them on one until the date is updated.",
+{empId:e.id});
 else if(e.active && e.licExp<=addDays(dates[6].date,30))
 push("warn","License expiring — "+e.name.split(" ")[0],
 (e.licLabel||"Their license")+" runs out "+prettyDate(e.licExp)+". Get the renewal moving now — with a date past, the drafter will refuse to schedule them.",
@@ -8584,7 +8599,10 @@ const su=root.querySelector("#ovsetup");
 if(su) su.onclick=()=>{ wizClearDraft(); wizard(); };
 const rsm=root.querySelector("#ovresume"); if(rsm) rsm.onclick=()=>wizard(false, true);
 const b=root.querySelector("#ovgen");
-if(b) b.onclick=()=>{ const r=generateSchedule(); save(); toast("Drafted "+r.filled+" shifts"+(r.perDiem? " · "+r.perDiem+" per diem called in":"")+(r.unfilled.length?" · "+r.unfilled.length+" could not be filled":"")); go("week"); };
+if(b) b.onclick=()=>withLicenceCheck(S.currentWeek, 1, ()=>{
+const r=generateSchedule(); save();
+toast("Drafted "+r.filled+" shifts"+(r.perDiem? " · "+r.perDiem+" per diem called in":"")+(r.unfilled.length?" · "+r.unfilled.length+" could not be filled":""));
+go("week"); });
 };
 
 
@@ -8844,7 +8862,7 @@ return "See what each plan covers and what it costs.";
 ? "Off \u2014 devices aren't listed and you won't be told about several at once"
 : (live>=2? live+" devices are using this account right now" : "On \u2014 you'll get a quiet note if it's signed in from several places at once"),
 `<select data-set="rules.deviceWatch"><option value="0" ${S.rules.deviceWatch===false?"selected":""}>Off</option><option value="1" ${S.rules.deviceWatch===false?"":"selected"}>On</option></select>`)}
-      ${setRow("Ask for an emailed confirmation on a new device <span class=\"chip\">optional</span>", S.rules.newDeviceConfirm
+      ${setRow("Ask for an emailed confirmation on a new device", S.rules.newDeviceConfirm
 ? "On \u2014 a device your account has never been used on has to be confirmed from your inbox, once"
 : "Off \u2014 any device with your email and password gets straight in",
 `<select data-set="rules.newDeviceConfirm"><option value="0" ${S.rules.newDeviceConfirm?"":"selected"}>Off</option><option value="1" ${S.rules.newDeviceConfirm?"selected":""}>On</option></select>`)}
@@ -8977,7 +8995,7 @@ cards:["What\u2019s switched on","Your business","Where you operate","When you'r
 {k:"team", t:"Team and shifts",
 cards:["Your people","Shifts and cover","Who gets first pick"]},
 {k:"rules", t:"Rules and drafting",
-cards:["Ground rules","Meals and rest breaks","Drafting","Money"]},
+cards:["Ground rules","Meals and rest breaks","Drafting","Money","Union agreement or public-sector rules"]},
 {k:"account", t:"Account and data",
 cards:["Your account","Where your schedule lives, and who can see it","Problems and feedback","Everything else"]},
 {k:"device", t:"This device",
@@ -9003,9 +9021,10 @@ const h=card.querySelector("header h3, .foldhead h3, h3");
 return h? h.textContent.trim() : "";
 }
  
+ 
 const SET_ADVANCED=["Who gets first pick","Drafting","Money",
 "Where your schedule lives, and who can see it","Problems and feedback",
-"This board","Everything else"];
+"This board","Union agreement or public-sector rules"];
 function foldKeyFor(title){ return "c_"+String(title).toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,24); }
 function cardFolded(title){
 const k=foldKeyFor(title), f=(S.ui&&S.ui.fold)||{};
@@ -9442,13 +9461,6 @@ const t=root.querySelector("#aptheme"); if(t) t.onchange=()=>applyTheme(t.value)
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-root.querySelectorAll("[data-mcd]").forEach(cb=>cb.onchange=()=>{
-S.rules.mealClose=S.rules.mealClose||{};
-const d=new Set(S.rules.mealClose.days||[]);
-if(cb.checked) d.add(+cb.dataset.mcd); else d.delete(+cb.dataset.mcd);
-S.rules.mealClose.days=[...d].sort((a,b)=>a-b);
-save(); render();
-});
 const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","msg.on","fww.on","union.on","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
 const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.maxSpanH","org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
@@ -9951,7 +9963,7 @@ return `<tr${e.active?"":' style="opacity:.5"'}>
             <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}</td>
             <td>${e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span> `:"";}).join("")}</td>
             <td><span class="chip">${esc(e.type)}</span>${prefsBlank(e)?'<div class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine \u2014 send the starter form if you would like their preferences.">nothing on file \u00b7 open availability</div>':""}${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
-return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)? (e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}` : e.licExp<=addDays(ymd(new Date()),45)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}`:"")
+return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)? (e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}` : e.licExp<=addDays(ymd(new Date()),30)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}`:"")
 : `<div class="mini" title="Weeksolved has no date for this, so it cannot warn you about it. It is not a claim that anything is wrong.">no expiry date on file</div>`):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
             <td class="mono">${(()=>{const L=effLimits(e);
 if(L.exactH) return "exactly "+L.exactH+"h";
@@ -11408,7 +11420,18 @@ return `
     </div></div>
   </div>`;
 }
+ 
+function wireMealClose(root){
+root.querySelectorAll("[data-mcd]").forEach(cb=>cb.onchange=()=>{
+S.rules.mealClose=S.rules.mealClose||{};
+const d=new Set(S.rules.mealClose.days||[]);
+if(cb.checked) d.add(+cb.dataset.mcd); else d.delete(+cb.dataset.mcd);
+S.rules.mealClose.days=[...d].sort((a,b)=>a-b);
+save(); render();
+});
+}
 WIRE.rules = root=>{
+wireMealClose(root);
 root.querySelectorAll("[data-seg]").forEach(seg=>{
 seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{
 S.rules[seg.dataset.seg]=b.dataset.v;
@@ -12116,13 +12139,13 @@ const commitNote=()=>{ const w=getWeek(ws); const n=noteOf(); if(n) w.note=n; el
 r.querySelector("#wknoteinp").addEventListener("change",()=>{ commitNote(); save(); });
 const on=(id,fn)=>{ const b=r.querySelector(id); if(b) b.onclick=()=>{ commitNote(); fn(); }; };
 on("#wkopen",()=>{ S.currentWeek=ws; save(); closeModal(); go("week"); });
-on("#wkredraft",()=>{
+on("#wkredraft",()=>{ closeModal(true); withLicenceCheck(ws, 1, ()=>{
 const w=getWeek(ws); w.published=false; delete w.publishedAt;
 w.assignments=w.assignments.filter(a=>a.locked);
 const res=generateSchedule(ws); w.suggested=true; w.touched=true;
-S.currentWeek=ws; save(); closeModal(); render();
+S.currentWeek=ws; save(); render();
 toast(res.filled+" shifts drafted"+(res.perDiem? " · "+res.perDiem+" per diem called in":"")+(res.unfilled.length? ", "+res.unfilled.length+" left open":""));
-});
+}); });
 on("#wkshape",()=>{ S.currentWeek=ws; closeModal(); weekPatternModal(ws); });
 on("#wkfix",()=>{ S.currentWeek=ws; closeModal(); fixModal(ws); });
 on("#wkprint",()=>{ S.currentWeek=ws; closeModal(true); printModal(); });
@@ -15093,7 +15116,7 @@ if(k.num) return r.num+" hours a week";
 return k.hint;
 }
 WIRE.requests = root=>{
-{ const b=root.querySelector("#qask"); if(b) b.onclick=()=>askModal();
+{ const b=root.querySelector("#qask"); if(b) b.onclick=()=>teamAskModal();
 const b2=root.querySelector("#qaskread"); if(b2) b2.onclick=()=>askReadModal(); }
 let hard=1;
 const kSel=root.querySelector("#qk"), extra=root.querySelector("#qextra");
@@ -16647,11 +16670,12 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<div class="hint">Nothing is sent anywhere by this page — the code is the only thing that leaves, and you send it yourself.</div>',
 '</div><script>',
 'var D=JSON.parse(decodeURIComponent(escape(atob("'+data+'"))));',
+'function esc(t){return String(t==null?"":t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
 'document.getElementById("sub").textContent=D.org+(D.from?" · "+D.from+" to "+D.to:"");',
 'document.getElementById("mx").textContent=D.maxPicks;',
 'if(D.deadline){document.getElementById("dl").innerHTML=" All requests are due by <b>"+D.deadline+"</b>.";}',
 'var who=document.getElementById("who");',
-'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+s.name+"</option>";}).join("")+"<option value=\'__other\'>My name isn’t listed</option>";',
+'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("")+"<option value=\'__other\'>My name isn’t listed</option>";',
 'function busyLevel(f,t){var mx=0,d=new Date(f+"T00:00:00"),e=new Date(t+"T00:00:00"),g=0;',
 'while(d<=e&&g++<400){var k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");mx=Math.max(mx,D.heat[k]||0);d.setDate(d.getDate()+1);}return mx;}',
 'function holHit(f,t){for(var i=0;i<D.hol.length;i++){if(D.hol[i]>=f&&D.hol[i]<=t)return D.hol[i];}return null;}',
@@ -16670,7 +16694,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'P.addEventListener("change",function(ev){var el=ev.target.closest(".pick");if(el)check(el);});',
 'document.getElementById("mk").onclick=function(){',
 'var k=who.value;if(!k){alert("Pick your name first.");return;}',
-'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;}',
+'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;k=String(k).replace(/[|;~]/g," ").trim().slice(0,60);if(!k)return;}',
 'var segs=[];var bad=false;',
 'P.querySelectorAll(".pick").forEach(function(el,i){var f=el.querySelector(".pf").value,t=el.querySelector(".pt").value;',
 'if(!f&&!t)return;if(!f||!t||t<f){bad=true;return;}segs.push(f+"~"+t);});',
@@ -16746,14 +16770,15 @@ const P = [
 '<div class="hint">Your answers are not sent anywhere by this page. Nothing leaves your device until you send the code yourself.</div>',
 '</div><script>',
 'var D=JSON.parse(decodeURIComponent(escape(atob("'+data+'"))));',
+'function esc(t){return String(t==null?"":t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
 'document.getElementById("sub").textContent=D.org+(D.site?" · "+D.site:"");',
 'var who=document.getElementById("who");',
-'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+s.name+"</option>";}).join("")+"<option value=\'__other\'>My name isn\'t listed</option>";',
+'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("")+"<option value=\'__other\'>My name isn\'t listed</option>";',
 'var order=D.holidays.map(function(h,i){return i;}),cant={};',
 'function draw(){var L=document.getElementById("list");L.innerHTML="";order.forEach(function(hi,pos){',
 'var h=D.holidays[hi],d=new Date(h.date+"T00:00:00");',
 'var el=document.createElement("div");el.className="it"+(cant[hi]?" cant":"");',
-'el.innerHTML="<span class=\'no\'>"+(pos+1)+"</span><div class=\'nm\'><b>"+h.name+"</b><span>"+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(h.hours?" · "+h.hours:"")+"</span></div>"+',
+'el.innerHTML="<span class=\'no\'>"+(pos+1)+"</span><div class=\'nm\'><b>"+esc(h.name)+"</b><span>"+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(h.hours?" · "+h.hours:"")+"</span></div>"+',
 '"<button class=\'bt\' data-u>↑</button><button class=\'bt\' data-d>↓</button><button class=\'bt x\' data-c>"+(cant[hi]?"can\'t ✓":"can\'t")+"</button>";',
 'el.querySelector("[data-u]").onclick=function(){if(pos>0){var t=order[pos-1];order[pos-1]=order[pos];order[pos]=t;draw();}};',
 'el.querySelector("[data-d]").onclick=function(){if(pos<order.length-1){var t=order[pos+1];order[pos+1]=order[pos];order[pos]=t;draw();}};',
@@ -16762,7 +16787,7 @@ const P = [
 'draw();',
 'document.getElementById("mk").onclick=function(){',
 'var k=who.value;if(!k){alert("Pick your name first.");return;}',
-'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;}',
+'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;k=String(k).replace(/[|;~]/g," ").trim().slice(0,60);if(!k)return;}',
 'var c=[];order.forEach(function(hi){if(cant[hi])c.push(hi);});',
 'var raw="CD1|"+k+"|"+order.join(".")+"|"+c.join(".");',
 'var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
@@ -17697,6 +17722,11 @@ const av=e.avail[dow];
 blocks.push(av&&av.ok? "only free "+m2disp(t2m(av.from))+"–"+m2disp(t2m(av.to))+" that day" : "not available "+DSHORT[dow]);
 }
 if(onTimeOff(e.id,date)) blocks.push("on "+((timeOffFor(e.id,date)||{}).type||"time off"));
+if(empLicensed(e) && e.licExp && date > e.licExp)
+blocks.push((e.licLabel||"their license")+" expired "+prettyDate(e.licExp));
+if(minorBlock(e, date, dow, aMin, bMin, empWeekMinutes(e.id, ws), ws))
+blocks.push("under-18 hour limits");
+if(!cycleWorksOn(e, date)) blocks.push("not on their work pattern that day");
 const sameDay = wk.assignments.filter(a=>a.empId===e.id && a.date===date);
 if(sameDay.length) blocks.push("already on "+(shiftById(sameDay[0].shiftId)||{label:"a shift"}).label);
 const mins = empWeekMinutes(e.id,ws), add = paidEstimate(aMin,bMin);
