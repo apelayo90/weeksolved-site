@@ -1773,8 +1773,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "2e97baf0";       
-const BUILD_AT = "2026-09-01 22:27 UTC";       
+const BUILD_ID = "80c4cda7";       
+const BUILD_AT = "2026-09-01 22:55 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "32f50d2ca959e00b";
 const TERMS_DATE = "";
@@ -8367,7 +8367,7 @@ const TITLES={
 home:["Home","Everything you need, on one screen."],
 settings:["Settings","Every answer the setup questions asked — change any of them here."],
 overview:["Overview","Where this week stands."],
-week:["This week","The grid — drag, edit, lock, post."],
+week:["This week","Every shift for the week — change one, lock one, then post."],
 weeks:["All schedules","Every week you've worked on, and what state it's in."],
 day:["Day sheet","Hour-by-hour with meals and rest breaks placed."],
 requests:["Requests","Everything people have asked for, in one place, before you draft."],
@@ -8820,7 +8820,7 @@ return `<div class="spread" style="padding:7px 0;border-bottom:1px solid var(--l
         <span><kbd>W</kbd> week · <kbd>D</kbd> day · <kbd>R</kbd> requests · <kbd>T</kbd> team · <kbd>H</kbd> holidays</span>
         <span><kbd>←</kbd><kbd>→</kbd> change week</span>
         <span><kbd>⌘</kbd><kbd>Z</kbd> undo</span>
-        <span>Drag a shift between people or days on the week grid.</span>
+        <span>${isPhone()? "Tap a shift to move it to a different person or day." : "Drag a shift between people or days on the week grid."}</span>
       </div>
     </div></div>
   </div>`;
@@ -9144,7 +9144,7 @@ add("Labor cost", costOn(), "settings|Money",
 add("Licence expiry", licenseOn(), "team",
 "Warns before somebody\u2019s licence lapses, and won\u2019t schedule them after",
 "No licence dates are tracked");
-add("Posts and stations", skillsOn(), "stations",
+add("Stations on the floor", skillsOn(), "stations",
 "People are placed on named posts, with cover for each other\u2019s meals",
 "Shifts only \u2014 no named posts within a shift");
 add("Under-18 rules", minorsOn(), "settings|Ground rules",
@@ -12743,7 +12743,10 @@ return `<div class="banner ${no?"warn":"info"}"><div><b>${ok} of ${ok+no} reques
         </div>`).join("")}
       </div>` : `<div class="banner info"><div><b>Nothing flagged.</b> Every shift is filled, every minimum holds, everyone is inside their hours, and every break sits inside the window Weeksolved has for ${esc(law().name)}.
           <div class="mini" style="margin-top:4px">${esc(LAWNOTE)}</div></div></div>`}
-      <div class="mini">Drag any shift to a different person or day, click one to change its times or hand it over, and lock the ones you don't want touched when you draft again. <b>Posting locks the whole week here \u2014 it does not tell anybody.</b> Handing it out is the step after.</div>
+      <div class="mini">${isPhone()
+? "Tap any shift to change its times, move it to somebody else or hand it over, and lock the ones you don\u2019t want touched when you draft again."
+: "Drag any shift to a different person or day, click one to change its times or hand it over, and lock the ones you don\u2019t want touched when you draft again."}
+        <b>Posting locks the whole week here \u2014 it does not tell anybody.</b> Handing it out is the step after.</div>
     </div>
   </div>`;
 }
@@ -14036,10 +14039,14 @@ copies: cop.value==="n"? (+r.querySelector("#prn").value||1) : 1
 });
 const sheets=(html.match(/class="sheet"/g)||[]).length;
  
-const send=()=>{
-saveFile((what.value==="week"? "week-":"day-sheets-")+useWs+".html", html);
+const send=async ()=>{
+closeModal();
+const ok = await saveFile((what.value==="week"? "week-":"day-sheets-")+useWs+".html", html);
+if(!ok) return;                        
 logIt("post","Printed "+(what.value==="week"?"the week":"day sheets")+" \u2014 "+sheets+" page"+(sheets===1?"":"s"));
-save(); closeModal();
+const wk=peekWeek(useWs);
+if(what.value==="week" && wk && wk.published && !postPending(wk)) markTold(useWs, "print");
+save(); render();
 toast(sheets+" page"+(sheets===1?"":"s")+" ready \u2014 open the file and it prints itself");
 };
 if(sheets>60){
@@ -14581,7 +14588,7 @@ if(k==="pri") return `
         <p class="whead">When two people both fit a shift and it's one everybody wants — or one nobody does — who decides?</p>
         <div class="wopts">${PRI_MODES.map(m=>opt("priority",m[0],W.priority,m[1],m[2])).join("")}</div>
         ${W.priority==="seniority"? `<div class="banner info"><div>Seniority reads each person's start date, which you haven't entered yet. Add them on the profiles later and the ladder sorts itself — until then it falls back to the order you listed people in.</div></div>`:""}
-        ${W.priority==="custom"? `<div class="help">The order you typed the names in becomes the starting ladder. Drag it around any time under Shift priority.</div>`:""}
+        ${W.priority==="custom"? `<div class="help">The order you typed the names in becomes the starting ladder. Rearrange it any time under Shift priority.</div>`:""}
         ${W.priority==="lottery"? `<div class="help">Reshuffled every week from a seed you can re-roll — and the same seed always gives the same order, so it's auditable after the fact.</div>`:""}
         ${W.hoursPreset==="wkday"? "" : `<div class="desrow" style="margin-top:6px">
           <strong style="font-family:Archivo,sans-serif;font-size:13px">And weekends — wanted or not?</strong>
@@ -15585,7 +15592,7 @@ return `
 
     <div class="card">
       <header><h3>The ladder</h3>
-        <span class="hint">${dragable? "Drag to reorder, or use the arrows." : "Computed from "+esc(mode[1].toLowerCase())+" — switch to “My own order” to arrange it by hand."}</span>
+        <span class="hint">${dragable? (isPhone()? "Use the arrows to move a name up or down." : "Drag to reorder, or use the arrows.") : "Computed from "+esc(mode[1].toLowerCase())+" — switch to “My own order” to arrange it by hand."}</span>
         ${dragable? `<button class="btn sm" id="pfromsen">Start from seniority</button>`:""}
         ${P.mode!=="custom"? `<button class="btn sm" id="pfreeze">Freeze this order and edit it</button>`:""}</header>
       <div class="body">
