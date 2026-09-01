@@ -692,9 +692,20 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .personcard .ln{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dotted var(--line)}
 .personcard .ln:last-child{border-bottom:0}
 /* the closed-test door */
-.gate{position:fixed;inset:0;display:grid;place-items:center;background:var(--ground);padding:24px;
-  padding-bottom:calc(24px + env(safe-area-inset-bottom))}
-.gatebox{width:min(380px,100%);text-align:center}
+/* This screen has to survive a phone browser whose own toolbar floats over the
+   bottom of the page. Centring with place-items looked fine until the form grew
+   two agreement boxes: taller than the viewport, it overflowed off both ends
+   with nothing to scroll, and the Create button sat under Safari's toolbar
+   where it could not be tapped. So: the panel scrolls, and it is centred with
+   margin:auto, which centres when there is room and simply stops when there is
+   not. The bottom gap clears the toolbar and the home indicator both. */
+.gate{position:fixed;inset:0;background:var(--ground);
+  display:flex;flex-direction:column;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding:24px 24px calc(24px + env(safe-area-inset-bottom))}
+.gatebox{width:min(380px,100%);margin:auto;text-align:center;
+  padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+@media (max-width:820px){ .gate{padding-top:16px} }
 .gatemark{width:46px;height:46px;margin:0 auto 14px;border-radius:10px;background:var(--accent);color:var(--on-accent);
   display:grid;place-items:center;font-family:"Archivo","Public Sans",sans-serif;font-weight:700;font-size:20px}
 .gatebox h1{font-family:"Archivo","Public Sans",sans-serif;font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
@@ -1842,6 +1853,9 @@ if(!(await newDeviceGate(uid))) return;
 SESSION_AT=Date.now();
 startApp();
 setSync(true,"Signed in — your board follows you between devices");
+ 
+if(WELCOME_WITH){ const W=WELCOME_WITH; WELCOME_WITH=null;
+setTimeout(()=>accessWelcome(W.id, W.life, W.days, W.at), 350); }
 watchKick(uid);
 deviceCheck();
 if(cloudUnsub) cloudUnsub();
@@ -2184,6 +2198,7 @@ document.body.innerHTML =
 (tab==="new"? '<div class="gnote">Pressing <b>Create my account</b> means you agree to both.</div>' : '')+
 '<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
 (tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot password?</button>':'')+
+(tab==="new"? '<div class="gnote"><b>Your code works once.</b> It is tied to this account the moment you press the button, and it stays used even if the account is deleted later \u2014 deleting an account does not hand the code back. Use an email and password you want to keep.</div>' : '')+
 '<p class="gfoot">'+(tab==="new"
 ? "Codes are personal and run for 30 days from the day you create the account. Please don\'t pass yours on. Everything is free during the tester program."
 : "New here? Switch to New tester and use the access code you were given. Free while testing — <a href=\'/pricing.html\' style=\'color:inherit\'>see what it will cost later</a>.")+'</p>'+
@@ -2255,7 +2270,7 @@ F.body = [
 "Everything in the product is switched on for the whole of it \u2014 nothing is held back for a paid plan, and no card is asked for at any point.",
 "When it ends, nothing is deleted. Your board stays in your account, and a new code picks it up exactly where you left it."];
 }
-F.body.push("Your code was single use. It is now tied to this account and cannot be used to make another one, so there is no need to keep it anywhere.");
+F.body.push("Your code was single use. It is tied to this account now and cannot make another one \u2014 not even if this account is later deleted. There is no need to keep it anywhere.");
 return F;
 }
  
@@ -2269,6 +2284,85 @@ modal(F.title, `
       ${ndaNeeded()? `<div class="help">One last thing: Weeksolved is not public yet, so please keep the product itself between you and your own business. The schedules you make are entirely yours \u2014 print them, send them, hand them out, no restriction at all.</div>`:""}
     </div>`,
 `<button class="btn primary" data-close>Got it</button>`);
+}
+ 
+async function wipeCloudData(uid){
+const kill=[];
+const drop=async(path)=>{ try{ const c=await FB.db.collection(path).get();
+(c.docs||[]).forEach(d=>kill.push(d.ref.delete().catch(()=>{}))); }catch(e){} };
+await drop("users/"+uid+"/weeks");
+await drop("users/"+uid+"/devices");
+["board/current","meta/kick","meta/profile"].forEach(d=>{
+try{ kill.push(FB.db.doc("users/"+uid+"/"+d).delete().catch(()=>{})); }catch(e){} });
+await Promise.all(kill);
+}
+function deleteAccountModal(){
+const em=acctEmail();
+const tester=!!(typeof ACCESS!=="undefined" && ACCESS && ACCESS.on);
+if(!em){
+modal("Clear this device", `
+      <div class="stack">
+        <div class="banner warn"><div><b>You are not signed in, so there is no account to delete.</b> This board lives in this browser only. Clearing it removes it from this device and nowhere else, and it cannot be undone.</div></div>
+        <div class="help">Take a backup first if there is anything here you want to keep.</div>
+      </div>`,
+`<button class="btn" data-close>Cancel</button>
+       <button class="btn" id="dabak0">Back it up first</button>
+       <button class="btn danger" id="dawipe">Clear this device</button>`,
+r=>{ r.querySelector("#dabak0").onclick=()=>saveFile("weeksolved-backup.json", JSON.stringify(S,null,2));
+r.querySelector("#dawipe").onclick=()=>{ try{ localStorage.clear(); }catch(e){} location.reload(); }; });
+return;
+}
+modal("Delete your account", `
+    <div class="stack">
+      <div class="banner crit"><div><b>This deletes ${esc(em)} and everything in it, for good.</b> Your team, your rules, every week you have built — all of it goes, and none of it can be brought back, not by you and not by us.</div></div>
+      <div class="card"><div class="body">
+        <div class="lab">What goes</div>
+        <div class="mini">Your schedules and every saved week · your team and their details · your hours, roles, shifts and rules · time-off records and balances · the list of devices you have signed in from · the sign-in itself, so this email is free to use again from scratch.</div>
+      </div></div>
+      <div class="card"><div class="body">
+        <div class="lab">What stays, and why</div>
+        <div class="mini">${tester? "<b>The record that your access code was used.</b> That is the thing that stops one code making a second account, so it survives deletion by design. Deleting this account does <b>not</b> give the code back, and you cannot sign up again with it.<br><br>":""}<b>The note that you agreed to the terms.</b> One line saying which version you accepted and when. Nobody can edit or remove it, us included — a record that can be rewritten later is not a record.<br><br><b>Any problem reports you sent.</b> They are how things get fixed, and they are not deleted with the account.<br><br>Nothing else is kept. If you would rather those went too, write to us and ask.</div>
+      </div></div>
+      <div class="field"><label>Take a backup first?</label>
+        <button class="btn sm" id="dabak">Download a backup of this board</button>
+        <span class="mini">A backup restores everything into a fresh account later. This is your last chance to take one.</span></div>
+      <div class="field"><label>Your password, to prove it is you</label>
+        <input type="password" id="dapass" autocomplete="current-password" placeholder="Password">
+        <span class="mini">Asked because deleting an account should not be something a borrowed phone can do.</span></div>
+      <div class="field"><label>Type DELETE to confirm</label>
+        <input type="text" id="datype" autocomplete="off" autocapitalize="characters" placeholder="DELETE"></div>
+      <div id="daerr"></div>
+    </div>`,
+`<button class="btn" data-close>Keep my account</button><button class="btn danger" id="dago">Delete it for good</button>`,
+r=>{
+const err=t=>{ r.querySelector("#daerr").innerHTML = t? `<div class="banner crit"><div>${esc(t)}</div></div>` : ""; };
+r.querySelector("#dabak").onclick=()=>saveFile("weeksolved-backup.json", JSON.stringify(S,null,2));
+r.querySelector("#dago").onclick=async ()=>{
+const pass=r.querySelector("#dapass").value;
+if((r.querySelector("#datype").value||"").trim().toUpperCase()!=="DELETE"){ err("Type DELETE in the box to confirm."); return; }
+if(!pass){ err("Your password is needed to confirm."); return; }
+const btn=r.querySelector("#dago"); btn.disabled=true; btn.textContent="Deleting…"; err("");
+try{
+const u=FB.auth.currentUser;
+const cred=firebase.auth.EmailAuthProvider.credential(u.email, pass);
+await u.reauthenticateWithCredential(cred);
+await wipeCloudData(u.uid);
+if(cloudUnsub){ try{ cloudUnsub(); }catch(e){} cloudUnsub=null; }
+await u.delete();
+try{ localStorage.clear(); }catch(e){}
+document.body.innerHTML='<div class="gate"><div class="gatebox"><div class="gatemark">WS</div>'+
+'<h1>Weeksolved</h1><p class="gsub">Your account is gone. Thank you for trying it.</p>'+
+'<p class="gfoot">Nothing of yours is left in the app. If you kept a backup you can restore it into a new account any time.</p></div></div>';
+}catch(e){
+btn.disabled=false; btn.textContent="Delete it for good";
+const c=(e&&e.code)||"";
+err(c==="auth/wrong-password"||c==="auth/invalid-credential"? "That password is not right."
+: c==="auth/too-many-requests"? "Too many tries — wait a minute and try again."
+: c==="auth/network-request-failed"? "No connection. Try again when you are back online."
+: "That did not go through: "+((e&&e.message)||"something went wrong")+". Nothing has been deleted.");
+}
+};
+});
 }
 function expiredScreen(){
 document.body.innerHTML =
@@ -8621,6 +8715,10 @@ return `<div class="card"><header><h3>Your account</h3>
     <div class="setbody">
       ${setRow("Signed in as", esc(FB.user.email||"")+" \u2014 your board saves here and follows you between devices",
 `<span class="chip acc" style="margin-right:8px">${window.TESTER_LIFE?"Free for life \u2014 founding account":"Free \u2014 tester program"}</span><button class="btn sm" id="setsignout">Sign out</button>`)}
+      ${(()=>{ const F=accessFacts(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM);
+return setRow("Your access", esc(F.title)+" \u2014 "+esc(F.who), `<button class="btn sm" id="setaccess">What that means</button>`); })()}
+      ${setRow("Delete this account", "Removes the account and everything in it, for good. Take a backup first \u2014 nothing can be brought back afterwards"+((typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.on)? ", and your access code stays used either way":"")+".",
+`<button class="btn sm danger" id="setdelacct">Delete account</button>`)}
       ${setRow("How many places this covers", "One location: one roster, one set of hours, holidays and rules. A second site gets its own account and its own login \u2014 that keeps the two from overwriting each other. Three or more sites are priced together on the Multi plan.", "")}
       ${swap? `<div class="setrow"><div class="sq"><strong style="color:var(--warn)">This board was replaced with a different team</strong>
         <div class="mini">A different business name and a completely different roster arrived from another device. Nothing has been changed or blocked \u2014 but two locations sharing one login will keep overwriting each other's week. Each site works far better on its own account.</div></div>
@@ -9186,6 +9284,9 @@ const nm=root.querySelector("#setname");
 if(nm) nm.addEventListener("change",()=>{ myName=nm.value.trim();
 try{ localStorage.setItem("dowel.myname", myName); }catch(e){}
 save(); toast(myName? "Colleagues will see changes as "+myName : "Name cleared"); });
+{ const a=root.querySelector("#setaccess");
+if(a) a.onclick=()=>accessWelcome(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM);
+const d=root.querySelector("#setdelacct"); if(d) d.onclick=()=>deleteAccountModal(); }
 const bk=root.querySelector("#setbak");
 if(bk) bk.onclick=()=>saveFile("weeksolved-backup.json", JSON.stringify(S,null,2));
 const rs=root.querySelector("#setrestore");
