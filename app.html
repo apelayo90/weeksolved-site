@@ -1285,6 +1285,10 @@ modal("Your account", `
             <span><b>Sign out</b><span class="mini" style="display:block">Leaves this browser signed out. Nothing is deleted.</span></span></button>`
 : `<button class="btn primary" id="acin" style="justify-content:flex-start;text-align:left">
             <span><b>Sign in</b><span class="mini" style="display:block">Takes you to the sign-in screen.</span></span></button>`}
+        ${em? `<button class="btn" id="acacc" style="justify-content:flex-start;text-align:left">
+            <span><b>What this account gives you</b><span class="mini" style="display:block">${esc(accessFacts(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM).title)}</span></span></button>`:""}
+        <a class="btn" href="/pricing.html" target="_blank" rel="noopener" style="justify-content:flex-start;text-align:left">
+            <span><b>Plan and billing</b><span class="mini" style="display:block">${window.TESTER_LIFE? "Free for life \u2014 nothing to pay, ever." : (typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.on)? "Free while testing. See what plans will cost." : "See what each plan covers."}</span></span></a>
         <button class="btn" id="acset" style="justify-content:flex-start;text-align:left">
           <span><b>Account settings</b><span class="mini" style="display:block">Devices using this account, password, and what one account covers.</span></span></button>
       </div>
@@ -1296,6 +1300,9 @@ const b1=r.querySelector("#acsw"); if(b1) b1.onclick=out;
 const b2=r.querySelector("#acout"); if(b2) b2.onclick=out;
 const b3=r.querySelector("#acin"); if(b3) b3.onclick=()=>location.reload();
 r.querySelector("#acset").onclick=()=>{ closeModal(true); go("settings"); };
+{ const ac=r.querySelector("#acacc");
+if(ac) ac.onclick=()=>{ closeModal(true);
+accessWelcome(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM); }; }
 });
 }
 
@@ -1706,8 +1713,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "9be7ab56";       
-const BUILD_AT = "2026-09-01 19:17 UTC";       
+const BUILD_ID = "fc300d49";       
+const BUILD_AT = "2026-09-01 19:45 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "32f50d2ca959e00b";
 const TERMS_DATE = "";
@@ -1866,7 +1873,7 @@ startApp();
 setSync(true,"Signed in — your board follows you between devices");
  
 if(WELCOME_WITH){ const W=WELCOME_WITH; WELCOME_WITH=null;
-setTimeout(()=>accessWelcome(W.id, W.life, W.days, W.at), 350); }
+setTimeout(()=>accessWelcome(W.id, W.life, W.days, W.at, W.mailed), 350); }
 watchKick(uid);
 deviceCheck();
 if(cloudUnsub) cloudUnsub();
@@ -2177,6 +2184,8 @@ recordTermsAccept();
 if(ndaNeeded()) recordNdaAccept();
  
 WELCOME_WITH = {id:hit.id, life:!!hit.life, days:hit.days||30, at:Date.now()};
+ 
+try{ await cred.user.sendEmailVerification(); WELCOME_WITH.mailed=true; }catch(e){}
 } finally { SIGNING_UP=false; }
 await cloudEnter();
 }
@@ -2244,7 +2253,8 @@ document.body.innerHTML =
 '<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
 '<button class="btn ghost sm" id="gdiag" style="margin-top:8px">Having trouble? Check this device</button>'+
 '<div class="gnote" style="opacity:.65;font-size:11px">Build '+esc(BUILD_ID||"dev")+(BUILD_AT? " \u00b7 "+esc(BUILD_AT):"")+'</div>'+
-(tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot password?</button>':'')+
+(tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot your password? Send me a reset link</button>'+
+'<div class="gnote" style="opacity:.8">There is no separate username \u2014 you sign in with the email address you used to create the account. Put it in the box above and press the button and a reset link comes to it.</div>':'')+
 (tab==="new"? '<div class="gnote"><b>Your code works once.</b> It is tied to this account the moment you press the button, and it stays used even if the account is deleted later \u2014 deleting an account does not hand the code back. Use an email and password you want to keep.</div>' : '')+
 '<p class="gfoot">'+(tab==="new"
 ? "Codes are personal and run for 30 days from the day you create the account. Please don\'t pass yours on. Everything is free during the tester program."
@@ -2338,12 +2348,13 @@ F.body.push("Your code was single use. It is tied to this account now and cannot
 return F;
 }
  
-function accessWelcome(codeId, life, days, activatedMs){
+function accessWelcome(codeId, life, days, activatedMs, mailed){
 const F=accessFacts(codeId, life, days, activatedMs);
 modal(F.title, `
     <div class="stack">
       <div class="banner ok"><div><b>${esc(F.who)}</b></div></div>
       ${F.body.map(t=>`<div class="help">${esc(t)}</div>`).join("")}
+      ${mailed? `<div class="help"><b>Check your email.</b> A confirmation is on its way to the address you signed up with. You do not have to do anything with it \u2014 it is there so you have a record, and so we know the address works if you ever need to reset your password. If it does not arrive in a few minutes, look in spam.</div>`:""}
       <div class="help">You can read this again any time under <b>Settings \u2192 Your account</b>.</div>
       ${ndaNeeded()? `<div class="help">One last thing: Weeksolved is not public yet, so please keep the product itself between you and your own business. The schedules you make are entirely yours \u2014 print them, send them, hand them out, no restriction at all.</div>`:""}
     </div>`,
@@ -2359,6 +2370,37 @@ await drop("users/"+uid+"/devices");
 ["board/current","meta/kick","meta/profile"].forEach(d=>{
 try{ kill.push(FB.db.doc("users/"+uid+"/"+d).delete().catch(()=>{})); }catch(e){} });
 await Promise.all(kill);
+}
+ 
+async function codesModal(){
+modal("Who is testing", `<div class="stack"><div class="help">Reading the codes\u2026</div></div>`,
+`<button class="btn" data-close>Close</button>`);
+let rows=[], err=null;
+try{
+const snap=await FB.db.collection("codes").get();
+(snap.docs||[]).forEach(d=>rows.push(d.data()||{}));
+}catch(e){ err=(e&&e.message)||"could not read them"; }
+rows.sort((a,b)=>(b.at||0)-(a.at||0));
+const known=(typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes.map(c=>c.id) : [];
+const used=new Set(rows.map(r=>r.id));
+const spare=known.filter(id=>!used.has(id));
+const body = err
+? `<div class="banner crit"><div><b>Could not read them.</b> ${esc(err)}<div class="mini" style="margin-top:4px">If this says permission denied, the database rules that allow the founder account to read this have not been published yet.</div></div></div>`
+: `<div class="stack">
+        <div class="banner info"><div><b>${rows.length} redeemed \u00b7 ${spare.length} still unused.</b> ${spare.length? "Unused: "+esc(spare.join(", ")) : "Every code has been claimed."}</div></div>
+        ${rows.length? `<div class="scroll"><table><thead><tr><th style="width:80px">Code</th><th>Who</th><th style="width:120px">When</th></tr></thead>
+          <tbody>${rows.map(r=>`<tr>
+            <td><span class="chip ${(r.id==="FOUNDER"||r.id==="GIFT")?"acc":""}">${esc(r.id||"?")}</span></td>
+            <td><strong>${esc(r.email||"(no address recorded)")}</strong>
+              <div class="mini">${esc(r.tz||"time zone not recorded")}${r.loc? " \u00b7 "+esc(r.loc):""}</div>
+              ${r.ua? `<div class="mini" style="opacity:.7">${esc(String(r.ua).slice(0,90))}</div>`:""}</td>
+            <td class="mini">${r.at? esc(new Date(r.at).toLocaleString([],{dateStyle:"medium",timeStyle:"short"})) : "\u2014"}</td>
+          </tr>`).join("")}</tbody></table></div>`
+: `<div class="empty"><strong>Nothing redeemed yet</strong>Codes appear here the moment somebody signs up with one.</div>`}
+        <div class="help">Rows older than the change that started recording addresses will show the code and the date but no address \u2014 there was nothing to record at the time. A time zone that does not match where you expect somebody to be is worth a question.</div>
+      </div>`;
+const b2=document.querySelector("#modalroot .modal .body");
+if(b2) b2.innerHTML=body;
 }
 function deleteAccountModal(){
 const em=acctEmail();
@@ -5891,7 +5933,7 @@ AL:{n:"Alabama",p:[
 {l:"Alabama Board of Nursing licence lookup",u:"https://abn.alabama.gov/applications/LicenseLookup.aspx",c:["rn","lpn"],note:"RN and LPN only \u2014 the Board handles nurse practitioner checks by email, not here."},
 {l:"Alabama Board of Medical Examiners",u:"https://dashboard.albme.gov/Verification/search.aspx",c:["physician"]}]},
 AK:{n:"Alaska",p:[
-{l:"Alaska Professional Licensing search",u:"https://www.commerce.alaska.gov/web/cbpl/ProfessionalLicensing/ProfessionalLicenseSearch.aspx",c:"*"}]},
+{l:"Alaska professional licence search",u:"https://www.commerce.alaska.gov/cbp/main/search/professional",c:"*",note:"If it does not open, start at commerce.alaska.gov and pick Professional Licensing \u2014 Search."}]},
 AZ:{n:"Arizona",p:[
 {l:"Arizona Board of Pharmacy lookup",u:"https://azbop.igovsolution.net/online/Lookups/AZIndividual_Lookup.aspx",c:["pharmacist","pharmtech"],note:"Asks you to type a code from an image before it will search."}]},
 AR:{n:"Arkansas",p:[
@@ -5941,7 +5983,7 @@ LA:{n:"Louisiana",p:[
 {l:"Louisiana Board of Cosmetology",u:"http://www.lsbc.louisiana.gov/Public/Default.aspx",c:["cosmo"]},
 {l:"Louisiana Board of Practical Nurse Examiners",u:"https://www.lsbpne.la.gov/licensure/verification-of-licensure/",c:["lpn"],note:"Louisiana splits RNs and LPNs across two boards."}]},
 ME:{n:"Maine",p:[
-{l:"Maine Professional Licensing",u:"https://www.maine.gov/pfr/professionallicensing/",c:"*"},
+{l:"Maine Professional Licensing \u2014 find a licensee",u:"https://www.maine.gov/pfr/professionallicensing/",c:"*",note:"Opens the state page; the search itself is one click on from there."},
 {l:"Maine Board of Licensure in Medicine",u:"https://www.maine.gov/md/licensure/license-verification",c:["physician"]}]},
 MD:{n:"Maryland",p:[
 {l:"Maryland Board of Nursing lookup",u:"https://mdchart.health.maryland.gov/CHART/s/license-lookup",c:["rn","lpn","np"]},
@@ -5959,7 +6001,7 @@ MI:{n:"Michigan",p:[
 MN:{n:"Minnesota",p:[
 {l:"Minnesota Board of Nursing verification",u:"https://mn.gov/boards/nursing/verify-a-license/license-and-permit-verification/license-permit-verification.jsp",c:["rn","lpn","np"]},
 {l:"Minnesota Board of Medical Practice",u:"https://mn.gov/boards/medical-practice/consumers/find-practitioner/index.jsp",c:["physician","rt"]},
-{l:"Minnesota Board of Pharmacy verification",u:"https://mn.gov/boards/pharmacy/verify.jsp",c:["pharmacist","pharmtech"]},
+{l:"Minnesota Board of Pharmacy verification",u:"https://mn.gov/boards/pharmacy/verify.jsp",c:["pharmacist","pharmtech"],note:"Opens the board page; the search itself is one click on from there."},
 {l:"Minnesota Board of Dentistry verification",u:"https://mn.gov/boards/dentistry/public/verify-license.jsp",c:["dentist","dentalhyg"]}]},
 MS:{n:"Mississippi",p:[
 {l:"Mississippi Board of Nursing verification",u:"https://gateway.licensure.msbn.ms.gov/Verification/search.aspx",c:["rn","lpn","np"]},
@@ -5978,7 +6020,7 @@ NJ:{n:"New Jersey",p:[
 NM:{n:"New Mexico",p:[
 {l:"New Mexico \u2014 verify a licence",u:"https://www.rld.nm.gov/about-us/public-information-hub/verify-a-license/",c:"*"}]},
 NY:{n:"New York",p:[
-{l:"NYSED Office of the Professions verification",u:"https://eservices.nysed.gov/professions/verification-search",c:["pharmacist","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt"],note:"New York does not register pharmacy technicians."},
+{l:"NYSED Office of the Professions verification",u:"https://eservices.nysed.gov/professions/verification-search",c:["pharmacist","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt"],note:"Opens the state page and the search is on it; New York does not register pharmacy technicians."},
 {l:"NY Department of State licensee search",u:"https://appext20.dos.ny.gov/lcns_public/lic_name_search_frm",c:["security"]},
 {l:"NY appearance enhancement licensees",u:"https://dos.ny.gov/appearance-enhancement-licensee-search",c:["cosmo"],note:"Published as a list to browse rather than a search box."},
 {l:"NY registered radiologic technologists",u:"https://health.ny.gov/professionals/doctors/radiological/index.htm",c:["radtech"],note:"Lists by first letter rather than a search box."}]},
@@ -6004,14 +6046,14 @@ PA:{n:"Pennsylvania",p:[
 RI:{n:"Rhode Island",p:[
 {l:"Rhode Island Department of Health verification",u:"https://healthri.mylicense.com/verification/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"]}]},
 SC:{n:"South Carolina",p:[
-{l:"South Carolina LLR licensee lookup",u:"https://verify.llronline.com/LicLookup/LookupMain.aspx",c:"*",note:"Needs cookies and pop-ups allowed."}]},
+{l:"South Carolina LLR licensee lookup",u:"https://verify.llronline.com/LicLookup/LookupMain.aspx",c:"*",note:"Needs cookies and pop-ups allowed \u2014 with them blocked the page keeps reloading itself."}]},
 SD:{n:"South Dakota",p:[
 {l:"South Dakota Board of Pharmacy lookup",u:"https://sdbop.igovsolution.net/online/Lookups/Lookup_Individual.aspx",c:["pharmacist","pharmtech"],note:"Asks you to type a code from an image before it will search."},
 {l:"South Dakota Board of Medical and Osteopathic Examiners",u:"https://www.sdbmoe.gov/sdbmoe-licensee-lookup/",c:["physician","rt"]},
 {l:"South Dakota Board of Nursing verification",u:"https://www.sdbon.org/NurseLookup.asp",c:["rn","lpn","np"]}]},
 TN:{n:"Tennessee",p:[
 {l:"Tennessee health related boards verification",u:"https://internet.health.tn.gov/Licensure/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"],note:"Asks you to type a code from an image before it will search."},
-{l:"Tennessee Commerce and Insurance \u2014 verify a licence",u:"https://verify.tn.gov/",c:["cosmo","security"]}]},
+{l:"Tennessee Commerce and Insurance \u2014 verify a licence",u:"https://search.cloud.commerce.tn.gov/",c:["cosmo","security"]}]},
 TX:{n:"Texas",p:[
 {l:"Texas Medical Board \u2014 look up a licence",u:"https://www.tmb.texas.gov/resources/for-the-public/look-up-a-license",c:["physician","radtech","rt"]},
 {l:"Texas State Board of Pharmacy database search",u:"https://www.pharmacy.texas.gov/dbsearch/default.asp",c:["pharmacist","pharmtech"]},
@@ -8784,6 +8826,14 @@ return `<div class="card"><header><h3>Your account</h3>
 `<span class="chip acc" style="margin-right:8px">${window.TESTER_LIFE?"Free for life \u2014 founding account":"Free \u2014 tester program"}</span><button class="btn sm" id="setsignout">Sign out</button>`)}
       ${(()=>{ const F=accessFacts(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM);
 return setRow("Your access", esc(F.title)+" \u2014 "+esc(F.who), `<button class="btn sm" id="setaccess">What that means</button>`); })()}
+      ${window.TESTER_ID==="FOUNDER"? setRow("Who is testing",
+"Every access code, who redeemed it and when \u2014 so you can see at a glance which are still unused and spot one that has travelled further than you meant.",
+`<button class="btn sm" id="setcodes">Show me</button>`) : ""}
+      ${setRow("Plan and billing", (()=>{
+if(window.TESTER_LIFE) return "Nothing to pay, ever. This account is free for life \u2014 when paid plans open it is not billed and nothing will be asked of you.";
+if(typeof ACCESS!=="undefined" && ACCESS && ACCESS.on) return "Nothing to pay while Weeksolved is in testing, and no card is held. When paid plans open you will be asked here first, and never charged without choosing a plan yourself.";
+return "See what each plan covers and what it costs.";
+})(), `<a class="btn sm" href="/pricing.html" target="_blank" rel="noopener">See the plans</a>`)}
       ${setRow("Delete this account", "Removes the account and everything in it, for good. Take a backup first \u2014 nothing can be brought back afterwards"+((typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.on)? ", and your access code stays used either way":"")+".",
 `<button class="btn sm danger" id="setdelacct">Delete account</button>`)}
       ${setRow("How many places this covers", "One location: one roster, one set of hours, holidays and rules. A second site gets its own account and its own login \u2014 that keeps the two from overwriting each other. Three or more sites are priced together on the Multi plan.", "")}
@@ -8920,6 +8970,88 @@ sel("union.otLedger", [[1,"On"],[0,"Off"]], u.otLedger?1:0))}
       ${setRow("Where these settings show up", "Warnings appear on the week beside the ordinary ones, and under Export there are reports built for this: the offer standing, the seniority roster, and what a week may owe in premiums.", "", "export")}
     </div></div>`;
 }
+ 
+const SET_GROUPS=[
+{k:"business", t:"Your business",
+cards:["What\u2019s switched on","Your business","Where you operate","When you're open","Days that don't work"]},
+{k:"team", t:"Team and shifts",
+cards:["Your people","Shifts and cover","Who gets first pick"]},
+{k:"rules", t:"Rules and drafting",
+cards:["Ground rules","Meals and rest breaks","Drafting","Money"]},
+{k:"account", t:"Account and data",
+cards:["Your account","Where your schedule lives, and who can see it","Problems and feedback","Everything else"]},
+{k:"device", t:"This device",
+cards:["How it looks on this device","This board"]}
+];
+function setGroup(){
+const k=(S.ui&&S.ui.setTab)||"";
+if(k==="__all") return k;
+return SET_GROUPS.some(g=>g.k===k)? k : SET_GROUPS[0].k;
+}
+function setGroupNav(){
+const cur=setGroup();
+return `<div class="card"><div class="body" style="padding:9px 10px">
+    <div class="row" style="gap:6px;flex-wrap:wrap" role="tablist" aria-label="Settings sections">
+      ${SET_GROUPS.map(g=>`<button class="btn sm ${g.k===cur?"primary":""}" role="tab"
+        aria-selected="${g.k===cur}" data-setgrp="${g.k}">${esc(g.t)}</button>`).join("")}
+      <button class="btn sm ghost" data-setgrp="__all" aria-selected="${cur==="__all"}">Show me everything</button>
+    </div></div></div>`;
+}
+ 
+function cardTitle(card){
+const h=card.querySelector("header h3, .foldhead h3, h3");
+return h? h.textContent.trim() : "";
+}
+ 
+const SET_ADVANCED=["Who gets first pick","Drafting","Money",
+"Where your schedule lives, and who can see it","Problems and feedback",
+"This board","Everything else"];
+function foldKeyFor(title){ return "c_"+String(title).toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,24); }
+function cardFolded(title){
+const k=foldKeyFor(title), f=(S.ui&&S.ui.fold)||{};
+if(k in f) return !!f[k];                     
+return SET_ADVANCED.includes(title);          
+}
+function applyCardFolds(root){
+[...root.querySelectorAll(":scope > .card")].forEach(card=>{
+if(card.querySelector("[data-setgrp]")) return;
+const t=cardTitle(card); if(!t) return;
+const head=card.querySelector("header"); if(!head) return;
+if(!SET_ADVANCED.includes(t)) return;        
+const shut=cardFolded(t);
+card.classList.toggle("folded", shut);
+if(!head.dataset.cfold){
+head.dataset.cfold=foldKeyFor(t);
+head.style.cursor="pointer";
+const mark=document.createElement("span");
+mark.className="mini foldc"; mark.style.cssText="flex:none;font-size:15px;margin-left:auto";
+head.appendChild(mark);
+head.addEventListener("click", ev=>{
+if(ev.target.closest("button,a,input,select")) return;    
+S.ui=S.ui||{}; S.ui.fold=S.ui.fold||{};
+S.ui.fold[head.dataset.cfold]=!cardFolded(t);
+save(); render();
+});
+}
+const m=head.querySelector(".foldc"); if(m) m.textContent = shut? "+" : "\u2013";
+});
+}
+function applySetGroup(root){
+const cur=setGroup();
+const wanted = cur==="__all"? null : (SET_GROUPS.find(g=>g.k===cur)||{}).cards||[];
+let shown=0, unknown=[];
+[...root.querySelectorAll(":scope > .card")].forEach(card=>{
+if(card.querySelector("[data-setgrp]")) return;           
+const t=cardTitle(card);
+ 
+const known=SET_GROUPS.some(g=>g.cards.includes(t));
+if(!known) unknown.push(t);
+const on = !wanted || wanted.includes(t) || !known;
+card.hidden = !on;
+if(on) shown++;
+});
+return {shown, unknown};
+}
 function vSettings(){
 const L=law(), P=S.priority;
 const bt=BIZ_TYPES.find(x=>x.id===S.org.bizType);
@@ -8932,6 +9064,7 @@ return `
   <div class="stack">
     <div class="banner info"><div><b>Everything the setup questions asked, in the order they asked it.</b> Change any answer here and it takes effect on the next draft — nothing you've already posted is touched.</div>
       <button class="btn sm" id="setrerun" style="flex:none;margin-left:auto">Run setup again</button></div>
+    ${setGroupNav()}
 
     ${featureStateCard()}
 
@@ -9277,9 +9410,31 @@ return (a? "Agreed "+new Date(a.at).toLocaleDateString()+". " : "Not recorded on
 `<button class="btn sm danger" id="setreset">Reset and start the questions again</button>`)}
       ${setRow("Empty the board", "Clears the roster, rules, schedules and requests and leaves you on a blank board, without re-asking anything", `<button class="btn sm danger" id="setclear">Clear everything</button>`)}
     </div></div>
+
+    ${(()=>{
+ 
+const grp=(title, links)=>`<div style="margin-bottom:12px">
+        <div class="lab" style="margin-bottom:5px">${esc(title)}</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap">${links.map(([t,u])=>
+`<a class="btn sm" href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join("")}</div></div>`;
+return `<div class="card ${folded("setlinks")?"folded":""}">${foldHead("setlinks","Everything else",`<span class="hint">Plans, policies and how to reach us</span>`)}
+        <div class="body">
+          ${grp("The product", [["What it costs","/pricing.html"],["What's new","/updates.html"],["Questions and answers","/faq.html"],["About us","/about.html"]])}
+          ${grp("Your data and rights", [["Privacy policy","/privacy.html"],["Security","/security.html"],["Data processing terms","/dpa.html"],["Accessibility","/accessibility.html"]])}
+          ${grp("The agreement", [["Terms of service","/terms.html"],["Refunds","/refunds.html"]].concat(ndaNeeded()? [["Tester agreement","/tester-agreement.html"]] : []))}
+          ${grp("Talk to a person", [["Contact us","/contact.html"]])}
+          <div class="mini">Each opens in a new tab \u2014 your board stays exactly where it is.${BUILD_ID? " Build "+esc(BUILD_ID)+(BUILD_AT? " \u00b7 "+esc(BUILD_AT):"")+"." : ""}</div>
+        </div></div>`; })()}
   </div>`;
 }
 WIRE.settings = root=>{
+{ const pane=root.querySelector(".stack")||root;
+applySetGroup(pane);
+applyCardFolds(pane);
+root.querySelectorAll("[data-setgrp]").forEach(b=>b.onclick=()=>{
+S.ui=S.ui||{}; S.ui.setTab=b.dataset.setgrp; save(); render();
+const pn=document.getElementById("pane"); if(pn) pn.scrollIntoView({block:"start"});
+}); }
 root.querySelectorAll("[data-fgo]").forEach(b=>b.onclick=()=>go(b.dataset.fgo));
 { const a=root.querySelector("#apsize"); if(a) a.onchange=()=>{ applyAppearance(a.value,null); toast("Text size changed"); };
 const d=root.querySelector("#apdens"); if(d) d.onchange=()=>{ applyAppearance(null,d.value); render(); };
@@ -9351,6 +9506,7 @@ const nm=root.querySelector("#setname");
 if(nm) nm.addEventListener("change",()=>{ myName=nm.value.trim();
 try{ localStorage.setItem("dowel.myname", myName); }catch(e){}
 save(); toast(myName? "Colleagues will see changes as "+myName : "Name cleared"); });
+{ const cb=root.querySelector("#setcodes"); if(cb) cb.onclick=()=>codesModal(); }
 { const a=root.querySelector("#setaccess");
 if(a) a.onclick=()=>accessWelcome(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM);
 const d=root.querySelector("#setdelacct"); if(d) d.onclick=()=>deleteAccountModal(); }
