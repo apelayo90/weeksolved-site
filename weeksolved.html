@@ -3511,6 +3511,43 @@ function patternShiftName(i,k){
 }
 
 /* Draft several weeks in a row, each aware of the one before it. */
+/* Anyone in a licensed role whose licence runs out inside the stretch about to
+   be drafted. The drafter already refuses to place them past the date — this is
+   so the manager is told before it happens rather than reading it in the notes
+   afterwards. It only ever looks at people who are in a role marked licensed
+   AND have a date on file: somebody with no licence details is never mentioned,
+   because a blank is not a problem. */
+function licenceGate(fromWs, nWeeks){
+  const to=addDays(fromWs, (Math.max(1,nWeeks||1))*7-1);
+  return S.employees.filter(e=>e.active && empLicensed(e) && e.licExp && e.licExp < to)
+    .map(e=>({e, exp:e.licExp, whole: e.licExp < fromWs}))
+    .sort((a,b)=>a.exp.localeCompare(b.exp));
+}
+/* Ask, then do. Never drafts around an expired licence without saying so. */
+function withLicenceCheck(fromWs, nWeeks, go){
+  const hit=licenceGate(fromWs, nWeeks);
+  if(!hit.length){ go(); return; }
+  const one=hit.length===1;
+  modal("Before this week is drafted", `
+    <div class="stack">
+      <div class="banner warn"><div><b>${hit.length} ${one?"person has a licence that runs out":"people have licences that run out"} inside this stretch.</b>
+        Weeksolved will not put ${one?"them":"anyone"} on a shift dated after the licence expires — that part is not optional. What you decide here is only whether to carry on now or go and fix the details first.</div></div>
+      <div class="card"><div class="setbody">
+        ${hit.map(h=>`<div class="setrow"><div class="sq">
+          <strong>${esc(h.e.name)}</strong>
+          <div class="mini"><span class="chip ${h.whole?"crit":"warn"}">${esc(h.e.licLabel||"Licence")} ${h.whole? "expired" : "expires"} ${esc(prettyDate(h.exp))}</span>
+            ${h.whole? "They cannot be given any shift in this stretch." : "They can work up to that date and no further."}</div>
+        </div><div class="sc"><button class="btn sm" data-licfix="${esc(h.e.id)}">Open their file</button></div></div>`).join("")}
+      </div></div>
+      <div class="help">If the renewal has come through and you have not put the new date in yet, open their file and change it — the draft will then use them normally. If you carry on, the week is built without ${one?"them":"the people above"} where their licence does not cover it, and every shift that leaves open is listed for you afterwards.</div>
+    </div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="licgo">Carry on and draft</button>`,
+    r=>{
+      r.querySelectorAll("[data-licfix]").forEach(b=>b.onclick=()=>{ const id=b.dataset.licfix; closeModal(true); empModal(id); });
+      r.querySelector("#licgo").onclick=()=>{ closeModal(true); go(); };
+    });
+}
+
 function generateRange(fromWs, nWeeks){
   let filled=0, unfilled=0, built=[];
   for(let i=0;i<nWeeks;i++){
@@ -3546,12 +3583,15 @@ function draftModal(){
         r.querySelectorAll("#dwk .wopt").forEach(x=>x.classList.toggle("on",x===b)); });
       r.querySelector("#ddraft").onclick=()=>{
         const from = weekStartOf(r.querySelector("#dfrom").value||start, S.org.weekStart);
-        if(!r.querySelector("#dkeep").checked)
-          for(let i=0;i<n;i++){ const w=getWeek(addDays(from,i*7)); if(!w.published) w.assignments=[]; }
-        S.horizon=n; S.currentWeek=from;
-        const res=generateRange(from,n);
-        save(); closeModal(); render();
-        toast(res.filled+" shifts drafted across "+res.built.length+" week"+(res.built.length===1?"":"s")+(res.unfilled? " · "+res.unfilled+" left open":""));
+        const keep = r.querySelector("#dkeep").checked;
+        closeModal(true);
+        withLicenceCheck(from, n, ()=>{
+          if(!keep) for(let i=0;i<n;i++){ const w=getWeek(addDays(from,i*7)); if(!w.published) w.assignments=[]; }
+          S.horizon=n; S.currentWeek=from;
+          const res=generateRange(from,n);
+          save(); render();
+          toast(res.filled+" shifts drafted across "+res.built.length+" week"+(res.built.length===1?"":"s")+(res.unfilled? " · "+res.unfilled+" left open":""));
+        });
       };
     });
 }
@@ -9671,7 +9711,8 @@ function vTeam(){
             <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}</td>
             <td>${e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span> `:"";}).join("")}</td>
             <td><span class="chip">${esc(e.type)}</span>${prefsBlank(e)?'<div class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine \u2014 send the starter form if you would like their preferences.">nothing on file \u00b7 open availability</div>':""}${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
-              return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)&&e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>` : e.licExp<=addDays(ymd(new Date()),45)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>`:""):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
+              return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)? (e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>` : e.licExp<=addDays(ymd(new Date()),45)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>`:"")
+      : `<div class="mini" title="Weeksolved has no date for this, so it cannot warn you about it. It is not a claim that anything is wrong.">no expiry date on file</div>`):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
             <td class="mono">${(()=>{const L=effLimits(e);
               if(L.exactH) return "exactly "+L.exactH+"h";
               return (L.minH||0)+"–"+(L.maxH||0)+"h"+((L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH)?" *":"");})()}</td>
@@ -14943,10 +14984,10 @@ function wireReqTables(root){
   if(co) co.onclick=()=>{ const p=reqPeriod(S.currentWeek,S.horizon||1);
     S.requests=(S.requests||[]).filter(r=>r.kind==="maxh"||r.to>=p.from); save(); render(); toast("Cleared"); };
   const qd=root.querySelector("#qdraft");
-  if(qd) qd.onclick=()=>{
+  if(qd) qd.onclick=()=>withLicenceCheck(S.currentWeek, S.horizon||1, ()=>{
     const res=generateRange(S.currentWeek, S.horizon||1); save(); render();
     toast(res.filled+" shifts drafted"+(res.unfilled? " · "+res.unfilled+" left open":""));
-  };
+  });
 }
 
 
@@ -16899,6 +16940,8 @@ const KB=[
   a:"On the Requests page, press Ask the team. Weeksolved writes one page — send it however you already talk to your staff. They open it on a phone, add what they need (a day off, a shift they'd prefer, a time they can't start before), and get a short code. Paste the code into Read a reply and you see everything they asked for, with a button to add each one.\n\nNobody signs in and nothing is sent anywhere by the form — the code is the only thing that leaves, and they send it themselves. Nothing lands on the schedule until you press. You set how firm each one is, not them: the form records what they said, the dropdown decides what the scheduler is actually held to."},
  {t:"Starter form for a new hire", k:"starter form new hire onboarding intake about you details contact availability preferences add someone roster setup", go:"team",
   a:"On the Team page, press Starter form. It writes one page a new hire fills in on their phone: contact details, what they're trained for, when they can work, and what they'd prefer. They send back a code; you paste it into Read a reply, look at everything before you keep it, and press once to add or update them.\n\nThe form promises them nothing. It says at the top, and again over the preference sections, that these are preferences rather than promises, that you build the schedule around the business first, and that shifts, posts and rotations are your workplace's decision. Their hours, employment type, rate and start date are never asked — those are yours to set."},
+ {t:"Expired licenses and drafting", k:"license licence expired expiry lapsed block draft schedule certification registration renew warn stop", go:"team",
+  a:"If someone is in a role you marked as licensed and you have put an expiry date on their file, the drafter will not give them a shift dated after that date. That is not a setting and cannot be switched off — it is the one thing the scheduler simply refuses to do.\n\nWhen you press Draft, anything expiring inside the stretch is put in front of you first: who, what date, and whether it takes out the whole stretch or only part of it. You can open their file and put the new date in, or carry on and have the week built around it. If the renewal came through and you just have not typed it yet, fixing it there is the quickest route.\n\nNothing happens for anyone with no license details on file. A blank is not treated as a problem — Weeksolved has no date, so it makes no claim either way, and those people are scheduled normally."},
  {t:"Someone has no preferences on file", k:"blank preferences empty availability open nothing on file new person default flag", go:"team",
   a:"That's fine, and it costs you nothing. Anyone with nothing on file is treated as available whenever you're open, and the scheduler uses them normally. The Team page just shows a quiet 'nothing on file' note against them and a count in the header, so you know who you've never asked — not because anything is wrong. Press Starter form if you'd like to collect it, or leave it: plenty of rosters run perfectly well with nobody's preferences entered at all."},
  {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
