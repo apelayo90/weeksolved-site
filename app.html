@@ -1713,8 +1713,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "dd35ac62";       
-const BUILD_AT = "2026-09-01 20:30 UTC";       
+const BUILD_ID = "002c1284";       
+const BUILD_AT = "2026-09-01 21:40 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "32f50d2ca959e00b";
 const TERMS_DATE = "";
@@ -2152,7 +2152,12 @@ if(c==="auth/weak-password") return "Pick a longer password — 8 characters or 
 if(c==="auth/invalid-credential"||c==="auth/wrong-password"||c==="auth/user-not-found") return "Email and password don't match an account here.";
 if(c==="auth/too-many-requests") return "Too many tries — wait a minute and try again.";
 if(c==="auth/network-request-failed") return "No connection. Try again when you're back online.";
-return (e&&e.message)||"Something went wrong — try again.";
+ 
+const raw=String((e&&e.message)||"");
+if(/network|offline|fetch/i.test(raw)) return "No connection. Try again when you're back online.";
+if(/timeout|timed out/i.test(raw)) return "That took too long. Try again in a moment.";
+if(/permission|insufficient/i.test(raw)) return "That account isn't allowed to do this.";
+return raw.replace(/\s*\(auth\/[a-z-]+\)\.?/i,"").trim() || "Something went wrong — try again.";
 }
 
 async function cloudSignup(code,email,pass){
@@ -2379,7 +2384,14 @@ let rows=[], err=null;
 try{
 const snap=await FB.db.collection("codes").get();
 (snap.docs||[]).forEach(d=>rows.push(d.data()||{}));
-}catch(e){ err=(e&&e.message)||"could not read them"; }
+}catch(e){
+const m=String((e&&e.message)||"").toLowerCase();
+err = /permission|insufficient/.test(m)
+? "the database would not let this account read the codes. The rule that allows the founder account to see them may not have been published yet"
+: /offline|unavailable|network/.test(m)
+? "your device could not reach the database. That is usually the internet dropping out"
+: ((e&&e.message)||"they could not be read");
+}
 rows.sort((a,b)=>(b.at||0)-(a.at||0));
 const known=(typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes.map(c=>c.id) : [];
 const used=new Set(rows.map(r=>r.id));
@@ -2465,7 +2477,7 @@ const c=(e&&e.code)||"";
 err(c==="auth/wrong-password"||c==="auth/invalid-credential"? "That password is not right."
 : c==="auth/too-many-requests"? "Too many tries — wait a minute and try again."
 : c==="auth/network-request-failed"? "No connection. Try again when you are back online."
-: "That did not go through: "+((e&&e.message)||"something went wrong")+". Nothing has been deleted.");
+: "That did not go through: "+plainSendError((e&&e.message)||"")+". Nothing has been deleted.");
 }
 };
 });
@@ -3068,6 +3080,10 @@ const gross = (a.endMin-a.startMin) - gapMin(a);
 const unpaid = (a.breaks?a.breaks.meals:[]).filter(m=>!m.waived).reduce((t,m)=>t+m.len,0);
 return gross-unpaid;
 }
+ 
+function paidSpan(aMin, bMin, gapM){
+return paidEstimate(aMin, bMin) - (gapM||0);
+}
 function paidEstimate(aMin,bMin){
 const b = computeBreaks(aMin,bMin);
 return (bMin-aMin) - b.meals.reduce((t,m)=>t+m.len,0);
@@ -3536,7 +3552,7 @@ const e2 = f.end? pin+total : pin;
 if(s2<0) continue;
  
 if(!availOk(e, dow, s2, e2)) continue;
-if(lim.maxShiftH && L > lim.maxShiftH*60) continue;
+if(lim.maxShiftH && (paidEstimate(s2,e2)-gapM) > lim.maxShiftH*60) continue;
 if(lim.maxSpanH && (e2-s2) > lim.maxSpanH*60) continue;
 if(minorsOn() && minorBlock(e, date, dow, s2, e2, weekElse, ws)) continue;
 const paid = paidEstimate(s2,e2) - gapM;
@@ -3747,7 +3763,7 @@ for(const d of days){
 if(!dayOpen(d.date, d.dow)) continue;       
 for(const sh of shifts){
 const [aMin,bMin]=shiftMinutes(sh);
-if(floorMin && (bMin-aMin) < floorMin) continue;
+if(floorMin && paidSpan(aMin,bMin,0) < floorMin) continue;    
 const slot={shiftId:sh.id, roleId, sh};
 if(!hardOk(e, slot, d.date, d.dow, state, assignments)) continue;
 const a={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:sh.id,
@@ -3806,7 +3822,7 @@ if(!availOk(e,d.dow,aMin,bMin)){ note("that shift falls outside the hours they c
 const mb=minorsOn()? minorBlock(e, d.date, d.dow, aMin, bMin, state[e.id].min, null) : null;
 if(mb){ note("they\u2019re under 18 and it\u2019s "+mb); return; }
 }
-if(L.maxShiftH && (bMin-aMin-gapM) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
+if(L.maxShiftH && paidSpan(aMin, bMin, gapM) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
 if(L.maxSpanH && (bMin-aMin) > L.maxSpanH*60){ note("that shift keeps them at work longer than their span allows"); return; }
 if(L.maxH && state[e.id].min + paidEstimate(aMin,bMin) > L.maxH*60+1){
 note("another shift would take them past their "+L.maxH+"h cap"); return; }
@@ -3966,7 +3982,18 @@ function msgTpl(kind){ return ((S.msg&&S.msg.tpl)||{})[kind] || MSG_DEFAULT[kind
 function msgFill(kind, vars){
 let t=msgTpl(kind);
 Object.keys(vars||{}).forEach(k=>{ t=t.split("{"+k+"}").join(vars[k]==null?"":String(vars[k])); });
-return t.replace(/\{[a-z]+\}/g,"").replace(/[ \t]{2,}/g," ").trim();
+t=t.replace(/\{[a-z]+\}/g,"");
+ 
+return t
+.replace(/\(\s*\)/g, "")                  
+.replace(/\s+([,.;:!?])/g, "$1")           
+.replace(/([,;:])\s*([,.;:])/g, "$1")      
+.replace(/,\s*\./g, ".")
+.replace(/\u2014\s*([,.])/g, "$1")         
+.replace(/[ \t]{2,}/g, " ")
+.replace(/ +\n/g, "\n")
+.replace(/\n{3,}/g, "\n\n")
+.trim();
 }
  
 function tellModal(title, text, opts){
@@ -4205,7 +4232,7 @@ if(st.byDate[date] && st.byDate[date].length) return false;
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return false;  
 const add = paidEstimate(aMin,bMin);
 if(lim.maxH && (st.min + add) > lim.maxH*60 + 1) return false;         
-if(lim.maxShiftH && (bMin-aMin-gapM) > lim.maxShiftH*60) return false;
+if(lim.maxShiftH && paidSpan(aMin, bMin, gapM) > lim.maxShiftH*60) return false;
 if(lim.maxSpanH && (bMin-aMin) > lim.maxSpanH*60) return false;
 if(lim.noSplit && gapM>0) return false;                               
 if(lim.maxStretchH && estStretch(aMin,bMin,gapM) > lim.maxStretchH*60) return false;
@@ -4261,10 +4288,10 @@ if(free.length){
 const [aM,bM]=shiftMinutes(slot.sh);
 const why=free.map(e=>reqBlocks(e,date,aM,bM,state[e.id].min)).filter(Boolean);
 if(why.length===free.length) return "everyone who could take it "+(why.length===1? why[0] : "asked not to be scheduled then");
-const tooLong=free.filter(e=>{ const L=effLimits(e,date); return L.maxShiftH && (bM-aM) > L.maxShiftH*60; });
+const tooLong=free.filter(e=>{ const L=effLimits(e,date); return L.maxShiftH && paidSpan(aM,bM,0) > L.maxShiftH*60; });
 if(tooLong.length===free.length){
 const L=effLimits(tooLong[0],date);
-return "this shift is "+fmtHrs(bM-aM)+", longer than the "+L.maxShiftH+"h cap on "+(L.groups[0]||"their group");
+return "this shift pays "+fmtHrs(paidSpan(aM,bM,0))+", longer than the "+L.maxShiftH+"h cap on "+(L.groups[0]||"their group");
 }
 }
 if(slot._deferred) return slot._deferred;
@@ -4334,6 +4361,9 @@ const exact = e.hoursMode==="exact" ? (e.maxH||0) : 0;
 const L={ minH: exact||e.minH||0, maxH: exact||e.maxH||0, exactH: exact, maxD:e.maxD||7,
 maxShiftH:S.rules.maxShiftH, maxSpanH:S.rules.maxSpanH||0, minRestH:S.rules.minRestH,
 maxConsecDays:S.rules.maxConsecDays, canBeAlone:true, groups:[] };
+ 
+if(e.maxShiftH)     L.maxShiftH     = Math.min(L.maxShiftH||99, e.maxShiftH);
+if(e.maxConsecDays) L.maxConsecDays = Math.min(L.maxConsecDays||99, e.maxConsecDays);
 const wcap = cyclesOn()? cycleWeekCap(e, weekStartOf(ref||S.currentWeek, S.org.weekStart)) : null;
 if(wcap!=null){ L.maxH = L.maxH? Math.min(L.maxH, wcap) : wcap; L.cycleCap=wcap; }
 groupsFor(e).forEach(g=>{
@@ -4514,7 +4544,7 @@ if(!cycleWorksOn(e,slot.date)) return;
 if(onTimeOff(e.id,slot.date)) return;                       
  
 if(empLicensed(e) && e.licExp && slot.date > e.licExp) return;
-if(lim.maxShiftH && (bMin-aMin) > lim.maxShiftH*60) return; 
+if(lim.maxShiftH && paidSpan(aMin,bMin,0) > lim.maxShiftH*60) return; 
 
 const reqBlock=reqBlocks(e,slot.date,aMin,bMin,mins);
 const overCap = lim.maxH && total > lim.maxH*60+1;
@@ -9279,7 +9309,7 @@ sel("rules.askHours", [[0,"Judge it by how soon the shift is"],[2,"2 hours"],[6,
         </select>`)}
       ${(S.mail.endpoint||"").trim()? setRow("Replies come back to", "Staff hit reply and it reaches this address. Leave it blank and the account\u2019s own email is used.",
 `<input type="email" data-bind="mail.replyTo" value="${esc(S.mail.replyTo||"")}" data-rerender="no" placeholder="${esc((FB&&FB.user&&FB.user.email)||"you@example.com")}" style="min-width:210px">`) : ""}
-      ${S.mail.lastErr? setRow("Last time it didn\u2019t send", esc(S.mail.lastErr)+" \u2014 nothing went out, and you were offered your mail app instead.",
+      ${S.mail.lastErr? setRow("Last time it didn\u2019t send", esc(plainSendError(S.mail.lastErr))+" \u2014 nothing went out, and you were offered your mail app instead.",
 `<button class="btn sm" id="setmailclr">Clear</button>`) : ""}
       ${setRow("Messages to staff about their requests (optional)", msgOn()
 ? "On \u2014 a Tell them button on every request, and declining one offers the message straight away. Nothing is ever sent for you: \u201cDon\u2019t send\u201d is always the first button, and you can edit every word first."
@@ -10748,6 +10778,9 @@ if(!P.set){ epn.textContent="Sets the hour and day boxes below. Pick Custom to l
 epn.textContent=P.d||"";
 if(P.set.maxH) put("#emax", P.set.maxH);
 if(P.set.maxD) put("#emaxd", P.set.maxD);
+ 
+e.maxShiftH     = P.set.maxShiftH || 0;
+e.maxConsecDays = P.set.maxConsecDays || 0;
 if(P.set.cycle && !cyclesOn()){
 S.rules.useCycles=true; save();
 toast("Work patterns switched on \u2014 reopen this profile to set the cycle dates");
@@ -10855,6 +10888,8 @@ done:(e.trainPlan&&e.trainPlan.done)||{}};
 })(),
 licExp:((root.querySelector("#elic")||{}).value||"")||(e.licExp&&!root.querySelector("#elic")?e.licExp:""),
 licLabel:(((root.querySelector("#elicn")||{}).value)||(root.querySelector("#elicn")?"":e.licLabel||"")).trim(),
+maxShiftH: e.maxShiftH||0,
+maxConsecDays: e.maxConsecDays||0,
 licKind: root.querySelector("#elick")? root.querySelector("#elick").value : (e.licKind||""),
 licJur:  root.querySelector("#elicj")? root.querySelector("#elicj").value : (e.licJur||""),
 licNo:  (root.querySelector("#elicno")? root.querySelector("#elicno").value : (e.licNo||"")).trim().slice(0,40),
@@ -13366,6 +13401,21 @@ return {sent:0, failed:to, via:"server", why:S.mail.lastErr};
 }
 }
  
+function plainSendError(why){
+const w=String(why||"").toLowerCase();
+if(!w) return "the sender didn\u2019t answer";
+if(/failed to fetch|networkerror|network request failed|load failed/.test(w))
+return "your device couldn\u2019t reach the sender. That is usually the internet dropping out, or a firewall at work blocking it";
+if(/timeout|timed out|aborted/.test(w)) return "the sender took too long to answer";
+if(/answered 401|answered 403|unauthor|forbidden/.test(w))
+return "the sender refused the request. Your account may need reconnecting to it";
+if(/answered 404/.test(w)) return "the sending address in your settings does not exist";
+if(/answered 429|rate|too many/.test(w)) return "too many messages have gone out too quickly. Wait a few minutes and try again";
+if(/answered 5\d\d/.test(w)) return "the sending service had a problem at its end. It is not something you have done \u2014 try again shortly";
+if(/quota|mailbox|bounce|reject/.test(w)) return "the sending service turned it away: "+String(why).replace(/the sender answered \d+/i,"").trim();
+return String(why);
+}
+ 
 async function mailOutAndSay(msg, whatItWas){
 const r=await mailOut(msg);
 if(r.via==="client"){ toast("Your mail app is opening with it written"); return r; }
@@ -13376,9 +13426,30 @@ save(); toast("Sent to "+r.sent+" "+(r.sent===1?"person":"people"));
 return r;
 }
  
+if(r.sent && r.failed.length){
+logIt("send", whatItWas+" emailed to "+r.sent+" of "+(r.sent+r.failed.length)+"; "+r.failed.length+" did not go");
+save();
+modal("Some of it went, some did not", `
+      <div class="stack">
+        <div class="banner warn"><div><b>${r.sent} ${r.sent===1?"message":"messages"} went out. ${r.failed.length} did not.</b>
+          Do not resend to everybody \u2014 the ones below are the only people who did not get it.</div></div>
+        <div class="card"><div class="body"><div class="lab">Did not go</div>
+          <div class="mini">${r.failed.map(x=>esc(x)).join("<br>")}</div></div></div>
+        ${r.why? `<div class="help">The sender said: ${esc(plainSendError(r.why))}.</div>`:""}
+        <div class="help">You can open your own mail app addressed to just those people and send it from there.</div>
+      </div>`,
+`<button class="btn" data-close>Leave it</button><button class="btn primary" id="mfsome">Mail just those people</button>`,
+rr=>{ rr.querySelector("#mfsome").onclick=()=>{
+window.open("mailto:?bcc="+encodeURIComponent(r.failed.join(","))+
+"&subject="+encodeURIComponent(msg.subject||"")+"&body="+encodeURIComponent(msg.body||""));
+closeModal();
+}; });
+return r;
+}
+ 
 modal("That didn\u2019t send", `
     <div class="stack">
-      <div class="banner crit"><div><b>Weeksolved couldn\u2019t send it \u2014 ${esc(r.why||"the sender didn\u2019t answer")}.</b>
+      <div class="banner crit"><div><b>Weeksolved couldn\u2019t send it \u2014 ${esc(plainSendError(r.why))}.</b>
         Nothing has gone out, so nobody has been told twice.</div></div>
       <div class="help">You can open your own mail app with the same message and send it from there instead.</div>
     </div>`,
