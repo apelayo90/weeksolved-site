@@ -1697,6 +1697,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
+const BUILD_ID = "fa25aa3d";       
+const BUILD_AT = "2026-09-01 19:09 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "32f50d2ca959e00b";
 const TERMS_DATE = "";
@@ -2170,6 +2172,39 @@ WELCOME_WITH = {id:hit.id, life:!!hit.life, days:hit.days||30, at:Date.now()};
 await cloudEnter();
 }
 
+ 
+function gateDiagnostics(){
+const L=[];
+L.push("Build: "+(BUILD_ID||"unknown")+(BUILD_AT? " ("+BUILD_AT+")":""));
+L.push("Address: "+location.href.split("?")[0]);
+L.push("Screen: "+innerWidth+"x"+innerHeight);
+let store="yes";
+try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }
+catch(e){ store="NO \u2014 "+(e&&e.name||"blocked"); }
+L.push("Can save to this browser: "+store);
+L.push("Sign-in library loaded: "+((typeof firebase!=="undefined" && firebase && firebase.auth)? "yes":"NO \u2014 it was blocked or did not download"));
+L.push("Connected to the account service: "+((typeof FB!=="undefined" && FB && FB.auth)? "yes":"NO"));
+L.push("Online: "+(navigator.onLine? "yes":"no"));
+L.push("Access codes in this build: "+((typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes.length : "none"));
+L.push("Cookies enabled: "+(navigator.cookieEnabled? "yes":"NO"));
+L.push("Browser: "+String(navigator.userAgent||"").slice(0,160));
+return L.join("\n");
+}
+function gateDiagModal(){
+const txt=gateDiagnostics();
+const w=document.createElement("div");
+w.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto";
+w.innerHTML='<div style="background:var(--surface);color:var(--ink);border-radius:12px;padding:16px;max-width:460px;width:100%;margin:auto">'+
+'<h3 style="margin:0 0 8px;font-size:16px">What this device says</h3>'+
+'<p style="margin:0 0 10px;font-size:13px;color:var(--ink2)">Anything marked NO is the problem. Copy this and send it over.</p>'+
+'<pre id="gdtxt" style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:10px;margin:0 0 10px">'+esc(txt)+'</pre>'+
+'<button class="btn" id="gdcopy" style="width:100%;margin-bottom:6px">Copy it</button>'+
+'<button class="btn" id="gdclose" style="width:100%">Close</button></div>';
+document.body.appendChild(w);
+w.querySelector("#gdcopy").onclick=()=>{ copyText(txt,"Copied \u2014 paste it in a message"); };
+w.querySelector("#gdclose").onclick=()=>w.remove();
+w.addEventListener("mousedown",e=>{ if(e.target===w) w.remove(); });
+}
 function authScreen(msg, tab){
 tab=tab||"in";
 document.body.innerHTML =
@@ -2185,6 +2220,7 @@ document.body.innerHTML =
 : '')+
 '<input type="email" id="gmail" autocomplete="email" placeholder="Email" aria-label="Email" style="margin-top:8px">'+
 '<input type="password" id="gpass" autocomplete="'+(tab==="new"?"new-password":"current-password")+'" placeholder="Password'+(tab==="new"?" — 8+ characters":"")+'" aria-label="Password" style="margin-top:8px">'+
+(tab==="new"? '<input type="password" id="gpass2" autocomplete="new-password" placeholder="Password again" aria-label="Confirm your password" style="margin-top:8px">' : '')+
 (tab==="new"
 ? '<label class="gagree"><input type="checkbox" id="gterms"><span>'+
 'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>'+
@@ -2197,13 +2233,18 @@ document.body.innerHTML =
 '<button class="btn primary big" id="gGo" style="margin-top:12px">'+(tab==="new"?"Create my account":"Sign in")+'</button>'+
 (tab==="new"? '<div class="gnote">Pressing <b>Create my account</b> means you agree to both.</div>' : '')+
 '<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
+'<button class="btn ghost sm" id="gdiag" style="margin-top:8px">Having trouble? Check this device</button>'+
+'<div class="gnote" style="opacity:.65;font-size:11px">Build '+esc(BUILD_ID||"dev")+(BUILD_AT? " \u00b7 "+esc(BUILD_AT):"")+'</div>'+
 (tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot password?</button>':'')+
 (tab==="new"? '<div class="gnote"><b>Your code works once.</b> It is tied to this account the moment you press the button, and it stays used even if the account is deleted later \u2014 deleting an account does not hand the code back. Use an email and password you want to keep.</div>' : '')+
 '<p class="gfoot">'+(tab==="new"
 ? "Codes are personal and run for 30 days from the day you create the account. Please don\'t pass yours on. Everything is free during the tester program."
 : "New here? Switch to New tester and use the access code you were given. Free while testing — <a href=\'/pricing.html\' style=\'color:inherit\'>see what it will cost later</a>.")+'</p>'+
 '</div></div>';
-const err=t=>{ document.getElementById("gerr").textContent=t; };
+ 
+const err=t=>{ const e=document.getElementById("gerr"); if(e) e.textContent=t; };
+GATE_ERR = err;
+{ const d=document.getElementById("gdiag"); if(d) d.onclick=gateDiagModal; }
 document.getElementById("tabin").onclick=()=>authScreen("", "in");
 document.getElementById("tabnew").onclick=()=>authScreen("", "new");
 const busy=(b)=>{ const g=document.getElementById("gGo"); g.disabled=b; g.textContent=b? "One moment…" : (tab==="new"?"Create my account":"Sign in"); };
@@ -2212,6 +2253,11 @@ const email=document.getElementById("gmail").value.trim();
 const pass=document.getElementById("gpass").value;
 if(!email){ err("Email first."); return; }
 if(!pass || pass.length<8){ err("Password needs 8 characters or more."); return; }
+if(tab==="new"){
+const p2=document.getElementById("gpass2");
+if(!p2 || !p2.value){ err("Type the password a second time so we know it is what you meant."); return; }
+if(p2.value!==pass){ err("Those two passwords are not the same. Check them and try again."); p2.focus(); return; }
+}
 busy(true);
 try{
 if(tab==="new"){
@@ -7863,7 +7909,10 @@ ctx:String(typeof b.ctx==="string"? b.ctx : JSON.stringify(b.ctx||"")).slice(0,3
 }catch(e){}
 }
  
+let GATE_ERR=null;
 window.addEventListener("error", ev=>{
+try{ if(GATE_ERR && document.getElementById("gerr"))
+GATE_ERR("Something went wrong on this screen: "+((ev&&ev.message)||"unknown")+". Press \u201cHaving trouble?\u201d below and send me what it says."); }catch(e){}
 try{
 if(!loaded) return;
 logBug({auto:true, kind:"crash",
