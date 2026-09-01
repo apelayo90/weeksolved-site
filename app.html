@@ -1885,7 +1885,8 @@ if(!Array.isArray(s.rules.mealClose.days)) s.rules.mealClose.days=[0,6];
 if(typeof s.rules.mealClose.mins!=="number") s.rules.mealClose.mins=0;
 if(typeof s.rules.maxSpanH!=="number") s.rules.maxSpanH=0;
 if(typeof s.rules.mealEarliestMin!=="number") s.rules.mealEarliestMin=0;
-s.shifts.forEach(x=>{ if(x.gapFrom===undefined) x.gapFrom=""; if(x.gapTo===undefined) x.gapTo=""; });
+s.shifts.forEach(x=>{ if(x.gapFrom===undefined) x.gapFrom=""; if(x.gapTo===undefined) x.gapTo="";
+if(!x.flex) x.flex="none"; if(typeof x.lenMinH!=="number") x.lenMinH=0; if(typeof x.lenMaxH!=="number") x.lenMaxH=0; });
 if(!s.rules.topUpLabel) s.rules.topUpLabel="Project time";
 if(!s.rules.stationRotation) s.rules.stationRotation="fair";
 if(!s.rules.stationSpan) s.rules.stationSpan="day";
@@ -1997,12 +1998,13 @@ const m=((t%1440)+1440)%1440;
 return m>=c.from && m<c.to;
 }
  
-function mealTarget(startMin, endMin, natural, deadline, len){
+function mealTarget(startMin, endMin, natural, deadline, len, ctx){
 const lo=startMin+60, hi=Math.min(deadline, endMin-30-len);
 if(hi<lo) return natural;
 const plan=mealPlan();
 if(plan==="closed"){
-const c=lunchClosureAnyDay();
+ 
+const c = ctx && ctx.date!=null ? lunchClosure(ctx.dow, ctx.date) : lunchClosureAnyDay();
 if(c && c.from>=lo && c.from<=hi) return c.from;
 return natural;
 }
@@ -2129,7 +2131,7 @@ if(opts.nudge) tw += opts.nudge;
 tw = clamp(tw, earliest, L.meal.mustStartByMin);
 if(tw+len > worked-30) tw = Math.max(earliest, worked-30-len);
 let target = fit(round5(W2C(tw)), len);
-target = fit(mealTarget(startMin, endMin, target, deadline, len), len);
+target = fit(mealTarget(startMin, endMin, target, deadline, len, opts), len);
 out.meals.push({start:target,end:target+len,len,waivable,waived:false,deadline,late:target>deadline,idx:1});
 
  
@@ -2200,10 +2202,15 @@ return (S.coverage||[]).filter(r=>r.days.includes(dow))
  
 function staggerDay(list, all){
 const plan = mealPlan();
+if(plan!=="slots" && plan!=="closed" && !S.rules.staggerMeals) return;
+let withMeals = list.filter(a=>a.breaks && a.breaks.meals.length);
  
-if(plan==="closed") return;
-if(plan!=="slots" && !S.rules.staggerMeals) return;
-const withMeals = list.filter(a=>a.breaks && a.breaks.meals.length);
+if(plan==="closed"){
+withMeals = withMeals.filter(a=>{
+const c=lunchClosure(a.dow, a.date); if(!c) return true;
+return (a.breaks.meals||[]).some(m=>!m.waived && (m.start<c.from || m.end>c.to));
+});
+}
 if(!withMeals.length) return;
 const day = (all && all.length)? all : list;
 const dow = withMeals[0].dow;
@@ -2213,15 +2220,27 @@ const slots = plan==="slots"? mealSlotList() : null;
 const rivalOf={};
 (S.stations||[]).forEach(st=>{ const r=mealRivals(st.id); if(r.length) rivalOf[st.id]=new Set(r); });
 const partnerClash=(a,t,len)=>{
-const set = a.station? rivalOf[a.station] : null;
+const mySt=stationAt(a, t);
+const set = mySt? rivalOf[mySt] : null;
 if(!set) return false;
-return day.some(b=>b!==a && b.station && set.has(b.station) &&
-(((b.breaks||{}).meals)||[]).some(m2=>!m2.waived && m2.start < t+len && m2.end > t));
+return day.some(b=>{
+if(b===a) return false;
+return (((b.breaks||{}).meals)||[]).some(m2=>{
+if(m2.waived || !(m2.start < t+len && m2.end > t)) return false;
+const theirs=stationAt(b, m2.start);
+return theirs && set.has(theirs);
+});
+});
 };
 withMeals.sort((a,b)=>a.startMin-b.startMin);
 const taken = [];
+ 
+const workClock=(a,n)=>{ const g=aGap(a); const before=g? g.from-a.startMin : Infinity;
+return (!g || n<=before)? a.startMin+n : g.to+(n-before); };
 withMeals.forEach(a=>{
-let floor = a.startMin+45;                  
+ 
+const earliest = Math.max(45, +(S.rules.mealEarliestMin||0) || 45);
+let floor = workClock(a, earliest);         
 a.breaks.meals.forEach(m=>{
 const home = m.start;
 const lo = floor;
@@ -2260,7 +2279,7 @@ a.breaks.rests.length, a.breaks.rests[0].len, aGap(a));
 }
 
 function applyBreaks(a){
-const b = computeBreaks(a.startMin, a.endMin, {gap:aGap(a)});
+const b = computeBreaks(a.startMin, a.endMin, {gap:aGap(a), date:a.date, dow:a.dow});
 a.breaks = b;
 return a;
 }
@@ -2303,6 +2322,23 @@ function shiftMinutes(sh){
 let a=t2m(sh.start), b=t2m(sh.end);
 if(b<=a) b+=1440;
 return [a,b];
+}
+ 
+function shiftFlex(sh){
+if(!sh || !sh.flex || sh.flex==="none") return null;
+const [a,b]=shiftMinutes(sh);
+const nominal=(b-a) - (()=>{ const g=shiftGap(sh); return g? g.to-g.from : 0; })();
+let lo=Math.round((+sh.lenMinH||0)*60) || nominal;
+let hi=Math.round((+sh.lenMaxH||0)*60) || nominal;
+if(hi<lo){ const t=lo; lo=hi; hi=t; }
+if(hi<=lo) return null;
+return {end: sh.flex==="end", lo, hi, nominal};
+}
+function flexLabel(sh){
+const f=shiftFlex(sh); if(!f) return "";
+return f.end
+? "starts "+m2disp(shiftMinutes(sh)[0])+", runs "+fmtHrs(f.lo)+"\u2013"+fmtHrs(f.hi)
+: "ends "+m2disp(shiftMinutes(sh)[1])+", runs "+fmtHrs(f.lo)+"\u2013"+fmtHrs(f.hi);
 }
  
 function shiftGap(sh){
@@ -2730,12 +2766,15 @@ const short = S.rules.fillMode==="full"
 : [];
 
  
+ 
+ 
+wk.assignments = assignments.sort((x,y)=> x.date.localeCompare(y.date) || x.startMin-y.startMin);
 dates.forEach(({date})=>{
+assignments.filter(a=>a.date===date && !a.locked).forEach(applyBreaks);
 staggerDay(assignments.filter(a=>a.date===date && !a.locked), assignments.filter(a=>a.date===date));
 });
 wk.short = short;
 
-wk.assignments = assignments.sort((x,y)=> x.date.localeCompare(y.date) || x.startMin-y.startMin);
 wk.generatedAt = Date.now();
 wk.unfilled = unfilled;
  
@@ -2756,11 +2795,88 @@ if(a) a.perDiemAuto=true;
 wk.perDiemUsed=(unfilled.length-still.length)||0;
 wk.unfilled = still;
 } else wk.perDiemUsed=0;
+flexPass(ws);
 if((S.stations||[]).length){ const T=seedTally(ws);
 dates.forEach(({date})=>{ clearAdmin(date,ws); assignStations(date,ws,T); }); }
  
 dates.forEach(({date})=>assignMentors(date,ws));
 return {filled:assignments.length-kept.length, unfilled:wk.unfilled, perDiem:wk.perDiemUsed||0};
+}
+
+ 
+function flexPass(ws){
+ws=ws||S.currentWeek;
+const wk=peekWeek(ws); if(!wk) return 0;
+let changed=0;
+const dates=weekDates(ws);
+const isFlex=a=>{ const sh=shiftById(a.shiftId); return !!(sh && shiftFlex(sh)); };
+ 
+const target=e=>{ const L=effLimits(e, ws); return Math.round((L.exactH || L.minH || 0)*60); };
+ 
+for(let sweep=0; sweep<2; sweep++)
+dates.forEach(({date,dow})=>{
+const day=wk.assignments.filter(a=>a.date===date);
+if(!day.length) return;
+day.forEach(a=>{
+if(a.locked) return;
+const sh=shiftById(a.shiftId); const f=sh? shiftFlex(sh) : null; if(!f) return;
+const e=empById(a.empId); if(!e) return;
+const lim=effLimits(e, date);
+const pin = f.end? a.startMin : a.endMin;
+const others=day.filter(x=>x!==a);
+const mine=wk.assignments.filter(x=>x.empId===a.empId);
+const weekElse=mine.filter(x=>x!==a).reduce((t,x)=>t+paidMinutes(x),0);
+const owed=target(e);
+ 
+const flexCount=mine.filter(isFlex).length || 1;
+const fixedMin=mine.filter(x=>!isFlex(x)).reduce((t,x)=>t+paidMinutes(x),0);
+const share = !owed ? 0
+: sweep===0 ? Math.max(0, owed-fixedMin)/flexCount
+: Math.max(0, owed-weekElse);
+const gapM = gapMin(a);
+const prevA=wk.assignments.filter(x=>x.empId===a.empId && x.date===addDays(date,-1));
+const nextA=wk.assignments.filter(x=>x.empId===a.empId && x.date===addDays(date,1));
+let best=null;
+for(let L=f.lo; L<=f.hi; L+=15){
+const total=L+gapM;                        
+const s2 = f.end? pin : pin-total;
+const e2 = f.end? pin+total : pin;
+if(s2<0) continue;
+ 
+if(!availOk(e, dow, s2, e2)) continue;
+if(lim.maxShiftH && L > lim.maxShiftH*60) continue;
+if(lim.maxSpanH && (e2-s2) > lim.maxSpanH*60) continue;
+if(minorsOn() && minorBlock(e, date, dow, s2, e2, weekElse, ws)) continue;
+const paid = paidEstimate(s2,e2) - gapM;
+if(lim.maxH && weekElse + paid > lim.maxH*60 + 1) continue;
+if(lim.exactH && weekElse + paid > lim.exactH*60 + 1) continue;    
+if(prevA.length){
+const g=(s2+1440)-Math.max.apply(null, prevA.map(x=>x.endMin));
+if(g < (lim.minRestH||0)*60) continue;
+}
+if(nextA.length){
+const g=(Math.min.apply(null, nextA.map(x=>x.startMin))+1440)-e2;
+if(g < (lim.minRestH||0)*60) continue;
+}
+ 
+const probe=others.concat([Object.assign({}, a, {startMin:s2, endMin:e2,
+breaks:computeBreaks(s2,e2,{gap:aGap(a)})})]);
+const short=dayShortfall(probe, dow);
+const hoursMiss = share? Math.abs(paid - share) : 0;
+const drift = Math.abs(L - f.nominal);       
+ 
+const sc = short*10000 + hoursMiss*(lim.exactH? 60 : 10) + drift;
+if(!best || sc < best.sc) best={sc, s2, e2, L};
+}
+if(!best) return;
+if(best.s2===a.startMin && best.e2===a.endMin) return;
+a.startMin=best.s2; a.endMin=best.e2; a.flexed=true;
+applyBreaks(a);
+changed++;
+});
+if(changed) staggerDay(day.filter(x=>!x.locked), day);
+});
+return changed;
 }
 
  
@@ -4646,6 +4762,13 @@ const m=/^(.*?)[\s\-#]*\d+$/.exec((st.name||"").trim());
 return (m? m[1] : (st.name||"")).trim().toLowerCase();
 }
  
+ 
+function stationAt(a, t){
+if(!a) return null;
+const P=a.stationPlan;
+if(P && P.length){ const b=P.find(x=>t>=x.from && t<x.to); return b? b.st : null; }
+return a.station || null;
+}
 function coverGroupOf(stId){
 return (S.coverGroups||[]).find(g=>(g.sts||[]).includes(stId)) || null;
 }
@@ -4749,10 +4872,8 @@ return true;
 live.forEach(st=>{
 let fit=onFloor.filter(x=>(!st.roleId || x.e.roleIds.includes(st.roleId)) &&
 (!st.slots || !st.slots.length || st.slots.includes(x.a.shiftId)));
-if(st.needSkilled && skillsBias(date, ws).dir!==0){
-const trained=fit.filter(x=>skillOf(x.e, st.id)>0);
-if(trained.length) fit=trained;       
-}
+ 
+if(st.needSkilled && skillsOn()) fit=fit.filter(x=>skillOf(x.e, st.id)>0);
 if(!fit.length) return;
 fit.sort((x,y)=> score(x,st)-score(y,st) || x.e.name.localeCompare(y.e.name));
 const pick=fit[0];
@@ -4845,6 +4966,7 @@ const take=(st)=>{
 let fit=people.filter(x=>(!st.roleId || x.e.roleIds.includes(st.roleId)) && covers(x,st));
 if(!fit.length && (st.from||st.to||(st.slots&&st.slots.length)))
 fit=people.filter(x=>!st.roleId || x.e.roleIds.includes(st.roleId));    
+if(st.needSkilled && skillsOn()) fit=fit.filter(x=>skillOf(x.e, st.id)>0);
 if(!fit.length) return null;
 fit.sort((x,y)=> score(x,st)-score(y,st) || x.e.name.localeCompare(y.e.name));
 const pick=fit[0];
@@ -4909,8 +5031,11 @@ target.admin=(target.admin||[]).concat([t.id]);
 });
 }
  
-if((S.coverGroups||[]).length || (S.stations||[]).some(x=>x.reliefFrom && x.reliefFrom!=="family"))
+ 
+if((S.coverGroups||[]).length || (S.stations||[]).some(x=>x.reliefFrom && x.reliefFrom!=="family")){
 staggerDay(list.filter(a=>!a.locked), list);
+staggerDay(list.filter(a=>!a.locked), list);
+}
 return T;
 }
  
@@ -4947,22 +5072,27 @@ const freeAt=(empId,from,to)=>!(busy[empId]||[]).some(w=>w[0]<to && w[1]>from);
 const book=(empId,from,to)=>{ (busy[empId]=busy[empId]||[]).push([from,to]); };
 const jobs=[];
 list.forEach(a=>{
-const st0=a.station? stationById(a.station):null;
+((a.breaks||{}).meals||[]).filter(m=>!m.waived).forEach(m=>{
+const st0=stationById(stationAt(a, m.start));
 if(!st0 || !st0.critical) return;
-((a.breaks||{}).meals||[]).filter(m=>!m.waived).forEach(m=>jobs.push({a,m,st:st0}));
+jobs.push({a,m,st:st0});
+});
 });
 jobs.sort((x,y)=>x.m.start-y.m.start);
 jobs.forEach(({a,m,st})=>{
+ 
+{ const c=lunchClosure(a.dow, a.date);
+if(c && m.start>=c.from && m.end<=c.to) return; }
 const partners=new Set(reliefPartners(st));
  
-const colleague=list.some(b=>b!==a && b.station===a.station &&
+const colleague=list.some(b=>b!==a && stationAt(b, m.start)===st.id &&
 b.startMin<=m.start && b.endMin>=m.end &&
 !((b.breaks||{}).meals||[]).some(x=>!x.waived && x.start<m.end && x.end>m.start));
 if(colleague){ out.push({station:st, mealOf:a.empId, start:m.start, end:m.end, by:null, covered:true}); return; }
 const cand=list.filter(b=>{
 if(b===a) return false;
 if(b.startMin>m.start || b.endMin<m.end) return false;       
-const bst=b.station? stationById(b.station):null;
+const bst=stationById(stationAt(b, m.start));
  
 if(bst && bst.neverLeave) return false;
 if(bst && bst.critical && !partners.has(bst.id)) return false;
@@ -4972,7 +5102,7 @@ if(!freeAt(b.empId, m.start, m.end)) return false;
 return true;
 });
 const rank=(b)=>{
-const bst=b.station? stationById(b.station):null;
+const bst=stationById(stationAt(b, m.start));
 if(bst && partners.has(bst.id)) return 0;                    
 if(!bst) return 1;                                           
 return 2;                                                    
@@ -4988,7 +5118,7 @@ return 0;
 });
 const pick=cand.length? cand[0] : null;
 if(pick) book(pick.empId, m.start, m.end);
-const pst=pick && pick.station? stationById(pick.station):null;
+const pst=pick? stationById(stationAt(pick, m.start)) : null;
 out.push({station:st, mealOf:a.empId, start:m.start, end:m.end,
 by: pick? pick.empId : null,
 alsoHolding: (pst && pst.critical)? pst.name : null});
@@ -7202,7 +7332,8 @@ const gross=(b-a)-(gg? gg.to-gg.from : 0);
 const br=computeBreaks(a,b,{gap:gg});
 return `<tr>
             <td><span class="tag" style="--sc:${esc(s.color)}">${esc(s.label)}</span>${
-gg? `<div class="mini">split \u2014 off ${esc(fmtHrs(gg.to-gg.from))} in the middle</div>`:""}</td>
+gg? `<div class="mini">split \u2014 off ${esc(fmtHrs(gg.to-gg.from))} in the middle</div>`:""}${
+shiftFlex(s)? `<div class="mini">${esc(flexLabel(s))}</div>`:""}</td>
             <td class="mono">${shTimes(s)}</td>
             <td class="mono">${fmtHrs(gross)}${gg? `<div class="mini">${esc(fmtHrs(b-a))} span</div>`:""}</td>
             <td class="mono">${br.owed.meals? br.owed.meals*(law().meal?law().meal.lengthMin:30)+" min":"—"}</td>
@@ -7272,6 +7403,17 @@ modal(id?"Edit shift":"New shift", `
         <div class="field"><label>Starts</label><input type="time" id="ss" value="${esc(s.start)}"></div>
         <div class="field"><label>Ends</label><input type="time" id="se" value="${esc(s.end)}"></div>
       </div>
+      <div class="field"><label>Are both ends fixed?</label>
+        <select id="sflex">
+          <option value="none" ${(!s.flex||s.flex==="none")?"selected":""}>Yes &mdash; the same times every time</option>
+          <option value="end"  ${s.flex==="end"?"selected":""}>Only the start &mdash; they leave when the work is done</option>
+          <option value="start" ${s.flex==="start"?"selected":""}>Only the end &mdash; they come in whenever suits, and stay to close</option>
+        </select>
+        <span class="mini" id="sflexnote"></span></div>
+      <div class="grid2" id="sflexwrap" style="display:${(s.flex&&s.flex!=="none")?"":"none"}">
+        <div class="field"><label>Shortest it can be</label><input type="number" step="0.25" min="1" max="16" id="sflo" value="${esc(String(s.lenMinH||""))}" placeholder="6"></div>
+        <div class="field"><label>Longest it can be</label><input type="number" step="0.25" min="1" max="16" id="sfhi" value="${esc(String(s.lenMaxH||""))}" placeholder="9"></div>
+      </div>
       <label class="switch"><input type="checkbox" id="ssplit" ${(s.gapFrom&&s.gapTo)?"checked":""}> Split shift &mdash; they go home in the middle and come back <span class="chip">optional</span></label>
       <div class="grid2" id="ssplitwrap" style="display:${(s.gapFrom&&s.gapTo)?"":"none"}">
         <div class="field"><label>Off at</label><input type="time" id="sgf" value="${esc(s.gapFrom||"14:00")}"></div>
@@ -7307,6 +7449,13 @@ root.querySelector("#brkprev").innerHTML = `<div>
 : ""}
           ${br.meals.length>1? "Second meal around "+m2disp(br.meals[1].start)+", latest "+m2disp(br.meals[1].deadline)+"." : ""}
           ${(()=>{const c=breakCliffs(a,b); return c? `<div style="margin-top:6px"><b>Close to a line:</b> ${esc(c)}</div>`:"";})()}
+          ${(()=>{ const fx=(root.querySelector("#sflex")||{}).value;
+const lo=parseFloat((root.querySelector("#sflo")||{}).value)||0, hi=parseFloat((root.querySelector("#sfhi")||{}).value)||0;
+if(fx==="none"||!lo||!hi||hi<lo) return "";
+return `<div style="margin-top:6px"><b>One end pinned.</b> ${fx==="end"
+? "Everyone on this starts at "+esc(m2disp(a))+"; the finish lands somewhere between "+esc(fmtHrs(lo*60))+" and "+esc(fmtHrs(hi*60))+" later."
+: "Everyone on this finishes at "+esc(m2disp(b))+"; they come in between "+esc(fmtHrs(lo*60))+" and "+esc(fmtHrs(hi*60))+" before that."}
+              The times above are the norm it starts from, and what you see below is worked out for that norm.</div>`; })()}
           ${gg? `<div style="margin-top:6px"><b>Split shift.</b> ${esc(m2disp(a))}\u2013${esc(m2disp(gg.from))}, then ${esc(m2disp(gg.to))}\u2013${esc(m2disp(b))}
             \u2014 ${esc(fmtHrs(gg.to-gg.from))} off the clock in between, so the day has them tied up for ${esc(fmtHrs(b-a))}.
             ${(S.org.jurisdiction||"")==="CA" && (gg.to-gg.from)>((L.meal&&L.meal.lengthMin)||30)
@@ -7316,6 +7465,19 @@ root.querySelector("#brkprev").innerHTML = `<div>
 };
 root.querySelectorAll("#scol button").forEach(b=>b.onclick=()=>{ color=b.dataset.c;
 root.querySelectorAll("#scol button").forEach(x=>x.style.outline=""); b.style.outline="2px solid var(--ink)"; b.style.outlineOffset="2px"; });
+{ const fx=root.querySelector("#sflex"), fw=root.querySelector("#sflexwrap"), fn=root.querySelector("#sflexnote");
+const paintFlex=()=>{
+const v=fx.value;
+fw.style.display = v==="none"? "none":"";
+fn.textContent = v==="end"
+? "The start is the promise. Weeksolved picks the finish inside the range you give \u2014 longer where the day needs it or the person is short of hours, shorter where it doesn't."
+: v==="start"
+? "The finish is the promise \u2014 somebody is there at close. The start moves to suit the day and their hours."
+: "Both ends the same every time. Most shifts are this.";
+};
+fx.onchange=()=>{ paintFlex(); prev(); };
+root.querySelector("#sflo").oninput=prev; root.querySelector("#sfhi").oninput=prev;
+paintFlex(); }
 { const sp=root.querySelector("#ssplit"), wrap=root.querySelector("#ssplitwrap");
 sp.onchange=()=>{ wrap.style.display=sp.checked?"":"none"; prev(); };
 root.querySelector("#sgf").oninput=prev; root.querySelector("#sgt").oninput=prev; }
@@ -7329,7 +7491,13 @@ s.gapFrom = spOn? root.querySelector("#sgf").value : "";
 s.gapTo   = spOn? root.querySelector("#sgt").value : "";
 const label=root.querySelector("#sl").value.trim();
 if(!label){ toast("Give the shift a name"); return; }
+const fxv=root.querySelector("#sflex").value;
+const flo=parseFloat(root.querySelector("#sflo").value)||0;
+const fhi=parseFloat(root.querySelector("#sfhi").value)||0;
+if(fxv!=="none" && (!flo || !fhi)){ toast("Give the shortest and longest it can run"); return; }
+if(fxv!=="none" && fhi<flo){ toast("The longest has to be at least the shortest"); return; }
 const rec={id:s.id,label,start:root.querySelector("#ss").value,end:root.querySelector("#se").value,
+flex:fxv, lenMinH:fxv==="none"?0:flo, lenMaxH:fxv==="none"?0:fhi,
 gapFrom:s.gapFrom||"", gapTo:s.gapTo||"",
 roleId:null,color,note:root.querySelector("#snote").value.trim(),unpaidBreakMin:30,desire:des};
 if(rec.gapFrom && rec.gapTo && !shiftGap(rec)){
@@ -8082,7 +8250,7 @@ return `<div class="banner warn"><div><b>${DAYS[x.busy.d]} is ${esc((LOAD_LABEL[
     ${pats.length? `<div class="banner info"><div><b>Not every week runs the same shape.</b> A normal week might be four ten-hour shifts; a holiday week five eights. Build the shape once here, then pick it on any week from the schedule.</div></div>`:""}
 
     <div class="card">
-      <header><h3>Shifts to fill, day by day</h3><span class="hint">How many of each named shift you want on the floor${cur? " during a “"+esc(cur.name)+"” week":""}. This is what the scheduler fills.</span></header>
+      <header><h3>Shifts to fill, day by day</h3><span class="hint">The fewest of each named shift you need${cur? " during a “"+esc(cur.name)+"” week":""} \u2014 a floor, not a cap. Nothing stops you putting extra people on a slot afterwards.</span></header>
       <div class="body stack">
       ${DAYS.map((d,i)=>{
 const rows=D[i]||[]; const h=S.hours[i];
@@ -8948,6 +9116,11 @@ modal(e.name+" — "+sh.label,`
         <div class="field"><label>Working as</label><select id="ar">${(e.roleIds.length?e.roleIds:[null]).map(id=>`<option value="${id||""}" ${a.roleId===id?"selected":""}>${esc(roleName(id))}</option>`).join("")}</select></div>
         <div class="field"><label>Move to</label><select id="am">${S.employees.filter(x=>x.active).map(x=>`<option value="${x.id}" ${x.id===a.empId?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
       </div>
+      ${(()=>{ const f=shiftFlex(sh); if(!f) return "";
+return `<div class="mini">${f.end
+? "This shift's <b>start is fixed</b> at "+esc(m2disp(shiftMinutes(sh)[0]))+" \u2014 the finish is the part that moves, anywhere from "+esc(fmtHrs(f.lo))+" to "+esc(fmtHrs(f.hi))+" later."
+: "This shift's <b>finish is fixed</b> at "+esc(m2disp(shiftMinutes(sh)[1]))+" \u2014 the start is the part that moves, from "+esc(fmtHrs(f.lo))+" to "+esc(fmtHrs(f.hi))+" before it."}
+          Change the pinned end here and it stays changed for this one person on this one day.</div>`; })()}
       <div class="mini" id="aimpact"></div>
       <label class="switch"><input type="checkbox" id="al" ${a.locked?"checked":""}> Lock it — keep this when I rebuild the week</label>
       <div class="sep"></div>
@@ -11161,7 +11334,7 @@ u + (W.perShift[i+":"+ri]!=null? +W.perShift[i+":"+ri] : (def[i+":"+ri]||0)),0),
 const tight = perDay > capacity;
 return `
       <div class="stack">
-        <p class="whead">On a normal open day, how many people from each bucket do you want on each shift? This is exactly what the scheduler will fill.</p>
+        <p class="whead">On a normal open day, what is the fewest people you need on each shift? Treat this as your <b>floor</b> \u2014 Weeksolved never schedules under it, and you can always put more people on a slot afterwards by hand.</p>
         ${cur.shifts.map((sh,i)=>`<div class="stack" style="gap:6px;border:1px solid var(--line);border-radius:7px;padding:10px 12px">
           <div class="row"><strong style="font-family:Archivo,sans-serif">${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}</strong>
             <span class="mini mono">${m2disp(t2m((W.shifts[i]&&W.shifts[i].start)||sh.start))}–${m2disp(t2m((W.shifts[i]&&W.shifts[i].end)||sh.end))}</span></div>
@@ -11170,10 +11343,10 @@ return `
               <input type="number" class="wneed" data-s="${i}" data-r="${ri}" min="0" max="20"
                 value="${W.perShift[i+":"+ri]!=null? W.perShift[i+":"+ri] : (def[i+":"+ri]||0)}"></div>`).join("")}</div>
         </div>`).join("")}
-        <div class="field"><label>Is that a target, or a floor?</label>
+        <div class="field"><label>And what should it do with anyone left over?</label>
           <div class="wopts">${
-opt("fillMode","demand",W.fillMode,"Schedule exactly that many","Anyone not needed simply isn't scheduled that day.")+
-opt("fillMode","full",W.fillMode,"That's the minimum — also give everyone their contracted hours","For union agreements, government rotas, or anywhere full-timers must be fully scheduled. The extra hands go down as project time.")}</div></div>
+opt("fillMode","demand",W.fillMode,"Stop at the floor","It fills those numbers and stops. Anyone not needed simply isn't scheduled that day \u2014 you can still add them yourself.")+
+opt("fillMode","full",W.fillMode,"Keep going until everyone has their contracted hours","For union agreements, government rotas, or anywhere full-timers must be fully scheduled. The extra hands go down as project time rather than sitting idle.")}</div></div>
         ${W.fillMode==="full"? `
         <div class="field"><label>What do you call that extra time?</label>
           <input type="text" data-w="topUpLabel" value="${esc(W.topUpLabel)}" placeholder="Project time"></div>
