@@ -332,6 +332,8 @@ tr:last-child td{border-bottom:0}
 .viol-i:last-child{border-bottom:0}
 .viol-i .sv{width:3px;align-self:stretch;border-radius:2px;flex:none}
 .viol-i .sv.crit{background:var(--crit)} .viol-i .sv.warn{background:var(--warn)} .viol-i .sv.info{background:var(--muted)}
+.dipacts{display:flex;gap:6px;flex:none;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:430px){ .viol-i{flex-wrap:wrap} .dipacts{margin-left:0;width:100%;justify-content:flex-start;margin-top:4px} }
 .viol-i .tx strong{display:block;font-weight:600;font-size:13px}
 .viol-i .tx span{color:var(--muted);font-size:12px}
 .rank{display:flex;flex-direction:column;gap:6px}
@@ -773,6 +775,13 @@ const $ = (s,r)=> (r||document).querySelector(s);
 const uid = p => (p||"id")+"_"+Math.random().toString(36).slice(2,9);
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+ 
+function spanTxt(m){
+m=Math.max(0,Math.round(m));
+if(m<60) return m+" min";
+const h=Math.floor(m/60), r=m%60;
+return r? h+"h "+r+"m" : h+(h===1?" hour":" hours");
+}
 const DSHORT=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -901,9 +910,10 @@ notifyH:8 }
 };
 }
 
+const SAMPLE_NAME="Bayview Outpatient Pharmacy";
 function seedState(){
 const s = blankState();
-s.org.name="Bayview Outpatient Pharmacy"; s.org.site="Main Campus, Suite 120";
+s.org.name=SAMPLE_NAME; s.org.site="Main Campus, Suite 120";
 s.hours=[
 {closed:false,open:"09:00",close:"15:00"},
 {closed:false,open:"07:30",close:"20:00"},
@@ -2053,8 +2063,10 @@ if(have<need) bad += need-have;
 return bad;
 }
 function dayShortfall(day, dow){
+const win=dayWindow(dow);
+if(!win) return 0;                        
 return (S.coverage||[]).filter(r=>r.days.includes(dow))
-.reduce((t,r)=>t+ruleShort(day,r),0);
+.reduce((t,r)=>t+ruleShort(day,r,win[0],win[1]),0);
 }
  
 function staggerDay(list, all){
@@ -4677,6 +4689,27 @@ target.admin=(target.admin||[]).concat([t.id]);
 return T;
 }
  
+ 
+function reliefStatus(){
+const posts=(S.stations||[]).filter(x=>x.kind!=="admin" && !x.off);
+if(!posts.length) return {ok:false, why:"nostations"};
+if(!posts.some(x=>x.critical)) return {ok:false, why:"nocritical"};
+if(S.rules.breakMode!=="assigned") return {ok:false, why:"nomealtimes"};
+return {ok:true};
+}
+function reliefNote(){
+const r=reliefStatus();
+if(r.ok || r.why==="nostations") return "";
+const B=(go,txt)=>`<button class="btn sm" data-go="${go}" style="flex:none;margin-left:auto">${txt}</button>`;
+if(r.why==="nocritical") return `<div class="body spread" style="border-top:1px solid var(--line);gap:10px">
+    <div class="help">No post is marked <b>can't sit empty</b>, so nobody is named to step in while its person eats.
+      Mark the ones that genuinely can't be left \u2014 the checking bench, the front counter \u2014 and the cover appears in the Meal column.</div>
+    ${B("stations","Mark a post")}</div>`;
+return `<div class="body spread" style="border-top:1px solid var(--line);gap:10px">
+    <div class="help">Meals don't have times on them right now \u2014 staff pick their own \u2014 so there is no moment to relieve anyone at.
+      Switch meals to <b>times on the schedule</b> and every must-cover post gets a named person for the exact window they're away.</div>
+    ${B("rules","Put times on meals")}</div>`;
+}
 function mealReliefFor(date, ws){
 const crit=(S.stations||[]).filter(x=>x.kind!=="admin" && !x.off && x.critical);
 if(!crit.length || S.rules.breakMode!=="assigned") return [];
@@ -6770,7 +6803,7 @@ const L=law();
 return `
   <div class="stack">
     <div class="card"><header><h3>Business</h3></header><div class="body grid2">
-      <div class="field"><label>Business name</label><input type="text" data-bind="org.name" value="${esc(S.org.name)}" placeholder="e.g. Bayview Outpatient Pharmacy" data-rerender="no"></div>
+      <div class="field"><label>Business or department name</label><input type="text" data-bind="org.name" value="${esc(S.org.name)}" placeholder="e.g. Riverside Pharmacy, or Outpatient Front Desk" data-rerender="no"></div>
       <div class="field"><label>Location / site</label><input type="text" data-bind="org.site" value="${esc(S.org.site)}" placeholder="e.g. Main Campus, Suite 120" data-rerender="no"></div>
       <div class="field"><label>Week starts on</label><select data-bind="org.weekStart">
         ${DAYS.map((d,i)=>`<option value="${i}" ${S.org.weekStart===i?"selected":""}>${d}</option>`).join("")}</select></div>
@@ -8827,7 +8860,9 @@ return `
           <div class="mini">${h.closed?"Closed":m2disp(t2m(h.open))+" – "+m2disp(t2m(h.close))} · ${list.length} scheduled</div></div>
       </div>
       <div class="row">
-        ${gapPts.length? `<span class="chip crit">${gapPts.length*STEP} min below minimum</span>`:`<span class="chip ok">coverage holds all day</span>`}
+        ${gapPts.length? `<button class="chip crit" id="dayjumpgap" title="Jump to where it dips">${
+esc(spanTxt(gapPts.length*STEP))} ${gapPts.every(p=>!p.staff)? "with nobody on":"short-handed"}</button>`
+:`<span class="chip ok">coverage holds all day</span>`}
         ${lunchClosure()? `<span class="chip">closed ${m2disp(lunchClosure().from)}–${m2disp(lunchClosure().to)}</span>`:""}
         ${(S.stations||[]).length? `<button class="btn" id="dayrot">Rotate stations</button>`:`<button class="btn ghost" data-go="stations">Set up stations</button>`}
         <button class="btn" id="dayprint">Print\u2026</button>
@@ -8930,14 +8965,24 @@ return `<div class="stblk"><span class="mono">${m2disp(b2.from)}–${m2disp(b2.t
             <td class="mono">${fmtHrs(paidMinutes(a))}</td>
             <td>${missing?'<span class="chip crit">meal missing</span>':late?'<span class="chip crit">meal late</span>':'<span class="chip ok">compliant</span>'}</td></tr>`;
 }).join(""); })()}</tbody></table></div>
+      ${reliefNote()}
       ${L.premium? `<div class="body" style="border-top:1px solid var(--line)"><div class="help"><b>${esc(L.name)}:</b> ${esc(L.premium)}</div></div>`:""}
     </div>
 
-    ${gapPts.length? `<div class="card"><header><h3>Where coverage dips</h3></header>
-      <div class="viollist">${collapseGaps(gapPts).map((g,gi)=>`<div class="viol-i"><span class="sv crit"></span>
-        <div class="tx"><strong>${m2disp(g.from)} – ${m2disp(g.to)}</strong>
-          <span>${esc(g.labels.join(" · "))}</span></div>
-        ${stretchOptions(date, ws, g).length? `<button class="btn sm" data-covergap="${gi}" style="flex:none;margin-left:auto">Cover this</button>`:""}</div>`).join("")}</div>
+    ${gapPts.length? `<div class="card" id="daydips"><header><h3>Where coverage dips</h3></header>
+      <div class="viollist">${collapseGaps(gapPts).map((g,gi)=>{
+const nobody = !list.some(a=>a.startMin<g.to && a.endMin>g.from);
+const edge = nobody && (g.to>=t2m(h.close) || g.from<=t2m(h.open));
+return `<div class="viol-i"><span class="sv crit"></span>
+        <div class="tx"><strong>${m2disp(g.from)} \u2013 ${m2disp(g.to)}</strong>
+          <span>${esc(g.labels.join(" \u00b7 "))}</span>
+          ${edge? `<span>Nobody is scheduled then at all. Your hours say you're open
+            ${esc(m2disp(t2m(h.open)))}\u2013${esc(m2disp(t2m(h.close)))} on ${esc(DAYS[dow])}s \u2014
+            if that's not right any more, fix the hours and this goes away.</span>`:""}</div>
+        <div class="dipacts">
+          ${edge? `<button class="btn sm ghost" data-go="org">Change our hours</button>`:""}
+          ${stretchOptions(date, ws, g).length? `<button class="btn sm" data-covergap="${gi}">Cover this</button>`:""}
+        </div></div>`; }).join("")}</div>
       <div class="body" style="border-top:1px solid var(--line)"><div class="help">Cover this stretches a shift already on the day — someone stays later or comes in earlier, with any overtime priced before you decide. Midday dips often come from meals stacking up: meal staggering under Scheduling rules helps too.</div></div>
     </div>`:""}
     `}
@@ -9134,6 +9179,9 @@ if(seg) seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.dat
 const rot=root.querySelector("#dayrot");
 if(rot) rot.onclick=()=>{ const e=weekDates().find(d=>d.dow===DAYVIEW)||weekDates()[0];
 clearAdmin(e.date); assignStations(e.date); save(); render(); toast("Stations handed out again"); };
+const jg=root.querySelector("#dayjumpgap");
+if(jg) jg.onclick=()=>{ const c=root.querySelector("#daydips");
+if(c) c.scrollIntoView({behavior:"smooth", block:"center"}); };
 const p=root.querySelector("#dayprint"); if(p) p.onclick=()=>printModal();
 const pd=root.querySelector("#daypdf"); if(pd) pd.onclick=()=>exportDayPDF().catch(()=>pdfUnavailable());
 };
@@ -10319,7 +10367,8 @@ function wizClearDraft(){ try{ localStorage.removeItem(WIZKEY); }catch(e){} }
 function wizard(firstRun, resume){
 const W = {
 step:0, biz:"other",
-name:S.sample? "" : (S.org.name||""), site:S.sample? "" : (S.org.site||""),
+name:(S.sample||S.org.name===SAMPLE_NAME)? "" : (S.org.name||""),
+site:(S.sample||S.org.name===SAMPLE_NAME)? "" : (S.org.site||""),
 juris:S.sample? "FED" : (S.org.jurisdiction||"FED"),
 hoursPreset:"same", open:"09:00", close:"17:00",
 dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false, hols:null,
@@ -10331,7 +10380,7 @@ dayOff:{},
 headcount:0,
 bucketCount:2, buckets:["Staff","Lead","",""], bucketNames:["","","",""], bucketLic:[false,false,false,false],
 people:{},                      
-shiftPreset:"openclose", shifts:[],
+shiftPreset:"openclose", shifts:[], custom:null,
 perShift:{},
 minRest:10, maxConsec:6, noClopen:true, preferLong:false, perDiem:"ask", breakMode:"assigned", restMode:"self", holPay:"ft", cycles:false, fillMode:"demand",
 mealPlan:"auto", mealSlots:["11:30","12:00","12:30"], mealCloseFrom:"13:00", mealCloseTo:"14:00",
@@ -10388,9 +10437,17 @@ const namesIn = b => (W.bucketNames[b]||"").split(/\n/).map(x=>x.trim()).filter(
 const allNames = () => { const out=[];
 for(let b=0;b<W.bucketCount;b++) namesIn(b).forEach((n,i)=>out.push({name:n,b,i})); return out; };
 const curShifts = () => {
+if(W.shiftPreset==="custom" && (W.custom||[]).length)
+return {id:"custom", t:"Shifts you set up here", d:"", shifts:W.custom};
 const ps=shiftPresets(W.hoursPreset==="always"?"00:00":W.open, W.hoursPreset==="always"?"23:59":W.close, W.hoursPreset==="always");
 return ps.find(x=>x.id===W.shiftPreset)||ps[0];
 };
+ 
+const bakeShifts = () => (curShifts().shifts||[]).map((sh,i)=>({
+label:((W.shifts[i]&&W.shifts[i].label)||sh.label||"").trim()||("Shift "+(i+1)),
+start:(W.shifts[i]&&W.shifts[i].start)||sh.start,
+end:(W.shifts[i]&&W.shifts[i].end)||sh.end,
+desire:sh.desire||0}));
 
 function body(){
 const k=STEPS[W.step].k;
@@ -10399,7 +10456,9 @@ if(k==="biz") return `
         <p class="whead">Pick the closest one. It sets sensible starting hours, shift shapes and job names — all of which you'll see and can change on the next few screens. Nothing here locks you in.</p>
         <div class="wopts wcols">${BIZ_TYPES.map(x=>opt("biz",x.id,W.biz,x.t,x.d)).join("")}</div>
         <div class="grid2">
-          <div class="field"><label>What's it called?</label><input type="text" id="wn" value="${esc(W.name)}" placeholder="e.g. Riverside Store"></div>
+          <div class="field"><label>What should this schedule be called?</label>
+            <input type="text" id="wn" value="${esc(W.name)}" placeholder="e.g. Riverside Pharmacy, or Outpatient Front Desk">
+            <span class="mini">The business, or just your department inside a bigger one &mdash; whatever people will recognise at the top of the printed schedule.</span></div>
           <div class="field"><label>Site or location (optional)</label><input type="text" id="ws" value="${esc(W.site)}" placeholder="e.g. North Branch"></div>
         </div>
       </div>`;
@@ -10542,17 +10601,26 @@ const cur=curShifts();
 return `
       <div class="stack">
         <p class="whead">Named shifts are the ones you use over and over — the times are worked out from your hours, and the names are yours to change.</p>
-        <div class="wopts">${presets.map(x=>opt("shiftPreset",x.id,W.shiftPreset,x.t,x.d)).join("")}</div>
+        <div class="wopts">${
+((W.custom||[]).length? opt("shiftPreset","custom",W.shiftPreset,"The ones you set up here",
+W.custom.length+" shift"+(W.custom.length===1?"":"s")+" you built by hand.") : "")
++ presets.map(x=>opt("shiftPreset",x.id,W.shiftPreset,x.t,x.d)).join("")}</div>
         ${cur.shifts.length? `<div class="stack" style="gap:6px">
           ${cur.shifts.map((sh,i)=>`<div class="desrow">
-            <input type="text" class="wsl" data-i="${i}" value="${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}" style="width:150px">
-            <input type="time" class="wss" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].start)||sh.start}" style="width:120px">
+            <input type="text" class="wsl" data-i="${i}" value="${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}" style="width:150px" aria-label="Shift name">
+            <input type="time" class="wss" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].start)||sh.start}" style="width:120px" aria-label="Starts">
             <span class="mini">to</span>
-            <input type="time" class="wse" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].end)||sh.end}" style="width:120px">
+            <input type="time" class="wse" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].end)||sh.end}" style="width:120px" aria-label="Ends">
             <span class="mini" style="margin-left:auto">${esc(DESIRE_LABEL[sh.desire]||"Neutral")}</span>
+            <button type="button" class="btn sm ghost" data-wsdel="${i}" aria-label="Remove ${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}">Remove</button>
           </div>`).join("")}
           <div class="help">Wanted / unwanted is a first guess from the shape — it's what decides who gets first claim later. Change it any time under Shift priority.</div>
         </div>`:""}
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn sm" id="wsadd">+ Add another shift</button>
+          <span class="mini">As many as you need &mdash; four, six, a dozen.</span>
+        </div>
+        <div class="help">Nothing here is final. Every shift you keep, rename, retime or add is on the <b>Roles &amp; shifts</b> page afterwards, where you can change it as often as you like.</div>
       </div>`;
 }
 if(k==="need"){
@@ -10612,6 +10680,7 @@ return `
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:2px">
           <button type="button" class="btn sm" data-hall="skip">None of these</button>
           <button type="button" class="btn sm" data-hall="normal">All normal hours</button>
+          <button type="button" class="btn sm" data-hall="reduced">All fewer people</button>
           <button type="button" class="btn sm" data-hall="closed">Closed for all</button>
         </div>
         <div class="stack" style="gap:6px">${C.map(h=>`
@@ -10970,9 +11039,39 @@ if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=
 W.bucketCount=bt.roles.length; W.buckets=bt.roles.concat(["","","",""]).slice(0,4); W.shifts=[]; W.perShift={};
 if(bt.rules) Object.assign(W, bt.rules); } }
 if(g==="shiftPreset"){ W.shifts=[]; W.perShift={}; }
+if(g==="biz"){ W.custom=null; }
 if(g==="hoursPreset"){ W.shifts=[]; W.perShift={}; }
 paint();
 });
+{ const wsa=r.querySelector("#wsadd");
+if(wsa) wsa.onclick=()=>{ collect();
+const list=bakeShifts();
+const always=W.hoursPreset==="always";
+const o=t2m(always?"00:00":W.open); let c=t2m(always?"23:59":W.close); if(c<=o) c+=1440;
+ 
+let st=o;
+if(list.length){
+const ls=t2m(list[list.length-1].start);
+let le=t2m(list[list.length-1].end); if(le<=ls) le+=1440;
+if(le>o && le<=c-120) st=le;
+else st=Math.max(o, Math.min(ls+60, c-120));
+}
+let en=Math.min(c, st+8*60);
+if(en-st<60) en=Math.min(c, st+60);
+list.push({label:"Shift "+(list.length+1), start:m2t(st), end:m2t(en), desire:0});
+W.custom=list; W.shiftPreset="custom"; W.shifts=[];
+paint(); }; }
+r.querySelectorAll("[data-wsdel]").forEach(b2=>b2.onclick=()=>{ collect();
+const d=+b2.dataset.wsdel, list=bakeShifts();
+list.splice(d,1);
+ 
+const np={}; Object.keys(W.perShift||{}).forEach(key=>{
+const q=key.indexOf(":"), si=+key.slice(0,q), rest=key.slice(q+1);
+if(si===d) return; np[(si>d? si-1 : si)+":"+rest]=W.perShift[key]; });
+W.perShift=np; W.shifts=[];
+if(list.length){ W.custom=list; W.shiftPreset="custom"; }
+else { W.custom=null; W.shiftPreset="none"; }
+paint(); });
 const wma=r.querySelector("#wmadd");
 if(wma) wma.onclick=()=>{ collect();
 const last=(W.mealSlots||[]).map(t2m).sort((a,b)=>a-b).slice(-1)[0];
@@ -10980,9 +11079,16 @@ W.mealSlots.push(m2t(((last==null?690:last)+30)%1440));
 W.mealSlots=[...new Set(W.mealSlots)].sort(); paint(); };
 const back=r.querySelector("#wback"); if(back) back.onclick=()=>{ collect(); W.step--; paint(); };
 { const sk=r.querySelector("#wskip");
-if(sk) sk.onclick=()=>{ collect(); if(W.step===STEPS.length-1) apply(); else { W.step=STEPS.length-1; paint(); } }; }
+if(sk) sk.onclick=()=>{ collect();
+if(!String(W.name||"").trim()){
+toast("Give it a name \u2014 it goes at the top of every schedule you print");
+W.step=0; paint(); setTimeout(()=>{ const nf=$("#modalroot").querySelector("#wn"); if(nf) nf.focus(); },60); return; }
+if(W.step===STEPS.length-1) apply(); else { W.step=STEPS.length-1; paint(); } }; }
 r.querySelector("#wnext").onclick=()=>{
 collect();
+if(STEPS[W.step].k==="biz" && !String(W.name||"").trim()){
+toast("Give it a name \u2014 it goes at the top of every schedule you print");
+const nf=r.querySelector("#wn"); if(nf) nf.focus(); return; }
 if(STEPS[W.step].k==="team" && !allNames().length){ toast("Add at least one name"); return; }
 if(W.step===STEPS.length-1) apply(); else { W.step++; paint(); }
 };
