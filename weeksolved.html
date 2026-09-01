@@ -1699,8 +1699,27 @@ let FB=null, CLOUD_REV=0, cloudPushTimer=null, cloudUnsub=null, SIGNING_UP=false
    so every acceptance is written once and never altered: which version, when,
    and on what. The address it came from is not ours to see from a browser \u2014 the
    sign-in provider logs that separately, and we say so rather than inventing it. */
+/* Testers see one extra document, because the product is not public yet. It asks
+   itself out of existence: ACCESS.on is only true in a build cut for testers, so
+   the day the public build ships this stops appearing without anybody remembering
+   to switch it off. */
+const NDA_VERSION = "1";
+const NDAKEY = "ws.nda";
+function ndaNeeded(){ return !!(typeof ACCESS!=="undefined" && ACCESS && ACCESS.on); }
+function ndaAccepted(){ try{ return JSON.parse(localStorage.getItem(NDAKEY)||"null"); }catch(e){ return null; } }
+function ndaCurrent(){ const a=ndaAccepted(); return !!(a && String(a.v)===String(NDA_VERSION)); }
+function recordNdaAccept(){
+  const rec={ v:String(NDA_VERSION), hash:"nda", at:Date.now(),
+              ua:String(navigator.userAgent||"").slice(0,200) };
+  try{ localStorage.setItem(NDAKEY, JSON.stringify(rec)); }catch(e){}
+  try{
+    if(FB && FB.user && FB.db)
+      FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+  }catch(e){}
+  return rec;
+}
 const TERMS_VERSION = "1";                 /* raised by hand when the terms change */
-const TERMS_HASH = "64c34940b534ba2e";
+const TERMS_HASH = "cd61980328074ec6";
 const TERMS_DATE = "";
 const TERMSKEY = "ws.terms";
 function termsAccepted(){
@@ -1725,6 +1744,34 @@ function recordTermsAccept(){
 /* Shown to somebody who agreed to an earlier version. Deliberately not a
    dark-pattern wall: it says what changed, both documents are one tap away, and
    signing out is offered rather than hidden. */
+/* For a tester who joined before this existed. Same shape as the terms screen:
+   says what it is, one tick, and leaving is offered rather than hidden. */
+function ndaScreen(){
+  document.body.innerHTML =
+    '<div class="gate"><div class="gatebox">'+
+      '<div class="gatemark">WS</div>'+
+      '<h1>One thing we ask</h1>'+
+      '<p class="gsub">Weeksolved is not public yet. Before you carry on, we need you to read the one-page tester agreement.</p>'+
+      '<div class="gnote"><b>The whole of it:</b> keep the product itself between you and your own business until it launches. '+
+        'The schedules you make are yours \u2014 print them, send them, hand them out, with no restriction at all. '+
+        'You can show Weeksolved to anyone in your own business, and you can stop testing whenever you like and take your data with you.</div>'+
+      '<label class="gagree"><input type="checkbox" id="ndaok"><span>'+
+        'I have read and agree to the <a href="/tester-agreement.html" target="_blank" rel="noopener">Tester Confidentiality Agreement</a>.</span></label>'+
+      '<button class="btn primary big" id="ndago" style="margin-top:12px">Agree and carry on</button>'+
+      '<div class="gerr" id="ndaerr"></div>'+
+      '<button class="btn ghost sm" id="ndaout" style="margin-top:10px">Sign out instead</button>'+
+      '<p class="gfoot">Your board is untouched either way. If you would rather not agree, sign out and email us \u2014 you can have everything you have entered as a file.</p>'+
+    '</div></div>';
+  document.getElementById("ndago").onclick=()=>{
+    if(!document.getElementById("ndaok").checked){
+      document.getElementById("ndaerr").textContent="Tick the box to carry on."; return; }
+    recordNdaAccept(); location.reload();
+  };
+  document.getElementById("ndaout").onclick=()=>{
+    try{ FB.auth.signOut().then(()=>location.reload()).catch(()=>location.reload()); }
+    catch(e){ location.reload(); }
+  };
+}
 function termsUpdateScreen(){
   document.body.innerHTML =
     '<div class="gate"><div class="gatebox">'+
@@ -1797,6 +1844,14 @@ async function cloudEnter(){
   if(!p.life && (Date.now()>expMs || Date.now()>hardEnd)){ expiredScreen(); return; }
   /* Somebody who agreed to an older version reads the new one before going in.
      Asked once, on this device, and never again for this version. */
+  if(ndaNeeded() && !ndaCurrent()){
+    let sawNda=null;
+    try{ const t=await FB.db.collection("users/"+uid+"/terms").get();
+         (t.docs||[]).forEach(d=>{ const x=d.data()||{};
+           if(x.hash==="nda" && String(x.v)===String(NDA_VERSION)) sawNda=x; }); }catch(e){}
+    if(sawNda){ try{ localStorage.setItem(NDAKEY, JSON.stringify(sawNda)); }catch(e){} }
+    else { ndaScreen(); return; }
+  }
   if(!termsCurrent()){
     let seen=null;
     try{ const t=await FB.db.collection("users/"+uid+"/terms").get();
@@ -2144,6 +2199,7 @@ async function cloudSignup(code,email,pass){
       .set({codeId:hit.id, days:hit.days||30, life:!!hit.life, activated:Date.now(), email:email.trim()});
     try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:hit.life?"9999-12-31":ymd(new Date(Date.now()+(hit.days||30)*86400000)), life:!!hit.life, at:Date.now()})); }catch(e){}
     recordTermsAccept();      /* they ticked the box a moment ago; this is the record of it */
+    if(ndaNeeded()) recordNdaAccept();
   } finally { SIGNING_UP=false; }
   await cloudEnter();
 }
@@ -2167,6 +2223,10 @@ function authScreen(msg, tab){
         ? '<label class="gagree"><input type="checkbox" id="gterms"><span>'+
             'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>'+
             (TERMS_DATE? ', dated '+esc(TERMS_DATE) : '')+'.</span></label>'
+        : '')+
+      (tab==="new" && ndaNeeded()
+        ? '<label class="gagree"><input type="checkbox" id="gnda"><span>'+
+            'Weeksolved is not public yet. I agree to the <a href="/tester-agreement.html" target="_blank" rel="noopener">Tester Confidentiality Agreement</a> \u2014 in short, I will keep the product itself between me and my own business, and I can print and hand out the schedules I make as freely as I like.</span></label>'
         : '')+
       '<button class="btn primary big" id="gGo" style="margin-top:12px">'+(tab==="new"?"Create my account":"Sign in")+'</button>'+
       (tab==="new"? '<div class="gnote">Pressing <b>Create my account</b> means you agree to both.</div>' : '')+
@@ -2194,6 +2254,12 @@ function authScreen(msg, tab){
         if(!box || !box.checked){
           err("Please read the terms and tick the box \u2014 we can\u2019t create the account without it.");
           busy(false); return; }
+        if(ndaNeeded()){
+          const nd=document.getElementById("gnda");
+          if(!nd || !nd.checked){
+            err("The tester agreement needs ticking too \u2014 it is one page, and it is the only thing we ask.");
+            busy(false); return; }
+        }
         await cloudSignup(code,email,pass);
       } else {
         await FB.auth.signInWithEmailAndPassword(email,pass);
@@ -8479,6 +8545,11 @@ function vSettings(){
           new Date(a.at).toLocaleDateString()+". Kept as a record on your account so neither of us has to remember.";
       })(), `<a class="btn sm" href="/terms.html" target="_blank" rel="noopener">Read them</a>
              <a class="btn sm" href="/privacy.html" target="_blank" rel="noopener">Privacy</a>`)}
+      ${ndaNeeded()? setRow("The tester agreement", (()=>{
+        const a=ndaAccepted();
+        return (a? "Agreed "+new Date(a.at).toLocaleDateString()+". " : "Not recorded on this device. ")+
+          "It applies only while Weeksolved is in testing and disappears at launch.";
+      })(), `<a class="btn sm" href="/tester-agreement.html" target="_blank" rel="noopener">Read it</a>`) : ""}
       ${setRow("Your data", "A backup restores this whole board on any device",
         `<button class="btn sm" id="setbak">Download a backup</button><button class="btn sm" id="setrestore">Restore</button>`)}
       ${setRow("Start over", "Wipes everything and takes you straight back to the setup questions, exactly as if the account were new. Useful for a practice run.",
