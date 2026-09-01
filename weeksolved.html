@@ -137,6 +137,14 @@ button,input,select,textarea{font:inherit;color:inherit}
 .dot.on{background:var(--ok)}
 .railfoot small{color:var(--muted);font-size:11px}
 /* Which account you are in should never be something you go looking for. */
+/* On a phone the rail footer is hidden, so the account lives here instead —
+   top right, where every app puts it, and never more than one tap away. */
+.acctmini{flex:none;width:34px;height:34px;min-width:34px;border-radius:50%;padding:0;
+  border:1px solid var(--line-strong);background:var(--accent);color:var(--on-accent);
+  font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;
+  display:none;align-items:center;justify-content:center;line-height:1}
+.acctmini.out{background:var(--sunken);color:var(--muted)}
+.acctmini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .acctchip{display:flex;align-items:center;gap:7px;width:100%;min-height:32px;padding:5px 7px;
   border:1px solid var(--line-strong);background:var(--surface);border-radius:8px;cursor:pointer;
   font-family:inherit;font-size:11.5px;font-weight:600;color:var(--ink);text-align:left}
@@ -746,6 +754,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .rail .brand .mark{width:26px;height:26px;font-size:13px}
   .rail .nav, .rail .railfoot{display:none}
   .mobonly{display:inline-flex}
+  .acctmini{display:inline-flex}
   .topbar{padding:10px 88px 8px 14px;gap:2px;position:relative}
   #helpbtn{position:absolute;top:9px;right:12px}
   #reportbtn{position:absolute;top:9px;right:50px}
@@ -824,6 +833,8 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
     </div>
     <button class="btn sm ghost mobonly" id="railmore" aria-haspopup="dialog"
             style="padding:6px 11px;font-size:12.5px;flex:none">More</button>
+    <button class="acctmini mobonly" id="acctmini" aria-haspopup="dialog" title="Your account">
+      <span id="acctminiav">?</span></button>
     <nav class="nav" id="nav"></nav>
     <div class="railfoot">
       <button class="acctchip" id="acctchip" aria-haspopup="dialog" title="Your account">
@@ -1247,13 +1258,25 @@ function setSync(on,msg){
    three pages into the settings. */
 function acctEmail(){ return (typeof FB!=="undefined" && FB && FB.user && FB.user.email) || ""; }
 function paintAccount(){
-  const chip=$("#acctchip"); if(!chip) return;
   const em=acctEmail();
-  const who=$("#acctwho"), av=$("#acctav");
-  chip.classList.toggle("out", !em);
-  if(who) who.textContent = em || "Not signed in";
-  chip.title = em? "Signed in as "+em+" \u2014 tap to sign out or switch account" : "Not signed in \u2014 this board is on this device only";
-  if(av) av.textContent = em? em.trim()[0] : "\u2013";
+  const label = em? "Signed in as "+em+" \u2014 tap to sign out or switch account"
+                  : "Not signed in \u2014 this board is on this device only";
+  const initial = em? em.trim()[0].toUpperCase() : "\u2013";
+  const chip=$("#acctchip");
+  if(chip){
+    const who=$("#acctwho"), av=$("#acctav");
+    chip.classList.toggle("out", !em);
+    if(who) who.textContent = em || "Not signed in";
+    chip.title = label;
+    if(av) av.textContent = initial;
+  }
+  const mini=$("#acctmini");
+  if(mini){
+    mini.classList.toggle("out", !em);
+    mini.title = label;
+    mini.setAttribute("aria-label", label);
+    const mav=$("#acctminiav"); if(mav) mav.textContent = initial;
+  }
 }
 function accountModal(){
   const em=acctEmail();
@@ -1690,6 +1713,7 @@ function gateScreen(msg){
 const CLOUD = {"apiKey":"AIzaSyD5BrMfKjRf0mzdjaj7tlohjYqqaTKGEao","authDomain":"weeksolved-54472.firebaseapp.com","projectId":"weeksolved-54472","storageBucket":"weeksolved-54472.firebasestorage.app","messagingSenderId":"332039926756","appId":"1:332039926756:web:f5a561eb23d2783eb78df1"};
 const MAILAPI = "";   /* the address of Weeksolved's own sender, filled in at build time */
 let FB=null, CLOUD_REV=0, cloudPushTimer=null, cloudUnsub=null, SIGNING_UP=false, SHELL=null;
+let WELCOME_WITH=null;   /* set at signup, shown once the board is on screen */
 
 /* ---------- Agreeing to the terms ----------
    Two things have to be true for online terms to hold: the person must have been
@@ -1839,6 +1863,8 @@ async function cloudEnter(){
   const p=prof.data()||{};
   window.TESTER_ID=p.codeId||"";
   window.TESTER_LIFE=!!p.life;
+  window.TESTER_DAYS=p.days||30;
+  window.TESTER_FROM=p.activated||0;
   const expMs=(p.activated||0)+(p.days||30)*86400000;
   const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
   if(!p.life && (Date.now()>expMs || Date.now()>hardEnd)){ expiredScreen(); return; }
@@ -2211,6 +2237,8 @@ async function cloudSignup(code,email,pass){
     try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:hit.life?"9999-12-31":ymd(new Date(Date.now()+(hit.days||30)*86400000)), life:!!hit.life, at:Date.now()})); }catch(e){}
     recordTermsAccept();      /* they ticked the box a moment ago; this is the record of it */
     if(ndaNeeded()) recordNdaAccept();
+    /* Tell them what they just got, before they see anything else. */
+    WELCOME_WITH = {id:hit.id, life:!!hit.life, days:hit.days||30, at:Date.now()};
   } finally { SIGNING_UP=false; }
   await cloudEnter();
 }
@@ -2289,6 +2317,48 @@ function authScreen(msg, tab){
   (document.getElementById(tab==="new"?"gcode":"gmail")||{focus:()=>{}}).focus();
 }
 
+/* Exactly what somebody just got, said in plain words. Nobody should have to
+   ask how long their access lasts or whether a bill is coming. Driven off what
+   the code itself says, so it can never drift from the truth. */
+function accessFacts(codeId, life, days, activatedMs){
+  const F={ id:codeId||"", life:!!life, days:days||30 };
+  F.title = F.life? "You have Weeksolved for life"
+    : "You have Weeksolved free for " + F.days + " days";
+  if(F.id==="FOUNDER"){
+    F.who = "This is the founder account.";
+    F.body = ["It never expires and is never billed \u2014 not when the test ends, not when paid plans open, not ever.",
+              "Everything in the product is switched on, with no limits and no feature held back."];
+  } else if(F.id==="GIFT"){
+    F.who = "This is a lifetime thank-you.";
+    F.body = ["It never expires and is never billed \u2014 not when the test ends, not when paid plans open, not ever. It is yours to keep for putting the time in.",
+              "Everything in the product is switched on, with no limits and no feature held back."];
+  } else if(F.life){
+    F.who = "This is a lifetime account.";
+    F.body = ["It never expires and is never billed.",
+              "Everything in the product is switched on."];
+  } else {
+    const end = activatedMs? prettyFull(ymd(new Date(activatedMs + F.days*86400000))) : "";
+    F.who = "This is a tester account" + (F.id? " (" + F.id + ")" : "") + ".";
+    F.body = [
+      "It runs for " + F.days + " days from the day you signed up" + (end? ", so it ends on " + end : "") + ". The clock started when you created the account, not when the code was written.",
+      "Everything in the product is switched on for the whole of it \u2014 nothing is held back for a paid plan, and no card is asked for at any point.",
+      "When it ends, nothing is deleted. Your board stays in your account, and a new code picks it up exactly where you left it."];
+  }
+  F.body.push("Your code was single use. It is now tied to this account and cannot be used to make another one, so there is no need to keep it anywhere.");
+  return F;
+}
+/* Shown once, right after the account is made. */
+function accessWelcome(codeId, life, days, activatedMs){
+  const F=accessFacts(codeId, life, days, activatedMs);
+  modal(F.title, `
+    <div class="stack">
+      <div class="banner ok"><div><b>${esc(F.who)}</b></div></div>
+      ${F.body.map(t=>`<div class="help">${esc(t)}</div>`).join("")}
+      <div class="help">You can read this again any time under <b>Settings \u2192 Your account</b>.</div>
+      ${ndaNeeded()? `<div class="help">One last thing: Weeksolved is not public yet, so please keep the product itself between you and your own business. The schedules you make are entirely yours \u2014 print them, send them, hand them out, no restriction at all.</div>`:""}
+    </div>`,
+    `<button class="btn primary" data-close>Got it</button>`);
+}
 function expiredScreen(){
   document.body.innerHTML =
     '<div class="gate"><div class="gatebox">'+
@@ -17816,7 +17886,9 @@ function applyTheme(t){
   if(g) g.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.t===t));
 }
 function initRail(){
-  { const a=$("#acctchip"); if(a) a.onclick=()=>accountModal(); paintAccount(); }
+  { const a=$("#acctchip"); if(a) a.onclick=()=>accountModal();
+    const m=$("#acctmini"); if(m) m.onclick=()=>accountModal();
+    paintAccount(); }
   const b=$("#railset"); if(b) b.onclick=()=>go("settings");
   const bg=$("#railbug"); if(bg) bg.onclick=()=>bugModal();
   const m=$("#railmore"); if(m) m.onclick=()=>moreSheet();
