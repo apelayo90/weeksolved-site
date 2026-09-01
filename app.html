@@ -1247,7 +1247,7 @@ h[k]=(h[k]<<13|h[k]>>>19)>>>0;
 return h.map(x=>(x>>>0).toString(36).padStart(7,"0")).join("");
 }
  
-const UPDREV=7;
+const UPDREV=8;
 function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
 function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
 function updModal(){
@@ -1310,6 +1310,7 @@ modal("A few new questions from the latest update", `
           <option value="24" ${S.rules.remindH===24?"selected":""}>The day before</option>
         </select>
         <span class="mini">New: the alarm rides along inside the calendar file, so it goes off on their own phone. Nothing for them to install, nothing for you to send.</span></div>
+      <div class="help"><b>The setup questions are shorter.</b> Seven questions now get you a working schedule, with the rest marked optional and a <b>Build it now</b> button once you have enough. Your answers also save as you go, so being interrupted no longer costs you anything. None of this changes what you already set up.</div>
       <div class="help"><b>New, nothing to answer:</b> a <b>Print</b> button on the week and the day sheet \u2014 the week landscape, day sheets portrait, scaled to the page, as many copies as you like including one for each person working that day. Print a run of weeks on a page each or packed together. And a <b>Reports</b> button on the Record page: sixteen reports covering hours, cost, overtime, coverage, breaks, requests, fairness, posts, balances, callouts, changes, the roster, holiday assignments and vacations \u2014 with names hidden where you want them hidden.</div>
       <div class="field"><label>Anyone still learning the job?</label>
         <select id="u_tr">
@@ -10343,28 +10344,38 @@ weeks:1
 };
  
 if(resume){ const d=wizDraft(); if(d) Object.assign(W, d.W); }
-const STEPS=[
-{k:"biz",     t:"What kind of place is this?"},
-{k:"where",   t:"Where do you operate?"},
-{k:"hours",   t:"When do you need people in?"},
+ 
+const POSTY=["pharmacy","clinic","warehouse","security","hotel","food"];
+const ALL_STEPS=[
+{k:"biz",     t:"What kind of place is this?",     core:true},
+{k:"where",   t:"Where do you operate?",           core:true},
+{k:"hours",   t:"When do you need people in?",     core:true},
+{k:"buckets", t:"How do you group your people?",   core:true},
+{k:"team",    t:"Who's on the team?",              core:true},
+{k:"shifts",  t:"Your shifts",                     core:true},
+{k:"need",    t:"How many on each shift",          core:true},
 {k:"busy",    t:"Which days are busy?"},
-{k:"buckets", t:"How do you group your people?"},
-{k:"count",   t:"How many people do you schedule?"},
-{k:"team",    t:"Their names"},
-{k:"days",    t:"Days that don't work"},
-{k:"shifts",  t:"Your shifts"},
-{k:"need",    t:"How many on each shift"},
-{k:"hols",    t:"Which holidays affect you?"},
-{k:"posts",   t:"Posts on the floor"},
 {k:"rules",   t:"Ground rules"},
+{k:"meals",   t:"Meals and rest breaks"},
 {k:"pri",     t:"Who gets first pick"},
-{k:"cost",    t:"Money"},
-{k:"handout", t:"Getting it to people"},
+{k:"hols",    t:"Which holidays affect you?"},
+{k:"posts",   t:"Posts on the floor", when:()=>POSTY.includes(W.biz)},
 {k:"extras",  t:"Anything else you want switched on?"},
-{k:"reqs",    t:"Anything people have asked for"},
-{k:"period",  t:"How far ahead"},
 {k:"done",    t:"Ready"}
 ];
+ 
+let STEPS=ALL_STEPS.filter(x=>!x.when || x.when());
+let CORE=STEPS.filter(x=>x.core).length;
+const rebuildSteps=()=>{
+STEPS=ALL_STEPS.filter(x=>!x.when || x.when());
+CORE=STEPS.filter(x=>x.core).length;
+};
+const phaseLabel=()=>{
+const i=W.step;
+if(i<CORE) return "Setup \u00b7 "+(i+1)+" of "+CORE;
+if(i===STEPS.length-1) return "Ready";
+return "Optional \u00b7 "+(i-CORE+1)+" of "+(STEPS.length-CORE-1);
+};
 const wizHolDefault=(h)=>{
 const b=W.biz;
 if(b==="hotel"||b==="security") return h.common==="closed"? "reduced" : h.common==="reduced"? "reduced" : "skip";
@@ -10494,7 +10505,9 @@ if(k==="count") return `
       </div>`;
 if(k==="team") return `
       <div class="stack">
-        <p class="whead">One name per line, under the role they belong to. Type or paste the lot. The order you list them in becomes the starting pecking order if you use one.</p>
+        <p class="whead">One name per line, under the role they belong to \u2014 type them or paste a list.
+          The order you put them in becomes the starting order for seniority, if you use it.
+          You can add, remove and rearrange people any time from the Team page.</p>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,b)=>`
           <div class="field"><label>${esc(W.buckets[b]||("Bucket "+(b+1)))} <span style="color:var(--faint)">· <span class="wcnt" data-b="${b}">${namesIn(b).length}</span></span></label>
             <textarea class="wbn" data-b="${b}" style="min-height:130px" spellcheck="false"
@@ -10659,23 +10672,17 @@ if(k==="posts") return `
       </div>`;
 if(k==="rules") return `
       <div class="stack">
-        <p class="whead">Limits the scheduler will never break. Your meal and rest break law is already handled \u2014 this is the rest, and every one of them has a sensible default if you\u2019d rather move on.</p>
+        <p class="whead">Three limits the scheduler will never break. All three come pre-set the way most places run \u2014 change one only if you know you need to.</p>
         <div class="field"><label>Least time off between two shifts</label>
           <div class="wopts wcols">${[8,10,12].map(n=>opt("minRest",n,W.minRest,n+" hours","")).join("")}</div></div>
         <div class="field"><label>Most days in a row</label>
           <div class="wopts wcols">${[5,6,7].map(n=>opt("maxConsec",n,W.maxConsec,n+" days","")).join("")}</div></div>
         <div class="field"><label>Closing one night and opening the next morning</label>
           <div class="wopts wcols">${opt("noClopen",true,W.noClopen,"Never","Protects the turnaround")+opt("noClopen",false,W.noClopen,"It's fine","")}</div></div>
-        <div class="field"><label>If someone still owes hours this week, how should they land?</label>
-          <div class="wopts">${
-opt("preferLong",true,W.preferLong,"Fewer, longer shifts","One 8-hour shift instead of two 4-hour ones — fewer handoffs, fewer commutes for the same pay.")+
-opt("preferLong",false,W.preferLong,"Whatever fits best","Short shifts are fine — useful when you cover rushes with overlap shifts.")}</div></div>
-        <div class="field"><label>People you keep on call (per diem)</label>
-          <div class="wopts">${
-opt("perDiem","ask",W.perDiem,"Ask me each time","A gap suggests them as one of the ways out — you decide instance by instance.")+
-opt("perDiem","auto",W.perDiem,"Use them automatically","When nobody regular can cover, the draft calls them in on its own and tells you who it used.")}</div></div>
-        <div class="sep"></div>
-        <div class="help">Meals and rest breaks are usually handled differently — plenty of places put lunches on the schedule and leave the short breaks to whoever's on the floor. So they're asked separately.</div>
+      </div>`;
+if(k==="meals") return `
+      <div class="stack">
+        <p class="whead">This is the part most scheduling tools leave to you. Weeksolved puts every meal inside the legal window for ${esc((LAW[W.juris]||LAW.NONE).name)} and staggers them so the floor never empties.</p>
         <div class="field"><label>Meal periods (the unpaid one)</label>
           <div class="wopts">${
 opt("breakMode","assigned",W.breakMode,"Put a time on the schedule","Each meal is placed inside the legal window and staggered so the floor never empties.")+
@@ -10695,22 +10702,16 @@ opt("mealPlan","closed",W.mealPlan,"We close for lunch","The doors shut for a se
             <label class="mini">Closed from</label><input type="time" data-w="mealCloseFrom" value="${esc(W.mealCloseFrom)}" style="width:auto">
             <label class="mini">until</label><input type="time" data-w="mealCloseTo" value="${esc(W.mealCloseTo)}" style="width:auto"></div>`:""}
         </div>`:""}
-        <div class="field"><label>Does anyone work a rotating pattern?</label>
-          <div class="wopts wcols">${
-opt("cycles",false,W.cycles,"No — same every week","The usual. Skip it.")+
-opt("cycles",true,W.cycles,"Yes — some work in cycles","Seven on and seven off, alternating weeks, or hours averaged over a pay period.")}</div>
-          <span class="mini">${W.cycles? "You'll set each person's pattern on their profile once you're in." : "Leave this off unless you know you need it — it stays out of the way entirely."}</span></div>
-        <div class="field"><label>Who gets paid for a holiday they don't work? <span class="chip">payroll \u2014 change it later if unsure</span></label>
-          <div class="wopts wcols">${
-opt("holPay","ft",W.holPay,"Full-timers only","8 hours each")+
-opt("holPay","all",W.holPay,"Everyone","8 hours each")+
-opt("holPay","none",W.holPay,"Nobody","")}</div>
-          <span class="mini">Changeable per person afterwards — this just sets the starting point.</span></div>
         <div class="field"><label>Rest breaks (the short paid ones)</label>
           <div class="wopts">${
 opt("restMode","self",W.restMode,"Staff take them when they see fit","The most common setup — the sheet notes how many are owed and leaves the timing alone.")+
 opt("restMode","lengths",W.restMode,"Say how many and how long","No clock times, just what each person is owed.")+
 opt("restMode","assigned",W.restMode,"Put times on the schedule too","Each break is placed near the middle of its stretch of work.")}</div></div>
+        <div class="sep"></div>
+        <div class="field"><label>People you keep on call (per diem)</label>
+          <div class="wopts">${
+opt("perDiem","ask",W.perDiem,"Ask me each time","A gap suggests them as one of the ways out \u2014 you decide instance by instance.")+
+opt("perDiem","auto",W.perDiem,"Use them automatically","When nobody regular can cover, the draft calls them in on its own and tells you who it used.")}</div></div>
       </div>`;
 if(k==="pri") return `
       <div class="stack">
@@ -10926,22 +10927,20 @@ PAINT_STEP=W.step;
 const last = W.step===STEPS.length-1;
 r.innerHTML=`<div class="scrim"><div class="modal" style="max-width:760px">
       <header><h3>${esc(STEPS[W.step].t)}</h3>
-        <span class="mini">${W.step+1} of ${STEPS.length}</span>
+        <span class="mini">${esc(phaseLabel())}</span>
         <button class="btn ghost sm" data-close>Close</button></header>
       <div class="wbar">${STEPS.map((x,i)=>`<i class="${i<W.step?"done":i===W.step?"now":""}"></i>`).join("")}</div>
-      ${(()=>{ const enough=STEPS.findIndex(x=>x.k==="need");
-return (enough>=0 && W.step>=enough && W.step<STEPS.length-1)
-? `<div class="wenough">You already have enough for a working schedule. Everything from here has a sensible default \u2014 <b>Build it now</b> and change any of it later.</div>` : ""; })()}
+      ${(W.step>=CORE && W.step<STEPS.length-1)
+? `<div class="wenough">That\u2019s everything Weeksolved needs \u2014 you can <b>Build it now</b> and see a schedule.
+           The rest is worth answering, but each one has a sensible default and its own page later.</div>` : ""}
       <div class="body">${body()}</div>
       <footer>
         ${W.step>0? `<button class="btn" id="wback">Back</button>`
-: firstRun? `<button class="btn ghost" id="wexplore">Explore the sample first</button>`
+: firstRun? `<button class="btn" id="wexplore">Show me a finished one first</button>`
 : `<span style="flex:1"></span>`}
-        ${(()=>{ const enough=STEPS.findIndex(x=>x.k==="need");
-if(last) return "";
-return (enough>=0 && W.step>=enough)
+        ${last? "" : (W.step>=CORE
 ? `<button class="btn" id="wskip" title="Everything left has a sensible default">Build it now</button>`
-: `<button class="btn ghost" id="wskip">Use the defaults for the rest</button>`; })()}
+: `<button class="btn ghost" id="wskip">Use the defaults for the rest</button>`)}
         <button class="btn primary" id="wnext">${last?"Build it":"Next"}</button>
       </footer></div></div>`;
 { const nb=r.querySelector(".modal .body"); if(nb && sameStep && keep) nb.scrollTop=keep; }
@@ -10966,7 +10965,7 @@ r.querySelectorAll(".wopt").forEach(b=>b.onclick=()=>{
 const g=b.dataset.g; let v=b.dataset.v;
 if(v==="true") v=true; else if(v==="false") v=false; else if(/^-?\d+$/.test(v)) v=+v;
 collect(); W[g]=v;
-if(g==="biz"){ const bt=BIZ_TYPES.find(x=>x.id===v);
+if(g==="biz"){ rebuildSteps(); const bt=BIZ_TYPES.find(x=>x.id===v);
 if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=bt.shifts;
 W.bucketCount=bt.roles.length; W.buckets=bt.roles.concat(["","","",""]).slice(0,4); W.shifts=[]; W.perShift={};
 if(bt.rules) Object.assign(W, bt.rules); } }
