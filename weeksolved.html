@@ -136,6 +136,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
 .dot.on{background:var(--ok)}
 .railfoot small{color:var(--muted);font-size:11px}
+/* Which account you are in should never be something you go looking for. */
+.acctchip{display:flex;align-items:center;gap:7px;width:100%;min-height:32px;padding:5px 7px;
+  border:1px solid var(--line-strong);background:var(--surface);border-radius:8px;cursor:pointer;
+  font-family:inherit;font-size:11.5px;font-weight:600;color:var(--ink);text-align:left}
+.acctchip:hover{background:var(--surface2)}
+.acctchip .av{flex:none;width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--on-accent);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;text-transform:uppercase}
+.acctchip.out .av{background:var(--sunken);color:var(--muted);border:1px solid var(--line-strong)}
+.acctchip .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .main{min-width:0;display:flex;flex-direction:column}
 .topbar{
@@ -685,6 +694,16 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .gatebox input{width:100%;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:16px;
   letter-spacing:.08em;text-transform:uppercase;padding:13px 12px;margin-bottom:10px}
 .gatebox .btn{width:100%;justify-content:center}
+/* Online terms only bind where the notice is conspicuous and the agreement is a
+   real, deliberate act. So: an unticked box, text the same size and colour as the
+   rest of the form rather than fine print, and links that look like links. */
+.gagree{display:flex;align-items:flex-start;gap:9px;text-align:left;margin-top:12px;
+  font-size:13.5px;line-height:1.5;color:var(--ink2);cursor:pointer}
+.gagree input{width:18px;height:18px;min-width:18px;margin:1px 0 0;flex:none;text-align:left;
+  accent-color:var(--accent);cursor:pointer}
+.gagree span{min-width:0}
+.gagree a{color:var(--accent);text-decoration:underline}
+.gnote{font-size:12.5px;line-height:1.5;color:var(--ink2);margin-top:10px;text-align:left}
 .gerr{color:var(--crit);font-size:12.5px;min-height:18px;margin-top:9px}
 .gfoot{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:20px}
 
@@ -807,6 +826,10 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
             style="padding:6px 11px;font-size:12.5px;flex:none">More</button>
     <nav class="nav" id="nav"></nav>
     <div class="railfoot">
+      <button class="acctchip" id="acctchip" aria-haspopup="dialog" title="Your account">
+        <span class="av" id="acctav">?</span>
+        <span class="who" id="acctwho">Not signed in</span>
+      </button>
       <span class="dot" id="syncdot"></span>
       <small id="syncmsg">Saved on this device</small>
       <button class="btn ghost sm" id="railset" title="Settings" style="padding:3px 8px;font-size:11.5px">Settings</button>
@@ -1218,6 +1241,50 @@ function renderCollabBar(){}
 function setSync(on,msg){
   const d=$("#syncdot"), m=$("#syncmsg");
   if(d) d.className = "dot"+(on?" on":""); if(m) m.textContent=msg;
+  paintAccount();
+}
+/* Who am I signed in as \u2014 answered in the corner of every screen, not buried
+   three pages into the settings. */
+function acctEmail(){ return (typeof FB!=="undefined" && FB && FB.user && FB.user.email) || ""; }
+function paintAccount(){
+  const chip=$("#acctchip"); if(!chip) return;
+  const em=acctEmail();
+  const who=$("#acctwho"), av=$("#acctav");
+  chip.classList.toggle("out", !em);
+  if(who) who.textContent = em || "Not signed in";
+  chip.title = em? "Signed in as "+em+" \u2014 tap to sign out or switch account" : "Not signed in \u2014 this board is on this device only";
+  if(av) av.textContent = em? em.trim()[0] : "\u2013";
+}
+function accountModal(){
+  const em=acctEmail();
+  const local=!em;
+  modal("Your account", `
+    <div class="stack">
+      ${em? `<div class="card"><div class="body">
+          <div class="lab">Signed in as</div>
+          <div style="font-size:15px;font-weight:600;word-break:break-all">${esc(em)}</div>
+          <div class="mini" style="margin-top:4px">Your board saves to this account and follows you to any browser you sign into.</div>
+        </div></div>`
+        : `<div class="banner info"><div><b>Not signed in.</b> This board lives in this browser only. Nothing is being saved to an account, and nothing leaves this device.</div></div>`}
+      <div class="stack" style="gap:8px">
+        ${em? `<button class="btn" id="acsw" style="justify-content:flex-start;text-align:left">
+            <span><b>Switch to a different account</b><span class="mini" style="display:block">Signs out and takes you to the sign-in screen. This board stays safe in ${esc(em)} and comes back when you sign in again.</span></span></button>
+          <button class="btn" id="acout" style="justify-content:flex-start;text-align:left">
+            <span><b>Sign out</b><span class="mini" style="display:block">Leaves this browser signed out. Nothing is deleted.</span></span></button>`
+        : `<button class="btn primary" id="acin" style="justify-content:flex-start;text-align:left">
+            <span><b>Sign in</b><span class="mini" style="display:block">Takes you to the sign-in screen.</span></span></button>`}
+        <button class="btn" id="acset" style="justify-content:flex-start;text-align:left">
+          <span><b>Account settings</b><span class="mini" style="display:block">Devices using this account, password, and what one account covers.</span></span></button>
+      </div>
+      ${em? `<div class="help">Signing out does not remove anything. The board you are looking at is kept in ${esc(em)}, and whatever is in the other account is waiting in that one.</div>`:""}
+    </div>`, `<button class="btn" data-close>Close</button>`, r=>{
+      const out=()=>{ try{ FB.auth.signOut().then(()=>location.reload()).catch(()=>location.reload()); }
+                      catch(e){ location.reload(); } };
+      const b1=r.querySelector("#acsw"); if(b1) b1.onclick=out;
+      const b2=r.querySelector("#acout"); if(b2) b2.onclick=out;
+      const b3=r.querySelector("#acin"); if(b3) b3.onclick=()=>location.reload();
+      r.querySelector("#acset").onclick=()=>{ closeModal(true); go("settings"); };
+    });
 }
 
 /* ============================================================
@@ -1623,6 +1690,67 @@ function gateScreen(msg){
 const CLOUD = {"apiKey":"AIzaSyD5BrMfKjRf0mzdjaj7tlohjYqqaTKGEao","authDomain":"weeksolved-54472.firebaseapp.com","projectId":"weeksolved-54472","storageBucket":"weeksolved-54472.firebasestorage.app","messagingSenderId":"332039926756","appId":"1:332039926756:web:f5a561eb23d2783eb78df1"};
 const MAILAPI = "";   /* the address of Weeksolved's own sender, filled in at build time */
 let FB=null, CLOUD_REV=0, cloudPushTimer=null, cloudUnsub=null, SIGNING_UP=false, SHELL=null;
+
+/* ---------- Agreeing to the terms ----------
+   Two things have to be true for online terms to hold: the person must have been
+   given conspicuous notice, and they must have done something unambiguous to
+   agree. A tick box they had to tick is the second; the wording and placing on
+   the sign-up screen is the first. Neither is worth anything without a record,
+   so every acceptance is written once and never altered: which version, when,
+   and on what. The address it came from is not ours to see from a browser \u2014 the
+   sign-in provider logs that separately, and we say so rather than inventing it. */
+const TERMS_VERSION = "1";                 /* raised by hand when the terms change */
+const TERMS_HASH = "ad73382742234cb1";
+const TERMS_DATE = "";
+const TERMSKEY = "ws.terms";
+function termsAccepted(){
+  try{ return JSON.parse(localStorage.getItem(TERMSKEY)||"null"); }catch(e){ return null; }
+}
+function termsCurrent(){
+  const a=termsAccepted();
+  return !!(a && String(a.v)===String(TERMS_VERSION));
+}
+function recordTermsAccept(){
+  const rec={ v:String(TERMS_VERSION), hash:String(TERMS_HASH||""), at:Date.now(),
+              ua:String(navigator.userAgent||"").slice(0,200) };
+  try{ localStorage.setItem(TERMSKEY, JSON.stringify(rec)); }catch(e){}
+  /* One document per acceptance, create-only, so the record cannot be quietly
+     rewritten later \u2014 by us or by anybody signed in. */
+  try{
+    if(FB && FB.user && FB.db)
+      FB.db.doc("users/"+FB.user.uid+"/terms/"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+  }catch(e){}
+  return rec;
+}
+/* Shown to somebody who agreed to an earlier version. Deliberately not a
+   dark-pattern wall: it says what changed, both documents are one tap away, and
+   signing out is offered rather than hidden. */
+function termsUpdateScreen(){
+  document.body.innerHTML =
+    '<div class="gate"><div class="gatebox">'+
+      '<div class="gatemark">WS</div>'+
+      '<h1>The terms have changed</h1>'+
+      '<p class="gsub">Nothing about your account or your schedules has changed. We have rewritten the Terms of Service and the Privacy Policy, and we need you to read them before carrying on.</p>'+
+      '<div class="gnote"><b>What is different:</b> the privacy policy now lists every kind of information the product holds and how long it is kept, and says plainly that we can reach the database and when we would. The terms add what happens to your agreement if the business becomes a company, and set out clearly what Weeksolved does not promise \u2014 it drafts schedules, it is not legal advice.</div>'+
+      '<label class="gagree"><input type="checkbox" id="tuok"><span>'+
+        'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>'+
+        (TERMS_DATE? ', dated '+esc(TERMS_DATE) : '')+'.</span></label>'+
+      '<button class="btn primary big" id="tugo" style="margin-top:12px">Agree and carry on</button>'+
+      '<div class="gerr" id="tuerr"></div>'+
+      '<button class="btn ghost sm" id="tuout" style="margin-top:10px">Sign out instead</button>'+
+      '<p class="gfoot">Your board is untouched and waiting either way. If you would rather not agree, sign out and email us \u2014 you can have everything you have entered as a file.</p>'+
+    '</div></div>';
+  document.getElementById("tugo").onclick=()=>{
+    if(!document.getElementById("tuok").checked){
+      document.getElementById("tuerr").textContent="Tick the box to carry on."; return; }
+    recordTermsAccept();
+    location.reload();
+  };
+  document.getElementById("tuout").onclick=()=>{
+    try{ FB.auth.signOut().then(()=>location.reload()).catch(()=>location.reload()); }
+    catch(e){ location.reload(); }
+  };
+}
 function cloudOn(){ return !!(CLOUD && CLOUD.apiKey && window.firebase); }
 
 function startApp(){
@@ -1667,6 +1795,16 @@ async function cloudEnter(){
   const expMs=(p.activated||0)+(p.days||30)*86400000;
   const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
   if(!p.life && (Date.now()>expMs || Date.now()>hardEnd)){ expiredScreen(); return; }
+  /* Somebody who agreed to an older version reads the new one before going in.
+     Asked once, on this device, and never again for this version. */
+  if(!termsCurrent()){
+    let seen=null;
+    try{ const t=await FB.db.collection("users/"+uid+"/terms").get();
+         (t.docs||[]).forEach(d=>{ const x=d.data()||{};
+           if(String(x.v)===String(TERMS_VERSION)) seen=x; }); }catch(e){}
+    if(seen){ try{ localStorage.setItem(TERMSKEY, JSON.stringify(seen)); }catch(e){} }
+    else { termsUpdateScreen(); return; }
+  }
 
   WKHASH={};
   const remote=await cloudFetchAll(uid);
@@ -2005,6 +2143,7 @@ async function cloudSignup(code,email,pass){
     await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
       .set({codeId:hit.id, days:hit.days||30, life:!!hit.life, activated:Date.now(), email:email.trim()});
     try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:hit.life?"9999-12-31":ymd(new Date(Date.now()+(hit.days||30)*86400000)), life:!!hit.life, at:Date.now()})); }catch(e){}
+    recordTermsAccept();      /* they ticked the box a moment ago; this is the record of it */
   } finally { SIGNING_UP=false; }
   await cloudEnter();
 }
@@ -2024,7 +2163,13 @@ function authScreen(msg, tab){
         : '')+
       '<input type="email" id="gmail" autocomplete="email" placeholder="Email" aria-label="Email" style="margin-top:8px">'+
       '<input type="password" id="gpass" autocomplete="'+(tab==="new"?"new-password":"current-password")+'" placeholder="Password'+(tab==="new"?" — 8+ characters":"")+'" aria-label="Password" style="margin-top:8px">'+
+      (tab==="new"
+        ? '<label class="gagree"><input type="checkbox" id="gterms"><span>'+
+            'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>'+
+            (TERMS_DATE? ', dated '+esc(TERMS_DATE) : '')+'.</span></label>'
+        : '')+
       '<button class="btn primary big" id="gGo" style="margin-top:12px">'+(tab==="new"?"Create my account":"Sign in")+'</button>'+
+      (tab==="new"? '<div class="gnote">Pressing <b>Create my account</b> means you agree to both.</div>' : '')+
       '<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
       (tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot password?</button>':'')+
       '<p class="gfoot">'+(tab==="new"
@@ -2045,6 +2190,10 @@ function authScreen(msg, tab){
       if(tab==="new"){
         const code=document.getElementById("gcode").value;
         if(!code.trim()){ err("The access code goes in the top box."); busy(false); return; }
+        const box=document.getElementById("gterms");
+        if(!box || !box.checked){
+          err("Please read the terms and tick the box \u2014 we can\u2019t create the account without it.");
+          busy(false); return; }
         await cloudSignup(code,email,pass);
       } else {
         await FB.auth.signInWithEmailAndPassword(email,pass);
@@ -7086,6 +7235,9 @@ function moreSheet(){
   $("#sheetroot").innerHTML =
     '<div class="sheet"><div class="sheetbox" role="dialog" aria-modal="true" aria-label="More">'+
       '<div class="grab"></div>'+
+      '<h4>Account</h4><div class="sheetlist"><button data-sheetacct="1">'+
+        esc(((typeof FB!=="undefined" && FB && FB.user && FB.user.email) || "Not signed in"))+
+      '</button></div>'+
       (main.length? '<h4>Go to</h4><div class="sheetlist">'+main.map(row).join("")+'</div>':"")+
       '<h4>Set up</h4><div class="sheetlist">'+setup.map(row).join("")+'</div>'+
       '<h4>This app</h4><div class="sheetlist">'+
@@ -7099,6 +7251,7 @@ function moreSheet(){
     '</div></div>';
   const r=$("#sheetroot");
   r.querySelector(".sheet").addEventListener("mousedown",e=>{ if(e.target.classList.contains("sheet")) closeSheet(); });
+  r.querySelectorAll("[data-sheetacct]").forEach(b=>b.onclick=()=>{ closeSheet(); accountModal(); });
   r.querySelectorAll("[data-sheetgo]").forEach(b=>b.onclick=()=>{ closeSheet();
     if(!advanced() && NAV.some(x=>x.id===b.dataset.sheetgo && !x.simple)) S.ui.advanced=true;
     go(b.dataset.sheetgo); });
@@ -7124,7 +7277,7 @@ window.addEventListener("resize", ()=>{
 let LAST_VIEW=null;
 function render(){
   WAS_PHONE = isPhone();
-  settlePending(); runQueued(); graceTick();
+  settlePending(); runQueued(); graceTick(); paintAccount();
   const keepY = (LAST_VIEW===VIEW)? window.scrollY : null;
   LAST_VIEW=VIEW;
   initSwipe();
@@ -8208,6 +8361,13 @@ function vSettings(){
         " It is your own note to yourself for when somebody asks why a shift moved; it stays on your board, and only what happens to a posted schedule is ever noted \u2014 never what you do in a draft.",
         sel("rules.auditKeep", [[90,"90 days"],[365,"A year"],[730,"Two years"],[0,"As long as it fits (about 6,000 entries)"]], S.rules.auditKeep||0)+
         ` <button class="btn sm" data-go="analytics">See it →</button>`)}
+      ${setRow("The terms you agreed to", (()=>{
+        const a=termsAccepted();
+        if(!a) return "No record on this device \u2014 sign in and it is written when you accept them.";
+        return "Version "+esc(String(a.v))+(TERMS_DATE? " ("+esc(TERMS_DATE)+")":"")+", agreed "+
+          new Date(a.at).toLocaleDateString()+". Kept as a record on your account so neither of us has to remember.";
+      })(), `<a class="btn sm" href="/terms.html" target="_blank" rel="noopener">Read them</a>
+             <a class="btn sm" href="/privacy.html" target="_blank" rel="noopener">Privacy</a>`)}
       ${setRow("Your data", "A backup restores this whole board on any device",
         `<button class="btn sm" id="setbak">Download a backup</button><button class="btn sm" id="setrestore">Restore</button>`)}
       ${setRow("Start over", "Wipes everything and takes you straight back to the setup questions, exactly as if the account were new. Useful for a practice run.",
@@ -16351,6 +16511,7 @@ function applyTheme(t){
   if(g) g.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.t===t));
 }
 function initRail(){
+  { const a=$("#acctchip"); if(a) a.onclick=()=>accountModal(); paintAccount(); }
   const b=$("#railset"); if(b) b.onclick=()=>go("settings");
   const bg=$("#railbug"); if(bg) bg.onclick=()=>bugModal();
   const m=$("#railmore"); if(m) m.onclick=()=>moreSheet();
