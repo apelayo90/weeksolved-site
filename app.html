@@ -236,6 +236,9 @@ input[type=time],input[type=date],input[type=number]{font-family:"IBM Plex Mono"
 .statepill.on{background:var(--accent);color:var(--on-accent)}
 .statepill.off{background:var(--sunken);color:var(--muted);border-color:var(--line-strong)}
 .setrow.son{box-shadow:inset 3px 0 0 var(--accent)}
+@keyframes cardflash{0%{box-shadow:0 0 0 0 var(--accent)}35%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
+.card.flash{animation:cardflash 1.6s ease-out}
+@media (prefers-reduced-motion:reduce){ .card.flash{animation:none;box-shadow:0 0 0 3px var(--accent)} }
 .fstate{display:flex;flex-wrap:wrap;gap:7px}
 .fstate button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;
   border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;font-size:12.5px;font-weight:600;min-height:26px}
@@ -278,7 +281,14 @@ tr:last-child td{border-bottom:0}
 .modal .body{padding:18px;overflow-y:auto;overscroll-behavior:contain}
 .modal>footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;background:var(--surface2);border-radius:0 0 10px 10px}
 .modal>footer>*{min-width:0}
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw;
+  display:flex;align-items:center;gap:12px;bottom:calc(18px + env(safe-area-inset-bottom))}
+.toast .tact{flex:none;background:transparent;border:1px solid rgba(255,255,255,.45);color:var(--ground);
+  font:inherit;font-weight:600;padding:7px 12px;min-height:36px;border-radius:6px;cursor:pointer}
+.toast .tact:hover{background:rgba(255,255,255,.14)}
+.toast .tact:focus-visible{outline:2px solid var(--ground);outline-offset:1px}
+@media (max-width:820px){ .toast{max-width:calc(100vw - 24px);font-size:13.5px}
+  .toast .tact{min-height:40px;padding:9px 14px} }
 
 /* ---------- availability grid ---------- */
 .avail{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
@@ -733,8 +743,28 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .gatebox h1{font-family:"Archivo","Public Sans",sans-serif;font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 .gatebox .gsub{color:var(--ink2);font-size:14px;line-height:1.55;margin:0 0 18px}
 .gatebox input{width:100%;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:16px;
-  letter-spacing:.08em;text-transform:uppercase;padding:13px 12px;margin-bottom:10px}
+  letter-spacing:.04em;padding:13px 12px;margin-bottom:10px}
+/* Only the access code is genuinely upper-case; it is typed that way and read
+   aloud that way. An email is not, and a password certainly is not. */
+.gatebox input#gcode{letter-spacing:.08em;text-transform:uppercase}
+.gatebox input[type=email]{text-transform:none}
+.gatebox .pwwrap input{text-align:left;padding-left:14px}
 .gatebox .btn{width:100%;justify-content:center}
+/* A password you cannot read is how a typo becomes a locked-out account. The eye
+   is a switch, not a peephole: press it once and the password stays readable
+   until you press it again. */
+.pwwrap{position:relative;margin-bottom:10px}
+.pwwrap input{margin-bottom:0;padding-right:52px}
+.pweye{position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  width:44px;height:44px;display:grid;place-items:center;
+  background:transparent;border:0;border-radius:7px;cursor:pointer;color:var(--muted);padding:0}
+.pweye:hover{color:var(--ink)}
+.pweye:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pweye svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.pweye[aria-pressed="true"]{color:var(--accent)}
+.field .pwwrap{margin-bottom:0}
+.field .pwwrap input{text-align:left}
 /* Online terms only bind where the notice is conspicuous and the agreement is a
    real, deliberate act. So: an unticked box, text the same size and colour as the
    rest of the form rather than fine print, and links that look like links. */
@@ -745,7 +775,8 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .gagree span{min-width:0}
 .gagree a{color:var(--accent);text-decoration:underline}
 .gnote{font-size:12.5px;line-height:1.5;color:var(--ink2);margin-top:10px;text-align:left}
-.gerr{color:var(--crit);font-size:12.5px;min-height:18px;margin-top:9px}
+.gerr{color:var(--crit);font-size:12.5px;line-height:1.5;min-height:18px;margin-top:9px}
+.gerr.ok{color:var(--ok)}
 .gfoot{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:20px}
 
 /* the week, a day at a time — what a phone gets instead of the wide grid */
@@ -943,9 +974,16 @@ return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
 function prettyFull(s){ const d=parseYmd(s);
 return d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
 
-function toast(msg){
-const r=$("#toastroot"); r.innerHTML='<div class="toast">'+esc(msg)+"</div>";
-clearTimeout(toast._t); toast._t=setTimeout(()=>r.innerHTML="",2800);
+ 
+function toast(msg, act){
+const r=$("#toastroot");
+r.innerHTML='<div class="toast"><span>'+esc(msg)+'</span>'+
+(act? '<button type="button" class="tact" id="toastact">'+esc(act.label||"Undo")+'</button>' : '')+'</div>';
+if(act){
+const btn=r.querySelector("#toastact");
+btn.onclick=()=>{ clearTimeout(toast._t); r.innerHTML=""; try{ act.run(); }catch(e){} };
+}
+clearTimeout(toast._t); toast._t=setTimeout(()=>r.innerHTML="", act? 7000 : 2800);
 }
 
  
@@ -1489,8 +1527,8 @@ if(how==="copy"){
 const txt = mode==="each"
 ? working.map(e=>personalText(e.id,ws)).join("\n\n" + "-".repeat(40) + "\n\n")
 : wholeWeekText(ws);
-try{ await navigator.clipboard.writeText(txt); toast("Copied — paste it wherever you like"); }
-catch(err){ toast("Couldn't copy here — use the Export page instead"); }
+try{ await navigator.clipboard.writeText(txt); markTold(ws,"copy"); toast("Copied — paste it wherever you like"); render(); }
+catch(err){ toast("Couldn\u2019t copy on this device \u2014 print it or save the PDF from Hand it out instead"); }
 return;
 }
 
@@ -1499,7 +1537,7 @@ const sub=(S.org.name||"Work")+" schedule — week of "+prettyDate(ws);
 const txt=wholeWeekText(ws);
 if(how==="email") openMail(reachable.map(e=>contactOf(e).email).join(","), sub, txt);
 else openSms(reachable.map(e=>contactOf(e).phone).join(","), txt);
-wk.sentAt=Date.now(); wk.sentTo=reachable.length; snapWeek(wk); save(); closeModal(); render();
+wk.sentAt=Date.now(); wk.sentTo=reachable.length; wk.toldHow=how; snapWeek(wk); save(); closeModal(); render();
 toast("Opened your "+(how==="sms"?"messages":"mail")+" app with all "+reachable.length+" on it");
 return;
 }
@@ -1513,7 +1551,7 @@ else openSms(contactOf(e).phone, personalText(e.id,ws));
 }
 at++;
 if(at>=queue.length){
-wk.sentAt=Date.now(); wk.sentTo=queue.length; snapWeek(wk); save(); closeModal(); render();
+wk.sentAt=Date.now(); wk.sentTo=queue.length; wk.toldHow=how; snapWeek(wk); save(); closeModal(); render();
 toast("That's all "+queue.length+" — check your sent folder to be sure");
 } else paint(r);
 };
@@ -1735,8 +1773,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "b2cbd6cd";       
-const BUILD_AT = "2026-09-01 21:56 UTC";       
+const BUILD_ID = "2e97baf0";       
+const BUILD_AT = "2026-09-01 22:27 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "32f50d2ca959e00b";
 const TERMS_DATE = "";
@@ -2250,6 +2288,33 @@ w.querySelector("#gdcopy").onclick=()=>{ copyText(txt,"Copied \u2014 paste it in
 w.querySelector("#gdclose").onclick=()=>w.remove();
 w.addEventListener("mousedown",e=>{ if(e.target===w) w.remove(); });
 }
+ 
+const EYE_OPEN='<svg viewBox="0 0 24 24"><path d="M1.8 12S5.5 5.4 12 5.4 22.2 12 22.2 12 18.5 18.6 12 18.6 1.8 12 1.8 12Z"/><circle cx="12" cy="12" r="3.1"/></svg>';
+const EYE_SHUT='<svg viewBox="0 0 24 24"><path d="M9.9 5.7A9.8 9.8 0 0 1 12 5.4c6.5 0 10.2 6.6 10.2 6.6a19 19 0 0 1-3.3 4.2M6.4 6.8A18.6 18.6 0 0 0 1.8 12S5.5 18.6 12 18.6a9.6 9.6 0 0 0 3.9-.8"/><path d="m9.9 9.9a3.1 3.1 0 0 0 4.3 4.3"/><path d="M3 3l18 18"/></svg>';
+function pwField(id, ph, ac, aria){
+return '<div class="pwwrap"><input type="password" id="'+id+'" autocomplete="'+ac+'" placeholder="'+ph+
+'" aria-label="'+(aria||ph)+'">'+
+'<button type="button" class="pweye" data-pweye="'+id+'" aria-pressed="false" aria-label="Show password" title="Show password">'+EYE_SHUT+'</button></div>';
+}
+ 
+function wirePwEyes(root){
+(root||document).querySelectorAll("[data-pweye]").forEach(btn=>{
+if(btn.dataset.pwwired) return;
+btn.dataset.pwwired="1";
+btn.onclick=()=>{
+const inp=document.getElementById(btn.dataset.pweye);
+if(!inp) return;
+const show = inp.type==="password";
+inp.type = show? "text" : "password";
+btn.setAttribute("aria-pressed", show? "true":"false");
+btn.setAttribute("aria-label", show? "Hide password":"Show password");
+btn.title = show? "Hide password":"Show password";
+btn.innerHTML = show? EYE_OPEN : EYE_SHUT;
+ 
+try{ const n=inp.value.length; inp.focus(); inp.setSelectionRange(n,n); }catch(e){}
+};
+});
+}
 function authScreen(msg, tab){
 tab=tab||"in";
 document.body.innerHTML =
@@ -2264,8 +2329,8 @@ document.body.innerHTML =
 ? '<input type="text" id="gcode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Access code — XXXX-XXXX-XXXX" aria-label="Access code">'
 : '')+
 '<input type="email" id="gmail" autocomplete="email" placeholder="Email" aria-label="Email" style="margin-top:8px">'+
-'<input type="password" id="gpass" autocomplete="'+(tab==="new"?"new-password":"current-password")+'" placeholder="Password'+(tab==="new"?" — 8+ characters":"")+'" aria-label="Password" style="margin-top:8px">'+
-(tab==="new"? '<input type="password" id="gpass2" autocomplete="new-password" placeholder="Password again" aria-label="Confirm your password" style="margin-top:8px">' : '')+
+pwField("gpass", "Password"+(tab==="new"?" \u2014 8+ characters":""), (tab==="new"?"new-password":"current-password"), "Password")+
+(tab==="new"? pwField("gpass2", "Password again", "new-password", "Type your password a second time") : '')+
 (tab==="new"
 ? '<label class="gagree"><input type="checkbox" id="gterms"><span>'+
 'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>'+
@@ -2288,9 +2353,11 @@ document.body.innerHTML =
 : "New here? Switch to New tester and use the access code you were given. Free while testing — <a href=\'/pricing.html\' style=\'color:inherit\'>see what it will cost later</a>.")+'</p>'+
 '</div></div>';
  
-const err=t=>{ const e=document.getElementById("gerr"); if(e) e.textContent=t; };
+const err=(t,good)=>{ const e=document.getElementById("gerr"); if(!e) return;
+e.textContent=t; e.classList.toggle("ok", !!good); };
 GATE_ERR = err;
 { const d=document.getElementById("gdiag"); if(d) d.onclick=gateDiagModal; }
+wirePwEyes(document);
  
 { const gc=document.getElementById("gcode");
 if(gc) gc.addEventListener("input", ()=>{
@@ -2338,8 +2405,16 @@ const fg=document.getElementById("gforgot");
 if(fg) fg.onclick=async ()=>{
 const email=document.getElementById("gmail").value.trim();
 if(!email){ err("Type your email above first, then press this again."); return; }
-try{ await FB.auth.sendPasswordResetEmail(email); err("Reset email sent — check your inbox."); }
+const btn=fg; const was=btn.textContent;
+btn.disabled=true; btn.textContent="Sending\u2026"; err("");
+try{
+await FB.auth.sendPasswordResetEmail(email);
+err("If there is an account for "+email+", a reset link is on its way. It comes from a noreply address at Google, "+
+"so check your spam and Promotions folders too \u2014 it is the first mail we ever send you and inboxes are suspicious of those. "+
+"The link is good for one hour.", true);
+}
 catch(e){ err(authErrSay(e)); }
+btn.disabled=false; btn.textContent=was;
 };
 ["gcode","gmail","gpass"].forEach(id=>{ const el=document.getElementById(id);
 if(el) el.onkeydown=e=>{ if(e.key==="Enter") document.getElementById("gGo").click(); }; });
@@ -2467,7 +2542,8 @@ modal("Delete your account", `
         <button class="btn sm" id="dabak">Download a backup of this board</button>
         <span class="mini">A backup restores everything into a fresh account later. This is your last chance to take one.</span></div>
       <div class="field"><label>Your password, to prove it is you</label>
-        <input type="password" id="dapass" autocomplete="current-password" placeholder="Password">
+        <div class="pwwrap"><input type="password" id="dapass" autocomplete="current-password" placeholder="Password" aria-label="Password">
+          <button type="button" class="pweye" data-pweye="dapass" aria-pressed="false" aria-label="Show password" title="Show password">${EYE_SHUT}</button></div>
         <span class="mini">Asked because deleting an account should not be something a borrowed phone can do.</span></div>
       <div class="field"><label>Type DELETE to confirm</label>
         <input type="text" id="datype" autocomplete="off" autocapitalize="characters" placeholder="DELETE"></div>
@@ -7355,6 +7431,107 @@ const GRACE_CHOICES=[[0,"Straight away"],[30,"30 seconds"],[60,"1 minute"],[90,"
 function graceSec(){ const g=S.rules.postGraceSec; return (g==null? 90 : +g)||0; }
 function goesLiveAt(wk){ return (wk && wk.pendingAt)? wk.pendingAt + (wk.graceSec||0)*1000 : 0; }
 function postPending(wk){ return !!(wk && wk.published && wk.pendingAt && Date.now() < goesLiveAt(wk)); }
+ 
+var TELL_WORD = {email:"emailed to the team", sms:"texted to the team", copy:"copied out",
+print:"printed to pin up", pdf:"saved as a PDF", cards:"printed as one card each",
+csv:"exported as a spreadsheet"};
+ 
+function weekStamp(ws){
+const wk=peekWeek(ws); if(!wk) return "";
+return wk.assignments.map(a=>{
+const b=a.breaks||{meals:[]};
+return [a.date,a.empId,a.shiftId,a.roleId||"",a.startMin,a.endMin,a.station||"",
+(b.meals||[]).map(m=>m.waived?"w":m.start).join("/")].join(",");
+}).sort().join(";");
+}
+function toldIsStale(ws){
+const wk=peekWeek(ws);
+return !!(wk && wk.sentAt && wk.toldStamp!=null && wk.toldStamp !== weekStamp(ws));
+}
+function markTold(ws, how, n){
+const wk=peekWeek(ws||S.currentWeek); if(!wk) return;
+wk.sentAt=Date.now(); wk.toldHow=how||""; if(n!=null) wk.sentTo=n;
+wk.toldStamp=weekStamp(ws||S.currentWeek);
+logIt("post","Week of "+prettyDate(ws||S.currentWeek)+" "+(TELL_WORD[how]||"handed out"));
+save();
+}
+function toldText(wk){
+if(!wk || !wk.sentAt) return "";
+return (TELL_WORD[wk.toldHow]||"handed out")+" "+new Date(wk.sentAt).toLocaleString([],{dateStyle:"medium",timeStyle:"short"});
+}
+ 
+function needsTelling(ws){
+const wk=peekWeek(ws);
+if(!(wk && wk.published && !postPending(wk) && wk.assignments.length)) return false;
+return !wk.sentAt || toldIsStale(ws);
+}
+function tellBanner(ws){
+const wk=peekWeek(ws);
+if(!wk || !wk.published || postPending(wk) || !wk.assignments.length) return "";
+if(wk.sentAt && !toldIsStale(ws)) return `<div class="hnotice"><span><b>The team has this week.</b> ${esc(toldText(wk))}.</span>
+    <button class="btn sm" data-tell="${esc(ws)}" style="flex:none">Hand it out again</button></div>`;
+if(wk.sentAt) return `<div class="banner warn"><div><b>This week has changed since you handed it out.</b>
+      Your team is working from the version you gave them ${esc(toldText(wk).replace(/^[a-z ]+/,""))}. Hand it out again so nobody turns up to the old plan.</div>
+    <button class="btn sm primary" data-tell="${esc(ws)}" style="flex:none;margin-left:auto">Hand it out again</button></div>`;
+return `<div class="banner warn"><div><b>Posted \u2014 but nobody has been told yet.</b>
+      Posting locks the week in here. It does not go to anyone\u2019s phone on its own. Pick how your team finds out.</div>
+    <button class="btn sm primary" data-tell="${esc(ws)}" style="flex:none;margin-left:auto">Hand it out</button></div>`;
+}
+ 
+function tellModal(ws){
+ws = ws || S.currentWeek;
+const wk=peekWeek(ws);
+if(!wk || !wk.assignments.length){ toast("Nothing to hand out \u2014 this week is empty"); return; }
+if(postPending(wk)){ toast("That week is still in its take-it-back window \u2014 hand it out once it is really up"); return; }
+const em=withEmail().length, ph=withPhone().length;
+modal("Hand the week out", `
+    <div class="stack">
+      <p class="whead">${!wk.sentAt? "Nobody has seen this week yet. Any one of these counts as telling them."
+: toldIsStale(ws)? "You handed this week out \u2014 "+esc(toldText(wk))+" \u2014 and it has changed since. What your team is holding is out of date."
+: "You handed this week out already \u2014 "+esc(toldText(wk))+". Doing it again is fine."}</p>
+      <div class="stack" style="gap:8px">
+        <div class="lab">On paper</div>
+        <button class="btn" id="tlprint">Print the whole week to pin up</button>
+        <button class="btn" id="tlcards">Print one card each, personal shifts only (PDF)</button>
+        <button class="btn" id="tlpdf">Save the whole week as a PDF</button>
+      </div>
+      <div class="sep"></div>
+      <div class="stack" style="gap:8px">
+        <div class="lab">On a screen</div>
+        <button class="btn" id="tlcopy">Copy the week as text \u2014 paste it into your own group chat</button>
+        ${sendOn()
+? `<button class="btn primary" id="tlsend">Email or text each person their own shifts</button>`
+: `<div class="mini">Weeksolved can also write one message per person with just their own shifts, and open your
+               mail or messages app with it ready. It is switched off right now.</div>
+             <button class="btn" data-go="settings" id="tlturn">Turn sending on in Settings</button>`}
+      </div>
+      <div class="mini">${(!em&&!ph)? "No emails or mobiles are on file yet \u2014 printing and copying work without them."
+: em+" of your team have an email on file and "+ph+" have a mobile."}</div>
+    </div>`,
+`<button class="btn" data-close>Close</button>`,
+r=>{
+const done=(how)=>{ markTold(ws, how); closeModal(); render(); };
+r.querySelector("#tlprint").onclick=()=>{
+const body=esc(wholeWeekText(ws));
+const html=`<html><head><meta charset="utf-8"><title>Schedule</title><style>
+          body{font:13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:26px;color:#182421}
+          pre{font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
+          .f{margin-top:22px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#667}
+          </style></head><body><pre>${body}</pre>
+          <div class="f">These are the hours and times scheduled, not a record of what anyone worked.</div>
+          </body></html>`;
+if(printDoc(html, "Schedule \u2014 week of "+prettyDate(ws))) done("print");
+else toast("Your browser blocked the print window \u2014 allow pop-ups, or use one of the other ways");
+};
+r.querySelector("#tlcards").onclick=()=>{ exportPersonCards().then(ok=>{ if(ok) done("cards"); }).catch(()=>pdfUnavailable()); };
+r.querySelector("#tlpdf").onclick=()=>{ exportWeekPDF().then(ok=>{ if(ok) done("pdf"); }).catch(()=>pdfUnavailable()); };
+r.querySelector("#tlcopy").onclick=async()=>{
+try{ await navigator.clipboard.writeText(wholeWeekText(ws)); toast("Copied \u2014 paste it wherever your team reads things"); done("copy"); }
+catch(err){ toast("Couldn\u2019t copy on this device \u2014 print it or save the PDF instead"); }
+};
+const sd=r.querySelector("#tlsend"); if(sd) sd.onclick=()=>{ closeModal(); setTimeout(()=>sendModal(ws), 250); };
+});
+}
 function postSecsLeft(wk){ return Math.max(0, Math.ceil((goesLiveAt(wk)-Date.now())/1000)); }
  
 function weekLive(ws){ const wk=peekWeek(ws); return !!(wk && wk.published) && !postPending(wk); }
@@ -8429,6 +8606,7 @@ el.addEventListener("change",()=>{ commit(); save(); if(el.dataset.rerender!=="n
 });
 root.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
 root.querySelectorAll("[data-undopost]").forEach(el=>el.addEventListener("click",()=>undoPost(el.dataset.undopost)));
+root.querySelectorAll("[data-tell]").forEach(el=>el.addEventListener("click",()=>tellModal(el.dataset.tell||S.currentWeek)));
 root.querySelectorAll("[data-qdel]").forEach(el=>el.addEventListener("click",()=>{
 S.queued=queueList().filter(q=>q.id!==el.dataset.qdel); save(); render(); toast("Dropped \u2014 nothing will happen"); }));
 root.querySelectorAll("[data-qnow]").forEach(el=>el.addEventListener("click",()=>{
@@ -8508,6 +8686,7 @@ if(b && (b.classList.contains("primary") || b.classList.contains("danger"))) MOD
 MODAL_DIRTY=false;
 }
 if(onMount) onMount(r);
+wirePwEyes(r);
 polishA11y(r); markToggleState(r);
 return r;
 }
@@ -8681,7 +8860,9 @@ if(!ready){ headline="Let's get you set up.";
 sub="A few short questions — most of them just picking an option — and you'll have a schedule."; }
 else if(postPending(wk)){ headline="Going up in a moment.";
 sub="Nothing has been sent and nobody can see it yet. Take it back and it is as if you never pressed the button."; }
-else if(wk.published){ headline="Posted. You're done for this week.";
+else if(wk.published && needsTelling(ws)){ headline="Posted \u2014 one step left.";
+sub=wk.assignments.length+" shifts are locked in. Nobody has been given them yet, and Weeksolved does not do that on its own."; }
+else if(wk.published){ headline="Posted, and your team has it.";
 sub=wk.assignments.length+" shifts are up and locked. Move to next week when you're ready."; }
 else if(!wk.assignments.length){ headline="Ready when you are.";
 sub="Everything it needs is on file. One press and you'll have a full week to look over."; }
@@ -8702,6 +8883,9 @@ return `
     ${ACCESS.on && !(S.ui&&S.ui.repTip)? `<div class="hnotice"><span>Spot something wrong while testing? The <b>⚑ Report</b> button up top sends it straight to the fix list — ten seconds, no email needed.</span>
       <button class="btn sm" id="reptipok" style="flex:none">Got it</button></div>`:""}
     ${graceBanner(ws)}
+    ${tellBanner(ws)}
+    ${wk.auto && wk.suggested && !wk.published && !(S.ui&&S.ui.autoTipSeen)? `<div class="hnotice"><span><b>Weeksolved drafted this week when you opened it</b> \u2014 a starting point, nothing more. It is not posted, nobody has seen it, and Draft again gives you a different take.</span>
+      <button class="btn sm" id="autotipok" style="flex:none">Got it</button></div>`:""}
     ${queueCard(null)}
     ${updDue()? `<div class="hnotice"><span><b>Weeksolved was updated.</b> A few new settings arrived — your setup and team are untouched.</span>
       <button class="btn sm primary" id="updgo" style="flex:none">Review — 1 min</button></div>`:""}
@@ -8726,8 +8910,10 @@ return `
           </div>
           <div class="stack hacts" style="flex:none;gap:8px;min-width:190px">
             ${!ready? `<button class="btn primary big" id="hsetup">Set it up</button>`
-: wk.published? `<button class="btn big" id="hunpost">Unpost to change it</button>
-                               <button class="btn primary big" id="hnextweek">Do next week</button>`
+: wk.published? `${!postPending(wk) && wk.assignments.length && !wk.sentAt
+? `<button class="btn primary big" data-tell="${esc(ws)}">Hand it out to the team</button>` : ""}
+                               <button class="btn big" id="hunpost">Unpost to change it</button>
+                               <button class="btn ${!postPending(wk) && wk.assignments.length && !wk.sentAt?"":"primary "}big" id="hnextweek">Do next week</button>`
 : `<button class="btn primary big" id="hdraft">${wk.assignments.length?"Draft it again":"Draft the schedule"}</button>
                  ${wk.assignments.length? `<button class="btn big" id="hpost">${crit.length?"Post it anyway":"Looks good — post it"}</button>`:""}`}
           </div>
@@ -8840,18 +9026,22 @@ on("#hsetup",()=>wizard());
 on("#hsetup2",()=>wizard());
 on("#homesetup",()=>wizard());
 on("#reptipok",()=>{ S.ui=S.ui||{}; S.ui.repTip=true; save(); render(); });
+on("#autotipok",()=>{ S.ui=S.ui||{}; S.ui.autoTipSeen=true; save(); render(); });
 on("#updgo",()=>updModal());
 on("#hdraft",()=>draftModal());
 on("#hpost",()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
 repostGuard(ws, choice=>{ const wk=getWeek(); beginPost(ws, wk, choice); snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true); save(); render();
-toast(postPending(wk)? "Going up in "+graceClock(postSecsLeft(wk))+" \u2014 take it back from the banner if that wasn\u2019t right" : "Posted and locked");
+toast(postPending(wk)? "Going up in "+graceClock(postSecsLeft(wk))+" \u2014 take it back from the banner if that wasn\u2019t right"
+: "Posted and locked \u2014 nobody has been told yet");
 if(!postPending(wk)) repostNotify(ws, choice, changes); }); });
 on("#hunpost",()=>unpostWeek(S.currentWeek, "Open for edits again"));
 on("#hlook",()=>go("week"));
-on("#hpdf",()=>exportWeekPDF().catch(()=>pdfUnavailable()));
+on("#hpdf",()=>{ const ws=S.currentWeek;
+exportWeekPDF().then(ok=>{ const wk=peekWeek(ws); if(ok&&wk&&wk.published&&!postPending(wk)){ markTold(ws,"pdf"); render(); } }).catch(()=>pdfUnavailable()); });
 on("#hxls",()=>saveFile("schedule-"+S.currentWeek+".csv", weekGridCSV()));
-on("#hcards",()=>exportPersonCards().catch(()=>pdfUnavailable()));
+on("#hcards",()=>{ const ws=S.currentWeek;
+exportPersonCards().then(ok=>{ const wk=peekWeek(ws); if(ok&&wk&&wk.published&&!postPending(wk)){ markTold(ws,"cards"); render(); } }).catch(()=>pdfUnavailable()); });
 root.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{
 DAYVIEW=+b.dataset.day; go("day"); });
 root.querySelectorAll("[data-week]").forEach(b=>b.onclick=()=>{ S.currentWeek=b.dataset.week; save(); render(); });
@@ -8932,7 +9122,7 @@ return "See what each plan covers and what it costs.";
  
 function featureStates(){
 const f=[];
-const add=(name,on,where,when,off)=>f.push({name,on:!!on,where,when,off});
+const add=(name,on,where,when,off,card)=>f.push({name,on:!!on,where,when,off,card});
 add("Vacation draw", S.vacations&&S.vacations.on, "vacation",
 "A ranked survey and one fair draw for the season\u2019s time off",
 "Longer time off is handled by hand under Team");
@@ -8942,40 +9132,55 @@ add("Holidays", (S.holidays.list||[]).length, "holidays",
 add("Rotating patterns", cyclesOn(), "team",
 "Seven on seven off, alternating weeks, hours averaged over a period",
 "Everyone works the same shape every week");
-add("Sending schedules out", sendOn(), "settings",
+add("Sending schedules out", sendOn(), "settings|Ground rules",
 "A Send button on the week and on Export \u2014 each person gets their own shifts",
 "You hand the schedule out however you do now");
 add("Time-off balances", ptoOn(), "team",
 "Hours accrue and draw down; balances show on each profile",
 "Time off is tracked as dates only, with no balance");
-add("Labor cost", costOn(), "settings",
+add("Labor cost", costOn(), "settings|Money",
 "Hourly rates roll up into a cost for the week against your budget",
 "No pay information is held at all");
-add("Licence expiry", licenseOn(), "shifts",
+add("Licence expiry", licenseOn(), "team",
 "Warns before somebody\u2019s licence lapses, and won\u2019t schedule them after",
 "No licence dates are tracked");
 add("Posts and stations", skillsOn(), "stations",
 "People are placed on named posts, with cover for each other\u2019s meals",
 "Shifts only \u2014 no named posts within a shift");
-add("Under-18 rules", minorsOn(), "settings",
+add("Under-18 rules", minorsOn(), "settings|Ground rules",
 "School-night hours and the extra breaks minors are owed are enforced",
 "Nobody on the roster is under 18");
-add("Local scheduling law", fwwOn(), "settings",
+add("Local scheduling law", fwwOn(), "settings|Ground rules",
 "Notice periods and change premiums for your city are checked",
 "No city scheduling ordinance is being checked");
-add("Everyone\u2019s contracted hours", S.rules.fillMode==="full", "settings",
+add("Everyone\u2019s contracted hours", S.rules.fillMode==="full", "settings|Ground rules",
 "Required cover first, then everybody owed hours keeps getting them",
 "It schedules exactly the cover you asked for and no more");
-add("Ask before re-posting", S.rules.confirmRepost!==false, "settings",
+add("Ask before re-posting", S.rules.confirmRepost!==false, "settings|Ground rules",
 "Changing a posted week asks first, with a choice of who to tell",
 "Changes to a posted week go out silently");
-if(unionOn()) add("Agreement rules", true, "settings",
+if(unionOn()) add("Agreement rules", true, "settings|Union agreement or public-sector rules",
 esc(unionLabel())+" \u2014 the terms you entered are checked alongside the law",
 "");
-add("Saving to your account", typeof cloudOn==="function"&&cloudOn()&&FB&&FB.user, "settings",
+add("Saving to your account", typeof cloudOn==="function"&&cloudOn()&&FB&&FB.user, "settings|Your account",
 "Kept on this device and in your account, so any browser you sign into has it",
 "Kept on this device only \u2014 nothing leaves this browser");
 return f;
+}
+ 
+function goFeature(where){
+const [view, card] = String(where||"").split("|");
+if(view!=="settings" || !card){ go(view||"settings"); return; }
+const grp=(SET_GROUPS.find(g=>g.cards.includes(card))||{}).k;
+S.ui=S.ui||{}; if(grp) S.ui.setTab=grp;
+save();
+if(VIEW!=="settings") go("settings"); else render();
+setTimeout(()=>{
+const hit=[...document.querySelectorAll("#pane .card")].find(c=>!c.hidden && cardTitle(c)===card);
+if(!hit){ toast("That setting has moved \u2014 it is on this page"); return; }
+hit.scrollIntoView({behavior:"smooth", block:"center"});
+hit.classList.add("flash"); setTimeout(()=>hit.classList.remove("flash"), 1600);
+}, 90);
 }
 function featureStateCard(){
 const f=featureStates(), on=f.filter(x=>x.on).length;
@@ -9413,7 +9618,7 @@ sel("rules.mealPlan", [["auto","Work them out for me"],["slots","Use the times I
         </div>
       </div></div>
 
-    ${advanced()? unionCard() : ""}
+    ${unionCard()}
 
     <div class="card"><header><h3>Problems and feedback</h3><span class="hint">Collected here, sent as one note rather than one email each</span></header>
       <div class="setbody">
@@ -9506,7 +9711,7 @@ root.querySelectorAll("[data-setgrp]").forEach(b=>b.onclick=()=>{
 S.ui=S.ui||{}; S.ui.setTab=b.dataset.setgrp; save(); render();
 const pn=document.getElementById("pane"); if(pn) pn.scrollIntoView({block:"start"});
 }); }
-root.querySelectorAll("[data-fgo]").forEach(b=>b.onclick=()=>go(b.dataset.fgo));
+root.querySelectorAll("[data-fgo]").forEach(b=>b.onclick=()=>goFeature(b.dataset.fgo));
 { const a=root.querySelector("#apsize"); if(a) a.onchange=()=>{ applyAppearance(a.value,null); toast("Text size changed"); };
 const d=root.querySelector("#apdens"); if(d) d.onchange=()=>{ applyAppearance(null,d.value); render(); };
 const t=root.querySelector("#aptheme"); if(t) t.onchange=()=>applyTheme(t.value); }
@@ -10016,7 +10221,7 @@ return `<tr${e.active?"":' style="opacity:.5"'}>
             <td>${e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span> `:"";}).join("")}</td>
             <td><span class="chip">${esc(e.type)}</span>${prefsBlank(e)?'<div class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine \u2014 send the starter form if you would like their preferences.">nothing on file \u00b7 open availability</div>':""}${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
 return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)? (e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}` : e.licExp<=addDays(ymd(new Date()),30)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}`:"")
-: `<div class="mini" title="Weeksolved has no date for this, so it cannot warn you about it. It is not a claim that anything is wrong.">no expiry date on file</div>`):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
+: `<div class="mini" style="color:var(--muted)" title="Weeksolved has no date for this, so it cannot warn you before it lapses. It is not a claim that anything is wrong.">expiry not entered \u2014 optional</div>`):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
             <td class="mono">${(()=>{const L=effLimits(e);
 if(L.exactH) return "exactly "+L.exactH+"h";
 return (L.minH||0)+"–"+(L.maxH||0)+"h"+((L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH)?" *":"");})()}</td>
@@ -10585,7 +10790,7 @@ return `<div class="mini" style="margin-top:3px;display:flex;gap:5px;flex-wrap:w
 function empModal(id){
 const blankAvail=()=>[0,1,2,3,4,5,6].map(()=>({ok:true,from:"06:00",to:"22:00"}));
 const e = id? JSON.parse(JSON.stringify(empById(id))) :
-{id:uid("e"),name:"",email:"",phone:"",roleIds:[],type:"FT",hoursMode:"range",minH:32,maxH:40,maxD:5,
+{id:uid("e"),name:"",email:"",phone:"",roleIds:[],type:"FT",hoursMode:"range",minH:0,maxH:40,maxD:5,
 holidayPay:true,holidayPayH:8,onCall:false,cycle:null,
 avail:blankAvail(),prefShiftIds:[],avoidShiftIds:[],prefDaysOff:[],canOpen:true,canClose:true,
 notes:"",seniority:ymd(new Date()),active:true,rate:0};
@@ -10625,7 +10830,8 @@ modal(id?"Edit "+e.name:"Add someone", `
       <option value="exact" ${e.hoursMode==="exact"?"selected":""}>Exactly this many, every week</option></select>
       <span class="mini" id="ehmnote"></span></div>
     <div class="grid3">
-      <div class="field" id="eminwrap"><label>Guaranteed hours</label><input type="number" inputmode="decimal" id="emin" min="0" max="80" value="${e.minH}"></div>
+      <div class="field" id="eminwrap"><label>Guaranteed hours</label><input type="number" inputmode="decimal" id="emin" min="0" max="80" value="${e.minH}">
+        <span class="mini" id="eminnote"></span></div>
       <div class="field"><label id="emaxlab">Hour cap</label><input type="number" inputmode="decimal" id="emax" min="0" max="80" value="${e.maxH}"></div>
       <div class="field"><label>Max days / week</label><select id="emaxd">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${e.maxD===n?"selected":""}>${n} day${n===1?"":"s"}</option>`).join("")}</select></div>
       <div class="field"><label>Started</label><input type="date" id="esen" value="${esc(e.seniority||"")}"></div>
@@ -10829,12 +11035,32 @@ const pp=root.querySelector("#eptop");
 if(pp) pp.onchange=()=>{ root.querySelector("#eptorw").style.display = pp.value==="none"?"none":""; };
 {
 const et=root.querySelector("#et");
+const emin=root.querySelector("#emin"), emax=root.querySelector("#emax"), eminnote=root.querySelector("#eminnote");
+ 
+const TYPE_HOURS={FT:[32,40], PT:[0,28], PRN:[0,40], TEMP:[0,40], TRAIN:[0,32]};
+const paintMin=()=>{
+if(!eminnote) return;
+const v=+(emin&&emin.value||0), t=(et&&et.value)||e.type;
+eminnote.textContent = t==="PRN"
+? "Per diem work carries no guarantee \u2014 leave this at 0."
+: v>0
+? "Weeksolved will treat "+v+"h as owed every week and flag the week if it can\u2019t reach it."
+: "No guarantee. They get whatever the week needs, and a light week is never flagged.";
+};
+if(emin) emin.addEventListener("input", paintMin);
 if(et) et.addEventListener("change",()=>{
 const cur=root.querySelector("#etrm");
+const was=TYPE_HOURS[e.type]||[], now=TYPE_HOURS[et.value];
+ 
+if(now && emin && emax && +emin.value===(was[0]||0) && +emax.value===(was[1]||0)){
+emin.value=now[0]; emax.value=now[1];
+}
 e.type=et.value;
+paintMin();
 if(!cur && et.value==="TRAIN"){ save(); closeModal(true); setTimeout(()=>empModal(e.id),0); }
 else if(cur && et.value!=="TRAIN"){ save(); closeModal(true); setTimeout(()=>empModal(e.id),0); }
 });
+paintMin();
 const tm=root.querySelector("#etrm");
 if(tm) tm.addEventListener("change",()=>{
 const w=root.querySelector("#etrwrap"), ea=root.querySelector("#etreachwrap");
@@ -11755,8 +11981,7 @@ wk.assignments.forEach(a=>a.locked=true); save(); render();
  
 if(postPending(wk)) toast("Going up in "+graceClock(postSecsLeft(wk))+" \u2014 nothing has been sent; take it back from the banner if that wasn\u2019t right");
 else if(choice){ toast("Posted and locked"); repostNotify(ws, choice, changes); }
-else if(sendOn()){ toast("Posted and locked — now send it out"); setTimeout(()=>sendModal(S.currentWeek), 350); }
-else toast("Week posted and locked"); }); };
+else { toast("Posted and locked — now hand it out"); setTimeout(()=>tellModal(S.currentWeek), 350); } }); };
 const wsend=root.querySelector("#wsend"); if(wsend) wsend.onclick=()=>sendModal(S.currentWeek);
 { const wl=root.querySelector("#wlater"); if(wl) wl.onclick=()=>scheduleModal("post", S.currentWeek);
 const sl=root.querySelector("#wsendlater"); if(sl) sl.onclick=()=>scheduleModal("send", S.currentWeek); }
@@ -12113,7 +12338,7 @@ root.querySelectorAll("[data-wkdiscard]").forEach(b=>b.onclick=ev=>{ ev.stopProp
 const ws=b.dataset.wkdiscard;
 if(weekState(ws)==="posted"){ toast("That week is posted \u2014 unpost it first"); return; }
 delete S.weeks[ws]; save(); render();
-toast("Draft discarded \u2014 press Undo to put it back");
+toast("Draft discarded", {label:"Undo", run:undo});
 });
 { const da=root.querySelector("#wkdiscardall");
 if(da) da.onclick=()=>{
@@ -12122,7 +12347,7 @@ if(!list.length){ toast("No drafts to clear"); return; }
 confirmModal("Throw away "+list.length+" draft"+(list.length===1?"":"s")+"?",
 "Nothing posted is touched \u2014 only weeks still being worked on. Undo puts them all back.",
 ()=>{ list.forEach(k=>{ delete S.weeks[k]; }); save(); render();
-toast(list.length+" draft"+(list.length===1?"":"s")+" discarded \u2014 press Undo to put them back"); });
+toast(list.length+" draft"+(list.length===1?"":"s")+" discarded", {label:"Undo", run:undo}); });
 }; }
 const pa=root.querySelector("#wkpostall");
 if(pa) pa.onclick=()=>{
@@ -12428,7 +12653,7 @@ if(!roster.length || !wantSlots) return `<div class="banner warn"><div><b>Nothin
     <button class="btn sm" data-go="${!roster.length?"team":"demand"}" style="flex:none;margin-left:auto">${!roster.length?"Add people":"Set coverage"}</button></div>`;
 
 if(postPending(wk)) return "";      
-if(wk.published) return `<div class="banner info"><div><b>Posted.</b> This week went up ${wk.publishedAt? new Date(wk.publishedAt).toLocaleDateString():"just now"}${daysOut>=0?", "+daysOut+" days ahead of the first shift":""}. Every shift is locked, so a stray click can't rewrite what people have planned around.</div>
+if(wk.published) return `${tellBanner(ws)}<div class="banner info"><div><b>Posted.</b> This week went up ${wk.publishedAt? new Date(wk.publishedAt).toLocaleDateString():"just now"}${daysOut>=0?", "+daysOut+" days ahead of the first shift":""}. Every shift is locked, so a stray click can't rewrite what people have planned around.</div>
     <button class="btn sm" id="wunpost" style="flex:none;margin-left:auto">Unpost to edit</button></div>`;
 
 if(!wk.assignments.length) return `<div class="card"><div class="body stack" style="align-items:flex-start">
@@ -12478,7 +12703,7 @@ d:clopens.slice(0,4).map(x=>(x.e?x.e.name.split(" ")[0]:"?")+" "+prettyDate(x.a.
 : ". Everyone here has agreed to it in writing."), act:null});
 }
 
-return `<div class="card review">
+return `${tellBanner(ws)}<div class="card review">
     <header><h3>${wk.suggested?"Suggested schedule":"This week's schedule"} — your pass before it goes up</h3>
       <span class="hint">${wk.auto? "Drafted for you when you opened this week":wk.generatedAt? "Drafted "+new Date(wk.generatedAt).toLocaleString([],{dateStyle:"short",timeStyle:"short"}):""}</span></header>
     <div class="body stack">
@@ -12493,9 +12718,9 @@ return `<div class="card review">
           <button class="btn" id="wshape">Shape: ${esc(patternName(ws))}</button>
           ${wk.assignments.length && !wk.published && !queueFor(ws).some(q=>q.kind==="post")? `<button class="btn" id="wlater">Put it up later…</button>`:""}
           ${sendOn() && wk.published && !postPending(wk) && !queueFor(ws).some(q=>q.kind==="send")? `<button class="btn" id="wsendlater">Send it later…</button>`:""}
-          ${sendOn() && wk.published? (postPending(wk)
-? `<button class="btn" disabled title="Nothing goes out until the week is actually up">Send in <span data-gracecount="${esc(ws)}">${graceClock(postSecsLeft(wk))}</span></button>`
-: `<button class="btn primary" id="wsend">Send it to the team</button>`):""}
+          ${wk.published? (postPending(wk)
+? `<button class="btn" disabled title="Nothing goes out until the week is actually up">Hand out in <span data-gracecount="${esc(ws)}">${graceClock(postSecsLeft(wk))}</span></button>`
+: `<button class="btn ${wk.sentAt?"":"primary"}" data-tell="${esc(ws)}">${wk.sentAt?"Hand it out again":"Hand it out to the team"}</button>`):""}
           <button class="btn" id="wredo">Not right — redo it</button>
           <button class="btn ${crit.length?"":"primary"}" id="wpost">${crit.length?"Post it anyway":"Looks good — post it"}</button>
         </div>
@@ -12518,7 +12743,7 @@ return `<div class="banner ${no?"warn":"info"}"><div><b>${ok} of ${ok+no} reques
         </div>`).join("")}
       </div>` : `<div class="banner info"><div><b>Nothing flagged.</b> Every shift is filled, every minimum holds, everyone is inside their hours, and every break sits inside the window Weeksolved has for ${esc(law().name)}.
           <div class="mini" style="margin-top:4px">${esc(LAWNOTE)}</div></div></div>`}
-      <div class="mini">Drag any shift to a different person or day, click one to change its times or hand it over, and lock the ones you don't want touched when you draft again. Posting locks the whole week.</div>
+      <div class="mini">Drag any shift to a different person or day, click one to change its times or hand it over, and lock the ones you don't want touched when you draft again. <b>Posting locks the whole week here \u2014 it does not tell anybody.</b> Handing it out is the step after.</div>
     </div>
   </div>`;
 }
@@ -12732,7 +12957,7 @@ doc.text(lawVintage()+". "+(L.premium?L.premium:"")+
 doc.text("Generated "+new Date().toLocaleString([],{dateStyle:"short",timeStyle:"short"}), W-40, H-26, {align:"right"});
 }
 async function exportWeekPDF(){
-if(!jsPDFReady()){ pdfUnavailable(); return; }
+if(!jsPDFReady()){ pdfUnavailable(); return false; }
 const ws=S.currentWeek, wk=getWeek(ws), dates=weekDates(ws);
 const doc=newDoc("landscape");
 pdfHeader(doc, (S.org.name||"Weekly schedule"), (S.org.site?S.org.site+"  ·  ":"")+"Week of "+prettyFull(ws));
@@ -12763,7 +12988,7 @@ doc.autoTable({body:V.map(v=>[v.title,v.detail]),startY:y+4,theme:"plain",
 styles:{fontSize:7.4,cellPadding:3,textColor:[80,92,89]},columnStyles:{0:{cellWidth:190,fontStyle:"bold"}},margin:{left:40,right:40}});
 }
 pdfFooter(doc);
-await saveFile("schedule-week-of-"+ws+".pdf", doc.output("arraybuffer"));
+return await saveFile("schedule-week-of-"+ws+".pdf", doc.output("arraybuffer"));
 }
 async function exportDayPDF(){
 if(!jsPDFReady()){ pdfUnavailable(); return; }
@@ -17169,10 +17394,12 @@ a:"Press Draft on the Home screen (or This week). The scheduler fills every shif
 a:"An open shift means nobody cleared every limit — the conflicts list names each person and the exact reason: hour cap, turnaround, availability, a request you approved, a license, a coverage rule. Press 'Who could work it?' on the gap for the ways out: a per diem on call, an hour of overtime with the cost shown, or a request you could decline."},
 {t:"Reject a schedule and redo it", k:"reject redo redraft different dont like change shuffle again", go:"week",
 a:"On This week, press Draft again for a fresh take with the same rules. To steer it, open the shift, day, or person you don't like and use the redo options — you can veto a specific pairing, add a request, or just ask for a different outcome."},
-{t:"Post the schedule", k:"post publish lock finalize final done approve", go:"week",
-a:"Posting locks every shift and marks the week as the official copy. Edit afterwards and you'll see a 'Changed since it last went out' list so you know who to tell. Unpost from the same place if you need to rework it."},
-{t:"Send schedules by email or text", k:"send email text sms message everyone personal share out", go:"export",
-a:"Turn the send option on under Scheduling rules (it's asked in setup too). Then from This week or Export & share: send everyone their own shifts, or the whole week to the whole team. It opens your own mail or messages app with everything written — nothing sends until you press send there."},
+{t:"Post the schedule", k:"post posting posted publish published lock locked finalize final done approve official", go:"week",
+a:"Posting locks every shift and marks the week as the official copy \u2014 inside Weeksolved. It does not reach anybody: nothing is emailed, texted or pushed to a phone. Until you hand it out, a posted week is a decision only you can see, and Weeksolved says so on the week until you do. Edit afterwards and you'll see a 'Changed since it last went out' list so you know who to tell. Unpost from the same place if you need to rework it."},
+{t:"Tell my team what they're working", k:"hand out handout tell told notify inform let them know print pin up wall board give distribute nobody knows staff dont know", go:"week",
+a:"Press 'Hand it out to the team' on Home or This week \u2014 it appears the moment a week is posted and stays until you have used one of the ways. Every way is there in one place: print the whole week to pin up, print one card each with only that person's shifts, save a PDF, or copy the week as text to paste into whatever your team already reads. If you switch the optional sending feature on (Settings \u2192 Ground rules \u2192 'Sending the schedule out'), you also get one written message per person, opened in your own mail or messages app. Whichever you use, Weeksolved records it and the week stops asking."},
+{t:"Send schedules by email or text", k:"send email text sms message everyone personal share out", go:"settings",
+a:"It is optional and off to begin with. Turn it on at Settings \u2192 Ground rules \u2192 'Sending the schedule out' (setup asks you too). Then 'Hand it out to the team' on This week gains an email-or-text option: everyone gets their own shifts, or the whole team gets the whole week. It opens your own mail or messages app with everything written \u2014 Weeksolved sends nothing itself, and nothing goes until you press send there. Leave it off and printing, cards and copying still hand the week out."},
 {t:"Calendar files for phones", k:"calendar ics google apple outlook phone subscribe", go:"export",
 a:"Export & share → 'For phone calendars'. Pick one person or the whole team and download a calendar file (.ics). Opened on a phone it drops every shift — times, station, meal — straight into Google or Apple Calendar."},
 {t:"Meal and rest breaks", k:"meal lunch break rest legal law compliance late missing window waive", go:"rules",
@@ -17203,8 +17430,8 @@ a:"All schedules → Month toggle. Every day shows its shift count — green pos
 a:"Export & share has the week grid and shift list for Excel, weekly and day-sheet PDFs, a printable day sheet, and one-card-per-person schedules. PDF footers name the break law you applied to the plan."},
 {t:"Day notes", k:"note day truck delivery reminder today annotation", go:"day",
 a:"Type a note on any day sheet — 'Truck at 7am', 'Inspection' — and it shows on the printed sheet, the PDF, and in what you send to the team."},
-{t:"Accounts and signing in", k:"account login sign in password code tester device sync move phone computer", go:null,
-a:"Your access code creates your account — one code, one account, yours alone. Sign in on any phone or computer and your whole board is there; changes save to your account within a second or two. Codes run 30 days from the day the account was created."},
+{t:"Accounts and signing in", k:"account login signin sign in password device sync move phone computer switch", go:null,
+a:"Your access code creates your account — one code, one account, yours alone. Sign in on any phone or computer and your whole board is there; changes save to your account within a second or two. How long an account runs depends on the code it was made with — see 'How tester codes work'."},
 {t:"Forgot password", k:"forgot password reset cant login locked out email", go:null,
 a:"On the sign-in screen, type your email and press 'Forgot password?' — a reset link arrives by email within a minute or two. Check spam if it doesn't."},
 {t:"Working offline", k:"offline internet connection lost wifi airplane sync later", go:null,
@@ -17223,6 +17450,12 @@ a:"On someone's file, say what kind of licence it is and which state issued it. 
 a:"If someone is in a role you marked as licensed and you have put an expiry date on their file, the drafter will not give them a shift dated after that date. That is not a setting and cannot be switched off — it is the one thing the scheduler simply refuses to do.\n\nWhen you press Draft, anything expiring inside the stretch is put in front of you first: who, what date, and whether it takes out the whole stretch or only part of it. You can open their file and put the new date in, or carry on and have the week built around it. If the renewal came through and you just have not typed it yet, fixing it there is the quickest route.\n\nNothing happens for anyone with no license details on file. A blank is not treated as a problem — Weeksolved has no date, so it makes no claim either way, and those people are scheduled normally."},
 {t:"Someone has no preferences on file", k:"blank preferences empty availability open nothing on file new person default flag", go:"team",
 a:"That's fine, and it costs you nothing. Anyone with nothing on file is treated as available whenever you're open, and the scheduler uses them normally. The Team page just shows a quiet 'nothing on file' note against them and a count in the header, so you know who you've never asked — not because anything is wrong. Press Starter form if you'd like to collect it, or leave it: plenty of rosters run perfectly well with nobody's preferences entered at all."},
+{t:"Delete my account", k:"delete account close cancel remove erase wipe quit leave shut down my data gone", go:"settings",
+a:"Settings \u2192 Your account \u2192 Delete this account. It asks for your password, then removes the account and everything saved in it \u2014 your team, every week, every setting. It cannot be undone and support cannot get it back, so export or print anything you want to keep first. If you are on a tester code, note that codes are single use: deleting the account does not free the code up, and you would need a new one to come back."},
+{t:"Union agreement or public-sector rules", k:"union collective bargaining agreement cba steward seniority public sector civil service memorandum", go:"settings",
+a:"Settings \u2192 Rules and drafting \u2192 'Union agreement or public-sector rules', the last card on that section. Switch it on and Weeksolved records that an agreement governs the site: seniority can be given weight in who gets first claim on shifts, the change record is kept for as long as you say rather than the default, and where a local scheduling law can be waived by agreement, Weeksolved stops asserting the law and tells you to read your contract instead. It does not read or enforce your agreement \u2014 no software can. It makes room for it."},
+{t:"How tester codes work", k:"tester testers testing code codes invite invitation redeem redeemed redemption expired expires trial founder gift lifetime program beta earlyaccess", go:"settings",
+a:"A code turns into an account once, and only once. Redeeming it ties it to the email you sign up with; it cannot be moved, shared or used again, including after deleting the account. Most codes run for a set number of days from the day they are first used \u2014 Settings \u2192 Your account \u2192 'Your access' says which kind you hold and how long is left. Nothing is charged and no card is asked for. When a code runs out the account stays; scheduling pauses until it is renewed."},
 {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
 a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
 {t:"Vacation calendar", k:"vacation calendar survey draw ranked longer time off season annual pto request weeks", go:"vacation",
@@ -17278,7 +17511,7 @@ a:"When a shift can't be filled, Cover the gaps offers to send it out. You get a
 {t:"A reply code came back", k:"reply code claim paste open shift confirm give shift accept", go:"week",
 a:"Cover the gaps → Enter a reply code. Paste what they sent and you'll see exactly what they're offering to take, with each shift checked again against every rule — hours, turnaround, availability, licenses, the lot. A shift someone else already took shows as covered, and one that would break a limit says which limit and can't be given. Nothing is ever placed quietly: you press the button for each one."},
 {t:"Devices on your account", k:"device login sign in sessions sharing password security signed out everywhere account", go:"settings",
-a:"Settings → Your account lists every browser your login has been opened in, when it was last used, and roughly where. Remove one you don't recognise, or sign every other device out at once — and change your password at the same time if you want to be certain. You'll also get a quiet note if the account is in use in several places at the same time. One account covers one location: a second site works far better on its own login, since two rosters on one account overwrite each other's week."},
+a:"Settings \u2192 Your account (it appears once you are signed in) lists every browser your login has been opened in, when it was last used, and roughly where. Remove one you don't recognise, or sign every other device out at once — and change your password at the same time if you want to be certain. You'll also get a quiet note if the account is in use in several places at the same time. One account covers one location: a second site works far better on its own login, since two rosters on one account overwrite each other's week."},
 {t:"Confirming a new device", k:"two step 2fa verification email code new device confirm login", go:"settings",
 a:"Optional, and off unless you turn it on. With it on, the first time your account is opened on a device it has never been used on, you get an email with a link — open it on that device and it never asks again. If the email can't be sent for any reason, the check turns itself off and lets you straight in, so it can never lock you out of your own schedule."},
 {t:"The record of changes", k:"audit trail history log who changed what retention record changes", go:"analytics",
@@ -18009,12 +18242,12 @@ else if(e.key==="ArrowRight" && (VIEW==="week"||VIEW==="overview")){ S.currentWe
 
  
 async function exportPersonCards(){
-if(!jsPDFReady()){ pdfUnavailable(); return; }
+if(!jsPDFReady()){ pdfUnavailable(); return false; }
 const ws=S.currentWeek, wk=getWeek(ws), dates=weekDates(ws), L=law();
 const doc=newDoc("portrait");
 const W=doc.internal.pageSize.getWidth();
 const people=S.employees.filter(e=>e.active && wk.assignments.some(a=>a.empId===e.id));
-if(!people.length){ toast("Nothing scheduled to hand out yet"); return; }
+if(!people.length){ toast("Nothing scheduled to hand out yet"); return false; }
 let y=52, first=true;
 people.forEach((e,idx)=>{
 if(!first && y>620){ doc.addPage(); y=52; }
@@ -18042,7 +18275,7 @@ y = doc.lastAutoTable.finalY + 26;
 if(y>690 && idx<people.length-1){ doc.addPage(); y=52; }
 });
 pdfFooter(doc);
-await saveFile("individual-schedules-"+ws+".pdf", doc.output("arraybuffer"));
+return await saveFile("individual-schedules-"+ws+".pdf", doc.output("arraybuffer"));
 }
 
 
@@ -18114,7 +18347,7 @@ modal("Week tools", `
     <div class="stack">
       <div class="stack" style="gap:8px">
         <div class="lab">This week</div>
-        ${sendOn()? `<button class="btn primary" id="msend">Send it to the team</button>`:""}
+        <button class="btn primary" id="mtell">Hand it out to the team</button>
         <button class="btn" id="mclear">Clear everything that isn't locked</button>
         <button class="btn" id="mcopy">Copy last week forward</button>
         <button class="btn" id="mswap">Check a trade — two people swapping shifts</button>
@@ -18143,7 +18376,7 @@ modal("Week tools", `
       </div>
     </div>`, `<button class="btn" data-close>Close</button>`,
 r=>{
-const sb=r.querySelector("#msend"); if(sb) sb.onclick=()=>{ closeModal(); sendModal(S.currentWeek); };
+const sb=r.querySelector("#mtell"); if(sb) sb.onclick=()=>{ closeModal(); tellModal(S.currentWeek); };
 const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swapModal(S.currentWeek); };
 r.querySelector("#mclear").onclick=()=>{ const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
 r.querySelector("#munlock").onclick=()=>{ getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
@@ -18158,7 +18391,8 @@ applyBreaks(c); return c;
 wk.generatedAt=Date.now(); wk.published=false; save(); closeModal(); render(); toast("Copied last week forward");
 };
 r.querySelector("#msave").onclick=()=>{ closeModal(); saveTemplate(); };
-r.querySelector("#mcards").onclick=()=>{ closeModal(); exportPersonCards(); };
+r.querySelector("#mcards").onclick=()=>{ const ws=S.currentWeek; closeModal();
+exportPersonCards().then(ok=>{ const wk=peekWeek(ws); if(ok&&wk&&wk.published&&!postPending(wk)){ markTold(ws,"cards"); render(); } }).catch(()=>{}); };
 r.querySelector("#mfix").onclick=()=>{ closeModal(); fixModal(S.currentWeek); };
 r.querySelector("#mdeny").onclick=()=>{ closeModal(); requestConflictModal(S.currentWeek); };
 r.querySelectorAll("[data-apptpl]").forEach(b=>b.onclick=()=>{ closeModal(); applyTemplate(b.dataset.apptpl); });
