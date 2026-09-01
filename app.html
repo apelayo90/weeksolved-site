@@ -1647,7 +1647,7 @@ let FB=null, CLOUD_REV=0, cloudPushTimer=null, cloudUnsub=null, SIGNING_UP=false
 
  
 const TERMS_VERSION = "1";                  
-const TERMS_HASH = "ad73382742234cb1";
+const TERMS_HASH = "64c34940b534ba2e";
 const TERMS_DATE = "";
 const TERMSKEY = "ws.terms";
 function termsAccepted(){
@@ -2692,6 +2692,32 @@ const L=law();
 const mealLen=(L.meal&&L.meal.lengthMin)||30;
 return (g.to-g.from) > mealLen && (S.org.jurisdiction||"")==="CA";
 }
+ 
+ 
+function estStretch(aMin, bMin, gapM){
+const worked=(bMin-aMin)-(gapM||0);
+const L=law(), M=(L&&L.meal)||{};
+let longest = gapM>0? Math.max((bMin-aMin) - gapM, 0) : worked;
+if(gapM>0){
+ 
+longest = worked;    
+}
+if(M.firstAfterMin && worked >= M.firstAfterMin) longest = worked - (M.lengthMin||30);
+return longest;
+}
+function longestStretch(a){
+const cuts=[];
+const g=aGap(a); if(g) cuts.push([g.from,g.to]);
+((a.breaks&&a.breaks.meals)||[]).forEach(m=>{ if(!m.waived) cuts.push([m.start,m.end]); });
+cuts.sort((x,y)=>x[0]-y[0]);
+let best=0, at=a.startMin;
+cuts.forEach(([f,t])=>{
+if(t<=at) return;
+if(f>at) best=Math.max(best, Math.min(f,a.endMin)-at);
+at=Math.max(at,t);
+});
+return Math.max(best, a.endMin-at);
+}
 function aGap(a){
 const g=a && a.gap;
 return (g && g.to>g.from && g.from>=a.startMin && g.to<=a.endMin)? g : null;
@@ -3154,6 +3180,12 @@ const share = !owed ? 0
 : sweep===0 ? Math.max(0, owed-fixedMin)/flexCount
 : Math.max(0, owed-weekElse);
 const gapM = gapMin(a);
+ 
+const g0 = aGap(a);
+const gOff = g0? (f.end? g0.from - a.startMin : a.endMin - g0.to) : 0;
+const gLen = g0? g0.to - g0.from : 0;
+const gapAt = (s2,e2)=> !g0? null
+: (f.end? {from:s2+gOff, to:s2+gOff+gLen} : {from:e2-gOff-gLen, to:e2-gOff});
 const prevA=wk.assignments.filter(x=>x.empId===a.empId && x.date===addDays(date,-1));
 const nextA=wk.assignments.filter(x=>x.empId===a.empId && x.date===addDays(date,1));
 let best=null;
@@ -3179,8 +3211,11 @@ const g=(Math.min.apply(null, nextA.map(x=>x.startMin))+1440)-e2;
 if(g < (lim.minRestH||0)*60) continue;
 }
  
-const probe=others.concat([Object.assign({}, a, {startMin:s2, endMin:e2,
-breaks:computeBreaks(s2,e2,{gap:aGap(a)})})]);
+const gp=gapAt(s2,e2);
+ 
+if(gp && (gp.from-s2 < 30 || e2-gp.to < 30)) continue;
+const probe=others.concat([Object.assign({}, a, {startMin:s2, endMin:e2, gap:gp,
+breaks:computeBreaks(s2,e2,{gap:gp})})]);
 const short=dayShortfall(probe, dow);
 const hoursMiss = share? Math.abs(paid - share) : 0;
 const drift = Math.abs(L - f.nominal);       
@@ -3191,6 +3226,7 @@ if(!best || sc < best.sc) best={sc, s2, e2, L};
 if(!best) return;
 if(best.s2===a.startMin && best.e2===a.endMin) return;
 a.startMin=best.s2; a.endMin=best.e2; a.flexed=true;
+if(g0) a.gap=gapAt(best.s2, best.e2);
 applyBreaks(a);
 changed++;
 });
@@ -3797,6 +3833,7 @@ if(lim.maxH && (st.min + add) > lim.maxH*60 + 1) return false;
 if(lim.maxShiftH && (bMin-aMin-gapM) > lim.maxShiftH*60) return false;
 if(lim.maxSpanH && (bMin-aMin) > lim.maxSpanH*60) return false;
 if(lim.noSplit && gapM>0) return false;                               
+if(lim.maxStretchH && estStretch(aMin,bMin,gapM) > lim.maxStretchH*60) return false;
  
 const prevA = (st.byDate[addDays(date,-1)]||[]);
 if(prevA.length){
@@ -3940,7 +3977,8 @@ if(r.canBeAlone===false){ L.canBeAlone = false; L.aloneGroup = g.name; }
 if(unionOn()){
 const U=union();
 if(U.restH) L.minRestH = Math.max(L.minRestH||0, U.restH);
-if(U.maxConsecH) L.maxShiftH = Math.min(L.maxShiftH||99, U.maxConsecH);
+ 
+if(U.maxConsecH) L.maxStretchH = Math.min(L.maxStretchH||99, U.maxConsecH);
 L.noSplit = !!U.noSplit;
 }
 return L;
@@ -5872,21 +5910,28 @@ function queuePending(){ return queueList().filter(q=>q.status==="waiting"); }
 function queueFor(ws){ return queuePending().filter(q=>q.ws===ws); }
  
 const QUEUE_AUTO_MS = 6*3600*1000;
+ 
+function fireQueued(q){
+const wk=S.weeks[q.ws];
+if(!wk || !wk.assignments.length){ q.status="empty"; return false; }
+if(wk.published && !postPending(wk)){ q.status="already"; return false; }
+clearPending(wk);
+ 
+wk.published=true; wk.publishedAt=Date.now();
+auditPost(q.ws, q.notify||null, wk.postedOnce? weekDiff(q.ws) : []);
+wk.postedOnce=true; snapWeek(wk);
+wk.assignments.forEach(a=>a.locked=true);
+q.status="done"; q.ranAt=Date.now();
+return true;
+}
 function runQueued(){
-const now=Date.now(); let changed=false, done=[];
+const now=Date.now(); let changed=false, done=[], stuck=[];
 queuePending().forEach(q=>{
 if(q.at>now) return;
-const late=now-q.at;
-if(late>QUEUE_AUTO_MS){ q.status="late"; changed=true; return; }
+if(now-q.at > QUEUE_AUTO_MS){ q.status="late"; changed=true; return; }
 if(q.kind==="post"){
-const wk=S.weeks[q.ws];
-if(!wk || !wk.assignments.length){ q.status="gone"; changed=true; return; }
- 
-wk.published=true; wk.publishedAt=q.at;
-delete wk.pendingAt; delete wk.graceSec; delete wk.pendingChoice;
-auditPost(q.ws, q.notify||null); wk.postedOnce=true;
-wk.assignments.forEach(a=>a.locked=true);
-q.status="done"; q.ranAt=now; changed=true; done.push(q);
+changed=true;
+if(fireQueued(q)) done.push(q); else stuck.push(q);
 } else if(q.kind==="send"){
 q.status="ready"; changed=true;       
 }
@@ -5898,7 +5943,19 @@ toast(done.length===1
 ? "Week of "+prettyDate(done[0].ws)+" went up"+(lateOne? " \u2014 "+minsAgo(done[0].at)+" later than you set, because that is when Weeksolved was next open":"")
 : done.length+" scheduled postings went up");
 }
+ 
+stuck.forEach(q=>{
+const why = q.status==="empty"? "there are no shifts in it any more" : "you had already posted it yourself";
+toast("The week of "+prettyDate(q.ws)+" did NOT go up \u2014 "+why);
+logIt("post","Scheduled posting for the week of "+prettyDate(q.ws)+" did not run: "+why+".");
+});
 return changed;
+}
+ 
+function cancelQueued(ws, kind){
+let n=0;
+queueList().forEach(q=>{ if(q.ws===ws && q.status==="waiting" && (!kind || q.kind===kind)){ q.status="overtaken"; n++; } });
+return n;
 }
 function minsAgo(t){
 const m=Math.round((Date.now()-t)/60000);
@@ -5916,6 +5973,8 @@ function scheduleModal(kind, ws){
 ws=ws||S.currentWeek;
 const wk=peekWeek(ws);
 if(kind==="post" && (!wk || !wk.assignments.length)){ toast("Nothing to post yet"); return; }
+if(kind==="post" && wk && wk.published){ toast(postPending(wk)? "That week is going up already" : "That week is already posted"); return; }
+if(queueFor(ws).some(q=>q.kind===kind)){ toast("There is already one waiting for that week \u2014 drop it first"); return; }
 const d=new Date(); d.setDate(d.getDate()+1); d.setHours(8,0,0,0);
 const dstr=ymd(d);
 modal(kind==="post"? "Put this week up later" : "Send it later", `
@@ -5949,7 +6008,8 @@ toast((kind==="post"? "Set to go up ":"Set to send ")+queueWhenText(at));
 });
 }
 function queueCard(ws){
-const mine=queueList().filter(q=>(!ws || q.ws===ws) && q.status!=="done" && q.status!=="gone");
+const mine=queueList().filter(q=>(!ws || q.ws===ws) &&
+["waiting","late","ready","empty","already"].includes(q.status));
 if(!mine.length) return "";
 return `<div class="card"><header><h3>Waiting to happen</h3>
       <span class="hint">Nothing here has happened yet</span></header>
@@ -5958,9 +6018,11 @@ const late=q.status==="late", ready=q.status==="ready";
 return `<div class="setrow"><div class="sq">
         <strong>${q.kind==="post"? "Put the week of "+esc(prettyDate(q.ws))+" up" : "Send the week of "+esc(prettyDate(q.ws))}</strong>
         <div class="mini">${late? "Was set for "+esc(queueWhenText(q.at))+" \u2014 that is "+esc(minsAgo(q.at))+" ago, so Weeksolved left it alone rather than surprising anybody. Do it now, or drop it."
+: q.status==="empty" ? "It did not go up: there are no shifts in that week any more. Draft it again, then post it, or drop this."
+: q.status==="already" ? "It did not go up: you had already posted that week yourself. Nothing was changed \u2014 you can drop this."
 : ready? "Ready now. It needs you to press send, because messages still go through your own mail app."
 : esc(queueWhenText(q.at))}</div></div>
-        <div class="sc">${late? `<button class="btn sm primary" data-qnow="${esc(q.id)}">Do it now</button>`
+        <div class="sc">${(late || q.status==="empty")? `<button class="btn sm primary" data-qnow="${esc(q.id)}">Do it now</button>`
 : ready? `<button class="btn sm primary" data-qnow="${esc(q.id)}">Send it</button>` : ""}
           <button class="btn sm danger" data-qdel="${esc(q.id)}">Drop it</button></div></div>`;
 }).join("")}</div></div>`;
@@ -5982,11 +6044,12 @@ const wk=S.weeks[ws];
 if(wk && wk.published && wk.pendingAt && Date.now()>=goesLiveAt(wk)){
 wk.publishedAt = goesLiveAt(wk);       
 const choice=wk.pendingChoice||null;
-auditPost(ws, choice);
+const diff=wk.pendingDiff||[];
+auditPost(ws, choice, diff);
 wk.postedOnce=true;
-delete wk.pendingAt; delete wk.graceSec; delete wk.pendingChoice;
+clearPending(wk);
  
-if(choice && typeof repostNotify==="function"){ try{ repostNotify(ws, choice, weekDiff(ws)); }catch(e){} }
+if(choice && typeof repostNotify==="function"){ try{ repostNotify(ws, choice, diff); }catch(e){} }
 changed=true;
 }
 });
@@ -5996,8 +6059,11 @@ return changed;
 function undoPost(ws){
 const wk=peekWeek(ws); if(!wk || !postPending(wk)) return false;
 const secs=(wk.graceSec||0)-postSecsLeft(wk);
-wk.published=false; delete wk.pendingAt; delete wk.graceSec; delete wk.pendingChoice;
-wk.assignments.forEach(a=>a.locked=false);
+const keep=new Set(wk.pendingLocks||[]);
+wk.published=false;
+ 
+wk.assignments.forEach(a=>{ a.locked = keep.has(a.id); });
+clearPending(wk);
  
 if(unionOn()) logIt("post","Week of "+prettyDate(ws)+": posting taken back after "+secs+"s. Nothing was sent and it was never visible to anybody.");
 save(); render();
@@ -6013,16 +6079,15 @@ GRACE_TIMER=setInterval(()=>{
 const still=Object.keys(S.weeks||{}).some(ws=>postPending(S.weeks[ws]));
 if(settlePending() || !still){ clearInterval(GRACE_TIMER); GRACE_TIMER=null; render(); return; }
 document.querySelectorAll("[data-gracecount]").forEach(el=>{
-const wk=peekWeek(el.dataset.gracecount);
-const n=postSecsLeft(wk);
-el.textContent = n>=60? Math.floor(n/60)+":"+String(n%60).padStart(2,"0") : n+"s";
+el.textContent = graceClock(postSecsLeft(peekWeek(el.dataset.gracecount)));
 });
 }, 1000);
 }
+function graceClock(n){ return n>=60? Math.floor(n/60)+":"+String(n%60).padStart(2,"0") : n+"s"; }
 function graceBanner(ws){
 const wk=peekWeek(ws);
 if(!postPending(wk)) return "";
-return `<div class="banner warn" id="gracebar"><div><b>Going up in <span data-gracecount="${esc(ws)}">${postSecsLeft(wk)}s</span>.</b>
+return `<div class="banner warn" id="gracebar"><div><b>Going up in <span data-gracecount="${esc(ws)}">${graceClock(postSecsLeft(wk))}</span>.</b>
       Nothing has been sent and nobody can see it yet. Change your mind and it is as if you never pressed the button.</div>
     <button class="btn sm primary" data-undopost="${esc(ws)}" style="flex:none;margin-left:auto">Take it back</button></div>`;
 }
@@ -6093,20 +6158,42 @@ if(S.audit.length>6000) S.audit=S.audit.slice(-6000);
 }
  
 function beginPost(ws, wk, choice){
+const wasPosted = !!wk.postedOnce;
+const diff = wasPosted? weekDiff(ws) : [];
+ 
+clearPending(wk);
+ 
+cancelQueued(ws, "post");
 wk.published=true;
 const g=graceSec();
 if(g>0){
 wk.pendingAt=Date.now(); wk.graceSec=g; wk.pendingChoice=choice||null;
+wk.pendingDiff=diff;
+ 
+wk.pendingLocks=wk.assignments.filter(a=>a.locked).map(a=>a.id);
 setTimeout(graceTick,0);
 } else {
-wk.publishedAt=Date.now(); auditPost(ws, choice); wk.postedOnce=true;
+wk.publishedAt=Date.now(); auditPost(ws, choice, diff); wk.postedOnce=true;
 }
 }
-function auditPost(ws, choice){
+function clearPending(wk){
+if(!wk) return;
+delete wk.pendingAt; delete wk.graceSec; delete wk.pendingChoice;
+delete wk.pendingDiff; delete wk.pendingLocks;
+}
+ 
+function unpostWeek(ws, say){
+const wk=peekWeek(ws); if(!wk) return;
+wk.published=false; clearPending(wk);
+wk.assignments.forEach(a=>a.locked=false);
+save(); render();
+if(say!==false) toast(say||"Open for edits again");
+}
+function auditPost(ws, choice, diff){
 const wk=peekWeek(ws);
 if(!wk) return;
 if(!wk.postedOnce){ logIt("post","Week of "+prettyDate(ws)+" posted \u2014 "+wk.assignments.length+" shift"+(wk.assignments.length===1?"":"s")); return; }
-const ch=weekDiff(ws);
+const ch = diff || weekDiff(ws);
 if(!ch.length){ logIt("post","Week of "+prettyDate(ws)+" posted again, nothing changed"); return; }
 const told = choice==="all"? "everyone told" : choice==="affected"? "affected people told" : choice==="none"? "nobody told" : "";
 if(fwwOn() && fwwCovered().state==="yes"){
@@ -6449,7 +6536,7 @@ would+DSHORT[a.dow]+" is split around "+m2disp(g.from)+"\u2013"+m2disp(g.to)+", 
 if(U.maxConsecH){
 mine.forEach(a=>{
  
-const worked=((a.endMin-a.startMin) - gapMin(a))/60;
+const worked=longestStretch(a)/60;
 if(worked > U.maxConsecH+0.01)
 push("crit","Past the hours ceiling — "+e.name,
 DSHORT[a.dow]+" runs "+fmtHrs(worked*60)+" back to back, past the "+U.maxConsecH+"h ceiling in "+unionLabel()+".",
@@ -6538,7 +6625,7 @@ const split=wk.assignments.filter(splitPremiumDue);
 if(split.length){
 const who=[...new Set(split.map(a=>(empById(a.empId)||{name:"?"}).name))];
 push("warn","Split-shift premium owed \u2014 "+split.length+" shift"+(split.length===1?"":"s"),
-esc(who.join(", "))+" work"+(who.length===1?"s":"")+" a day broken in two. California owes one extra hour at the minimum wage for each of those days, on top of what they earn \u2014 unless the day's pay already clears the minimum-wage floor plus that hour. Weeksolved flags it; your payroll has to pay it.",
+who.join(", ")+" work"+(who.length===1?"s":"")+" a day broken in two. California owes one extra hour at the minimum wage for each of those days, on top of what they earn \u2014 unless the day's pay already clears the minimum-wage floor plus that hour. Weeksolved flags it; your payroll has to pay it.",
 {});
 }
 }
@@ -7017,11 +7104,11 @@ root.querySelectorAll("[data-qdel]").forEach(el=>el.addEventListener("click",()=
 S.queued=queueList().filter(q=>q.id!==el.dataset.qdel); save(); render(); toast("Dropped \u2014 nothing will happen"); }));
 root.querySelectorAll("[data-qnow]").forEach(el=>el.addEventListener("click",()=>{
 const q=queueList().find(x=>x.id===el.dataset.qnow); if(!q) return;
-if(q.kind==="post"){ const wk=S.weeks[q.ws];
-if(!wk){ toast("That week is gone"); return; }
-wk.published=true; wk.publishedAt=Date.now(); auditPost(q.ws, q.notify||null); wk.postedOnce=true;
-wk.assignments.forEach(a=>a.locked=true);
-q.status="done"; q.ranAt=Date.now(); save(); render(); toast("Up now"); }
+if(q.kind==="post"){
+if(fireQueued(q)){ save(); render(); toast("Up now"); }
+else { save(); render();
+toast(q.status==="empty" ? "There are no shifts in that week \u2014 draft it again first"
+: "That week is already posted"); } }
 else { q.status="done"; q.ranAt=Date.now(); save(); sendModal(q.ws); }
 }));
  
@@ -7298,7 +7385,7 @@ return `
               <button class="btn sm ghost" id="hprev" aria-label="Previous week">←</button>
               <strong>${prettyDate(ws)} – ${prettyDate(addDays(ws,6))}</strong>
               <button class="btn sm ghost" id="hnext" aria-label="Next week">→</button>
-              ${postPending(wk)? `<span class="chip warn">going up in <span data-gracecount="${esc(ws)}">${postSecsLeft(wk)}s</span></span>`
+              ${postPending(wk)? `<span class="chip warn">going up in <span data-gracecount="${esc(ws)}">${graceClock(postSecsLeft(wk))}</span></span>`
 : wk.published? `<span class="chip ok">posted</span>` : wk.assignments.length? `<span class="chip acc">draft</span>`:""}
               ${patternFor(ws)? `<span class="chip">${esc(patternName(ws))}</span>`:""}
             </div>
@@ -7367,7 +7454,7 @@ const state = !wkx||!n? "empty" : wkx.published? "posted" : "draft";
 return `<button class="wkcard ${state}" data-week="${w}">
             <span class="wl">${prettyDate(w)}</span>
             <span class="wn">${n||"—"}</span>
-            <span class="wsx">${state==="posted"?"posted":state==="draft"?"draft":"nothing yet"}</span>
+            <span class="wsx">${state==="posted"?"posted":state==="pending"?"going up":state==="draft"?"draft":"nothing yet"}</span>
             ${w===ws? '<span class="wnow">you are here</span>':""}
           </button>`;
 }).join("")}
@@ -7426,9 +7513,9 @@ on("#hdraft",()=>draftModal());
 on("#hpost",()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
 repostGuard(ws, choice=>{ const wk=getWeek(); beginPost(ws, wk, choice); snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true); save(); render();
-toast(postPending(wk)? "Going up in "+postSecsLeft(wk)+"s \u2014 take it back from the banner if that wasn\u2019t right" : "Posted and locked");
+toast(postPending(wk)? "Going up in "+graceClock(postSecsLeft(wk))+" \u2014 take it back from the banner if that wasn\u2019t right" : "Posted and locked");
 if(!postPending(wk)) repostNotify(ws, choice, changes); }); });
-on("#hunpost",()=>{ const wk=getWeek(); wk.published=false; wk.assignments.forEach(a=>a.locked=false); save(); render(); toast("Open for edits again"); });
+on("#hunpost",()=>unpostWeek(S.currentWeek, "Open for edits again"));
 on("#hlook",()=>go("week"));
 on("#hpdf",()=>exportWeekPDF().catch(()=>pdfUnavailable()));
 on("#hxls",()=>saveFile("schedule-"+S.currentWeek+".csv", weekGridCSV()));
@@ -10140,7 +10227,7 @@ if(wp) wp.onclick=()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
 repostGuard(ws, choice=>{ const wk=getWeek(); beginPost(ws, wk, choice); snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true); save(); render();
  
-if(postPending(wk)) toast("Going up in "+postSecsLeft(wk)+"s \u2014 nothing has been sent; take it back from the banner if that wasn\u2019t right");
+if(postPending(wk)) toast("Going up in "+graceClock(postSecsLeft(wk))+" \u2014 nothing has been sent; take it back from the banner if that wasn\u2019t right");
 else if(choice){ toast("Posted and locked"); repostNotify(ws, choice, changes); }
 else if(sendOn()){ toast("Posted and locked — now send it out"); setTimeout(()=>sendModal(S.currentWeek), 350); }
 else toast("Week posted and locked"); }); };
@@ -10148,7 +10235,7 @@ const wsend=root.querySelector("#wsend"); if(wsend) wsend.onclick=()=>sendModal(
 { const wl=root.querySelector("#wlater"); if(wl) wl.onclick=()=>scheduleModal("post", S.currentWeek);
 const sl=root.querySelector("#wsendlater"); if(sl) sl.onclick=()=>scheduleModal("send", S.currentWeek); }
 const wu=root.querySelector("#wunpost");
-if(wu) wu.onclick=()=>{ const wk=getWeek(); wk.published=false; wk.assignments.forEach(a=>a.locked=false); save(); render(); toast("Unposted — edits are open again"); };
+if(wu) wu.onclick=()=>unpostWeek(S.currentWeek, "Unposted — edits are open again");
 root.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{
 const [date,shiftId,roleId]=b.dataset.fill.split("|");
 fillOpenModal(date, shiftId, roleId||null);
@@ -10357,6 +10444,7 @@ people:new Set(wk.assignments.map(a=>a.empId)).size};
 function weekState(ws){
 const wk=S.weeks[ws];
 if(!wk || !wk.assignments.length) return "unstarted";
+if(postPending(wk)) return "pending";       
 return wk.published? "posted" : "draft";
 }
 function vWeeks(){
@@ -10380,6 +10468,7 @@ const inner = `<div class="wkrow ${state} ${isNow?"here":""}" data-open="${ws}">
       </div>
       <div class="wkstate">
         ${state==="posted"? `<span class="chip ok">posted</span><div class="mini">${wk.publishedAt? new Date(wk.publishedAt).toLocaleDateString():""}</div>`
+: state==="pending"? `<span class="chip warn">going up in ${graceClock(postSecsLeft(wk))}</span><div class="mini">nobody can see it yet</div>`
 : state==="draft"? `<span class="chip acc">draft</span><div class="mini">${wk.generatedAt? "worked on "+new Date(wk.generatedAt).toLocaleDateString():""}</div>`
 : `<span class="chip">nothing yet</span>`}
       </div>
@@ -10522,9 +10611,12 @@ return `<div class="fixopt"><span class="fixk ${st.open?"deny":"free"}">${st.ope
       </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="pallgo">Post them all</button>`,
 r=>{ r.querySelector("#pallgo").onclick=()=>{
-drafts.forEach(k=>{ const wk=S.weeks[k]; auditPost(k, null); wk.published=true; wk.publishedAt=Date.now(); wk.postedOnce=true; snapWeek(wk);
+drafts.forEach(k=>{ const wk=S.weeks[k]; beginPost(k, wk, null); snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true); });
-save(); closeModal(); render(); toast(drafts.length+" weeks posted"); }; });
+save(); closeModal(); render();
+const held=drafts.filter(k=>postPending(S.weeks[k])).length;
+toast(held? drafts.length+" weeks going up in "+graceSec()+"s \u2014 take any of them back from the week page"
+: drafts.length+" weeks posted"); }; });
 };
 };
 
@@ -10539,7 +10631,7 @@ const st=weekStats(ws), state=weekState(ws), wk=S.weeks[ws]||getWeek(ws);
 modal(prettyDate(ws)+" – "+prettyDate(addDays(ws,6)), `
     <div class="stack">
       <div class="row">
-        ${state==="posted"? '<span class="chip ok">posted</span>' : state==="draft"? '<span class="chip acc">draft</span>' : '<span class="chip">nothing yet</span>'}
+        ${state==="posted"? '<span class="chip ok">posted</span>' : state==="pending"? '<span class="chip warn">going up shortly</span>' : state==="draft"? '<span class="chip acc">draft</span>' : '<span class="chip">nothing yet</span>'}
         ${patternFor(ws)? `<span class="chip">${esc(patternName(ws))}</span>`:""}
         ${st.open? `<span class="chip crit">${st.open} open</span>`:""}
       </div>
@@ -10560,6 +10652,7 @@ modal(prettyDate(ws)+" – "+prettyDate(addDays(ws,6)), `
         <div class="lab">Move it about</div>
         <button class="btn" id="wkdup">Copy it to another week…</button>
         ${state==="draft"? `<button class="btn primary" id="wkpost">Post this week</button>`:""}
+        ${state==="pending"? `<button class="btn primary" data-undopost="${esc(ws)}">Take it back — it hasn\u2019t gone up yet</button>`:""}
         ${state==="posted"? `<button class="btn" id="wkunpost">Unpost so I can change it</button>`:""}
       </div>
       ${(S.weeks[ws] && (st.wk.assignments.length || wk.note || wk.patternId))? `<div class="sep"></div>
@@ -10589,10 +10682,11 @@ on("#wkfix",()=>{ S.currentWeek=ws; closeModal(); fixModal(ws); });
 on("#wkprint",()=>{ S.currentWeek=ws; closeModal(true); printModal(); });
 on("#wkdup",()=>{ closeModal(); duplicateWeekModal(ws); });
 on("#wkpost",()=>{ const changes=weekDiff(ws); closeModal(true);
-repostGuard(ws, choice=>{ const w=getWeek(ws); auditPost(ws, choice); w.published=true; w.publishedAt=Date.now(); w.postedOnce=true; snapWeek(w);
-w.assignments.forEach(a=>a.locked=true); save(); render(); toast("Posted"); repostNotify(ws, choice, changes); }); });
-on("#wkunpost",()=>{ const w=getWeek(ws); w.published=false; w.assignments.forEach(a=>a.locked=false);
-save(); closeModal(); render(); toast("Unposted — open for edits"); });
+repostGuard(ws, choice=>{ const w=getWeek(ws); beginPost(ws, w, choice); snapWeek(w);
+w.assignments.forEach(a=>a.locked=true); save(); render();
+if(postPending(w)) toast("Going up in "+graceClock(postSecsLeft(w))+" \u2014 nothing has been sent yet");
+else { toast("Posted"); repostNotify(ws, choice, changes); } }); });
+on("#wkunpost",()=>{ closeModal(true); unpostWeek(ws, "Unposted — open for edits"); });
 on("#wkclear",()=>{
 const w=getWeek(ws); w.assignments=[]; w.unfilled=[]; w.touched=true; w.suggested=false; w.auto=false;
 w.published=false; delete w.publishedAt;
@@ -10807,7 +10901,8 @@ if(!roster.length || !wantSlots) return `<div class="banner warn"><div><b>Nothin
     ${!roster.length?"Add people under Team. ":""}${!wantSlots?"Then say how many of each shift you need under Coverage needs.":""}</div>
     <button class="btn sm" data-go="${!roster.length?"team":"demand"}" style="flex:none;margin-left:auto">${!roster.length?"Add people":"Set coverage"}</button></div>`;
 
-if(wk.published) return `<div class="banner info"><div><b>Posted.</b> This week went up ${wk.publishedAt? new Date(wk.publishedAt).toLocaleDateString():""}${daysOut>=0?", "+daysOut+" days ahead of the first shift":""}. Every shift is locked, so a stray click can't rewrite what people have planned around.</div>
+if(postPending(wk)) return "";      
+if(wk.published) return `<div class="banner info"><div><b>Posted.</b> This week went up ${wk.publishedAt? new Date(wk.publishedAt).toLocaleDateString():"just now"}${daysOut>=0?", "+daysOut+" days ahead of the first shift":""}. Every shift is locked, so a stray click can't rewrite what people have planned around.</div>
     <button class="btn sm" id="wunpost" style="flex:none;margin-left:auto">Unpost to edit</button></div>`;
 
 if(!wk.assignments.length) return `<div class="card"><div class="body stack" style="align-items:flex-start">
@@ -10873,7 +10968,7 @@ return `<div class="card review">
           ${wk.assignments.length && !wk.published && !queueFor(ws).some(q=>q.kind==="post")? `<button class="btn" id="wlater">Put it up later…</button>`:""}
           ${sendOn() && wk.published && !postPending(wk) && !queueFor(ws).some(q=>q.kind==="send")? `<button class="btn" id="wsendlater">Send it later…</button>`:""}
           ${sendOn() && wk.published? (postPending(wk)
-? `<button class="btn" disabled title="Nothing goes out until the week is actually up">Send in <span data-gracecount="${esc(ws)}">${postSecsLeft(wk)}s</span></button>`
+? `<button class="btn" disabled title="Nothing goes out until the week is actually up">Send in <span data-gracecount="${esc(ws)}">${graceClock(postSecsLeft(wk))}</span></button>`
 : `<button class="btn primary" id="wsend">Send it to the team</button>`):""}
           <button class="btn" id="wredo">Not right — redo it</button>
           <button class="btn ${crit.length?"":"primary"}" id="wpost">${crit.length?"Post it anyway":"Looks good — post it"}</button>
@@ -14447,9 +14542,13 @@ modal("About "+nm+"\u2019s vacation", `
           <span><b>Keep ${esc(nm)} out of this round</b><span class="mini" style="display:block">This round only.</span></span></button></div>`}
     </div>`, `<button class="btn" data-close>Cancel</button>`, r2=>{
 const add=t=>{
+ 
+const had=(S.vacations.tweaks||[]).some(x=>x.empId===empId && x.kind!==t.kind);
 S.vacations.tweaks=(S.vacations.tweaks||[]).filter(x=>!(x.empId===empId &&
-x.kind===t.kind && String(x.pick||"")===String(t.pick||"") && String(x.from||"")===String(t.from||"")));
+(x.kind!==t.kind ||
+(x.kind===t.kind && String(x.pick||"")===String(t.pick||"") && String(x.from||"")===String(t.from||"")))));
 S.vacations.tweaks.push(Object.assign({empId}, t));
+if(had) setTimeout(()=>toast("That replaces what you said before about "+nm),400);
 save(); closeModal(true); vacDrawRender(out);
 toast("Worked out again \u2014 your instruction is kept for the next run too");
 };
@@ -14735,8 +14834,14 @@ modal("About "+nm+" on "+hn, `
         </div>
       </div>`, `<button class="btn" data-close>Cancel</button>`, r2=>{
 const add=(kind, holidayId)=>{
-S.holidays.tweaks=(S.holidays.tweaks||[]).filter(t=>!(t.empId===empId && t.holidayId===holidayId && t.kind===kind));
+ 
+const opposite = kind==="must"? "avoid" : "must";
+const gone=(S.holidays.tweaks||[]).some(t=>t.empId===empId && t.kind===opposite &&
+(t.holidayId===holidayId || !t.holidayId || !holidayId));
+S.holidays.tweaks=(S.holidays.tweaks||[]).filter(t=>!(t.empId===empId &&
+(t.holidayId===holidayId || !t.holidayId || !holidayId)));
 S.holidays.tweaks.push({kind, empId, holidayId});
+if(gone) setTimeout(()=>toast("That replaces what you said before about "+nm),400);
 const a=allocateHolidays();
 if(a) S.holidays.result=a;
 save(); closeModal(true); render();
@@ -14894,8 +14999,12 @@ const served={};
 const resp=V.responses.filter(r=>empById(r.empId) && (empById(r.empId)||{}).active);
  
 TW.filter(t=>t.kind==="grant").forEach(t=>{
-const r=resp.find(x=>x.empId===t.empId); if(!r) return;
-const p=r.picks[(t.pick||1)-1]; if(!p) return;
+const r=resp.find(x=>x.empId===t.empId);
+if(!r){ clashes.push({empId:t.empId, pick:(t.pick||1), from:"", to:"",
+why:"you asked for this one, but there is no survey answer from them any more \u2014 read their code in and ask again"}); return; }
+const p=r.picks[(t.pick||1)-1];
+if(!p){ clashes.push({empId:t.empId, pick:(t.pick||1), from:"", to:"",
+why:"you asked for choice #"+(t.pick||1)+", and they only sent "+r.picks.length+" \u2014 pick one they actually asked for"}); return; }
  
 const before=grants.slice();
 let why=null;
@@ -15899,7 +16008,7 @@ S.employees.forEach(e=>{ L[e.id]={good:0,bad:0,total:0}; });
 const from = S.priority.ledgerFrom||"posted";
 Object.keys(S.weeks).forEach(ws=>{
 const wk=S.weeks[ws];
-if(from==="posted" && !wk.published) return;
+if(from==="posted" && (!wk.published || postPending(wk))) return;
 if(from==="current" && ws!==S.currentWeek) return;
 wk.assignments.forEach(a=>{
 const rec=L[a.empId]; if(!rec) return;
@@ -15981,7 +16090,9 @@ function density(){ try{ return localStorage.getItem("ws.density")||"comfortable
 function applyAppearance(size, dens){
 if(size!=null){ try{ localStorage.setItem("ws.textsize",size); }catch(e){} }
 if(dens!=null){ try{ localStorage.setItem("ws.density",dens); }catch(e){} }
-const z=parseFloat(textSize())||1;
+ 
+let z=parseFloat(textSize());
+if(!isFinite(z) || z<0.75 || z>1.75) z=1;
  
 document.documentElement.style.zoom = z===1? "" : String(z);
 document.body.classList.toggle("compact", density()==="compact");
