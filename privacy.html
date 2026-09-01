@@ -1,47 +1,540 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy Policy — Weeksolved</title>
-<meta name="description" content="Privacy Policy for Weeksolved staff scheduling software: what we store, where, and your rights.">
+<meta name="description" content="What Weeksolved stores, where it lives, who can reach it, and your rights over it.">
 <link rel="canonical" href="https://weeksolved.com/privacy.html">
 <meta name="theme-color" content="#1c6a66">
 <style>
-:root{--bg:#f2f5f4;--surface:#fff;--ink:#18211f;--ink2:#3c4a47;--muted:#697773;--line:#d2d8d6;--accent:#1c6a66}
-@media (prefers-color-scheme: dark){:root{--bg:#101514;--surface:#191f1e;--ink:#e7ecea;--ink2:#c2ccc9;--muted:#8d9b97;--line:#2c3634;--accent:#4cb3a9}}
+:root{--bg:#f2f5f4;--surface:#fff;--ink:#18211f;--ink2:#3c4a47;--muted:#5d6966;--line:#d2d8d6;--accent:#1c6a66;--warn-soft:#f6ead4;--warn:#8d5c0f}
+@media (prefers-color-scheme: dark){:root{--bg:#101514;--surface:#191f1e;--ink:#e7ecea;--ink2:#c2ccc9;--muted:#8d9b97;--line:#2c3634;--accent:#4cb3a9;--warn-soft:#33260f;--warn:#d9a441}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:760px;margin:0 auto;padding:0 20px 60px}
+.wrap{max-width:800px;margin:0 auto;padding:0 20px 60px}
 header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
 .mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px}
 .brand{font-weight:800;font-size:18px}
 header.top a{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:600;font-size:13.5px}
 h1{font-size:28px;letter-spacing:-.02em;margin:22px 0 4px}
 .eff{color:var(--muted);font-size:13px;margin-bottom:26px}
-h2{font-size:17px;margin:26px 0 8px;letter-spacing:-.01em}
-p,li{color:var(--ink2);font-size:14px}
-ul{padding-left:22px}
+h2{font-size:19px;margin:34px 0 8px;letter-spacing:-.01em;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15.5px;margin:22px 0 6px;letter-spacing:-.005em}
+h4{font-size:14px;margin:16px 0 4px;color:var(--ink)}
+p,li,td,th{color:var(--ink2);font-size:14px}
+ul,ol{padding-left:22px}
+li{margin-bottom:5px}
+a{color:var(--accent)}
+strong{color:var(--ink)}
+code{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+pre code{border:0;background:none;padding:0;font-size:12.5px;line-height:1.5}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+table{border-collapse:collapse;width:100%;margin:12px 0;display:block;overflow-x:auto}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+   font-weight:700;padding:7px 9px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+/* A warranty disclaimer is only enforceable if a reasonable person would notice
+   it. That is judged on the rendered page, so it is built to be noticed here. */
+blockquote{margin:16px 0;padding:14px 16px;background:var(--warn-soft);border:2px solid var(--warn);
+  border-radius:8px}
+blockquote p{color:var(--ink);font-weight:600}
+blockquote strong{font-weight:800}
 footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
 footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inline-block}
+.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 26px}
+.toc h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.toc a{display:inline-block;margin:0 14px 4px 0;font-size:13px;text-decoration:none}
+@media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
 </style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
-<h1>Privacy Policy</h1><div class="eff">Effective August 31, 2026</div>
-<p>This policy explains what Weeksolved stores and why, in plain language.</p>
-<h2>What we collect</h2>
+<h1>Privacy Policy</h1>
+<nav class="toc"><h4>On this page</h4><a href="#the-short-version">The short version</a><a href="#1-who-is-responsible-for-what">1. Who is responsible for what</a><a href="#2-what-we-collect">2. What we collect</a><a href="#3-where-your-data-lives-and-who-can-reach-it">3. Where your data lives, and who can reach it</a><a href="#4-who-else-we-give-data-to-subprocessors">4. Who else we give data to (subprocessors)</a><a href="#5-what-we-never-do">5. What we never do</a><a href="#6-retention-and-deletion">6. Retention and deletion</a><a href="#7-your-rights">7. Your rights</a><a href="#8-automated-decision-making">8. Automated decision-making</a><a href="#9-minors">9. Minors</a><a href="#10-security">10. Security</a><a href="#11-if-there-is-a-breach">11. If there is a breach</a><a href="#12-changes-to-this-policy">12. Changes to this policy</a><a href="#13-contact">13. Contact</a><a href="#">---</a></nav>
+<p><strong>Effective date: [EFFECTIVE DATE]</strong>
+<strong>Last updated: [EFFECTIVE DATE]</strong></p>
+<p>This policy explains what Weeksolved collects, where it goes, who can reach it, and what you can do about it. It covers weeksolved.com and the Weeksolved application.</p>
+<p>We have tried to write this so you can actually read it. Where something is unflattering, we have said it anyway.</p>
+<hr />
+<h2 id="the-short-version">The short version</h2>
 <ul>
-<li><b>Account information:</b> your email address and a password (held by our authentication provider — we never see the password itself).</li>
-<li><b>Schedule data:</b> what you enter to run your schedule — staff names, roles, availability, hours, and any contact details or notes you add. You control this data; we store it so it follows you between devices.</li>
-<li><b>Problem reports and messages:</b> what you write when reporting a problem or contacting us, plus technical context (screen, app version, device type). Reports never include your staff's names, hours, or contact details.</li>
+<li>Weeksolved runs in your browser. Your data is stored in your browser, and if you sign in, it also syncs to Google Firebase in the United States.</li>
+<li><strong>Only managers have accounts. Your employees have no logins and never use the product.</strong></li>
+<li>We do not sell your data. We do not share it for advertising. We do not use it to train AI models. We run no ad trackers, no third-party analytics, and no fingerprinting.</li>
+<li><strong>We can technically reach your data.</strong> We are the operator of the database. See "Who can reach your data" below — we have written that section plainly rather than implying we have made it impossible.</li>
+<li>For your employees' information, <strong>you are the business and we are the service provider.</strong> Their privacy rights requests go to you.</li>
+<li><strong>Your staff's names, contact details, pay rates, balances and schedules are confidential and we do not give them to anyone.</strong> Not sold, not shared, not used to train anything. See "What we never do" below, and section 3.1 of the Terms, which makes it contractual.</li>
 </ul>
-<h2>What we don't do</h2>
+<hr />
+<h2 id="1-who-is-responsible-for-what">1. Who is responsible for what</h2>
+<p>Weeksolved handles two different kinds of information, and the legal roles are different for each. This distinction matters, so it comes first.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Your account information</strong></th>
+<th><strong>Your employees' information</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Whose data</td>
+<td>The manager or admin who signs up</td>
+<td>The staff you schedule</td>
+</tr>
+<tr>
+<td>Who decides what is collected</td>
+<td>We do</td>
+<td><strong>You do</strong></td>
+</tr>
+<tr>
+<td>Our role under the CCPA</td>
+<td><strong>Business</strong></td>
+<td><strong>Service provider</strong></td>
+</tr>
+<tr>
+<td>Your role under the CCPA</td>
+<td>Consumer</td>
+<td><strong>Business</strong></td>
+</tr>
+<tr>
+<td>Who gives the privacy notice</td>
+<td>We do (this document)</td>
+<td><strong>You do</strong>, to your employees</td>
+</tr>
+<tr>
+<td>Who answers rights requests</td>
+<td>We do</td>
+<td><strong>You do</strong>; we assist you</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What that means in practice.</strong> We process your employees' information only on your documented instructions, to provide the service. We do not decide what to collect about them, we do not use it for our own purposes, and we do not sell or share it. If one of your employees contacts us directly, we will refer them to you, tell you they contacted us, and take no action on their data without your instruction.</p>
+<p>Since January 1, 2023, when the CCPA's exemption for employee data expired, California employers have had to give their own employees a notice at collection and honor their privacy rights. That obligation is yours. We will give you what you need to meet it.</p>
+<hr />
+<h2 id="2-what-we-collect">2. What we collect</h2>
+<h3>2.1 Information you give us about yourself (account information)</h3>
+<table>
+<thead>
+<tr>
+<th>Category (CCPA terms)</th>
+<th>What it is</th>
+<th>Where it comes from</th>
+<th>Why we have it</th>
+<th>Kept for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identifiers</td>
+<td>Your email address; your account ID</td>
+<td>You, at sign-up</td>
+<td>To create and secure your account; to contact you about the service</td>
+<td>While your account is active, then 30 days</td>
+</tr>
+<tr>
+<td>Account credentials</td>
+<td>Your password</td>
+<td>You, at sign-up</td>
+<td>Authentication. <strong>Held by Firebase Authentication in hashed form. We never see it and cannot retrieve it.</strong></td>
+<td>While your account is active</td>
+</tr>
+<tr>
+<td>Commercial information</td>
+<td>Your invitation code; your plan; subscription status</td>
+<td>You and our merchant of record</td>
+<td>To grant access, run billing</td>
+<td>While active + 7 years for tax records</td>
+</tr>
+<tr>
+<td>Internet or network activity</td>
+<td>Basic technical error information in problem reports</td>
+<td>Your browser, when you file a report</td>
+<td>To fix bugs</td>
+<td>Up to 24 months</td>
+</tr>
+</tbody>
+</table>
+<h3>2.2 Information you enter about your employees (customer data)</h3>
+<p>You decide what goes in here. The fields the product offers are:</p>
+<table>
+<thead>
+<tr>
+<th>Category (CCPA terms)</th>
+<th>Fields</th>
+<th>Optional?</th>
+<th>Why the product has it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identifiers</td>
+<td>Name, email address, phone number</td>
+<td>Email/phone optional</td>
+<td>To identify staff and let you contact them</td>
+</tr>
+<tr>
+<td>Professional or employment information</td>
+<td>Employment type, availability, hours worked and scheduled, licence expiry dates</td>
+<td>Some optional</td>
+<td>To build schedules; to warn on expiring licences</td>
+</tr>
+<tr>
+<td>Commercial / financial information</td>
+<td>Hourly pay rate</td>
+<td><strong>Optional</strong></td>
+<td>To calculate labor cost on a schedule</td>
+</tr>
+<tr>
+<td>Protected classification characteristic</td>
+<td>Date of birth</td>
+<td><strong>Optional</strong></td>
+<td>Only to warn about work-hour limits for employees under 18</td>
+</tr>
+<tr>
+<td>Professional or employment information</td>
+<td>Time-off records, sick-leave records, callout and no-show records</td>
+<td>—</td>
+<td>Availability and attendance tracking</td>
+</tr>
+<tr>
+<td>Any category, depending on what you type</td>
+<td>Free-text notes</td>
+<td>—</td>
+<td>Whatever you use them for</td>
+</tr>
+<tr>
+<td>Professional or employment information</td>
+<td><em>If you turn on the optional advanced features:</em> overtime offers and refusals; mandatory-overtime rotation position; an audit log of changes made to schedules after posting</td>
+<td><strong>Off by default</strong></td>
+<td>Fair-rotation tracking and change history, if you want them</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Three honest notes on this table.</strong></p>
+<p><strong>Free-text notes accept anything.</strong> We have no way to stop you typing something sensitive into a notes field. Our Terms of Service ask you not to. Whatever you type is stored the same way as everything else.</p>
+<p><strong>Sick-leave records are health-adjacent.</strong> The product records that leave was taken, not why. It is not a medical record system, we are not a HIPAA business associate, and no diagnosis, condition, or medical document should be entered. If you are a pharmacy: no patient information belongs in Weeksolved.</p>
+<p><strong>The optional advanced features record employee conduct.</strong> Overtime refusals, callouts, no-shows, and the post-posting audit log create a record of individual behavior that could be used in a discipline or grievance process. They are off by default and it is your decision whether to turn them on. If you have a collective bargaining agreement, check it before you do.</p>
+<h3>2.3 What we do not collect</h3>
 <ul>
-<li>No advertising, and no selling or sharing of your data with anyone for marketing.</li>
-<li>No analytics trackers, no third-party cookies, no fingerprinting.</li>
-<li>Nothing you type in the help assistant leaves your device.</li>
+<li>We do not collect precise geolocation.</li>
+<li>We do not collect biometric information.</li>
+<li>We do not run analytics trackers, advertising trackers, third-party cookies, session recording, or browser fingerprinting.</li>
+<li>We do not buy personal information from data brokers.</li>
+<li>Anything typed into the in-app help assistant stays on your device and is not sent to us.</li>
 </ul>
-<h2>Where data lives</h2>
-<p>Account and schedule data are stored with Google Cloud (Firebase) in the United States, encrypted in transit and at rest, in a database whose access rules allow each account to read only its own data. A copy also lives in your own browser so the app works offline.</p>
-<h2>Payments</h2>
-<p>When paid plans begin, payments will be handled by a merchant of record; we never see or store card numbers or bank details.</p>
-<h2>Retention and deletion</h2>
-<p>Your data is kept while your account is active. Email us and we will delete your account and its data; exports are available inside the app any time. Tester accounts that expire keep their data so a returning code can pick up where it left off, unless you ask us to remove it.</p>
-<h2>Your staff's information</h2>
-<p>If you enter your employees' information, you are the one who decides what goes in and who it's shared with; we process it only to provide the service to you. Employees can ask you, the account holder, to view or remove their information.</p>
-<h2>Changes and contact</h2>
-<p>Material changes will be posted here with a new effective date. Questions or requests: weeksolved@gmail.com.</p><footer><a href="/">Home</a><a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>
+<h3>2.3a Three other companies see your browser connect</h3>
+<p>We want to be exact about this, because "no trackers" is true and still not the whole picture.</p>
+<p>When the page loads, your browser fetches three things from outside our control:</p>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>From</th>
+<th>What they can see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Typefaces</td>
+<td>Google Fonts (<code>fonts.googleapis.com</code>, <code>fonts.gstatic.com</code>)</td>
+<td>Your IP address, browser and operating system, and that a Weeksolved page was opened</td>
+</tr>
+<tr>
+<td>The Firebase sign-in and sync library</td>
+<td>Google (<code>www.gstatic.com</code>)</td>
+<td>The same</td>
+</tr>
+<tr>
+<td>The library that builds PDF exports</td>
+<td>Cloudflare's public CDN (<code>cdnjs.cloudflare.com</code>)</td>
+<td>The same</td>
+</tr>
+</tbody>
+</table>
+<p><strong>None of them receive your schedule, your staff, or anything you typed.</strong> They serve a file; that is all. But a request carries an IP address, and an IP address is personal information, so we are not going to describe this product as "nothing leaves your browser" when three requests do.</p>
+<p><strong>None of these are required for the product to work.</strong> With all three blocked — by a corporate firewall, an ad blocker, or no internet at all — Weeksolved still opens, still drafts a schedule, still places breaks and still prints. You lose the designed typefaces (it falls back to your system's), PDF export, and signing in to an account. Everything else is unaffected. We test this.</p>
+<p>If your organisation cannot accept those requests, tell us: a build that carries the typefaces and the PDF library inside the file, so nothing is fetched at all, is a change to how we package it, not to how it works.</p>
+<h3>2.4 Sensitive personal information</h3>
+<p>The CCPA defines a specific list of "sensitive personal information" — Social Security and government ID numbers, financial account details, precise geolocation, racial or ethnic origin, religious or philosophical beliefs, union membership, contents of private communications, genetic and biometric data, health information, and sexual orientation or sex life.</p>
+<p><strong>The product has no fields for any of it, and we do not ask you for any of it.</strong> Date of birth is not on that list. We do not use or disclose sensitive personal information for any purpose that would require us to offer a "Limit the Use of My Sensitive Personal Information" link.</p>
+<p>The one gap is the free-text notes field, where you could enter such information yourself. Please do not. Our Terms of Service section 4(f) lists what to keep out.</p>
+<hr />
+<h2 id="3-where-your-data-lives-and-who-can-reach-it">3. Where your data lives, and who can reach it</h2>
+<h3>3.1 Where it lives</h3>
+<p><strong>In your browser.</strong> Weeksolved is a single-page application: the whole program runs in your browser. Your data is stored there, in browser localStorage, which is why the app keeps working when you are offline. That copy is on your device and under your control. Clearing your browser data clears it.</p>
+<p><strong>On Google Firebase, if you sign in.</strong> If you sign in, your data also syncs to <strong>Google Firebase / Cloud Firestore, hosted in the United States</strong>. It is protected in transit and at rest by Google's platform encryption, and by per-account Firestore security rules under which each account can read only its own data.</p>
+<p><strong>Firebase Authentication</strong> holds your password. It is stored hashed by Google. We never see it and cannot recover it — if you lose it, you reset it.</p>
+<h3>3.2 Who can reach it — read this part</h3>
+<p>Your data is protected from <em>other customers</em> by per-account security rules. Those rules are how accounts are kept apart, and they are enforced by Google's infrastructure, not by our application code alone.</p>
+<p><strong>They do not, and cannot, keep us out.</strong></p>
+<p>We operate the Firebase project. Like the operator of any hosted service, <strong>we can technically reach the database through the Google Firebase console.</strong> We are telling you this plainly because the alternative — implying that we have made it technically impossible for us to see your data — would not be true. We do not offer customer-managed encryption keys, and we do not hold your data under a key we cannot access.</p>
+<p>What we commit to instead is a rule about <em>when</em> we will look:</p>
+<ul>
+<li>We access customer data only when there is a reason to: you have asked us for support that requires it, we are investigating a bug or an outage you or another customer reported, we are responding to a security incident, or the law compels us.</li>
+<li>We do not read customer data out of curiosity, and we do not read it for product research, marketing, sales, or model training.</li>
+<li>We do not use your employees' information for any purpose of our own.</li>
+</ul>
+<p>Access to the production Firebase project is limited to [NUMBER] person/people. Today that is the founder. As the company grows, access will be granted on a need-to-do-the-job basis and removed when the need ends.</p>
+<p>If you are a business or agency buyer and you want these commitments as contract terms rather than policy statements, our <strong>Data Processing Addendum</strong> puts them in writing and is signable.</p>
+<h3>3.3 What is not encrypted end-to-end</h3>
+<p>To be clear about what the encryption above does and does not do: your data is encrypted in transit between your browser and Google, and encrypted at rest on Google's disks. It is <strong>not</strong> end-to-end encrypted in the sense of being unreadable to us. See 3.2.</p>
+<hr />
+<h2 id="4-who-else-we-give-data-to-subprocessors">4. Who else we give data to (subprocessors)</h2>
+<p>We do not sell your data and we do not share it for advertising. We do use a small number of vendors to run the service. Here is the complete list.</p>
+<table>
+<thead>
+<tr>
+<th>Subprocessor</th>
+<th>What they do</th>
+<th>What they get</th>
+<th>Where</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Google LLC — Firebase / Cloud Firestore</strong></td>
+<td>Database and hosting</td>
+<td>Account information and all customer data you sync</td>
+<td>United States</td>
+<td><strong>Live</strong></td>
+</tr>
+<tr>
+<td><strong>Google LLC — Firebase Authentication</strong></td>
+<td>Sign-in; password storage</td>
+<td>Your email address and hashed password</td>
+<td>United States</td>
+<td><strong>Live</strong></td>
+</tr>
+<tr>
+<td><strong>[MERCHANT OF RECORD NAME]</strong></td>
+<td>Merchant of record; seller of record; payment processing and sales tax</td>
+<td>Your billing contact details and transaction records. <strong>They handle card numbers; we never see or store them.</strong></td>
+<td>[MoR REGION]</td>
+<td><strong>Not live.</strong> Begins when paid plans start.</td>
+</tr>
+<tr>
+<td><strong>[EMAIL SENDER NAME]</strong></td>
+<td>Sending transactional email from our servers</td>
+<td>Recipient email address and message contents</td>
+<td>[SENDER REGION]</td>
+<td><strong>Not live.</strong> Planned for January 2027.</td>
+</tr>
+</tbody>
+</table>
+<p>We will update this table before adding a subprocessor, and customers under a Data Processing Addendum get advance notice and a right to object, as set out there.</p>
+<h3>4.1 About email — how it works today</h3>
+<p><strong>Right now, Weeksolved sends no email at all.</strong></p>
+<p>When you use a feature that emails a staff member, the app opens a pre-filled draft in <strong>your own mail client</strong> using a <code>mailto:</code> link. The message is composed and sent by you, from your own email account, through your own email provider. It never touches our servers, and we have no copy of it and no record that you sent it.</p>
+<p>That means your own email provider's privacy practices apply to those messages, not ours.</p>
+<p><strong>This is changing.</strong> We plan to add a server-side email sender in <strong>January 2027</strong>. When that happens, messages you send through the product will pass through our systems and a third-party sending provider. We will update this policy and this table, and we will tell you before the change takes effect.</p>
+<h3>4.2 Other disclosures</h3>
+<p>We may disclose information:</p>
+<ul>
+<li><strong>When the law requires it</strong> — a valid subpoena, warrant, court order, or other legal process. If we receive a legal demand for a customer's data, we will notify that customer before responding unless we are legally prohibited from doing so, and we will object to demands that are overbroad or improper.</li>
+<li><strong>To protect people</strong> — where we reasonably believe disclosure is needed to prevent imminent physical harm, fraud, or an attack on the service.</li>
+<li><strong>In a business transfer</strong> — if the business is reorganized, converted into an LLC, merged, or acquired, or if its assets are sold, customer data may transfer to the successor. The successor will be bound by this policy or one at least as protective, and we will notify you.</li>
+</ul>
+<p>Any successor takes the data subject to the same commitments. A change of ownership is not permission to start selling data.</p>
+<hr />
+<h2 id="5-what-we-never-do">5. What we never do</h2>
+<ul>
+<li><strong>We do not sell your personal information</strong>, as "sell" is defined by the CCPA. We never have.</li>
+<li><strong>We do not share it for cross-context behavioral advertising</strong>, as "share" is defined by the CCPA. We never have.</li>
+<li>We have no actual knowledge of selling or sharing the personal information of anyone under 16.</li>
+<li>Because we do not sell or share, <strong>there is no "Do Not Sell or Share My Personal Information" link on this site.</strong> If that ever changes, we will add one and say so here before it does.</li>
+<li><strong>We do not use your data, or your employees' data, to train artificial intelligence or machine learning models</strong> — not ours, and not anyone else's.</li>
+<li>We do not use your data for advertising, we do not build profiles for marketing, and we do not disclose it to data brokers.</li>
+<li>We do not use your employees' information for any purpose other than providing the service to you.</li>
+<li><strong>We do not disclose anything that identifies one of your staff</strong> — name, contact details, pay rate, accrued time off, licence details, notes, or their schedule history — to anyone, for any purpose of ours. This is also a term of the <a href="https://weeksolved.com/terms">Terms of Service</a> (section 3.1), so it is a promise we owe you contractually and not only a statement of policy. The only ways it leaves your account are: you send it, the vendors in the table above hold it to run the service, or valid legal process compels it — and in that last case we tell you first unless we are legally forbidden from doing so.</li>
+</ul>
+<hr />
+<h2 id="6-retention-and-deletion">6. Retention and deletion</h2>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>How long</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Account information</td>
+<td>While your account is active, then 30 days after termination</td>
+</tr>
+<tr>
+<td>Customer data (employee information)</td>
+<td>While your account is active. On termination, available for export for 30 days, then deleted</td>
+</tr>
+<tr>
+<td>Data in your browser</td>
+<td>Until you clear it. It is on your device; we cannot delete it for you</td>
+</tr>
+<tr>
+<td>Billing and transaction records</td>
+<td>7 years, for tax and accounting law</td>
+</tr>
+<tr>
+<td>Problem reports</td>
+<td>Up to 24 months</td>
+</tr>
+<tr>
+<td>Security and access logs</td>
+<td>Up to 12 months</td>
+</tr>
+<tr>
+<td>Backups</td>
+<td>Deleted data may persist in routine backups for up to [BACKUP RETENTION] days and is then overwritten. Deleted data is not restored to live systems</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tester accounts.</strong> If your tester access expires, your data is retained so you can come back. <strong>Ask us and we will delete it.</strong> We will contact expired tester accounts before the paid launch to ask whether to keep or delete the data, and we will delete data belonging to any tester who does not respond within 90 days of that notice.</p>
+<p><strong>Deletion is real.</strong> When we delete, we delete — subject only to the backup window above and to records we are legally required to keep.</p>
+<hr />
+<h2 id="7-your-rights">7. Your rights</h2>
+<h3>7.1 If you are a Weeksolved account holder</h3>
+<p>You have the right to:</p>
+<ul>
+<li><strong>Know</strong> what personal information we have collected about you, the categories, the sources, the purposes, and the categories of third parties we disclosed it to.</li>
+<li><strong>Access</strong> a copy of it, in a portable format.</li>
+<li><strong>Correct</strong> it if it is inaccurate.</li>
+<li><strong>Delete</strong> it, subject to records we must keep by law.</li>
+<li><strong>Opt out of sale or sharing</strong> — we do not sell or share, so there is nothing to opt out of, but the right exists and we will honor it if that ever changes.</li>
+<li><strong>Limit the use of sensitive personal information</strong> — we do not use sensitive personal information in a way that triggers this right.</li>
+<li><strong>Not be discriminated or retaliated against</strong> for exercising any of these rights. We will not deny you service, charge you a different price, or give you a lower quality of service because you exercised a privacy right.</li>
+</ul>
+<p><strong>How to exercise them.</strong> Email <strong>[PRIVACY EMAIL]</strong> with what you want. You can also export your data yourself from inside the app at any time, and delete your account yourself.</p>
+<p><strong>How we verify you.</strong> We will ask you to send the request from the email address on the account, and we may ask you to confirm details only the account holder would know. We do this to avoid handing your data to someone pretending to be you. We do not ask for government ID.</p>
+<p><strong>How long we take.</strong> We confirm receipt within 10 business days and respond within 45 calendar days. If we need more time we will tell you why, and take no more than 90 days total. There is no charge unless a request is manifestly unfounded or excessive, in which case we will tell you before doing anything.</p>
+<p><strong>Authorized agents.</strong> You may use an authorized agent. We will ask for written permission signed by you, and we may ask you to confirm directly.</p>
+<p><strong>Appeals.</strong> If we deny a request, we will tell you why. You may appeal by replying to our decision, and a human being will review it. You may also complain to the California Privacy Protection Agency at cppa.ca.gov or the California Attorney General at oag.ca.gov.</p>
+<h3>7.2 If you are an employee of a Weeksolved customer</h3>
+<p>Your employer decided to put your information into Weeksolved. They chose the tool, they chose what to enter, and they control it.</p>
+<p><strong>So your request goes to your employer, not to us.</strong> Ask your manager, your HR department, or whoever handles privacy at your workplace. Under California law, your employer must give you a notice about the information it collects on you and must honor your privacy rights.</p>
+<p>If you contact us instead, we will tell you this, let your employer know you got in touch, and not act on your data ourselves. That is not us brushing you off — we are legally the service provider here, and acting on your data without your employer's instruction would be the wrong thing for us to do.</p>
+<p>If your employer will not respond, you can complain to the California Privacy Protection Agency (cppa.ca.gov), the California Attorney General (oag.ca.gov), or the California Civil Rights Department.</p>
+<h3>7.3 If you are outside California</h3>
+<p>We extend the access, correction, deletion, and portability rights above to everyone who asks, wherever you are, rather than checking your address first.</p>
+<hr />
+<h2 id="8-automated-decision-making">8. Automated decision-making</h2>
+<p>Weeksolved builds draft schedules from rules that the manager sets, and shows warnings. <strong>A human manager reviews and publishes every schedule.</strong> The software does not assign anyone to a shift on its own, and it does not make hiring, pay, promotion, discipline, or termination decisions.</p>
+<p>California's regulations on automated decisionmaking technology take effect <strong>January 1, 2027</strong>. They apply to <em>businesses</em> that use such technology to make significant employment decisions, including work assignment and compensation. If those rules apply to a use of Weeksolved, <strong>the obligations fall on the employer using the tool, not on us as the vendor.</strong></p>
+<p>If you are a customer and you need to document how the product works for a risk assessment or a pre-use notice, ask us at [PRIVACY EMAIL] and we will help.</p>
+<hr />
+<h2 id="9-minors">9. Minors</h2>
+<p>Weeksolved is not directed to children and is not intended for anyone under 18. <strong>Only managers have accounts, and account holders must be 18 or older.</strong> Employees, including employees under 18, have no logins and never use the product.</p>
+<p>The product lets an employer optionally record an employee's date of birth for one reason: to warn the employer about work-hour limits that apply to workers under 18. That value is entered by the adult employer, about their employee.</p>
+<p><strong>The Children's Online Privacy Protection Act does not apply to us.</strong> COPPA covers operators of sites and services directed to children under 13 that collect personal information <em>from</em> children. We do not collect information online from children. Information an adult employer enters about a young worker is not information collected from a child, and the FTC's own guidance states that COPPA does not apply to information about children collected from adults. In any event, employees under 13 are not lawfully employable in the settings Weeksolved serves.</p>
+<p>Employers remain responsible for handling a minor employee's information under the laws that apply to them.</p>
+<hr />
+<h2 id="10-security">10. Security</h2>
+<p>What we actually do:</p>
+<ul>
+<li>Data is encrypted in transit (HTTPS/TLS) and at rest, using Google Cloud's platform encryption.</li>
+<li>Per-account Firestore security rules mean an account can read only its own data. This is enforced by Google's infrastructure.</li>
+<li>Passwords are held hashed by Firebase Authentication. We never see them.</li>
+<li>Access to the production Firebase project is limited to the smallest number of people needed to run it, protected by multi-factor authentication, and reviewed when someone's role changes.</li>
+<li>The service is a static single-page application, which means there is no application server of ours holding customer data in transit.</li>
+<li>We keep dependencies patched and monitor Google's security advisories.</li>
+</ul>
+<p>What we are not claiming: we hold no SOC 2 report, no ISO 27001 certificate, and no third-party penetration test as of this policy's date. If we get them, we will say so here. We would rather tell you that now than have you find out during a security review.</p>
+<p><strong>No system is perfectly secure.</strong> Anyone who tells you otherwise is selling something. Keep your password strong and unique, do not share accounts, and remove access for people who leave.</p>
+<p>If you believe you have found a vulnerability, email <strong>[SECURITY EMAIL]</strong>. We will acknowledge within 3 business days. We will not pursue legal action against anyone who reports a vulnerability in good faith, does not access or alter other people's data, and gives us a reasonable chance to fix it before going public.</p>
+<hr />
+<h2 id="11-if-there-is-a-breach">11. If there is a breach</h2>
+<p>If personal information is exposed by a security incident, we will:</p>
+<ol>
+<li><strong>Tell affected customers without undue delay, and no later than 72 hours</strong> after we confirm a breach affecting their data. Customers under a Data Processing Addendum get the same commitment as a contract term.</li>
+<li>Tell you what we know: what happened, when, what categories of information and roughly how many people were affected, what we have done, and what we recommend you do.</li>
+<li>Keep you updated as we learn more. We would rather send you an incomplete notice on time than a complete one late.</li>
+<li>Give you the information you need to make your own notifications. <strong>You, as the employer, are the one who must notify your employees and any regulator</strong> under California Civil Code sections 1798.29 and 1798.82 and any other law that applies to you. We will support you; we will not do it for you, because they are your employees.</li>
+<li>Make our own notifications where the law requires us to.</li>
+</ol>
+<hr />
+<h2 id="12-changes-to-this-policy">12. Changes to this policy</h2>
+<p>If we change this policy materially, we will post the new version with a new effective date and notify account holders by email or in the app at least 30 days before it takes effect. Non-material changes take effect when posted.</p>
+<p>We keep prior versions available at [ARCHIVE URL] so you can see what changed.</p>
+<p>We will not apply a materially less protective policy to data we already collected without asking you first.</p>
+<hr />
+<h2 id="13-contact">13. Contact</h2>
+<p>Privacy questions, rights requests, and complaints:
+<strong>[PRIVACY EMAIL]</strong></p>
+<p>Security reports:
+<strong>[SECURITY EMAIL]</strong></p>
+<p>Postal:
+[ENTITY NAME]
+[ENTITY ADDRESS]</p>
+<p>We are a small company. A person reads these, and it is usually the person who wrote the software.</p>
+<h2 id="">---</h2>
+<!--
+=========================================================================
+FILL-IN CHECKLIST — every placeholder in this document
+=========================================================================
+
+  [EFFECTIVE DATE]            Target January 11, 2027. Appears twice at top.
+
+  [ENTITY NAME]               LLC legal name. s.13. Before the LLC exists,
+  [ENTITY ADDRESS]            use the sole-proprietorship form (see
+                              legal-terms.md checklist).
+
+  [PRIVACY EMAIL]             s.7.1, s.7.2, s.8, s.13.
+  [SECURITY EMAIL]            s.10, s.13.
+                              These can both route to one inbox, but use
+                              privacy@ and security@ on your own domain.
+                              Enterprise and government reviewers look for
+                              these specific addresses.
+
+  [NUMBER]                    s.3.2 — how many people have Firebase console
+                              access. Write the real number. Today it is 1.
+                              Update it when it changes; a stale number here
+                              is a misrepresentation.
+
+  [BACKUP RETENTION]          s.6 — the real backup retention window for
+                              your Firestore backups. YOU MUST LOOK THIS UP
+                              IN YOUR OWN FIREBASE CONFIGURATION. Do not
+                              guess. If you have not configured backups at
+                              all, say so instead of naming a window.
+
+  [MERCHANT OF RECORD NAME]   s.4 table. Fill when selected (Paddle,
+  [MoR REGION]                Lemon Squeezy, FastSpring, etc.). Note the
+                              region honestly — several MoRs are EU-based,
+                              which would make s.4 an international transfer
+                              and would change the DPA's transfer section.
+
+  [EMAIL SENDER NAME]         s.4 table. Fill when the January 2027 sender
+  [SENDER REGION]             ships (Postmark, SendGrid, Resend, SES...).
+
+  [ARCHIVE URL]               s.12 — where old policy versions live. Can be
+                              a simple /privacy/archive page or a public git
+                              history. Must exist before you claim it does.
+
+=========================================================================
+MAINTENANCE TRIGGERS — this policy becomes FALSE if you do these things
+without updating it. Each is a misrepresentation, which is exactly the
+kind of thing Civil Code 1668 does not let you disclaim away.
+=========================================================================
+
+  - Adding ANY analytics, error-reporting, or product-telemetry tool
+    (Google Analytics, Sentry, PostHog, Plausible, Hotjar, anything).
+    s.2.3 and s.5 currently say you run none. Adding one without
+    updating this policy is an affirmative false statement.
+
+  - Turning on the server-side email sender (s.4.1) — planned Jan 2027.
+
+  - Going live with the merchant of record (s.4).
+
+  - Adding any AI or LLM feature that sends customer data anywhere.
+    s.5 currently promises no model training and s.2.3 promises the
+    help assistant stays on-device.
+
+  - Adding a field that collects sensitive personal information as the
+    CCPA defines it — this would trigger the "Limit the Use of My
+    Sensitive Personal Information" right that s.2.4 says does not apply.
+
+  - Adding a second person with Firebase console access ([NUMBER], s.3.2).
+
+  - Starting to sell or share data in the CCPA sense — would require a
+    "Do Not Sell or Share My Personal Information" link (s.5).
+
+  - Obtaining SOC 2 / ISO 27001 / a pen test — s.10 says you have none.
+    Good news is also a change.
+
+=========================================================================
+-->
+<footer><a href="/">Home</a><a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>

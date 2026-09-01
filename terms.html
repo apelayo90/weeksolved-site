@@ -5,45 +5,333 @@
 <link rel="canonical" href="https://weeksolved.com/terms.html">
 <meta name="theme-color" content="#1c6a66">
 <style>
-:root{--bg:#f2f5f4;--surface:#fff;--ink:#18211f;--ink2:#3c4a47;--muted:#697773;--line:#d2d8d6;--accent:#1c6a66}
-@media (prefers-color-scheme: dark){:root{--bg:#101514;--surface:#191f1e;--ink:#e7ecea;--ink2:#c2ccc9;--muted:#8d9b97;--line:#2c3634;--accent:#4cb3a9}}
+:root{--bg:#f2f5f4;--surface:#fff;--ink:#18211f;--ink2:#3c4a47;--muted:#5d6966;--line:#d2d8d6;--accent:#1c6a66;--warn-soft:#f6ead4;--warn:#8d5c0f}
+@media (prefers-color-scheme: dark){:root{--bg:#101514;--surface:#191f1e;--ink:#e7ecea;--ink2:#c2ccc9;--muted:#8d9b97;--line:#2c3634;--accent:#4cb3a9;--warn-soft:#33260f;--warn:#d9a441}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:760px;margin:0 auto;padding:0 20px 60px}
+.wrap{max-width:800px;margin:0 auto;padding:0 20px 60px}
 header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
 .mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px}
 .brand{font-weight:800;font-size:18px}
 header.top a{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:600;font-size:13.5px}
 h1{font-size:28px;letter-spacing:-.02em;margin:22px 0 4px}
 .eff{color:var(--muted);font-size:13px;margin-bottom:26px}
-h2{font-size:17px;margin:26px 0 8px;letter-spacing:-.01em}
-p,li{color:var(--ink2);font-size:14px}
-ul{padding-left:22px}
+h2{font-size:19px;margin:34px 0 8px;letter-spacing:-.01em;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15.5px;margin:22px 0 6px;letter-spacing:-.005em}
+h4{font-size:14px;margin:16px 0 4px;color:var(--ink)}
+p,li,td,th{color:var(--ink2);font-size:14px}
+ul,ol{padding-left:22px}
+li{margin-bottom:5px}
+a{color:var(--accent)}
+strong{color:var(--ink)}
+code{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+pre code{border:0;background:none;padding:0;font-size:12.5px;line-height:1.5}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+table{border-collapse:collapse;width:100%;margin:12px 0;display:block;overflow-x:auto}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+   font-weight:700;padding:7px 9px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+/* A warranty disclaimer is only enforceable if a reasonable person would notice
+   it. That is judged on the rendered page, so it is built to be noticed here. */
+blockquote{margin:16px 0;padding:14px 16px;background:var(--warn-soft);border:2px solid var(--warn);
+  border-radius:8px}
+blockquote p{color:var(--ink);font-weight:600}
+blockquote strong{font-weight:800}
 footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
 footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inline-block}
+.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 26px}
+.toc h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.toc a{display:inline-block;margin:0 14px 4px 0;font-size:13px;text-decoration:none}
+@media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
 </style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
-<h1>Terms of Service</h1><div class="eff">Effective August 31, 2026</div>
-<p>Weeksolved ("we", "us") is staff-scheduling software provided at weeksolved.com, operated as a sole proprietorship by Alberto Pelayo. By creating an account or using the service you agree to these terms.</p>
-<h2>1. The service</h2>
-<p>Weeksolved helps managers build staff schedules from rules they define, including meal and rest break placement informed by published state labor rules. It produces drafts and information — it is a tool, not legal advice. You remain responsible for reviewing every schedule and for your own compliance with the laws that apply to your business.</p>
-<h2>2. Beta period</h2>
-<p>During the tester program the service is provided free of charge, access is granted by invitation code, and features may change, break, or be withdrawn without notice. Feedback you submit may be used to improve the service.</p>
-<h2>3. Your account</h2>
-<p>You are responsible for the accuracy of the information you enter, for keeping your password secure, and for everything done under your account. Access codes are personal and non-transferable. We may suspend accounts that abuse the service or attempt to disrupt it.</p>
-<h2>4. Your data</h2>
-<p>The schedule information you enter — including your staff's names and any contact details you add — belongs to you. We store it to run the service, as described in our <a href="/privacy.html" style="color:var(--accent)">Privacy Policy</a>, and you can export it at any time. You are responsible for having the right to enter your staff's information into a scheduling tool.</p>
-<h2>5. Payments</h2>
-<p>When paid plans begin, purchases are processed by our merchant of record, which handles payment and applicable sales tax; the checkout will identify the seller. Prices are shown plus applicable tax. Refunds are governed by our <a href="/refunds.html" style="color:var(--accent)">Refund Policy</a>.</p>
-<h2>6. Acceptable use</h2>
-<p>Don't use the service to break the law, to attempt unauthorized access to our systems or other people's data, to resell access without our written agreement, or to probe, scan, or disrupt the service.</p>
-<h2>7. Intellectual property</h2>
-<p>The service, its design, and its software are ours; your data is yours. You get a personal, non-exclusive right to use the service while these terms are in effect.</p>
-<h2>8. Disclaimers</h2>
-<p>The service is provided "as is" and "as available", without warranties of any kind, express or implied, including fitness for a particular purpose. Scheduling outputs, including break placement, may contain errors; laws change and vary by locality. Always verify before relying on them.</p>
-<h2>9. Limitation of liability</h2>
-<p>To the fullest extent permitted by law, we are not liable for indirect, incidental, special, consequential, or punitive damages, or for lost profits, revenue, data, or goodwill. Our total liability for all claims in any twelve-month period is limited to the amounts you paid us for the service in that period — or fifty dollars ($50) if you paid nothing.</p>
-<h2>10. Termination</h2>
-<p>You can stop using the service and delete your account at any time. We may suspend or end access for breach of these terms. On termination your right to use the service ends; export your data first.</p>
-<h2>11. Changes and governing law</h2>
-<p>We may update these terms; material changes will be posted here with a new effective date, and continued use means acceptance. These terms are governed by the laws of the State of California, and disputes will be resolved in the courts located there.</p>
-<h2>12. Contact</h2>
-<p>weeksolved@gmail.com — or the Contact us section inside the app.</p><footer><a href="/">Home</a><a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>
+<h1>Terms of Service</h1>
+<nav class="toc"><h4>On this page</h4><a href="#1-what-the-service-is">1. What the service is</a><a href="#2-who-can-use-it-and-accounts">2. Who can use it, and accounts</a><a href="#3-your-data-is-yours">3. Your data is yours</a><a href="#4-your-responsibilities-for-employee-information">4. Your responsibilities for employee information</a><a href="#5-minors">5. Minors</a><a href="#6-acceptable-use">6. Acceptable use</a><a href="#7-intellectual-property">7. Intellectual property</a><a href="#8-feedback">8. Feedback</a><a href="#9-tester-program">9. Tester program</a><a href="#10-payment">10. Payment</a><a href="#11-warranty-disclaimer">11. WARRANTY DISCLAIMER</a><a href="#12-limitation-of-liability">12. LIMITATION OF LIABILITY</a><a href="#13-indemnity">13. Indemnity</a><a href="#14-term-termination-and-suspension">14. Term, termination, and suspension</a><a href="#15-notices">15. Notices</a><a href="#16-dispute-resolution">16. Dispute resolution</a><a href="#17-governing-law">17. Governing law</a><a href="#18-assignment">18. Assignment</a><a href="#19-force-majeure">19. Force majeure</a><a href="#20-changes-to-these-terms">20. Changes to these terms</a><a href="#21-survival">21. Survival</a><a href="#22-severability">22. Severability</a><a href="#23-no-waiver">23. No waiver</a><a href="#24-relationship-of-the-parties">24. Relationship of the parties</a><a href="#25-entire-agreement">25. Entire agreement</a><a href="#26-contact">26. Contact</a><a href="#">---</a></nav>
+<p><strong>Effective date: [EFFECTIVE DATE]</strong>
+<strong>Last updated: [EFFECTIVE DATE]</strong></p>
+<p>Weeksolved is staff-scheduling software at weeksolved.com. These terms are the agreement between you and [ENTITY NAME] ("Weeksolved", "we", "us") for use of the service.</p>
+<p><strong>Please read section 11 (Warranty disclaimer) and section 12 (Limitation of liability) carefully. They limit what we are responsible for.</strong></p>
+<p>By clicking to accept these terms, entering an invitation code, creating an account, or using the service, you agree to them. If you are agreeing on behalf of a company, agency, or other organization, you confirm you have authority to bind it, and "you" means that organization.</p>
+<hr />
+<h2 id="1-what-the-service-is">1. What the service is</h2>
+<p>Weeksolved helps managers build staff schedules from rules they set. It runs as a single-page application inside your web browser. It produces draft schedules, warnings, and information for a person to review.</p>
+<p>Weeksolved encodes published state meal-and-rest-break rules and warns you when a draft appears to conflict with them.</p>
+<p><strong>Weeksolved is not legal advice, and it does not produce a compliant schedule.</strong></p>
+<p>To be direct about what that means:</p>
+<ul>
+<li>We are not a law firm and we are not your lawyer. Using Weeksolved does not create an attorney-client relationship.</li>
+<li>A schedule that Weeksolved does not flag is not a schedule we have verified, certified, approved, or found lawful. It is a schedule that did not trigger a warning we happened to have written.</li>
+<li>Labor law changes, varies by city and county, and is applied differently by different agencies and courts. Collective bargaining agreements, local ordinances, and your own policies may impose stricter requirements that Weeksolved knows nothing about.</li>
+<li>Every schedule is reviewed and published by a human being who works for you. That person, not the software, decides who works.</li>
+</ul>
+<p>You are responsible for reviewing every schedule before you post it, and for your own compliance with every law that applies to your business.</p>
+<h2 id="2-who-can-use-it-and-accounts">2. Who can use it, and accounts</h2>
+<p>You may use Weeksolved if you are at least 18 years old and legally able to enter a contract.</p>
+<p>Weeksolved is for managers and administrators. <strong>Employees do not have logins and do not use the product.</strong> Only the people you give account credentials to can reach your data.</p>
+<p>You are responsible for:</p>
+<ul>
+<li>the accuracy of everything you enter;</li>
+<li>keeping your password secure and your account credentials confidential;</li>
+<li>everything done under your account, whether or not you authorized it; and</li>
+<li>telling us promptly at [SUPPORT EMAIL] if you believe your account has been accessed without your permission.</li>
+</ul>
+<p>Invitation codes and account credentials are personal and non-transferable. Do not share them outside your organization.</p>
+<h2 id="3-your-data-is-yours">3. Your data is yours</h2>
+<p>The information you enter — your staff's names, contact details, availability, hours, pay rates, notes, and everything else — belongs to you. We do not claim ownership of it.</p>
+<p>We store and process it only to run the service for you and to do what you ask us to do. We describe exactly how in our <a href="https://weeksolved.com/privacy">Privacy Policy</a>. If you are a business or agency buyer, our Data Processing Addendum applies as well and is part of this agreement when you accept it.</p>
+<p>You can export your data from within the app at any time. Do that before you close your account.</p>
+<h3>3.1 We keep your people's details confidential</h3>
+<p>Everything in your account that identifies one of your staff — their name, email address, phone number, hourly rate, time-off balance and accruals, licence and certification details, availability, private notes, and every shift you have ever scheduled them for — is confidential information belonging to you.</p>
+<p><strong>We will not sell it, rent it, licence it, publish it, disclose it to anyone for their own purposes, use it for our own purposes, or use it to train artificial intelligence or machine learning models.</strong> This is a term of this agreement, not just a policy statement, and it survives the end of your account.</p>
+<p>There are exactly three ways information about a named person leaves your account, and none of them is us deciding to pass it on:</p>
+<ol>
+<li><strong>You send it.</strong> You export a report, print a sheet, email or text a schedule, or share a file. You choose what goes out and who receives it.</li>
+<li><strong>The vendors that run the service hold it.</strong> Our database provider stores it so the service can exist. The complete list is in the <a href="https://weeksolved.com/privacy">Privacy Policy</a>, each one is contractually barred from using it for anything but running the service for us, and we will not add one without telling you first.</li>
+<li><strong>The law compels it.</strong> A valid subpoena, warrant, court order or other legal process. We will tell you before we respond unless we are legally forbidden from doing so, and we will object to demands that are overbroad or improper.</li>
+</ol>
+<p>Two things this promise does not do, so that it is not misread. It does not stop <strong>you</strong> disclosing your own staff's information — what you print, send or share is your decision and your responsibility under section 4. And it does not make us blind to your data: we operate the database and can technically reach it, which we set out plainly in the Privacy Policy rather than pretending otherwise. Access is limited to what is needed to run, fix and secure the service.</p>
+<h2 id="4-your-responsibilities-for-employee-information">4. Your responsibilities for employee information</h2>
+<p>This section matters more than any other, so it is worth being plain about it.</p>
+<p><strong>You decide what goes into Weeksolved. You are the one with the legal relationship to your employees, not us.</strong></p>
+<p>You confirm and agree that:</p>
+<p><strong>(a) You have the right to enter the data.</strong> You have whatever legal basis, notice, or consent your jurisdiction requires to put your employees' information into a third-party scheduling tool.</p>
+<p><strong>(b) You give your own employee notices.</strong> Under the California Consumer Privacy Act, employers must give their own employees a notice at collection and must handle employees' privacy rights requests. That obligation is yours, not ours. It has been yours since the CCPA's employee-data exemption expired on January 1, 2023.</p>
+<p><strong>(c) You handle your employees' requests.</strong> If one of your employees wants to see, correct, or delete their information, they come to you. We will help you respond, but we will not act on an employee's request without your instruction, because the data is yours and the employment relationship is yours.</p>
+<p><strong>(d) You are responsible for employment-law compliance.</strong> Meal and rest breaks, overtime, minor work-hour limits, predictive-scheduling and fair-workweek ordinances, collective bargaining agreements, seniority and overtime-rotation rules, recordkeeping, and everything else. Weeksolved gives you information. You make the decisions.</p>
+<p><strong>(e) You handle automated-decision obligations.</strong> California's regulations on automated decisionmaking technology take effect January 1, 2027 and apply to businesses that use technology to make significant employment decisions, including work assignment and compensation. Those obligations — pre-use notice, risk assessments, and access and opt-out rights — fall on you as the employer, not on us as your software vendor. Weeksolved produces drafts that your managers review and publish; we do not assign anyone to a shift. If you need information about how the tool works in order to complete a risk assessment, ask us and we will help.</p>
+<p><strong>(f) Do not enter what does not belong here.</strong> Weeksolved is a scheduling tool. Do not enter, and do not permit anyone to enter:</p>
+<ul>
+<li>patient information, medical records, diagnoses, prescriptions, or anything else that is protected health information under HIPAA;</li>
+<li>Social Security numbers, government identification numbers, financial account numbers, or payment card numbers;</li>
+<li>immigration status, criminal history, or health, disability, religious, or union-membership details about a worker; or</li>
+<li>anything else you would not want stored in a scheduling database.</li>
+</ul>
+<p>We are not a HIPAA business associate and we will not sign a business associate agreement. Free-text note fields accept whatever you type; keep them to scheduling.</p>
+<p>If you enter this kind of information anyway, you do it at your own risk and you are responsible for the consequences.</p>
+<h2 id="5-minors">5. Minors</h2>
+<p>Weeksolved lets you record an employee's date of birth so it can warn you about work-hour limits that apply to workers under 18. That field is optional.</p>
+<p>Weeksolved is not directed to children, and minors do not use it. A minor employee never has an account and never enters anything. When a date of birth is entered, it is entered by you, the adult employer, about your employee. Because we do not collect personal information online from children, the Children's Online Privacy Protection Act does not apply to us.</p>
+<p>You are responsible for handling a minor employee's information under whatever laws apply to you as their employer.</p>
+<h2 id="6-acceptable-use">6. Acceptable use</h2>
+<p>Do not use Weeksolved to:</p>
+<ul>
+<li>break the law, or help anyone else break the law;</li>
+<li>attempt unauthorized access to our systems, our infrastructure, or any other customer's data;</li>
+<li>probe, scan, load-test, or otherwise disrupt the service;</li>
+<li>reverse-engineer, decompile, or derive source code, except where law gives you a right we cannot contract away;</li>
+<li>resell, sublicense, or provide the service to third parties without our written agreement;</li>
+<li>use the service to build a competing product; or</li>
+<li>upload malware, or content that is unlawful or infringes someone else's rights.</li>
+</ul>
+<h2 id="7-intellectual-property">7. Intellectual property</h2>
+<p>The service, its software, its design, its rule library, and its documentation are ours, and stay ours. We grant you a personal, non-exclusive, non-transferable, revocable right to use the service while this agreement is in effect, for your own internal business or agency operations.</p>
+<p>Your data is yours. Nothing in this agreement transfers it to us.</p>
+<h2 id="8-feedback">8. Feedback</h2>
+<p>If you send us ideas, suggestions, bug reports, or feature requests, we may use them to improve Weeksolved, without restriction and without owing you anything. You grant us a perpetual, irrevocable, worldwide, royalty-free licence to use, modify, and incorporate that feedback into the service.</p>
+<p>We will not identify you or your organization by name in connection with feedback without your permission. Do not include confidential information or employee personal information in feedback; if you do, we may delete it.</p>
+<h2 id="9-tester-program">9. Tester program</h2>
+<p>While Weeksolved is in its invitation-code tester program:</p>
+<ul>
+<li>the service is free;</li>
+<li>access is granted by invitation code and we can withdraw it;</li>
+<li>features may change, break, be removed, or be made paid without notice;</li>
+<li>the service may be unavailable, and data loss is possible, so keep your own exports; and</li>
+<li>the disclaimers and liability limits in sections 11 and 12 apply with full force, because you are paying nothing.</li>
+</ul>
+<p>We will give you reasonable notice before the tester program ends and before any charge begins. You will never be charged automatically at the end of the tester program without agreeing to a paid plan first.</p>
+<h2 id="10-payment">10. Payment</h2>
+<p>Weeksolved is currently free. When paid plans begin:</p>
+<ul>
+<li>Purchases are processed by our <strong>merchant of record</strong>. The merchant of record is the seller of record for your purchase, and it is responsible for collecting and remitting sales tax, VAT, and similar taxes. The checkout screen will identify the seller.</li>
+<li>Your purchase is also subject to the merchant of record's terms.</li>
+<li>Prices are shown exclusive of tax unless stated otherwise.</li>
+<li>Fees are due in advance for the subscription period you choose.</li>
+<li>Refunds are governed by our Refund Policy at [REFUND POLICY URL].</li>
+<li>If a payment fails or is charged back, we may suspend your account until it is resolved.</li>
+</ul>
+<p>We may change prices. For an existing subscription, a price change takes effect at your next renewal, and we will give you at least 30 days' notice before it does.</p>
+<h2 id="11-warranty-disclaimer">11. WARRANTY DISCLAIMER</h2>
+<blockquote>
+<h3>⚠️ PLEASE READ THIS SECTION. IT LIMITS THE PROMISES WE MAKE ABOUT THE SERVICE.</h3>
+<p><strong>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITH ALL FAULTS AND WITHOUT WARRANTY OF ANY KIND.</strong></p>
+<p><strong>TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, EXPRESS, IMPLIED, AND STATUTORY, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, ACCURACY, QUIET ENJOYMENT, AND NON-INFRINGEMENT, AND ANY WARRANTIES ARISING FROM COURSE OF DEALING, COURSE OF PERFORMANCE, OR USAGE OF TRADE.</strong></p>
+<p><strong>WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, TIMELY, SECURE, OR ERROR-FREE, THAT DEFECTS WILL BE CORRECTED, OR THAT ANY DATA WILL BE PRESERVED OR RECOVERABLE.</strong></p>
+<p><strong>WE SPECIFICALLY DO NOT WARRANT THAT ANY SCHEDULE, BREAK PLACEMENT, WARNING, CALCULATION, OR OTHER OUTPUT OF THE SERVICE IS ACCURATE, COMPLETE, CURRENT, OR COMPLIANT WITH ANY LAW, REGULATION, ORDINANCE, COLLECTIVE BARGAINING AGREEMENT, OR POLICY. THE SERVICE IS NOT LEGAL ADVICE. THE ABSENCE OF A WARNING IS NOT A DETERMINATION THAT A SCHEDULE IS LAWFUL. YOU MUST INDEPENDENTLY REVIEW EVERY SCHEDULE BEFORE RELYING ON IT.</strong></p>
+<p><strong>NO ADVICE OR INFORMATION, ORAL OR WRITTEN, THAT YOU OBTAIN FROM US OR THROUGH THE SERVICE CREATES ANY WARRANTY NOT EXPRESSLY STATED IN THESE TERMS.</strong></p>
+<p><strong>SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OF CERTAIN WARRANTIES. IF YOU ARE IN ONE OF THEM, SOME OF THE ABOVE MAY NOT APPLY TO YOU, AND YOU MAY HAVE RIGHTS THAT THESE TERMS CANNOT TAKE AWAY. IN THAT CASE, OUR WARRANTIES ARE LIMITED TO THE MINIMUM EXTENT PERMITTED BY LAW.</strong></p>
+</blockquote>
+<h2 id="12-limitation-of-liability">12. LIMITATION OF LIABILITY</h2>
+<blockquote>
+<h3>⚠️ PLEASE READ THIS SECTION. IT LIMITS WHAT WE PAY IF SOMETHING GOES WRONG.</h3>
+<p><strong>(a) EXCLUDED DAMAGES. TO THE FULLEST EXTENT PERMITTED BY LAW, WE WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR ANY LOST PROFITS, LOST REVENUE, LOST BUSINESS, LOST GOODWILL, LOST OR CORRUPTED DATA, COST OF SUBSTITUTE SERVICES, OR REGULATORY FINES OR PENALTIES ASSESSED AGAINST YOU, ARISING OUT OF OR RELATING TO THIS AGREEMENT OR THE SERVICE, WHETHER IN CONTRACT, TORT, STRICT LIABILITY, OR ANY OTHER THEORY, AND EVEN IF WE HAVE BEEN ADVISED THAT SUCH DAMAGES ARE POSSIBLE.</strong></p>
+<p><strong>(b) LIABILITY CAP. TO THE FULLEST EXTENT PERMITTED BY LAW, OUR TOTAL AGGREGATE LIABILITY FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THIS AGREEMENT OR THE SERVICE IN ANY TWELVE-MONTH PERIOD WILL NOT EXCEED THE GREATER OF (i) THE AMOUNTS YOU ACTUALLY PAID US FOR THE SERVICE IN THAT TWELVE-MONTH PERIOD, OR (ii) ONE HUNDRED DOLLARS ($100).</strong></p>
+<p><strong>(c) BASIS OF THE BARGAIN. THE PRICE OF THE SERVICE REFLECTS THIS ALLOCATION OF RISK. WITHOUT THESE LIMITS WE COULD NOT OFFER THE SERVICE AT ITS PRICE, OR FOR FREE DURING THE TESTER PROGRAM. THESE LIMITS APPLY EVEN IF A LIMITED REMEDY FAILS OF ITS ESSENTIAL PURPOSE.</strong></p>
+</blockquote>
+<p><strong>(d) What these limits do NOT cover — savings clause.</strong> Nothing in sections 11 or 12, and nothing anywhere else in this agreement, limits or excludes our liability for:</p>
+<ol>
+<li>our own fraud or fraudulent misrepresentation;</li>
+<li>our own willful injury to the person or property of another;</li>
+<li>our own violation of law, whether willful or negligent;</li>
+<li>death or personal injury caused by our negligence; or</li>
+<li>any other liability that cannot lawfully be limited or excluded.</li>
+</ol>
+<p>This paragraph exists because California Civil Code section 1668 makes contracts that try to exempt a party from responsibility for its own fraud, willful injury, or violation of law against public policy — and in 2025 the California Supreme Court confirmed that this applies to damage <em>caps</em> just as much as to total exculpation. Sections 11 and 12 are to be read as never having applied to the categories listed above. If a court nevertheless finds any part of sections 11 or 12 unenforceable as to a particular claim, that part is severed and modified only as far as necessary for that claim, and the rest of sections 11 and 12 continue to apply in full to every other claim.</p>
+<p><strong>(e) Your side.</strong> The limits in paragraphs (a) and (b) do not apply to your payment obligations under section 10 or to your indemnity obligations under section 13.</p>
+<h2 id="13-indemnity">13. Indemnity</h2>
+<p><strong>(a) You indemnify us for your data and your employment decisions.</strong> You will defend, indemnify, and hold us harmless from any third-party claim, and any resulting loss, liability, damages, penalty, or reasonable legal fees, arising out of or relating to:</p>
+<ul>
+<li>information you entered into the service, including your having entered it without the right to do so;</li>
+<li>your employment decisions, schedules, and employment-law compliance, including any claim by one of your employees or a labor agency;</li>
+<li>your breach of section 4 (responsibilities for employee information), section 6 (acceptable use), or your representations in this agreement; or</li>
+<li>your use of the service in violation of law.</li>
+</ul>
+<p><strong>(b) We indemnify you for intellectual property.</strong> We will defend, indemnify, and hold you harmless from any third-party claim that the service, as we provided it and as you used it in accordance with this agreement, infringes a United States patent, copyright, trademark, or trade secret. This does not apply to claims arising from your data, from your combining the service with anything we did not supply, or from your use of the service in a way this agreement does not permit. If the service becomes, or we think it may become, the subject of such a claim, we may modify it, replace it, or terminate your access and refund any prepaid unused fees. <strong>This paragraph (b) is our entire liability and your exclusive remedy for intellectual property infringement, and it is subject to the cap in section 12(b).</strong></p>
+<p><strong>(c) Public entities.</strong> If you are a government agency or other public entity whose governing law limits its ability to indemnify, paragraph (a) applies only to the extent that law permits. Nothing in this agreement requires you to exceed your legal authority.</p>
+<p><strong>(d) Process.</strong> The party seeking indemnity will notify the other promptly in writing, give the indemnifying party sole control of the defense (except that no settlement admitting fault or imposing a non-monetary obligation may be made without the other party's consent, which will not be unreasonably withheld), and cooperate reasonably at the indemnifying party's expense.</p>
+<h2 id="14-term-termination-and-suspension">14. Term, termination, and suspension</h2>
+<p><strong>(a) Term.</strong> This agreement starts when you first accept it and continues until terminated.</p>
+<p><strong>(b) You can leave.</strong> You can stop using the service and delete your account at any time, for any reason. If you are on a paid plan, cancellation takes effect at the end of your current paid period unless our Refund Policy says otherwise.</p>
+<p><strong>(c) We can terminate for cause.</strong> We may terminate this agreement or your access if you materially breach it and do not cure the breach within 30 days of our written notice (see section 15). We may terminate immediately and without a cure period for breaches of section 6 (acceptable use) or for non-payment after 15 days' notice.</p>
+<p><strong>(d) We can terminate for convenience.</strong> We may terminate this agreement for any reason on 60 days' written notice. If we do, we will refund any prepaid fees for the unused portion of your subscription.</p>
+<p><strong>(e) Suspension.</strong> We may suspend your access immediately, without prior notice, if we reasonably believe it is necessary to protect the service, our other customers, or a third party — for example, active abuse, a security incident, unlawful activity, or a legal order. We will tell you why as soon as we reasonably can, and we will restore access once the cause is resolved. Suspension is not termination.</p>
+<p><strong>(f) What happens to your data.</strong> On termination, your right to use the service ends. <strong>Export your data before you terminate.</strong> After termination we will keep your account data available for export for 30 days, and then delete it in accordance with our Privacy Policy and any Data Processing Addendum. Data stored in your own browser is under your control and you can clear it yourself.</p>
+<h2 id="15-notices">15. Notices</h2>
+<p><strong>To you:</strong> we will send notices to the email address on your account, or post them in the app. It is your job to keep your email address current.</p>
+<p><strong>To us:</strong> send notices to [SUPPORT EMAIL], and for legal notices, to [ENTITY NAME], [ENTITY ADDRESS]. Notice is effective when received.</p>
+<p><strong>Notice and cure.</strong> Before either of us starts a formal proceeding, the complaining party will send the other a written notice describing the problem and what would resolve it, and the parties will confer in good faith for 30 days. This does not prevent either party from seeking an injunction for a breach of confidentiality or intellectual property rights, or from filing in small claims court.</p>
+<h2 id="16-dispute-resolution">16. Dispute resolution</h2>
+<p><strong>There is no mandatory arbitration in this agreement.</strong> We do not require you to give up your right to go to court, and we do not waive ours.</p>
+<p>If we have a dispute, this is the order of operations:</p>
+<ol>
+<li><strong>Talk first.</strong> Follow the notice-and-cure process in section 15. Most problems end here.</li>
+<li><strong>Small claims.</strong> Either of us may bring a qualifying claim in small claims court, in the county where the defendant is located, without going through step 1 first.</li>
+<li><strong>Court.</strong> Otherwise, the dispute goes to the state or federal courts located in [ENTITY COUNTY] County, [ENTITY STATE], and we each consent to their personal jurisdiction and venue.</li>
+</ol>
+<p>Each party bears its own legal fees unless a statute or another part of this agreement says otherwise.</p>
+<p><strong>Public entities.</strong> If you are a government agency whose governing law requires disputes to be heard in a different venue, or which prohibits you from consenting to venue elsewhere, that law controls over this section, and the parties will follow it.</p>
+<h2 id="17-governing-law">17. Governing law</h2>
+<p>This agreement is governed by the laws of the State of [ENTITY STATE], without regard to its conflict-of-laws rules. The United Nations Convention on Contracts for the International Sale of Goods does not apply.</p>
+<p>If you are a government agency whose governing law requires the application of a different state's law, that law controls.</p>
+<h2 id="18-assignment">18. Assignment</h2>
+<p>You may not assign or transfer this agreement, or any of your rights under it, without our prior written consent. Any attempt to do so without consent is void.</p>
+<p><strong>We may assign this agreement, in whole or in part, without your consent</strong>, to:</p>
+<ul>
+<li>an affiliate;</li>
+<li>a successor entity formed by or for us, including on our conversion or reorganization from a sole proprietorship into a limited liability company or corporation; or</li>
+<li>an acquirer of all or substantially all of our business or assets relating to the service, whether by merger, acquisition, sale of assets, or operation of law.</li>
+</ul>
+<p><strong>You specifically agree now that we may assign this agreement to [ENTITY NAME] when it is formed, and that no further consent or signature from you is required.</strong> We will tell you when we do, but the assignment is effective whether or not you respond. Your rights under this agreement, and the protections in our Privacy Policy and any Data Processing Addendum, transfer with it and are not reduced by the assignment.</p>
+<p>We may use subcontractors and subprocessors to help provide the service. We remain responsible for their performance. Subprocessors that handle your data are listed in our Privacy Policy and governed by our Data Processing Addendum.</p>
+<p>This agreement binds and benefits the parties and their permitted successors and assigns.</p>
+<h2 id="19-force-majeure">19. Force majeure</h2>
+<p>Neither party is liable for a failure or delay in performance caused by something outside its reasonable control — natural disaster, fire, flood, war, terrorism, civil unrest, epidemic, labor dispute, government action, failure of the public internet, failure of a utility, or failure of a third-party hosting or infrastructure provider. This does not excuse an obligation to pay money already owed. If the event lasts more than 60 days, either party may terminate this agreement on written notice.</p>
+<h2 id="20-changes-to-these-terms">20. Changes to these terms</h2>
+<p>We may update these terms. If a change is material, we will post the updated terms with a new effective date and give you notice at least 30 days before it takes effect, by email or in the app.</p>
+<p>If you keep using the service after a material change takes effect, you have accepted it. If you do not accept it, stop using the service and close your account before the effective date, and we will refund any prepaid fees for the unused portion of your subscription.</p>
+<p>Changes do not apply retroactively to a dispute that arose before the change took effect.</p>
+<p>If you are on a signed order form or a negotiated Data Processing Addendum, its terms control over changes made this way for the length of your current term.</p>
+<h2 id="21-survival">21. Survival</h2>
+<p>Sections 3 (Your data is yours), 4 (Your responsibilities), 7 (Intellectual property), 8 (Feedback), 10 (Payment, as to amounts owed), 11 (Warranty disclaimer), 12 (Limitation of liability), 13 (Indemnity), 14(f) (Data after termination), 15 (Notices), 16 (Dispute resolution), 17 (Governing law), 18 (Assignment), and 21 through 25 survive termination of this agreement.</p>
+<h2 id="22-severability">22. Severability</h2>
+<p>If any provision of this agreement is held unenforceable, it will be modified to the minimum extent necessary to make it enforceable, and if it cannot be, it will be severed. The rest of the agreement stays in effect. Section 12(d) governs how sections 11 and 12 are treated.</p>
+<h2 id="23-no-waiver">23. No waiver</h2>
+<p>If we do not enforce a provision of this agreement, that is not a waiver of it, and it does not waive our right to enforce it later. A waiver is only effective if it is in writing and signed by the party giving it.</p>
+<h2 id="24-relationship-of-the-parties">24. Relationship of the parties</h2>
+<p>We are independent contractors. This agreement does not create a partnership, joint venture, agency, franchise, or employment relationship. Neither party may bind the other.</p>
+<p>There are no third-party beneficiaries to this agreement. Your employees are not parties to it and gain no rights under it against us; their rights, if any, are against you as their employer.</p>
+<h2 id="25-entire-agreement">25. Entire agreement</h2>
+<p>These terms, together with our Privacy Policy, our Refund Policy, any Data Processing Addendum you have accepted, and any order form you have signed, are the entire agreement between us about the service. They replace every earlier agreement, proposal, or understanding on the subject, written or oral.</p>
+<p>If there is a conflict, the order of precedence is: (1) a signed order form, (2) an executed Data Processing Addendum, (3) these terms, (4) the Privacy Policy.</p>
+<p>Any purchase order, vendor portal terms, or click-through terms you send us are rejected, and none of their terms apply, unless we sign them.</p>
+<h2 id="26-contact">26. Contact</h2>
+<p>[ENTITY NAME]
+[ENTITY ADDRESS]
+[SUPPORT EMAIL]</p>
+<h2 id="">---</h2>
+<!--
+=========================================================================
+FILL-IN CHECKLIST — every placeholder in this document
+=========================================================================
+
+  [ENTITY NAME]        The LLC's exact legal name, e.g. "Weeksolved LLC".
+                       Appears in: preamble, s.15 Notices, s.18 Assignment,
+                       s.26 Contact.
+                       BEFORE THE LLC EXISTS, this must read as the sole
+                       proprietorship: "Alberto Pelayo, doing business as
+                       Weeksolved, a California sole proprietorship."
+                       Do not name an entity that does not yet exist —
+                       a contract with a non-existent party is a problem.
+
+  [ENTITY ADDRESS]     Registered business address. Appears in: s.15, s.26.
+                       Do not use a home address if it can be avoided; use
+                       the registered agent's address or a mail service.
+
+  [ENTITY STATE]       State of formation / governing law. Appears in:
+                       s.16 Dispute resolution, s.17 Governing law.
+                       Expected: California.
+
+  [ENTITY COUNTY]      County for venue. Appears in: s.16.
+                       Should be the county of the business address.
+
+  [EFFECTIVE DATE]     Target: January 11, 2027. Appears at the top, twice.
+
+  [SUPPORT EMAIL]      Appears in: s.2, s.15, s.26.
+                       Recommend moving off weeksolved@gmail.com to
+                       something like legal@weeksolved.com and
+                       support@weeksolved.com before launch. A gmail.com
+                       address in a contract is a credibility problem with
+                       enterprise and government procurement.
+
+  [REFUND POLICY URL]  Appears in: s.10. The Refund Policy is referenced
+                       and incorporated by s.25 — it MUST exist and be
+                       linked before paid plans start, or s.10 points at
+                       nothing.
+
+  Also verify before publishing:
+   - The Privacy Policy link in s.3 resolves.
+   - The merchant of record is actually selected, and s.10's description
+     matches what that MoR's own terms say about who the seller is.
+   - The $100 floor in s.12(b) is what you want (raised from $50; see
+     legal-changes.md for why).
+   - s.16 names no arbitration provider because there is no arbitration
+     clause. This is a deliberate choice — see legal-changes.md.
+
+=========================================================================
+SIGN-UP SCREEN REQUIREMENTS (not part of the contract text, but the
+contract is not enforceable without them)
+=========================================================================
+
+Under Berman v. Freedom Financial Network (9th Cir. 2022), these terms
+bind a customer only if the sign-up screen gives (1) reasonably
+conspicuous notice and (2) an unambiguous manifestation of assent.
+Build the sign-up screen this way:
+
+  1. An UNCHECKED checkbox the user must actively tick. Do not pre-tick it.
+
+  2. Text immediately beside the checkbox, in the SAME SIZE AND COLOR as
+     the surrounding form text (not smaller, not gray):
+       "I have read and agree to the Terms of Service and Privacy Policy."
+
+  3. "Terms of Service" and "Privacy Policy" as visibly obvious links —
+     blue and underlined. Berman holds that underlining alone, or plain
+     text the user must hover to discover, is not enough.
+
+  4. Directly above or on the submit button:
+       "By clicking Create account, you agree to the Terms of Service
+        and Privacy Policy."
+     Berman: a click is assent only if the user was explicitly told that
+     clicking is assent.
+
+  5. All of the above ABOVE the fold, adjacent to the button — not in a
+     footer, not below other content.
+
+  6. LOG THE ASSENT. Store, per account: user id, timestamp, IP address,
+     the version/hash of the terms shown, and the fact the checkbox was
+     ticked. Keep old versions of the terms permanently. If you ever have
+     to prove a customer agreed, this record is the whole case.
+
+  7. For material changes (s.20): re-prompt with the same checkbox flow.
+     Do not rely on "continued use" alone for a change that matters.
+
+=========================================================================
+-->
+<footer><a href="/">Home</a><a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>
