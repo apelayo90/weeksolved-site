@@ -1,0 +1,15 @@
+# Weeksolved — how to report a security problem
+# https://weeksolved.com/security.html
+
+Contact: mailto:security@weeksolved.com
+Contact: https://weeksolved.com/contact.html
+Expires: 2027-09-02T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://weeksolved.com/.well-known/security.txt
+Policy: https://weeksolved.com/security.html
+
+# We are a small team. You will get a human reply, usually within three
+# business days. Tell us what you found, how to reproduce it, and what you
+# think the impact is. We will not take legal action against anyone who
+# reports a problem in good faith, stops at proof of concept, and does not
+# access, change or keep anyone else's data.
