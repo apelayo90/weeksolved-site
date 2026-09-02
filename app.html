@@ -1306,12 +1306,39 @@ let saveTimer = null, loaded = false;
 
  
 const LSKEY = "dowel.v3";
+ 
+function lsKeyFor(uid){ return uid? "dowel.v3:"+uid : LSKEY; }
+let LS_UID = "";         
+function lsKey(){ return lsKeyFor(LS_UID); }
 const LSKEY_OLD = "coveragedesk.v3";    
-function lsSave(){ try{ S._at=Date.now(); localStorage.setItem(LSKEY, JSON.stringify(S)); }catch(e){} }
+ 
+function signOutClean(){
+try{ LS_UID=""; }catch(e){}
+try{ localStorage.removeItem(LSKEY); localStorage.removeItem(LSKEY_OLD); }catch(e){}
+try{ if(cloudUnsub) cloudUnsub(); }catch(e){}
+try{ window.TESTER_ID=""; window.TESTER_LIFE=false; window.TESTER_DAYS=0; window.TESTER_FROM=0; }catch(e){}
+const go=()=>{ try{ location.reload(); }catch(e){} };
+try{ return FB.auth.signOut().then(go).catch(go); }catch(e){ go(); }
+}
+function lsSave(){ try{ S._at=Date.now(); S._uid=LS_UID||""; localStorage.setItem(lsKey(), JSON.stringify(S)); }catch(e){} }
 function lsLoad(){ try{
-let r=localStorage.getItem(LSKEY);
-if(!r){ r=localStorage.getItem(LSKEY_OLD); if(r) localStorage.setItem(LSKEY, r); }
-return r?JSON.parse(r):null; }catch(e){ return null; } }
+let r=localStorage.getItem(lsKey());
+ 
+if(!r && !LS_UID){ r=localStorage.getItem(LSKEY_OLD); if(r) localStorage.setItem(LSKEY, r); }
+if(!r) return null;
+const d=JSON.parse(r);
+ 
+if(LS_UID && d && d._uid && d._uid!==LS_UID) return null;
+return d; }catch(e){ return null; } }
+ 
+function legacyBoard(){
+try{
+const r=localStorage.getItem(LSKEY); if(!r) return null;
+const d=JSON.parse(r);
+return (d && !d._uid) ? d : null;
+}catch(e){ return null; }
+}
+function dropLegacy(){ try{ localStorage.removeItem(LSKEY); localStorage.removeItem(LSKEY_OLD); }catch(e){} }
 
  
 const ME = (function(){
@@ -1388,7 +1415,7 @@ modal("Your account", `
       </div>
       ${em? `<div class="help">Signing out does not remove anything. The board you are looking at is kept in ${esc(em)}, and whatever is in the other account is waiting in that one.</div>`:""}
     </div>`, `<button class="btn" data-close>Close</button>`, r=>{
-const out=()=>{ try{ FB.auth.signOut().then(()=>location.reload()).catch(()=>location.reload()); }
+const out=()=>{ try{ signOutClean(); }
 catch(e){ location.reload(); } };
 const b1=r.querySelector("#acsw"); if(b1) b1.onclick=out;
 const b2=r.querySelector("#acout"); if(b2) b2.onclick=out;
@@ -1807,8 +1834,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "d7bd5bd9";       
-const BUILD_AT = "2026-09-02 00:22 UTC";       
+const BUILD_ID = "07ce500e";       
+const BUILD_AT = "2026-09-02 00:56 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -1855,7 +1882,7 @@ document.getElementById("ndaerr").textContent="Tick the box to carry on."; retur
 recordNdaAccept(); location.reload();
 };
 document.getElementById("ndaout").onclick=()=>{
-try{ FB.auth.signOut().then(()=>location.reload()).catch(()=>location.reload()); }
+try{ signOutClean(); }
 catch(e){ location.reload(); }
 };
 }
@@ -1881,7 +1908,7 @@ recordTermsAccept();
 location.reload();
 };
 document.getElementById("tuout").onclick=()=>{
-try{ FB.auth.signOut().then(()=>location.reload()).catch(()=>location.reload()); }
+try{ signOutClean(); }
 catch(e){ location.reload(); }
 };
 }
@@ -1950,15 +1977,42 @@ else { termsUpdateScreen(); return; }
 }
 
 WKHASH={};
+LS_UID = uid;                        
 const remote=await cloudFetchAll(uid);
-const local=lsLoad();
+const local=lsLoad();                
 if(remote){
 CLOUD_REV=remote.rev;
 const localAt=local? (local._at||0):0;
 if(!local || remote.at>=localAt){ S=migrate(remote.state); lsSave(); if(remote.legacy) cloudPushNow(); }
 else { S=migrate(local); cloudPushNow(); }    
+} else if(local && local.v===3){
+S=migrate(local); cloudPushNow();
 } else {
-S=(local && local.v===3)? migrate(local) : seedState();
+ 
+const leg=legacyBoard();
+if(leg && (leg.employees||[]).length){
+const co=(leg.org&&leg.org.name)? String(leg.org.name) : "an unnamed business";
+const n=(leg.employees||[]).filter(e=>e.active).length;
+const keep=await new Promise(res=>{
+modal("There is a schedule saved on this device", `
+          <div class="stack">
+            <div class="banner warn"><div>This browser has a saved schedule for <b>${esc(co)}</b>
+              with <b>${n} ${n===1?"person":"people"}</b> on the roster, from before anyone signed in here.
+              It is not linked to any account.</div></div>
+            <p>If that is your business, we will move it into your account and it will follow you between devices from now on.</p>
+            <p><b>If it is not yours \u2014 if somebody else used this computer \u2014 say no.</b>
+              Starting fresh is the right answer, and their schedule stays out of your account.</p>
+          </div>`,
+`<button class="btn" id="lgno">Not mine \u2014 start fresh</button>
+           <button class="btn primary" id="lgyes">Yes, that is my business</button>`,
+r=>{ r.querySelector("#lgyes").onclick=()=>{ closeModal(true); res(true); };
+r.querySelector("#lgno").onclick =()=>{ closeModal(true); res(false); }; });
+});
+if(keep){ S=migrate(leg); dropLegacy(); }
+else { S=seedState(); }
+} else {
+S=seedState();
+}
 cloudPushNow();
 }
 if(!(await newDeviceGate(uid))) return;
@@ -2087,7 +2141,7 @@ kickUnsub=FB.db.doc("users/"+uid+"/meta/kick").onSnapshot(sn=>{
 const k=(sn.exists && sn.data())||null;
 if(!k || k.keep===deviceId()) return;
 if((k.at||0) < SESSION_AT) return;
-FB.auth.signOut().then(()=>location.reload()).catch(()=>{});
+signOutClean();
 }, ()=>{});
 }
 
@@ -2133,7 +2187,7 @@ document.body.innerHTML =
 '<button class="btn ghost sm" id="dcout" style="margin-top:10px">Sign out</button>'+
 '</div></div>';
 const err=t=>{ const e=document.getElementById("dcerr"); if(e) e.textContent=t; };
-document.getElementById("dcout").onclick=()=>{ FB.auth.signOut().then(()=>location.reload()); };
+document.getElementById("dcout").onclick=()=>{ signOutClean(); };
 document.getElementById("dcsend").onclick=async ()=>{
 const b=document.getElementById("dcsend");
 b.disabled=true; b.textContent="Sending\u2026";
@@ -2265,7 +2319,7 @@ const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
 FB.user=cred.user;
  
 try{ await FB.db.doc("codes/"+h).set({
-uid:cred.user.uid, id:hit.id, at:Date.now(),
+uid:cred.user.uid, id:hit.id, h:h, at:Date.now(),
 email:String(email||"").trim().slice(0,120),
 tz:(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||"").slice(0,60); }catch(e){ return ""; } })(),
 loc:String((navigator.languages&&navigator.languages[0])||navigator.language||"").slice(0,20),
@@ -2640,7 +2694,7 @@ document.body.innerHTML =
 '<p class="gfoot">Your board is kept safe in your account. Ask for a new code and everything picks up where it left off.</p>'+
 '<button class="btn ghost sm" id="gout" style="margin-top:10px">Sign out</button>'+
 '</div></div>';
-document.getElementById("gout").onclick=()=>{ FB.auth.signOut().then(()=>location.reload()); };
+document.getElementById("gout").onclick=()=>{ signOutClean(); };
 }
 
 async function boot(){
@@ -5078,7 +5132,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'who.innerHTML="<option value=\'\'>Pick your name\u2026</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("")+"<option value=\'__other\'>My name isn\u2019t listed</option>";',
 'var L=document.getElementById("list");',
 'D.shifts.forEach(function(sh){var el=document.createElement("label");el.className="sh";',
-'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" \u00b7 "+esc(sh.time)+" \u00b7 "+sh.hours+" hours"+(sh.role?" \u00b7 "+esc(sh.role):"")+"</span></span>";',
+'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" \u00b7 "+esc(sh.time)+" \u00b7 "+esc(String(sh.hours))+" hours"+(sh.role?" \u00b7 "+esc(sh.role):"")+"</span></span>";',
 'L.appendChild(el);});',
 'document.getElementById("mk").onclick=function(){',
 'var k=who.value;if(!k){alert("Pick your name first.");return;}',
@@ -6291,11 +6345,25 @@ const LIC_COMPACT=[
  
  
 function printDoc(html, title){
-const w=window.open("", "_blank");
-if(!w){ toast("Your browser blocked the print window \u2014 allow pop-ups, or download it and print from there"); return false; }
+let url="";
+try{
+ 
+url=URL.createObjectURL(new Blob([html], {type:"text/html"}));
+}catch(e){ url=""; }
+const w = url? window.open(url, "_blank", "noopener") : window.open("", "_blank");
+if(!w){
+if(url) URL.revokeObjectURL(url);
+toast("Your browser blocked the print window \u2014 allow pop-ups, or save it and print from there");
+return false;
+}
+if(!url){
+ 
+try{ w.opener=null; }catch(e){}
 w.document.open(); w.document.write(html); w.document.close();
 try{ w.document.title=title||"Print"; }catch(e){}
-setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} }, 500);
+}
+setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} }, 700);
+if(url) setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
 return true;
 }
 function withEmail(){ return S.employees.filter(e=>e.active && (e.email||"").trim()); }
@@ -9857,7 +9925,7 @@ r=>{ r.querySelector("#rsgo").onclick=()=>{
 try{ S=migrate(JSON.parse(r.querySelector("#rsbox").value)); priorityRefresh(); save(); closeModal(); render(); toast("Restored"); }
 catch(e){ toast("That doesn't look like a backup file"); } }; });
 const so=root.querySelector("#setsignout");
-if(so) so.onclick=()=>{ FB.auth.signOut().then(()=>location.reload()); };
+if(so) so.onclick=()=>{ signOutClean(); };
 const sw=root.querySelector("#setswapok");
 if(sw) sw.onclick=()=>{ S.ui.rosterSwap=0; save(); render(); };
 root.querySelectorAll("[data-devforget]").forEach(b=>b.onclick=async ()=>{
@@ -12971,7 +13039,11 @@ setTimeout(()=>URL.revokeObjectURL(url),1500);
 toast("Saved "+filename); return true;
 }catch(e){ toast("Your browser blocked that download."); return false; }
 }
-function csvRow(arr){ return arr.map(v=>{ const s=String(v==null?"":v); return /[",\n]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s; }).join(","); }
+function csvRow(arr){ return arr.map(v=>{
+let s=String(v==null?"":v);
+ 
+if(/^[=+\-@\t\r]/.test(s)) s="'"+s;
+return /[",\n\r]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s; }).join(","); }
 
 function weekGridCSV(){
 const ws=S.currentWeek, wk=getWeek(ws), dates=weekDates(ws);
@@ -13827,7 +13899,7 @@ const hols=res.map(r=>(S.holidays.list||[]).find(h=>h.id===r.holidayId)).filter(
 if(!hols.length) return "Hi "+first+" \u2014 you\u2019re not down for any of the holidays this season. Enjoy them.";
 return "Hi "+first+" \u2014 here are the holidays you\u2019re working:\n\n"+
 hols.map(h=>"  \u2022 "+h.name+", "+prettyFull(h.date)+
-(h.hours? " ("+h.hours+")" : "")).join("\n")+
+(h.hours? " ("+esc(h.hours)+")" : "")).join("\n")+
 "\n\nHolidays are set before vacations and ordinary requests, so these won\u2019t move. Thanks for covering them.";
 }
 if(kind==="request"){
@@ -17094,7 +17166,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'function esc(t){return String(t==null?"":t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
 'document.getElementById("sub").textContent=D.org+(D.from?" · "+D.from+" to "+D.to:"");',
 'document.getElementById("mx").textContent=D.maxPicks;',
-'if(D.deadline){document.getElementById("dl").innerHTML=" All requests are due by <b>"+D.deadline+"</b>.";}',
+'if(D.deadline){document.getElementById("dl").innerHTML=" All requests are due by <b>"+esc(D.deadline)+"</b>.";}',
 'var who=document.getElementById("who");',
 'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("")+"<option value=\'__other\'>My name isn’t listed</option>";',
 'function busyLevel(f,t){var mx=0,d=new Date(f+"T00:00:00"),e=new Date(t+"T00:00:00"),g=0;',
@@ -17199,7 +17271,7 @@ const P = [
 'function draw(){var L=document.getElementById("list");L.innerHTML="";order.forEach(function(hi,pos){',
 'var h=D.holidays[hi],d=new Date(h.date+"T00:00:00");',
 'var el=document.createElement("div");el.className="it"+(cant[hi]?" cant":"");',
-'el.innerHTML="<span class=\'no\'>"+(pos+1)+"</span><div class=\'nm\'><b>"+esc(h.name)+"</b><span>"+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(h.hours?" · "+h.hours:"")+"</span></div>"+',
+'el.innerHTML="<span class=\'no\'>"+(pos+1)+"</span><div class=\'nm\'><b>"+esc(h.name)+"</b><span>"+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(h.hours?" · "+esc(h.hours):"")+"</span></div>"+',
 '"<button class=\'bt\' data-u>↑</button><button class=\'bt\' data-d>↓</button><button class=\'bt x\' data-c>"+(cant[hi]?"can\'t ✓":"can\'t")+"</button>";',
 'el.querySelector("[data-u]").onclick=function(){if(pos>0){var t=order[pos-1];order[pos-1]=order[pos];order[pos]=t;draw();}};',
 'el.querySelector("[data-d]").onclick=function(){if(pos<order.length-1){var t=order[pos+1];order[pos+1]=order[pos];order[pos]=t;draw();}};',
