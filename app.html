@@ -1807,10 +1807,10 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "d6f4c8c8";       
-const BUILD_AT = "2026-09-02 00:00 UTC";       
+const BUILD_ID = "d7bd5bd9";       
+const BUILD_AT = "2026-09-02 00:22 UTC";       
 const TERMS_VERSION = "2";                  
-const TERMS_HASH = "ea38f0e93b4e655b";
+const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
 const TERMSKEY = "ws.terms";
 function termsAccepted(){
@@ -17553,6 +17553,8 @@ a:"On someone's file, say what kind of licence it is and which state issued it. 
 a:"If someone is in a role you marked as licensed and you have put an expiry date on their file, the drafter will not give them a shift dated after that date. That is not a setting and cannot be switched off — it is the one thing the scheduler simply refuses to do.\n\nWhen you press Draft, anything expiring inside the stretch is put in front of you first: who, what date, and whether it takes out the whole stretch or only part of it. You can open their file and put the new date in, or carry on and have the week built around it. If the renewal came through and you just have not typed it yet, fixing it there is the quickest route.\n\nNothing happens for anyone with no license details on file. A blank is not treated as a problem — Weeksolved has no date, so it makes no claim either way, and those people are scheduled normally."},
 {t:"Someone has no preferences on file", k:"blank preferences empty availability open nothing on file new person default flag", go:"team",
 a:"That's fine, and it costs you nothing. Anyone with nothing on file is treated as available whenever you're open, and the scheduler uses them normally. The Team page just shows a quiet 'nothing on file' note against them and a count in the header, so you know who you've never asked — not because anything is wrong. Press Starter form if you'd like to collect it, or leave it: plenty of rosters run perfectly well with nobody's preferences entered at all."},
+{t:"Is this email really from Weeksolved?", k:"phishing phish scam fake fraud suspicious email spoof impersonate pretend link safe verify real genuine", go:null,
+a:"Four things are always true, and anything that breaks one of them is not us.\n\n\u2022 We only ever email you from an address ending @weeksolved.com.\n\u2022 Every link we send goes to weeksolved.com. Never a shortened link, never another domain.\n\u2022 We will never ask you for your password \u2014 not by email, not by text, not on the phone, not ever. There is no situation in which we need it.\n\u2022 We will never ask you to move money, change bank details, or send us anything about your staff by email.\n\nChanges that matter \u2014 your password, your email address, deleting the account \u2014 can only be made inside the app after signing in. An email will tell you one happened; an email can never make one happen.\n\nIf something looks wrong, do not press the link. Open weeksolved.com by typing it yourself, and sign in there. Everything real will be waiting. Then forward the message to security@weeksolved.com and we will look at it.\n\nOne more, because it is the useful habit: your schedule and your team are only ever behind your own password on weeksolved.com. Nobody who genuinely works here will ever need you to give that up."},
 {t:"Delete my account", k:"delete account close cancel remove erase wipe quit leave shut down my data gone", go:"settings",
 a:"Settings \u2192 Your account \u2192 Delete this account. It asks for your password, then removes the account and everything saved in it \u2014 your team, every week, every setting. It cannot be undone and support cannot get it back, so export or print anything you want to keep first. If you are on a tester code, note that codes are single use: deleting the account does not free the code up, and you would need a new one to come back."},
 {t:"Union agreement or public-sector rules", k:"union collective bargaining agreement cba steward seniority public sector civil service memorandum", go:"settings",
