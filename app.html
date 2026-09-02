@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Weeksolved">
 <!-- Weeksolved. Copyright (c) 2026 Alberto Pelayo. All rights reserved. -->
 <title>Weeksolved — Staff Scheduling Software with Break Compliance</title>
-<meta name="description" content="Weeksolved builds your staff schedule from your own rules: required coverage, role ratios, availability, hour caps and state meal and rest break law. Weekly and daily rotas, station sheets, holiday polls, Excel and PDF export.">
+<meta name="description" content="Weeksolved builds your staff schedule from your own rules: required coverage, role ratios, availability, hour caps and state meal and rest break law. Weekly and daily schedules, station sheets, holiday polls, Excel and PDF export.">
 <meta name="keywords" content="employee scheduling software, staff scheduling, shift scheduler, work schedule maker, shift planner, staff rota software, employee rota, break compliance, meal break law, rest break scheduling, California meal break, labor law scheduling, coverage planning, shift rotation, seniority scheduling, healthcare staff scheduling, pharmacy staff scheduling, clinic scheduling software, small business scheduling">
 <meta name="author" content="Weeksolved">
 <meta name="robots" content="index,follow">
@@ -27,7 +27,7 @@
 <meta property="og:description" content="Give it your coverage rules once. Weeksolved drafts your week from your own coverage rules, places every meal and rest break inside the window your state's rules set, and tells you exactly what blocked any shift it could not fill.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Weeksolved — Staff Scheduling Software with Break Compliance">
-<meta name="twitter:description" content="Staff scheduling that follows your rules and your state's break law. Weekly and daily rotas, station sheets, fair rotation, Excel and PDF export.">
+<meta name="twitter:description" content="Staff scheduling that follows your rules and your state's break law. Weekly and daily schedules, station sheets, fair rotation, Excel and PDF export.">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication",
  "name":"Weeksolved",
@@ -467,7 +467,7 @@ ol.a2hs li{padding-left:2px}
 .mini{font-size:11px;color:var(--muted)}
 .ovf{max-height:280px;overflow-y:auto}
 
-/* shift + role colours that survive both themes */
+/* shift + role colors that survive both themes */
 .sc{color:var(--sc)}
 /* Fallback first, tint second. Safari before 16.2 and Firefox before 113 drop a
    declaration they can't parse, and a shift block with no background at all is
@@ -820,8 +820,12 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .field .pwwrap{margin-bottom:0}
 .field .pwwrap input{text-align:left}
 /* Online terms only bind where the notice is conspicuous and the agreement is a
-   real, deliberate act. So: an unticked box, text the same size and colour as the
+   real, deliberate act. So: an unchecked box, text the same size and color as the
    rest of the form rather than fine print, and links that look like links. */
+.gor{display:flex;align-items:center;gap:10px;margin:14px 0 10px;color:var(--muted);font-size:12px}
+.gor:before,.gor:after{content:"";flex:1;border-top:1px solid var(--line)}
+.ggoogle{width:100%;justify-content:center;gap:10px;background:var(--surface);border:1px solid var(--line2);color:var(--ink)}
+.ggoogle:hover{background:var(--surface2)}
 .gagree{display:flex;align-items:flex-start;gap:9px;text-align:left;margin-top:12px;
   font-size:13.5px;line-height:1.5;color:var(--ink2);cursor:pointer}
 .gagree input{width:18px;height:18px;min-width:18px;margin:1px 0 0;flex:none;text-align:left;
@@ -1409,9 +1413,18 @@ function signOutQuiet(){
 forgetSession();
 try{ return FB.auth.signOut().catch(()=>{}); }catch(e){ return Promise.resolve(); }
 }
+let LS_FULL_TOLD=false;
 function lsSave(){
 if(SIGNED_OUT) return;    
-try{ S._at=Date.now(); S._uid=LS_UID||""; localStorage.setItem(lsKey(), JSON.stringify(S)); }catch(e){}
+try{ S._at=Date.now(); S._uid=LS_UID||""; localStorage.setItem(lsKey(), JSON.stringify(S)); }
+catch(e){
+ 
+let saved=false;
+try{ localStorage.removeItem(LSKEY_OLD); localStorage.setItem(lsKey(), JSON.stringify(S)); saved=true; }catch(_){}
+if(!saved && !LS_FULL_TOLD){ LS_FULL_TOLD=true;
+try{ toast("This browser's storage is full, so changes are not being kept on this device. "+(FB&&FB.user? "They are still saved to your account." : "Sign in to keep saving, or export a backup from Settings."), {label:"OK", run:()=>{}}); }catch(_){}
+}
+}
 }
 function lsLoad(){ try{
 let r=localStorage.getItem(lsKey());
@@ -1490,6 +1503,7 @@ modal("Your account", `
           <div style="font-size:15px;font-weight:600;word-break:break-all">${esc(em)}</div>
           <div class="mini" style="margin-top:4px">Your board saves to this account and follows you to any browser you sign into.</div>
           <div id="acver" style="margin-top:10px"></div>
+          <div id="acways" style="margin-top:10px">${signInWaysHtml()}</div>
         </div></div>`
 : `<div class="banner info"><div><b>Not signed in.</b> This board lives in this browser only. Nothing is being saved to an account, and nothing leaves this device.</div></div>`}
       <div class="stack" style="gap:8px">
@@ -1505,6 +1519,8 @@ modal("Your account", `
             <span><b>Plan and billing</b><span class="mini" style="display:block">${window.TESTER_LIFE? "Free for life \u2014 nothing to pay, ever." : (typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.on)? "Free while testing. See what plans will cost." : "See what each plan covers."}</span></span></a>
         <button class="btn" id="acset" style="justify-content:flex-start;text-align:left">
           <span><b>Account settings</b><span class="mini" style="display:block">Devices using this account, password, and what one account covers.</span></span></button>
+        <button class="btn" id="accopy" style="justify-content:flex-start;text-align:left">
+          <span><b>Copy my details for support</b><span class="mini" style="display:block">Which build, which browser, whether saving is working \u2014 one paste, so nobody has to ask.</span></span></button>
       </div>
       ${em? `<div class="help">Signing out does not remove anything. The board you are looking at is kept in ${esc(em)}, and whatever is in the other account is waiting in that one.</div>`:""}
     </div>`, `<button class="btn" data-close>Close</button>`, r=>{
@@ -1514,11 +1530,42 @@ const b1=r.querySelector("#acsw"); if(b1) b1.onclick=out;
 const b2=r.querySelector("#acout"); if(b2) b2.onclick=out;
 const b3=r.querySelector("#acin"); if(b3) b3.onclick=()=>location.reload();
 r.querySelector("#acset").onclick=()=>{ closeModal(true); go("settings"); };
+{ const c=r.querySelector("#accopy"); if(c) c.onclick=()=>copySupportDetails(); }
 { const ac=r.querySelector("#acacc");
 if(ac) ac.onclick=()=>{ closeModal(true);
 accessWelcome(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM); }; }
 wireEmailCheck(r);
+wireSignInWays(r);
 });
+}
+ 
+function signInWaysHtml(){
+if(!(typeof FB!=="undefined" && FB && FB.user) || !GOOGLE_SIGNIN) return "";
+const u=FB.user, g=hasProvider(u,"google.com"), pw=hasProvider(u,"password");
+const ways=[pw? "email and password":"", g? "Google":""].filter(Boolean).join(" \u00b7 ");
+return '<div class="lab">Ways to sign in</div><div class="mini">'+esc(ways||"\u2014")+'</div>'+
+(!g && googleAvailable()? '<div class="row" style="margin-top:8px"><button class="btn sm" id="aclinkg">'+GOOGLE_MARK+'<span>Add Google sign-in</span></button></div>' : '')+
+(g && !pw? '<div class="row" style="margin-top:8px"><button class="btn sm" id="acaddpw">Add a password</button></div>'+
+'<div class="mini" style="margin-top:4px">Handy for the home-screen icon on an iPhone, where the Google window cannot come back to the app.</div>' : '')+
+'<div class="mini" id="acwaysnote" style="margin-top:6px"></div>';
+}
+function wireSignInWays(root){
+const note=t=>{ const n=root.querySelector("#acwaysnote"); if(n) n.textContent=t; };
+const lg=root.querySelector("#aclinkg");
+if(lg) lg.onclick=async ()=>{
+lg.disabled=true;
+try{ await FB.user.linkWithPopup(googleProvider());
+const slot=root.querySelector("#acways"); if(slot) slot.innerHTML=signInWaysHtml(); wireSignInWays(root);
+toast("Google added \u2014 either way in works now"); }
+catch(e){ lg.disabled=false; const m=googleErrSay(e); if(m) note(m); }
+};
+const ap=root.querySelector("#acaddpw");
+if(ap) ap.onclick=async ()=>{
+ap.disabled=true;
+try{ await FB.auth.sendPasswordResetEmail(FB.user.email);
+note("A link to set a password is on its way to "+FB.user.email+". It comes from a noreply address at Google, so check Spam and Promotions too. Once it is set, the email-and-password boxes work for this account as well."); }
+catch(e){ ap.disabled=false; note(authErrSay(e)); }
+};
 }
  
 function wireEmailCheck(root){
@@ -1671,7 +1718,7 @@ body.innerHTML = `
               <span class="wd">${working.length} ${working.length===1?"person is":"people are"} on this week. One message each, with their days, times, meal breaks and station.</span></button>
             <button type="button" class="wopt ${mode==="all"?"on":""}" data-mode="all">
               <span class="wt">Everyone gets the whole week</span>
-              <span class="wd">One message, the full rota day by day, to all ${roster.length} active staff.</span></button>
+              <span class="wd">One message, the full schedule day by day, to all ${roster.length} active staff.</span></button>
           </div></div>
         <div class="field"><label>How</label>
           <div class="seg" id="show">
@@ -1681,7 +1728,7 @@ body.innerHTML = `
           </div></div>
         ${how!=="copy"? `<div class="banner ${missing.length?"warn":"info"}"><div>
           <b>${reachable.length} of ${people.length} can be reached by ${how==="sms"?"text":"email"}.</b>
-          ${missing.length? "No "+(how==="sms"?"mobile number":"email address")+" on file for "+esc(missing.map(e=>e.name.split(" ")[0]).join(", "))+". Add one on their profile under Team." : "Everyone has one on file."}
+          ${missing.length? "No "+(how==="sms"?"cell number":"email address")+" on file for "+esc(missing.map(e=>e.name.split(" ")[0]).join(", "))+". Add one on their profile under Team." : "Everyone has one on file."}
         </div></div>`:""}
         <div class="field"><label>Preview${mode==="each"&&working.length? " — "+esc(working[0].name.split(" ")[0])+"'s copy":""}</label>
           <textarea rows="9" readonly style="font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)">${esc(mode==="each"? personalText((working[0]||{}).id, ws) : wholeWeekText(ws))}</textarea></div>`;
@@ -1853,7 +1900,7 @@ modal("A few new questions from the latest update", `
         </select>
         <span class="mini">New: put a date of birth on anyone still at school and the drafter holds them to their age\u2019s limits \u2014 hours on a school day, hours a week, and how late they may finish.</span></div>
       <div class="help">Also new, no answer needed: <b>an open shift can now be offered to the team</b>. Cover the gaps
-        writes you a one-page file and the message to go with it \u2014 your people tick what they\u2019d take and send back a
+        writes you a one-page file and the message to go with it \u2014 your people check what they\u2019d take and send back a
         short code. No accounts, no app for them, and every rule is checked again before anyone lands on the schedule.</div>
       <div class="help">Also new, no answer needed: <b>your account now lists the devices it has been opened on</b>, under
         Settings \u2014 with a way to sign the others out, and an optional emailed confirmation the first time a new device
@@ -1942,6 +1989,10 @@ inp.focus();
 
  
 const CLOUD = {"apiKey":"AIzaSyD5BrMfKjRf0mzdjaj7tlohjYqqaTKGEao","authDomain":"weeksolved-54472.firebaseapp.com","projectId":"weeksolved-54472","storageBucket":"weeksolved-54472.firebasestorage.app","messagingSenderId":"332039926756","appId":"1:332039926756:web:f5a561eb23d2783eb78df1"};
+ 
+const GOOGLE_SIGNIN = true;
+ 
+const APPCHECK_KEY = "";
 const MAILAPI = "";    
 let FB=null, CLOUD_REV=0, cloudPushTimer=null, cloudUnsub=null, SIGNING_UP=false, SHELL=null;
 let WELCOME_WITH=null;    
@@ -1963,8 +2014,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "5e7294a3";       
-const BUILD_AT = "2026-09-02 14:02 UTC";       
+const BUILD_ID = "92b292b6";       
+const BUILD_AT = "2026-09-02 19:36 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -1994,20 +2045,20 @@ document.body.innerHTML =
 '<div class="gate"><div class="gatebox">'+
 '<div class="gatemark">WS</div>'+
 '<h1>One thing we ask</h1>'+
-'<p class="gsub">Weeksolved is not public yet. Before you carry on, we need you to read the one-page tester agreement.</p>'+
+'<p class="gsub">Weeksolved is not public yet. Before you continue, we need you to read the one-page tester agreement.</p>'+
 '<div class="gnote"><b>The whole of it:</b> keep the product itself between you and your own business until it launches. '+
 'The schedules you make are yours \u2014 print them, send them, hand them out, with no restriction at all. '+
 'You can show Weeksolved to anyone in your own business, and you can stop testing whenever you like and take your data with you.</div>'+
 '<label class="gagree"><input type="checkbox" id="ndaok"><span>'+
 'I have read and agree to the <a href="/tester-agreement.html" target="_blank" rel="noopener">Tester Confidentiality Agreement</a>.</span></label>'+
-'<button class="btn primary big" id="ndago" style="margin-top:12px">Agree and carry on</button>'+
+'<button class="btn primary big" id="ndago" style="margin-top:12px">Agree and continue</button>'+
 '<div class="gerr" id="ndaerr"></div>'+
 '<button class="btn ghost sm" id="ndaout" style="margin-top:10px">Sign out instead</button>'+
 '<p class="gfoot">Your board is untouched either way. If you would rather not agree, sign out and email us \u2014 you can have everything you have entered as a file.</p>'+
 '</div></div>';
 document.getElementById("ndago").onclick=()=>{
 if(!document.getElementById("ndaok").checked){
-document.getElementById("ndaerr").textContent="Tick the box to carry on."; return; }
+document.getElementById("ndaerr").textContent="Check the box to continue."; return; }
 recordNdaAccept(); location.reload();
 };
 document.getElementById("ndaout").onclick=()=>{
@@ -2025,14 +2076,14 @@ document.body.innerHTML =
 '<label class="gagree"><input type="checkbox" id="tuok"><span>'+
 'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>'+
 (TERMS_DATE? ', dated '+esc(TERMS_DATE) : '')+'.</span></label>'+
-'<button class="btn primary big" id="tugo" style="margin-top:12px">Agree and carry on</button>'+
+'<button class="btn primary big" id="tugo" style="margin-top:12px">Agree and continue</button>'+
 '<div class="gerr" id="tuerr"></div>'+
 '<button class="btn ghost sm" id="tuout" style="margin-top:10px">Sign out instead</button>'+
 '<p class="gfoot">Your board is untouched and waiting either way. If you would rather not agree, sign out and email us \u2014 you can have everything you have entered as a file.</p>'+
 '</div></div>';
 document.getElementById("tugo").onclick=()=>{
 if(!document.getElementById("tuok").checked){
-document.getElementById("tuerr").textContent="Tick the box to carry on."; return; }
+document.getElementById("tuerr").textContent="Check the box to continue."; return; }
 recordTermsAccept();
 location.reload();
 };
@@ -2061,6 +2112,10 @@ if(!S.setupDone && !S.employees.length) setTimeout(wizard, 500);
 function cloudBoot(){
 SHELL=document.body.innerHTML;           
 firebase.initializeApp(CLOUD);
+ 
+if(APPCHECK_KEY && firebase.appCheck){
+try{ firebase.appCheck().activate(APPCHECK_KEY, true); window.APPCHECK_ON=true; }catch(e){ window.APPCHECK_ON=false; }
+}
 FB={ auth: firebase.auth(), db: firebase.firestore() };
 FB.auth.onAuthStateChanged(async u=>{
 if(SIGNING_UP) return;                     
@@ -2075,6 +2130,8 @@ async function cloudEnter(){
 const uid=FB.user.uid;
 const prof=await FB.db.doc("users/"+uid+"/meta/profile").get();
 if(!prof.exists){
+ 
+if(googleOnlyUser(FB.user)){ codeScreen(); return; }
 await signOutQuiet();
 authScreen("That account isn't part of this test. Create one with the access code you were given.");
 return;
@@ -2321,7 +2378,7 @@ document.body.innerHTML =
 '<p class="gsub">Your account hasn\'t been used on this device before. Confirm it from your email once and this device won\'t ask again.</p>'+
 '<button class="btn primary big" id="dcsend">Email me a confirmation link</button>'+
 '<div class="gerr" id="dcerr"></div>'+
-'<p class="gfoot">The link goes to '+esc(email)+'. Open it on this device to carry on.</p>'+
+'<p class="gfoot">The link goes to '+esc(email)+'. Open it on this device to continue.</p>'+
 '<button class="btn ghost sm" id="dcout" style="margin-top:10px">Sign out</button>'+
 '</div></div>';
 const err=t=>{ const e=document.getElementById("dcerr"); if(e) e.textContent=t; };
@@ -2452,47 +2509,138 @@ if(/permission|insufficient/i.test(raw)) return "That account isn't allowed to d
 return raw.replace(/\s*\(auth\/[a-z-]+\)\.?/i,"").trim() || "Something went wrong — try again.";
 }
 
-async function cloudSignup(code,email,pass){
+ 
+function googleAvailable(){
+if(!GOOGLE_SIGNIN) return false;
+if(typeof firebase==="undefined" || !firebase.auth || !firebase.auth.GoogleAuthProvider) return false;
+try{ if(isStandalone() && /^ios/.test(a2hsPlatform())) return false; }catch(e){}
+return true;
+}
+function googleProvider(){
+const p=new firebase.auth.GoogleAuthProvider();
+try{ p.setCustomParameters({prompt:"select_account"}); }catch(e){}
+return p;
+}
+function hasProvider(u, id){ return !!(u && (u.providerData||[]).some(x=>x && x.providerId===id)); }
+function googleOnlyUser(u){ return hasProvider(u,"google.com") && !hasProvider(u,"password"); }
+function googleErrSay(e){
+const code=(e&&e.code)||"";
+if(code==="auth/popup-closed-by-user" || code==="auth/cancelled-popup-request" || code==="auth/user-cancelled") return "";
+if(code==="auth/popup-blocked") return "Your browser blocked the Google window. Allow pop-ups for weeksolved.com and try again, or use your email and password.";
+if(code==="auth/operation-not-allowed") return "Google sign-in is not switched on for this build yet. Use your email and password.";
+if(code==="auth/unauthorized-domain") return "Google sign-in is not set up for this address yet. Use your email and password.";
+if(code==="auth/account-exists-with-different-credential") return "There is already a Weeksolved account for that email address. Sign in with its password, then add Google under Settings \u2192 Your account.";
+if(code==="auth/credential-already-in-use") return "That Google account is already attached to a different Weeksolved account.";
+if(code==="auth/provider-already-linked") return "Google is already attached to this account.";
+if(code==="auth/requires-recent-login") return "For safety this needs a fresh sign-in. Sign out, sign back in, and try again.";
+return authErrSay(e);
+}
+ 
+async function googleSignIn(err){
+try{ await FB.auth.signInWithPopup(googleProvider()); }
+catch(e){ const m=googleErrSay(e); if(m && err) err(m); }
+}
+const GOOGLE_MARK='<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true" style="flex:none"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.7 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
+function googleButtonHtml(id, label){
+return '<div class="gor" aria-hidden="true"><span>or</span></div>'+
+'<button type="button" class="btn big ggoogle" id="'+id+'">'+GOOGLE_MARK+'<span>'+esc(label||"Continue with Google")+'</span></button>';
+}
+ 
+function codeScreen(msg){
+const email=(FB&&FB.user&&FB.user.email)||"";
+document.body.innerHTML =
+'<div class="gate"><div class="gatebox">'+
+'<div class="gatemark">WS</div>'+
+'<h1>Weeksolved</h1>'+
+'<p class="gsub">Signed in as <b>'+esc(email)+'</b>. One more thing: the access code you were given.</p>'+
+'<input type="text" id="gcode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Access code \u2014 XXXX-XXXX-XXXX" aria-label="Access code">'+
+'<label class="gagree"><input type="checkbox" id="gterms"><span>'+
+'I have read and agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>'+
+(TERMS_DATE? ', dated '+esc(TERMS_DATE) : '')+'.</span></label>'+
+(ndaNeeded()
+? '<label class="gagree"><input type="checkbox" id="gnda"><span>'+
+'Weeksolved is not public yet. I agree to the <a href="/tester-agreement.html" target="_blank" rel="noopener">Tester Confidentiality Agreement</a> \u2014 in short, I will keep the product to myself and the people in my own business.</span></label>'
+: '')+
+'<button class="btn primary big" id="gGo" style="margin-top:12px">Create my account</button>'+
+'<div class="gnote">Pressing <b>Create my account</b> means you agree to both.</div>'+
+'<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
+'<button class="btn ghost sm" id="gother" style="margin-top:8px">Not you? Use a different account</button>'+
+'<div class="gnote"><b>Your code works once.</b> It is tied to this account the moment you press the button.</div>'+
+'<p class="gfoot">Codes are personal and run for 30 days from today. Please don\'t pass yours on. Everything is free during the tester program.</p>'+
+'</div></div>';
+const err=(t,good)=>{ const e=document.getElementById("gerr"); if(!e) return; e.textContent=t; e.classList.toggle("ok", !!good); };
+GATE_ERR = err;
+{ const gc=document.getElementById("gcode");
+gc.addEventListener("input", ()=>{
+const before=gc.value, atEnd = gc.selectionStart===before.length;
+let t=before.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12);
+const out=(t.match(/.{1,4}/g)||[]).join("-");
+if(out!==before){ gc.value=out; if(atEnd){ try{ gc.setSelectionRange(out.length,out.length); }catch(e){} } }
+});
+gc.onkeydown=e=>{ if(e.key==="Enter") document.getElementById("gGo").click(); };
+if(window.GCODE_PRE){ gc.value=window.GCODE_PRE; window.GCODE_PRE=""; gc.dispatchEvent(new Event("input")); }
+gc.focus(); }
+document.getElementById("gother").onclick=async ()=>{ await signOutQuiet(); authScreen(""); };
+const busy=b=>{ const g=document.getElementById("gGo"); if(!g) return; g.disabled=b; g.textContent=b? "One moment\u2026" : "Create my account"; };
+document.getElementById("gGo").onclick=async ()=>{
+const code=document.getElementById("gcode").value;
+const trouble=codeTrouble(code);
+if(trouble){ err(trouble); document.getElementById("gcode").focus(); return; }
+const box=document.getElementById("gterms");
+if(!box || !box.checked){ err("Please read the terms and check the box \u2014 we can\u2019t create the account without it."); return; }
+if(ndaNeeded()){ const nd=document.getElementById("gnda");
+if(!nd || !nd.checked){ err("The tester agreement needs checking too \u2014 it is one page, and it is the only thing we ask."); return; } }
+busy(true);
+try{ await cloudSignupGoogle(code); }
+catch(e){ err(authErrSay(e)); busy(false); }
+};
+}
+async function cloudSignupGoogle(code){
 const h=codeHash((code||"").trim());
 const hit=ACCESS.codes.find(c=>c.h===h);
 if(!hit) throw {message:"That access code isn't recognized. Check it and try again."};
 if(!hit.life && ACCESS.until && ymd(new Date())>ACCESS.until) throw {message:"This test has ended."};
+const user=FB.user; if(!user) throw {message:"You are no longer signed in. Go back and press Continue with Google again."};
 SIGNING_UP=true;
-try{
-const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
-FB.user=cred.user;
+try{ await claimCode(hit, h, user.email||"", user); }
+finally{ SIGNING_UP=false; }
+await cloudEnter();
+}
+ 
+async function claimCode(hit, h, email, user){
  
 try{
-await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
+await FB.db.doc("users/"+user.uid+"/meta/profile")
 .set({codeId:hit.id, days:hit.days||30, life:!!hit.life, activated:Date.now(),
 email:String(email||"").trim().slice(0,120)});
 }catch(e){
-await cred.user.delete().catch(()=>{});
+await user.delete().catch(()=>{});
 await signOutQuiet();
 throw {message:"Something went wrong setting the account up. Nothing was saved and your code has not been used \u2014 please try again."};
 }
  
 try{ await FB.db.doc("codes/"+h).set({
-uid:cred.user.uid, id:hit.id, h:h, at:Date.now(),
+uid:user.uid, id:hit.id, h:h, at:Date.now(),
 email:String(email||"").trim().slice(0,120),
 tz:(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||"").slice(0,60); }catch(e){ return ""; } })(),
 loc:String((navigator.languages&&navigator.languages[0])||navigator.language||"").slice(0,20),
 ua:String(navigator.userAgent||"").slice(0,180)
 }); }
 catch(e){
-await FB.db.doc("users/"+cred.user.uid+"/meta/profile").delete().catch(()=>{});
-await cred.user.delete().catch(()=>{});
+await FB.db.doc("users/"+user.uid+"/meta/profile").delete().catch(()=>{});
+await user.delete().catch(()=>{});
 await signOutQuiet();
 throw {message:"That code has already been used to create an account. Each code works once."};
 }
  
 try{
 const tz=(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||""); }catch(e){ return ""; } })();
-await FB.db.doc("reports/"+cred.user.uid+"_redeem").set({
-uid:cred.user.uid, tester:String(hit.id||"").slice(0,16), at:Date.now(),
+await FB.db.doc("reports/"+user.uid+"_redeem").set({
+uid:user.uid, tester:String(hit.id||"").slice(0,16), at:Date.now(),
 kind:"redeem", auto:true, seen:1,
 note:("Code "+hit.id+" redeemed by "+String(email||"").trim()+
-(hit.life? " \u2014 lifetime access" : " \u2014 "+(hit.days||30)+" days")).slice(0,500),
+(hit.life? " \u2014 lifetime access" : " \u2014 "+(hit.days||30)+" days")+
+(hasProvider(user,"google.com")? " (Google sign-in)":"")).slice(0,500),
 ctx:(tz+" \u00b7 "+String((navigator.languages&&navigator.languages[0])||navigator.language||"")+
 " \u00b7 "+String(navigator.userAgent||"")).slice(0,400)
 });
@@ -2503,7 +2651,19 @@ if(ndaNeeded()) recordNdaAccept();
  
 WELCOME_WITH = {id:hit.id, life:!!hit.life, days:hit.days||30, at:Date.now()};
  
-try{ await cred.user.sendEmailVerification(); WELCOME_WITH.mailed=true; }catch(e){}
+if(!user.emailVerified){ try{ await user.sendEmailVerification(); WELCOME_WITH.mailed=true; }catch(e){} }
+}
+
+async function cloudSignup(code,email,pass){
+const h=codeHash((code||"").trim());
+const hit=ACCESS.codes.find(c=>c.h===h);
+if(!hit) throw {message:"That access code isn't recognized. Check it and try again."};
+if(!hit.life && ACCESS.until && ymd(new Date())>ACCESS.until) throw {message:"This test has ended."};
+SIGNING_UP=true;
+try{
+const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
+FB.user=cred.user;
+await claimCode(hit, h, email, cred.user);
 } finally { SIGNING_UP=false; }
 await cloudEnter();
 }
@@ -2519,12 +2679,46 @@ try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }
 catch(e){ store="NO \u2014 "+(e&&e.name||"blocked"); }
 L.push("Can save to this browser: "+store);
 L.push("Sign-in library loaded: "+((typeof firebase!=="undefined" && firebase && firebase.auth)? "yes":"NO \u2014 it was blocked or did not download"));
+if(APPCHECK_KEY) L.push("App Check: "+(window.APPCHECK_ON? "active" : "did not start"));
 L.push("Connected to the account service: "+((typeof FB!=="undefined" && FB && FB.auth)? "yes":"NO"));
 L.push("Online: "+(navigator.onLine? "yes":"no"));
 L.push("Access codes in this build: "+((typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes.length : "none"));
 L.push("Cookies enabled: "+(navigator.cookieEnabled? "yes":"NO"));
 L.push("Browser: "+String(navigator.userAgent||"").slice(0,160));
 return L.join("\n");
+}
+ 
+function supportDetails(){
+const L=["Weeksolved \u2014 details for support"];
+const em=acctEmail();
+L.push("Account: "+(em||"not signed in \u2014 board is on this device only"));
+if(em){
+const F=(typeof accessFacts==="function")? accessFacts(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM) : null;
+if(F && F.title) L.push("Access: "+F.title);
+try{ const v=(FB&&FB.user&&FB.user.emailVerified); L.push("Email confirmed: "+(v? "yes":"not yet")); }catch(e){}
+if(Array.isArray(DEVLIST) && DEVLIST.length) L.push("Devices on this account: "+DEVLIST.length);
+}
+L.push("Build: "+(BUILD_ID||"unknown")+(BUILD_AT? " ("+BUILD_AT+")":""));
+try{ const sm=document.getElementById("syncmsg"); if(sm && sm.textContent) L.push("Saving: "+sm.textContent.trim()); }catch(e){}
+L.push("Business: "+((S&&S.org&&S.org.name)||"(not named yet)"));
+try{ L.push("People on the roster: "+(S.employees||[]).filter(e=>e.active).length); }catch(e){}
+try{ L.push("Time zone: "+(Intl.DateTimeFormat().resolvedOptions().timeZone||"")); }catch(e){}
+L.push("Screen: "+innerWidth+"x"+innerHeight+(isStandalone()? " (installed on home screen)":""));
+L.push("Online: "+(navigator.onLine? "yes":"no"));
+L.push("Browser: "+String(navigator.userAgent||"").slice(0,160));
+L.push("Copied: "+new Date().toLocaleString([],{dateStyle:"medium",timeStyle:"short"}));
+try{ if(FB&&FB.user&&FB.user.uid) L.push("Account ID: "+FB.user.uid); }catch(e){}
+return L.join("\n");
+}
+async function copySupportDetails(){
+const txt=supportDetails();
+try{ await navigator.clipboard.writeText(txt); toast("Copied \u2014 paste it into your message to support"); return; }
+catch(e){}
+ 
+modal("Your details for support", `<div class="stack">
+      <div class="help">Copying did not work on this device, so here it is to select by hand.</div>
+      <textarea rows="12" readonly style="font-family:'IBM Plex Mono',monospace;font-size:12px">${esc(txt)}</textarea>
+    </div>`, `<button class="btn primary" data-close>Close</button>`);
 }
 function gateDiagModal(){
 const txt=gateDiagnostics();
@@ -2595,6 +2789,7 @@ pwField("gpass", "Password"+(tab==="new"?" \u2014 8+ characters":""), (tab==="ne
 : '')+
 '<button class="btn primary big" id="gGo" style="margin-top:12px">'+(tab==="new"?"Create my account":"Sign in")+'</button>'+
 (tab==="new"? '<div class="gnote">Pressing <b>Create my account</b> means you agree to both.</div>' : '')+
+(googleAvailable()? googleButtonHtml("ggoogle", tab==="new"? "Continue with Google" : "Sign in with Google") : '')+
 '<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
 '<button class="btn ghost sm" id="gdiag" style="margin-top:8px">Having trouble? Check this device</button>'+
 '<div class="gnote" style="opacity:.65;font-size:11px">Build '+esc(BUILD_ID||"dev")+(BUILD_AT? " \u00b7 "+esc(BUILD_AT):"")+'</div>'+
@@ -2622,6 +2817,11 @@ if(out!==before){ gc.value=out; if(atEnd){ try{ gc.setSelectionRange(out.length,
 }); }
 document.getElementById("tabin").onclick=()=>authScreen("", "in");
 document.getElementById("tabnew").onclick=()=>authScreen("", "new");
+{ const gg=document.getElementById("ggoogle");
+if(gg) gg.onclick=async ()=>{ gg.disabled=true; err("");
+ 
+try{ const gc=document.getElementById("gcode"); window.GCODE_PRE = gc? gc.value : ""; }catch(e){}
+try{ await googleSignIn(err); } finally{ const b=document.getElementById("ggoogle"); if(b) b.disabled=false; } }; }
 const busy=(b)=>{ const g=document.getElementById("gGo"); g.disabled=b; g.textContent=b? "One moment…" : (tab==="new"?"Create my account":"Sign in"); };
 document.getElementById("gGo").onclick=async ()=>{
 const email=document.getElementById("gmail").value.trim();
@@ -2641,7 +2841,7 @@ const trouble=codeTrouble(code);
 if(trouble){ err(trouble); busy(false); document.getElementById("gcode").focus(); return; }
 const box=document.getElementById("gterms");
 if(!box || !box.checked){
-err("Please read the terms and tick the box \u2014 we can\u2019t create the account without it.");
+err("Please read the terms and check the box \u2014 we can\u2019t create the account without it.");
 busy(false); return; }
 if(ndaNeeded()){
 const nd=document.getElementById("gnda");
@@ -2737,7 +2937,41 @@ await Promise.all(kill);
 return failed;
 }
  
+ 
+let OP_ACT=null, OP_ACT_AT=0, OP_ACT_BUSY=false;
+function isFounder(){ return window.TESTER_ID==="FOUNDER" && !!(typeof FB!=="undefined" && FB && FB.user && FB.db); }
+function opActivity(){
+if(!isFounder()) return null;
+if(OP_ACT && Date.now()-OP_ACT_AT < 10*60000) return OP_ACT;
+if(OP_ACT_BUSY) return OP_ACT;
+OP_ACT_BUSY=true;
+FB.db.collection("reports").get().then(snap=>{
+const reps=[]; (snap.docs||[]).forEach(d=>reps.push(d.data()||{}));
+const seen=(S.ui&&S.ui.opSeen)||0;
+const fresh=reps.filter(r=>(r.at||0)>seen);
+OP_ACT={ total:reps.length, fresh:fresh.length,
+redeems:fresh.filter(r=>r.kind==="redeem").length,
+crashes:fresh.filter(r=>r.auto && r.kind!=="redeem").length,
+contacts:fresh.filter(r=>r.kind==="contact").length,
+problems:fresh.filter(r=>!r.auto && r.kind!=="redeem" && r.kind!=="contact" && r.kind!=="kbmiss").length,
+kbmiss:fresh.filter(r=>r.kind==="kbmiss").length,
+latest:reps.reduce((m,r)=>Math.max(m,r.at||0),0) };
+OP_ACT_AT=Date.now(); OP_ACT_BUSY=false;
+if(VIEW==="home") render();
+}).catch(()=>{ OP_ACT_BUSY=false; OP_ACT_AT=Date.now(); OP_ACT={err:true}; });
+return OP_ACT;
+}
+function opActivityHtml(){
+const a=opActivity(); if(!a || a.err || !a.fresh) return "";
+const bits=[[a.redeems,"code redeemed","codes redeemed"],[a.problems,"problem report","problem reports"],[a.crashes,"crash","crashes"],
+[a.contacts,"message","messages"],[a.kbmiss,"help answer marked unhelpful","help answers marked unhelpful"]]
+.filter(x=>x[0]).map(x=>x[0]+" "+(x[0]===1?x[1]:x[2]));
+return `<div class="hnotice"><span><b>From your testers since you last looked:</b> ${esc(bits.join(", ")||a.fresh+" new")}. ${a.total} on record in all.</span>
+      <button class="btn sm primary" id="opsee" style="flex:none">Who is testing</button></div>`;
+}
 async function codesModal(){
+ 
+try{ if(OP_ACT && OP_ACT.latest){ S.ui.opSeen=Math.max((S.ui.opSeen||0), OP_ACT.latest); OP_ACT=null; save(); } }catch(e){}
 modal("Who is testing", `<div class="stack"><div class="help">Reading…</div></div>`,
 `<button class="btn" data-close>Close</button>`);
 let rows=[], reps=[], err=null, repErr=null;
@@ -2991,13 +3225,16 @@ startApp();
 }
 function migrate(o){
 const base = blankState();
-const s = Object.assign(base, o);
+ 
+const s = Object.assign({}, base, o);
 s.org = Object.assign(base.org, o.org||{});
 s.rules = Object.assign(base.rules, o.rules||{});
 s.holidays = Object.assign(base.holidays, o.holidays||{});
 s.vacations = Object.assign(base.vacations, o.vacations||{});
 s.priority = Object.assign(base.priority, o.priority||{});
 s.ui = Object.assign(base.ui, o.ui||{});
+s.remind = Object.assign(base.remind, o.remind||{});
+if(!s.remind.offered || typeof s.remind.offered!=="object") s.remind.offered={};
 if(!Array.isArray(s.groups)) s.groups=[];
 if(!Array.isArray(s.requests)) s.requests=[];
 if(!Array.isArray(s.patterns)) s.patterns=[];
@@ -3093,6 +3330,23 @@ return s;
 
  
 function law(){ return LAW[S.org.jurisdiction] || LAW.NONE; }
+ 
+const OT_DEFAULT = { CA:{otDailyH:8, otWeeklyH:40, dtDailyH:12}, CO:{otDailyH:12, otWeeklyH:40, dtDailyH:0},
+NV:{otDailyH:8, otWeeklyH:40, dtDailyH:0} };
+function otDefaults(j){ return Object.assign({otDailyH:0, otWeeklyH:40, dtDailyH:0}, OT_DEFAULT[j]||{}); }
+function otDailyMin(){ const h=+S.org.otDailyH; return h>0? h*60 : 0; }       
+function dtDailyMin(){ const h=+S.org.dtDailyH; return h>0? h*60 : 0; }
+function otWeeklyMin(){ const h=+S.org.otWeeklyH; return h>0? h*60 : 40*60; }
+ 
+function otFollowState(newJ){
+if(newJ===S.org.jurisdiction) return;
+const was=otDefaults(S.org.jurisdiction), now=otDefaults(newJ);
+if(+S.org.otDailyH!==was.otDailyH || +S.org.otWeeklyH!==was.otWeeklyH || +S.org.dtDailyH!==was.dtDailyH) return;
+Object.assign(S.org, now);
+const nm=(LAW[newJ]||{}).name||"this choice";
+if(now.otDailyH!==was.otDailyH || now.dtDailyH!==was.dtDailyH)
+toast(now.otDailyH? "Daily overtime line set to "+now.otDailyH+" hours for "+nm : "No daily overtime line for "+nm+" \u2014 the 40-hour week still applies");
+}
 function round5(n){ return Math.round(n/5)*5; }
 
  
@@ -4114,29 +4368,29 @@ return ["Opening","Early mid","Mid","Late mid","Closing"][Math.min(i,4)] + (i>4?
 
  
  
-function licenceGate(fromWs, nWeeks){
+function licenseGate(fromWs, nWeeks){
 const to=addDays(fromWs, (Math.max(1,nWeeks||1))*7-1);
 return S.employees.filter(e=>e.active && empLicensed(e) && e.licExp && e.licExp < to)
 .map(e=>({e, exp:e.licExp, whole: e.licExp < fromWs}))
 .sort((a,b)=>a.exp.localeCompare(b.exp));
 }
  
-function withLicenceCheck(fromWs, nWeeks, go){
-const hit=licenceGate(fromWs, nWeeks);
+function withLicenseCheck(fromWs, nWeeks, go){
+const hit=licenseGate(fromWs, nWeeks);
 if(!hit.length){ go(); return; }
 const one=hit.length===1;
 modal("Before this week is drafted", `
     <div class="stack">
-      <div class="banner warn"><div><b>${hit.length} ${one?"person has a licence that runs out":"people have licences that run out"} inside this stretch.</b>
-        Weeksolved will not put ${one?"them":"anyone"} on a shift dated after the licence expires — that part is not optional. What you decide here is only whether to carry on now or go and fix the details first.</div></div>
+      <div class="banner warn"><div><b>${hit.length} ${one?"person has a license that runs out":"people have licenses that run out"} inside this stretch.</b>
+        Weeksolved will not put ${one?"them":"anyone"} on a shift dated after the license expires — that part is not optional. What you decide here is only whether to carry on now or go and fix the details first.</div></div>
       <div class="card"><div class="setbody">
         ${hit.map(h=>`<div class="setrow"><div class="sq">
           <strong>${esc(h.e.name)}</strong>
-          <div class="mini"><span class="chip ${h.whole?"crit":"warn"}">${esc(h.e.licLabel||"Licence")} ${h.whole? "expired" : "expires"} ${esc(prettyDate(h.exp))}</span>
+          <div class="mini"><span class="chip ${h.whole?"crit":"warn"}">${esc(h.e.licLabel||"License")} ${h.whole? "expired" : "expires"} ${esc(prettyDate(h.exp))}</span>
             ${h.whole? "They cannot be given any shift in this stretch." : "They can work up to that date and no further."}</div>
         </div><div class="sc"><button class="btn sm" data-licfix="${esc(h.e.id)}">Open their file</button></div></div>`).join("")}
       </div></div>
-      <div class="help">If the renewal has come through and you have not put the new date in yet, open their file and change it — the draft will then use them normally. If you carry on, the week is built without ${one?"them":"the people above"} where their licence does not cover it, and every shift that leaves open is listed for you afterwards.</div>
+      <div class="help">If the renewal has come through and you have not put the new date in yet, open their file and change it — the draft will then use them normally. If you carry on, the week is built without ${one?"them":"the people above"} where their license does not cover it, and every shift that leaves open is listed for you afterwards.</div>
     </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="licgo">Carry on and draft</button>`,
 r=>{
@@ -4182,7 +4436,7 @@ r.querySelector("#ddraft").onclick=()=>{
 const from = weekStartOf(r.querySelector("#dfrom").value||start, S.org.weekStart);
 const keep = r.querySelector("#dkeep").checked;
 closeModal(true);
-withLicenceCheck(from, n, ()=>{
+withLicenseCheck(from, n, ()=>{
 if(!keep) for(let i=0;i<n;i++){ const w=getWeek(addDays(from,i*7)); if(!w.published) w.assignments=[]; }
 S.horizon=n; S.currentWeek=from;
 const res=generateRange(from,n);
@@ -5415,7 +5669,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '.hide{display:none}</style></head><body><div class="w">',
 '<h1>Shifts going spare</h1><div class="sub" id="sub"></div>',
 '<div class="pnote"><b>Before you start.</b> Ticking a shift is telling your manager you would take it, not being given it. Nothing is agreed, guaranteed or owed until they confirm, and who gets a shift is their decision and your workplace\u2019s rules, not this form.</div>',
-'<div class="card"><div class="step">How this works</div><div class="hint">These shifts are open. Tick any you\u2019d be happy to work, and you\u2019ll get a short code \u2014 send it back and your manager will confirm. If two people want the same shift only one can have it.</div></div>',
+'<div class="card"><div class="step">How this works</div><div class="hint">These shifts are open. Check any you\u2019d be happy to work, and you\u2019ll get a short code \u2014 send it back and your manager will confirm. If two people want the same shift only one can have it.</div></div>',
 '<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
 '<div class="card"><div class="step">Step 2 \u2014 which would you take?</div><div id="list"></div></div>',
 '<div class="card"><div class="step">Step 3</div><button class="go" id="mk">Get my reply code</button>',
@@ -5436,7 +5690,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'var k=who.value;if(!k){alert("Pick your name first.");return;}',
 'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;k=String(k).replace(/[|;~]/g," ").trim().slice(0,60);if(!k)return;}',
 'var picked=[];L.querySelectorAll("input:checked").forEach(function(c){picked.push(c.value);});',
-'if(!picked.length){alert("Tick at least one shift, or just tell your manager you can\u2019t take any.");return;}',
+'if(!picked.length){alert("Check at least one shift, or just tell your manager you can\u2019t take any.");return;}',
 'var raw="OS1|"+D.token+"|"+k+"|"+picked.join(",");',
 'var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
 'document.getElementById("cd").textContent=code;document.getElementById("out").className="";',
@@ -5456,7 +5710,7 @@ return "  \u2022 "+DAYS[sl.dow]+", "+prettyFull(sl.date)+" \u2014 "+sh.label+", 
 });
 return "Subject: Shifts going spare \u2014 week of "+prettyDate(ws)+"\n\n"+
 "Hi all,\n\nThese shifts are open next week:\n\n"+rows.join("\n")+"\n\n"+
-"Attached is a one-page form \u2014 open it on your phone, tick anything you\u2019d take, and it gives you a short code. Reply with the code and I\u2019ll confirm.\n\n"+
+"Attached is a one-page form \u2014 open it on your phone, check anything you\u2019d take, and it gives you a short code. Reply with the code and I\u2019ll confirm.\n\n"+
 "Ticking isn\u2019t a commitment until I confirm, and if two people want the same shift only one can have it \u2014 so no hard feelings either way.\n\nThanks!";
 }
 
@@ -5754,7 +6008,7 @@ return `<label class="setrow" style="cursor:pointer">
 }).join("");
 modal("Offer these to the team", `
     <div class="stack">
-      <p class="whead">A one-page file goes out to whoever you send it to. They tick what they\u2019d take and send back a short code \u2014 nothing lands on the schedule until you confirm it here.</p>
+      <p class="whead">A one-page file goes out to whoever you send it to. They check what they\u2019d take and send back a short code \u2014 nothing lands on the schedule until you confirm it here.</p>
       <div class="card"><div class="setbody">${rows}</div></div>
       <div class="help">Nobody needs an account or an app. Ticking isn\u2019t a commitment on their side either \u2014 you still decide, and every limit gets checked again before anyone is placed.</div>
     </div>`,
@@ -5762,7 +6016,7 @@ modal("Offer these to the team", `
 r=>{
 r.querySelector("#ofgo").onclick=()=>{
 const pick=[...r.querySelectorAll(".ofsl:checked")].map(c=>slots[+c.value]);
-if(!pick.length){ toast("Tick at least one shift"); return; }
+if(!pick.length){ toast("Check at least one shift"); return; }
 makeOffer(ws, pick);
 closeModal(true);
 offerSendModal(ws);
@@ -6069,7 +6323,7 @@ const A=askOpen();
 const live = A && A.ws===ws && A.weeks===weeks;
 modal("Ask the team", `
     <div class="stack">
-      <div class="banner info"><div><b>One page, no accounts, no app.</b> Weeksolved writes a single file. Send it however you already talk to your team — email, text, a printout with a QR code, whatever they use. They open it on a phone, tick what they need and get a short code back. You paste the code in here, read what they asked for, and add the ones you’re granting. Nothing lands on the schedule unless you put it there.</div></div>
+      <div class="banner info"><div><b>One page, no accounts, no app.</b> Weeksolved writes a single file. Send it however you already talk to your team — email, text, a printout with a QR code, whatever they use. They open it on a phone, check what they need and get a short code back. You paste the code in here, read what they asked for, and add the ones you’re granting. Nothing lands on the schedule unless you put it there.</div></div>
       <div class="field"><label>What stretch are you asking about?</label>
         <div class="help">${weeks>1? "The "+weeks+" weeks from "+esc(prettyFull(ws))+"." : "The week of "+esc(prettyFull(ws))+"."} Change it with the week picker and the horizon setting.</div></div>
       <div class="field"><label>Ask them to reply by (optional)</label>
@@ -6275,17 +6529,17 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<label class="f">Mobile (optional)</label><input type="tel" inputmode="tel" id="ph" placeholder="(555) 010-0100">',
 '<div class="hint" style="margin-top:10px">Contact details are only used to send you your schedule. Leave them blank if you would rather your manager used what they already have.</div></div>',
 '<div class="card" id="rolewrap"><div class="step">What you are trained for</div>',
-'<div class="hint" style="margin-bottom:10px">Tick anything you are qualified and signed off to do. Your manager checks these against their own records.</div>',
+'<div class="hint" style="margin-bottom:10px">Check anything you are qualified and signed off to do. Your manager checks these against their own records.</div>',
 '<div id="roles"></div></div>',
-'<div class="card" id="licwrap"><div class="step">Licence or certification</div>',
+'<div class="card" id="licwrap"><div class="step">License or certification</div>',
 '<label class="f">What kind is it?</label><select id="lick"></select>',
 '<label class="f">Which state issued it?</label><select id="licj"></select>',
-'<div class="hint" style="margin-top:6px">The state that <b>issued</b> it, which may not be the state you work in \u2014 if you work for a federal employer, or hold a licence from somewhere you used to live, say where it actually came from.</div>',
+'<div class="hint" style="margin-top:6px">The state that <b>issued</b> it, which may not be the state you work in \u2014 if you work for a federal employer, or hold a license from somewhere you used to live, say where it actually came from.</div>',
 '<label class="f">What it is called</label><input type="text" id="lic" placeholder="e.g. Pharmacy Technician">',
 '<label class="f">Expires</label><input type="date" id="licx">',
 '<div class="hint" style="margin-top:10px">So your manager can warn you before it lapses. Leave blank if you would rather they took it from your file.</div></div>',
 '<div class="card"><div class="step">When you can work</div>',
-'<div class="hint" style="margin-bottom:10px">Untick a day you cannot work at all. On the days you can, set the earliest you could start and the latest you could finish. This is what you are <em>able</em> to do, not what you want — there is a place for that below.</div>',
+'<div class="hint" style="margin-bottom:10px">Uncheck a day you cannot work at all. On the days you can, set the earliest you could start and the latest you could finish. This is what you are <em>able</em> to do, not what you want — there is a place for that below.</div>',
 '<div id="av"></div></div>',
 '<div class="card" id="shiftwrap"><div class="step">Shifts you would prefer</div>',
 '<div class="hint" style="margin-bottom:10px">A preference only. Which shifts you actually get is your workplace’s decision.</div>',
@@ -6356,7 +6610,7 @@ const T=intakeOpen();
 modal("Starter form", `
     <div class="stack">
       <div class="banner info"><div><b>Stop typing everyone's details in.</b> Weeksolved writes one page. Send it to a new hire — or once to the whole team — and they fill in their contact details, what they're trained for, when they can work, and what they'd prefer. They send back a code, you read it here, and you decide what to keep. Nobody signs in.</div></div>
-      <div class="banner ok"><div><b>It promises them nothing.</b> The form says plainly, at the top and again over the preference sections, that these are preferences rather than promises, that the schedule is built around what the business needs first, and that shifts, posts and rotations are your workplace's decision. Nothing on it is agreed or owed just because somebody ticked it.</div></div>
+      <div class="banner ok"><div><b>It promises them nothing.</b> The form says plainly, at the top and again over the preference sections, that these are preferences rather than promises, that the schedule is built around what the business needs first, and that shifts, posts and rotations are your workplace's decision. Nothing on it is agreed or owed just because somebody checked it.</div></div>
       ${T? `<div class="mini">A form is already out, made ${esc(new Date(T.at).toLocaleString([],{dateStyle:"medium",timeStyle:"short"}))}. Making a new one retires the old codes, so read anything already sent back first.</div>`:""}
       <div class="field"><label>The message to go with it</label>
         <textarea id="tmmsg" style="min-height:150px">${esc(intakeMessageText())}</textarea>
@@ -6403,14 +6657,14 @@ out.innerHTML=`<div class="stack">
 : `<b>${esc(v.name)}</b> is not on your roster yet. Saving adds them, with sensible defaults for everything the form does not ask about — you can change any of it afterwards.`}</div></div>
           ${line("Email", esc(v.email))}
           ${line("Mobile", esc(v.phone))}
-          ${line("Trained for", roles.length? roles.map(x=>esc(x.name)).join(", ") : (S.roles.length? "nothing ticked" : ""))}
+          ${line("Trained for", roles.length? roles.map(x=>esc(x.name)).join(", ") : (S.roles.length? "nothing checked" : ""))}
           ${line("Can work", v.avail.map((a,i)=>a.ok? DSHORT[i]+" "+m2disp(t2m(a.from))+"–"+m2disp(t2m(a.to)) : DSHORT[i]+" no").join(" · "))}
           ${line("Would prefer", pref.length? pref.map(x=>esc(x.label)).join(", ") : "")}
           ${line("Would rather not", avoid.length? avoid.map(x=>esc(x.label)).join(", ") : "")}
           ${line("Days they'd like off", v.offIdx.length? v.offIdx.map(d=>DAYS[d]).join(", ") : "")}
           ${line("Open / close", (v.canOpen?"happy to open":"would rather not open")+" · "+(v.canClose?"happy to close":"would rather not close"))}
           ${line("Hours they'd like", v.hours? "around "+v.hours+" a week" : "")}
-          ${v.licLabel||v.licExp||v.licKind||v.licJur? line("Licence",
+          ${v.licLabel||v.licExp||v.licKind||v.licJur? line("License",
 [v.licKind? esc(licTypeName(v.licKind)) : "", esc(v.licLabel),
 v.licJur? ("issued in "+esc(v.licJur==="__fed"? "— they said a federal employer" : v.licJur==="__other"? "— somewhere else" : (LIC_DIR[v.licJur]||{n:v.licJur}).n)) : "",
 v.licExp? "expires "+esc(prettyDate(v.licExp)) : ""].filter(Boolean).join(" · ")) : ""}
@@ -6484,47 +6738,47 @@ const licTypeName = k => (LIC_TYPES.find(x=>x.k===k)||{}).t || "";
  
 const LIC_DIR={
 AL:{n:"Alabama",p:[
-{l:"Alabama Board of Nursing licence lookup",u:"https://abn.alabama.gov/applications/LicenseLookup.aspx",c:["rn","lpn"],note:"RN and LPN only \u2014 the Board handles nurse practitioner checks by email, not here."},
+{l:"Alabama Board of Nursing license lookup",u:"https://abn.alabama.gov/applications/LicenseLookup.aspx",c:["rn","lpn"],note:"RN and LPN only \u2014 the Board handles nurse practitioner checks by email, not here."},
 {l:"Alabama Board of Medical Examiners",u:"https://dashboard.albme.gov/Verification/search.aspx",c:["physician"]}]},
 AK:{n:"Alaska",p:[
-{l:"Alaska professional licence search",u:"https://www.commerce.alaska.gov/cbp/main/search/professional",c:"*",note:"If it does not open, start at commerce.alaska.gov and pick Professional Licensing \u2014 Search."}]},
+{l:"Alaska professional license search",u:"https://www.commerce.alaska.gov/cbp/main/search/professional",c:"*",note:"If it does not open, start at commerce.alaska.gov and pick Professional Licensing \u2014 Search."}]},
 AZ:{n:"Arizona",p:[
 {l:"Arizona Board of Pharmacy lookup",u:"https://azbop.igovsolution.net/online/Lookups/AZIndividual_Lookup.aspx",c:["pharmacist","pharmtech"],note:"Asks you to type a code from an image before it will search."}]},
 AR:{n:"Arkansas",p:[
 {l:"Arkansas State Medical Board",u:"https://armedicalboard.adh.arkansas.gov/public/verify/default.aspx",c:["physician"]},
 {l:"Arkansas State Board of Pharmacy roster search",u:"https://arbopharmv7prod.glsuite.us/glsuiteweb/clients/arbopharm/public/verification/search.aspx",c:["pharmacist","pharmtech"]},
-{l:"Arkansas cosmetology licence lookup",u:"https://www.adhcosmo.arkansas.gov/LicenseLookupIndividual",c:["cosmo"]}]},
+{l:"Arkansas cosmetology license lookup",u:"https://www.adhcosmo.arkansas.gov/LicenseLookupIndividual",c:["cosmo"]}]},
 CA:{n:"California",p:[
-{l:"California DCA licence search",u:"https://search.dca.ca.gov/",c:"*",note:"One search covering around thirty California boards \u2014 pharmacy, nursing, medical, dental, veterinary, physical therapy, respiratory care, cosmetology and security guards."},
+{l:"California DCA license search",u:"https://search.dca.ca.gov/",c:"*",note:"One search covering around thirty California boards \u2014 pharmacy, nursing, medical, dental, veterinary, physical therapy, respiratory care, cosmetology and security guards."},
 {l:"CDPH Laboratory Field Services",u:"https://www.cdph.ca.gov/Programs/OSPHLD/LFS/Pages/licensesearch.aspx",c:["labsci"],note:"Lab personnel sit with Public Health, not the DCA search."}]},
 CO:{n:"Colorado",p:[
-{l:"Colorado DORA \u2014 Check a Licence",u:"https://dora.colorado.gov/check-a-license",c:"*"}]},
+{l:"Colorado DORA \u2014 Check a License",u:"https://dora.colorado.gov/check-a-license",c:"*"}]},
 CT:{n:"Connecticut",p:[
 {l:"eLicense Connecticut lookup",u:"https://www.elicense.ct.gov/Lookup/LicenseLookup.aspx",c:"*",note:"Covers over 850 credential types across the health and consumer-protection boards."}]},
 DE:{n:"Delaware",p:[
-{l:"DELPROS \u2014 Verify a Licence",u:"https://delpros.delaware.gov/OH_VerifyLicense",c:"*",note:"Matches exactly \u2014 a partial name will find nothing."}]},
+{l:"DELPROS \u2014 Verify a License",u:"https://delpros.delaware.gov/OH_VerifyLicense",c:"*",note:"Matches exactly \u2014 a partial name will find nothing."}]},
 DC:{n:"District of Columbia",p:[
-{l:"DC Health licence verification",u:"https://app.hpla.doh.dc.gov/Physician%20Profile%20Lookup/Search.aspx",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"],note:"The page is titled for physicians but covers every DC health board."},
+{l:"DC Health license verification",u:"https://app.hpla.doh.dc.gov/Physician%20Profile%20Lookup/Search.aspx",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"],note:"The page is titled for physicians but covers every DC health board."},
 {l:"DC licensing and consumer protection search",u:"https://govservices.dcra.dc.gov/oplaportal/Home/GetLicenseSearchDetails",c:["cosmo","security","vet"]}]},
 FL:{n:"Florida",p:[
-{l:"Florida Health Care Provider licence search",u:"https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"]},
+{l:"Florida Health Care Provider license search",u:"https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"]},
 {l:"Florida DBPR licensee search",u:"https://www.myfloridalicense.com/wl11.asp?mode=0&SID=",c:["vet","cosmo"]}]},
 GA:{n:"Georgia",p:[
 {l:"Georgia Composite Medical Board",u:"https://gateway.medicalboard.georgia.gov/verification/search.aspx",c:["physician","rt"]},
 {l:"Georgia Secretary of State licensee search",u:"https://goals.sos.ga.gov/GASOSOneStop/s/licensee-search",c:"*",note:"The entry point for Georgia's professional boards."}]},
 HI:{n:"Hawaii",p:[
-{l:"Hawaii DCCA public licence search",u:"https://mypvl.dcca.hawaii.gov/public-license-search/",c:"*"}]},
+{l:"Hawaii DCCA public license search",u:"https://mypvl.dcca.hawaii.gov/public-license-search/",c:"*"}]},
 ID:{n:"Idaho",p:[
-{l:"Idaho DOPL licence search",u:"https://dopl.idaho.gov/license-search/",c:"*",note:"A list of searches by profession rather than one search box \u2014 pick the profession from the page."}]},
+{l:"Idaho DOPL license search",u:"https://dopl.idaho.gov/license-search/",c:"*",note:"A list of searches by profession rather than one search box \u2014 pick the profession from the page."}]},
 IL:{n:"Illinois",p:[
-{l:"Illinois IDFPR \u2014 Check a Licence",u:"https://idfpr.illinois.gov/checklicense.html",c:"*"}]},
+{l:"Illinois IDFPR \u2014 Check a License",u:"https://idfpr.illinois.gov/checklicense.html",c:"*"}]},
 IN:{n:"Indiana",p:[
-{l:"Indiana PLA licence verification",u:"https://mylicense.in.gov/everification/Search.aspx",c:"*",note:"Real time, and the Agency calls it an original source. A * works as a wildcard in the name fields."}]},
+{l:"Indiana PLA license verification",u:"https://mylicense.in.gov/everification/Search.aspx",c:"*",note:"Real time, and the Agency calls it an original source. A * works as a wildcard in the name fields."}]},
 IA:{n:"Iowa",p:[
-{l:"Iowa \u2014 Find a Record or Licence",u:"https://dial.iowa.gov/i-need/records",c:"*",note:"Iowa runs several separate lookups; this state page lists them all with what each one covers."},
+{l:"Iowa \u2014 Find a Record or License",u:"https://dial.iowa.gov/i-need/records",c:"*",note:"Iowa runs several separate lookups; this state page lists them all with what each one covers."},
 {l:"Iowa Board of Pharmacy lookup",u:"https://ibop.igovsolution.net/online/Lookups/Lookup_Individual.aspx",c:["pharmacist","pharmtech"],note:"Asks you to type a code from an image before it will search."}]},
 KS:{n:"Kansas",p:[
-{l:"Kansas licence verification portal",u:"https://prolicenseverify.ks.gov/",c:"*"},
+{l:"Kansas license verification portal",u:"https://prolicenseverify.ks.gov/",c:"*"},
 {l:"Kansas Board of Nursing verification",u:"https://www.kansas.gov/ksbn-verifications/search/records",c:["rn","lpn","np"]},
 {l:"Kansas Board of Healing Arts search",u:"https://www.kansas.gov/ssrv-ksbhada/search.html",c:["physician","pt","rt","radtech"]},
 {l:"Kansas Dental Board verification",u:"https://www.kansas.gov/dental-verification/index.do",c:["dentist","dentalhyg"]}]},
@@ -6546,10 +6800,10 @@ MD:{n:"Maryland",p:[
 {l:"Maryland Board of Dental Examiners",u:"https://mdbod.mylicense.com/Verification/Search.aspx",c:["dentist","dentalhyg"]},
 {l:"Maryland cosmetology public query",u:"https://www.dllr.state.md.us/cgi-bin/ElectronicLicensing/OP_search/OP_search.cgi?calling_app=COS%3A%3ACOS_qselect",c:["cosmo"]}]},
 MA:{n:"Massachusetts",p:[
-{l:"Massachusetts Check a Health Licence",u:"https://checkahealthlicense.mass.gov/search",c:["pharmacist","pharmtech","rn","lpn","np","dentist","dentalhyg","labsci","pt","rt","radtech"]},
+{l:"Massachusetts Check a Health License",u:"https://checkahealthlicense.mass.gov/search",c:["pharmacist","pharmtech","rn","lpn","np","dentist","dentalhyg","labsci","pt","rt","radtech"]},
 {l:"Massachusetts physician profiles",u:"https://profiles.ehs.state.ma.us/ProfilesV3",c:["physician"]},
 {l:"Massachusetts ePLACE licensee check",u:"https://elicensing21.mass.gov/CitizenAccess/GeneralProperty/PropertyLookUp.aspx?isLicensee=Y",c:["vet"]},
-{l:"Massachusetts occupational licence search",u:"https://occupationallicensingandpermitting.mass.gov/madol/s/license-search-page",c:["cosmo"]}]},
+{l:"Massachusetts occupational license search",u:"https://occupationallicensingandpermitting.mass.gov/madol/s/license-search-page",c:["cosmo"]}]},
 MI:{n:"Michigan",p:[
 {l:"Michigan LARA \u2014 find or verify a licensed professional",u:"https://www.michigan.gov/lara/i-need-to/find-or-verify-a-licensed-professional-or-business",c:"*"}]},
 MN:{n:"Minnesota",p:[
@@ -6561,18 +6815,18 @@ MS:{n:"Mississippi",p:[
 {l:"Mississippi Board of Nursing verification",u:"https://gateway.licensure.msbn.ms.gov/Verification/search.aspx",c:["rn","lpn","np"]},
 {l:"Mississippi Board of Medical Licensure",u:"https://gateway.msbml.ms.gov/verification/search.aspx",c:["physician","radtech"]}]},
 MO:{n:"Missouri",p:[
-{l:"Missouri Division of Professional Registration search",u:"https://pr.mo.gov/licensee-search-division.asp",c:"*",note:"Active licences only, refreshed nightly."}]},
+{l:"Missouri Division of Professional Registration search",u:"https://pr.mo.gov/licensee-search-division.asp",c:"*",note:"Active licenses only, refreshed nightly."}]},
 MT:{n:"Montana",p:[
 {l:"Montana \u2014 look up a licensed individual",u:"https://boards.bsd.dli.mt.gov/_global-pages/additional-license-information/lookup-individual",c:"*"}]},
 NE:{n:"Nebraska",p:[
-{l:"Nebraska DHHS licence search",u:"https://www.nebraska.gov/LISSearch/search.cgi",c:"*",note:"Needs JavaScript switched on."}]},
+{l:"Nebraska DHHS license search",u:"https://www.nebraska.gov/LISSearch/search.cgi",c:"*",note:"Needs JavaScript switched on."}]},
 NV:{n:"Nevada",p:[]},
 NH:{n:"New Hampshire",p:[
-{l:"New Hampshire OPLC licence lookup",u:"https://www.oplc.nh.gov/license-lookup",c:"*"}]},
+{l:"New Hampshire OPLC license lookup",u:"https://www.oplc.nh.gov/license-lookup",c:"*"}]},
 NJ:{n:"New Jersey",p:[
-{l:"New Jersey Consumer Affairs licence verification",u:"https://newjersey.mylicense.com/verification/",c:"*",note:"Security guards are licensed by the State Police and are not in this system."}]},
+{l:"New Jersey Consumer Affairs license verification",u:"https://newjersey.mylicense.com/verification/",c:"*",note:"Security guards are licensed by the State Police and are not in this system."}]},
 NM:{n:"New Mexico",p:[
-{l:"New Mexico \u2014 verify a licence",u:"https://www.rld.nm.gov/about-us/public-information-hub/verify-a-license/",c:"*"}]},
+{l:"New Mexico \u2014 verify a license",u:"https://www.rld.nm.gov/about-us/public-information-hub/verify-a-license/",c:"*"}]},
 NY:{n:"New York",p:[
 {l:"NYSED Office of the Professions verification",u:"https://eservices.nysed.gov/professions/verification-search",c:["pharmacist","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt"],note:"Opens the state page and the search is on it; New York does not register pharmacy technicians."},
 {l:"NY Department of State licensee search",u:"https://appext20.dos.ny.gov/lcns_public/lic_name_search_frm",c:["security"]},
@@ -6596,7 +6850,7 @@ OR:{n:"Oregon",p:[
 {l:"Oregon Medical Board licensee search",u:"https://omb.oregon.gov/clients/ormb/public/verification.aspx",c:["physician"]},
 {l:"Oregon Board of Pharmacy verification",u:"https://orbop.mylicense.com/verification/Search.aspx",c:["pharmacist","pharmtech"]}]},
 PA:{n:"Pennsylvania",p:[
-{l:"PALS licence verification",u:"https://www.pals.pa.gov/#!/page/search",c:"*"}]},
+{l:"PALS license verification",u:"https://www.pals.pa.gov/#!/page/search",c:"*"}]},
 RI:{n:"Rhode Island",p:[
 {l:"Rhode Island Department of Health verification",u:"https://healthri.mylicense.com/verification/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"]}]},
 SC:{n:"South Carolina",p:[
@@ -6607,20 +6861,20 @@ SD:{n:"South Dakota",p:[
 {l:"South Dakota Board of Nursing verification",u:"https://www.sdbon.org/NurseLookup.asp",c:["rn","lpn","np"]}]},
 TN:{n:"Tennessee",p:[
 {l:"Tennessee health related boards verification",u:"https://internet.health.tn.gov/Licensure/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","labsci","pt","rt","radtech"],note:"Asks you to type a code from an image before it will search."},
-{l:"Tennessee Commerce and Insurance \u2014 verify a licence",u:"https://search.cloud.commerce.tn.gov/",c:["cosmo","security"]}]},
+{l:"Tennessee Commerce and Insurance \u2014 verify a license",u:"https://search.cloud.commerce.tn.gov/",c:["cosmo","security"]}]},
 TX:{n:"Texas",p:[
-{l:"Texas Medical Board \u2014 look up a licence",u:"https://www.tmb.texas.gov/resources/for-the-public/look-up-a-license",c:["physician","radtech","rt"]},
+{l:"Texas Medical Board \u2014 look up a license",u:"https://www.tmb.texas.gov/resources/for-the-public/look-up-a-license",c:["physician","radtech","rt"]},
 {l:"Texas State Board of Pharmacy database search",u:"https://www.pharmacy.texas.gov/dbsearch/default.asp",c:["pharmacist","pharmtech"]},
 {l:"Texas State Board of Dental Examiners search",u:"https://tsbde.texas.gov/resources/public-license-search",c:["dentist","dentalhyg"]},
 {l:"Texas Board of Veterinary Medical Examiners lookup",u:"https://veterinary.texas.gov/enforcement/licensee-look-up/",c:["vet","vettech"]},
 {l:"Texas Online Private Security public search",u:"https://tops.portal.texas.gov/psp-self-service/search/index",c:["security"],note:"Asks you to pass a robot check before it will search."}]},
 UT:{n:"Utah",p:[
-{l:"Utah DOPL licence lookup",u:"https://secure.utah.gov/llv/search/index.html",c:"*",note:"One search for health professions, trades, cosmetology, security and veterinary."}]},
+{l:"Utah DOPL license lookup",u:"https://secure.utah.gov/llv/search/index.html",c:"*",note:"One search for health professions, trades, cosmetology, security and veterinary."}]},
 VT:{n:"Vermont",p:[
 {l:"Vermont \u2014 find a professional",u:"https://sos.vermont.gov/opr/find-a-professional/",c:"*"}]},
 VA:{n:"Virginia",p:[
-{l:"Virginia Health Professions licence lookup",u:"https://dhp.virginiainteractive.org/lookup/index",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt","radtech"]},
-{l:"Virginia DPOR licence lookup",u:"https://dporweb.dpor.virginia.gov/LicenseLookup/",c:["cosmo"]},
+{l:"Virginia Health Professions license lookup",u:"https://dhp.virginiainteractive.org/lookup/index",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt","radtech"]},
+{l:"Virginia DPOR license lookup",u:"https://dporweb.dpor.virginia.gov/LicenseLookup/",c:["cosmo"]},
 {l:"Virginia private security individual verification",u:"https://www.cms.dcjs.virginia.gov/GLSuiteWeb/Clients/VADCJS/Public/IndividualVerification/Search.aspx",c:["security"]}]},
 WA:{n:"Washington",p:[
 {l:"Washington provider credential search",u:"https://fortress.wa.gov/doh/providercredentialsearch/",c:["pharmacist","pharmtech","rn","lpn","np","physician","dentist","dentalhyg","vet","vettech","labsci","pt","rt","radtech"],note:"Health professions only \u2014 cosmetology and security guards sit with Licensing, not Health."}]},
@@ -6629,9 +6883,9 @@ WV:{n:"West Virginia",p:[
 {l:"West Virginia Board of Pharmacy verification",u:"https://www.wvbop.com/public/verify/index.asp",c:["pharmacist","pharmtech"]},
 {l:"West Virginia Board of Dentistry verification",u:"https://wvbodv7prod.glsuite.us/GLSuiteWeb/Clients/WVBOD/Public/Verification/Search.aspx",c:["dentist","dentalhyg"]}]},
 WI:{n:"Wisconsin",p:[
-{l:"Wisconsin DSPS licence lookup",u:"https://license.wi.gov/s/license-lookup",c:"*"}]},
+{l:"Wisconsin DSPS license lookup",u:"https://license.wi.gov/s/license-lookup",c:"*"}]},
 WY:{n:"Wyoming",p:[
-{l:"Wyoming Board of Medicine licence lookup",u:"https://wyomedboard.wyo.gov/consumers/license-lookup",c:["physician"]}]}
+{l:"Wyoming Board of Medicine license lookup",u:"https://wyomedboard.wyo.gov/consumers/license-lookup",c:["physician"]}]}
 };
  
 const LIC_COMPACT=[
@@ -6696,18 +6950,18 @@ if(i<list.length) setTimeout(next, 1200); };
 next(); };
 }
 function licChaseText(e){
-const what=(e.licLabel||licTypeName(e.licKind)||"licence");
+const what=(e.licLabel||licTypeName(e.licKind)||"license");
 const first=(e.name||"there").split(" ")[0];
 return "Hi "+first+" \u2014 my records have your "+what+" running out on "+prettyFull(e.licExp)+
-". If you\u2019ve already renewed it, could you send me the new expiry date (and the licence number if it changed)? "+
+". If you\u2019ve already renewed it, could you send me the new expiry date (and the license number if it changed)? "+
 "If it\u2019s still in hand, no problem, just let me know roughly when you expect it.\n\nThanks!";
 }
 function licChaseModal(id){
 const e=empById(id); if(!e) return;
 tellModal("Ask "+(e.name||"them")+" for the new date", licChaseText(e), {
-emp:e, subject:"Your "+(e.licLabel||licTypeName(e.licKind)||"licence")+" renewal",
+emp:e, subject:"Your "+(e.licLabel||licTypeName(e.licKind)||"license")+" renewal",
 lead:"Entirely optional \u2014 close this and nothing happens. Weeksolved does not send anything by itself and nothing here is recorded as a notice.",
-after:()=>{ logIt("change","Asked "+e.name+" for their renewed "+(e.licLabel||"licence")+" date"); save(); }
+after:()=>{ logIt("change","Asked "+e.name+" for their renewed "+(e.licLabel||"license")+" date"); save(); }
 });
 }
  
@@ -6715,11 +6969,11 @@ function licRenewModal(id){
 const e=empById(id); if(!e) return;
 modal("A new date for "+(e.name||"them"), `
     <div class="stack">
-      <div class="banner info"><div>My record says <b>${esc(e.licLabel||licTypeName(e.licKind)||"their licence")}</b> ${e.licExp? (e.licExp<ymd(new Date())? "expired ":"runs out ")+esc(prettyDate(e.licExp)) : "has no date on file"}. Put the new one in below.</div></div>
+      <div class="banner info"><div>My record says <b>${esc(e.licLabel||licTypeName(e.licKind)||"their license")}</b> ${e.licExp? (e.licExp<ymd(new Date())? "expired ":"runs out ")+esc(prettyDate(e.licExp)) : "has no date on file"}. Put the new one in below.</div></div>
       <div class="field"><label>The new expiry date</label><input type="date" id="lrx" value="${esc(e.licExp||"")}"></div>
-      <div class="field"><label>Licence number, if it changed</label><input type="text" id="lrn" value="${esc(e.licNo||"")}" placeholder="Leave as it is if unchanged"></div>
+      <div class="field"><label>License number, if it changed</label><input type="text" id="lrn" value="${esc(e.licNo||"")}" placeholder="Leave as it is if unchanged"></div>
       ${licLinkHtml(e.licJur||"", e.licKind||"")}
-      <div class="help">Checking is yours to do or skip. Weeksolved saves the date you type and nothing else \u2014 it does not look the licence up, does not know whether you looked, and records no answer either way.</div>
+      <div class="help">Checking is yours to do or skip. Weeksolved saves the date you type and nothing else \u2014 it does not look the license up, does not know whether you looked, and records no answer either way.</div>
     </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="lrsave">Save the new date</button>`,
 r=>{
@@ -6729,7 +6983,7 @@ if(!d){ toast("Put a date in first"); return; }
 const was=e.licExp||"";
 e.licExp=d;
 e.licNo=(r.querySelector("#lrn").value||"").trim().slice(0,40);
-logIt("change",(e.name||"Someone")+"\u2019s "+(e.licLabel||"licence")+" date updated"+(was? " from "+prettyDate(was):"")+" to "+prettyDate(d));
+logIt("change",(e.name||"Someone")+"\u2019s "+(e.licLabel||"license")+" date updated"+(was? " from "+prettyDate(was):"")+" to "+prettyDate(d));
 save(); closeModal(); render();
 toast(d>ymd(new Date())? (e.name||"They")+" is current again \u2014 good until "+prettyDate(d) : "Saved \u2014 note that date is already past");
 if(d>ymd(new Date())) remindOffer("lic");
@@ -6737,11 +6991,11 @@ if(d>ymd(new Date())) remindOffer("lic");
 });
 }
 function licLinkHtml(jur, type){
-const foot='<div class="mini" style="margin-top:6px">Weeksolved never checks a licence for you and never records an answer \u2014 this only opens the board\u2019s own page. What you find there is yours to read and act on.</div>';
-if(jur==="__fed") return `<div class="banner info"><div><b>No link for this one, and there shouldn\u2019t be.</b> A federal employer can take a licence issued by any state, wherever the site is \u2014 so the state you are in tells you nothing about which board holds the record. Ask them which state issued it, set it above, and the link will appear. Until then you will need to check it yourself.</div></div>`;
-if(!jur || !type) return `<div class="help">Say what kind of licence it is and who issued it, and if there is an official page for checking it, a link to that page will appear here.</div>`;
+const foot='<div class="mini" style="margin-top:6px">Weeksolved never checks a license for you and never records an answer \u2014 this only opens the board\u2019s own page. What you find there is yours to read and act on.</div>';
+if(jur==="__fed") return `<div class="banner info"><div><b>No link for this one, and there shouldn\u2019t be.</b> A federal employer can take a license issued by any state, wherever the site is \u2014 so the state you are in tells you nothing about which board holds the record. Ask them which state issued it, set it above, and the link will appear. Until then you will need to check it yourself.</div></div>`;
+if(!jur || !type) return `<div class="help">Say what kind of license it is and who issued it, and if there is an official page for checking it, a link to that page will appear here.</div>`;
 if(type==="other") return `<div class="help">Weeksolved has no page on file for this one \u2014 you will need to check it however you normally would. The expiry date above still works: set it and the drafter will not schedule them past it.</div>`;
-if(jur==="__other") return `<div class="help">Weeksolved only has pages for licences issued in the United States. You will need to check this one yourself. The expiry date above still works.</div>`;
+if(jur==="__other") return `<div class="help">Weeksolved only has pages for licenses issued in the United States. You will need to check this one yourself. The expiry date above still works.</div>`;
 const hits=licLinks(jur, type);
 const J=LIC_DIR[jur]||{n:jur};
 const comp=LIC_COMPACT.filter(x=>x.c.includes(type));
@@ -6750,7 +7004,7 @@ const home=(S.org.jurisdiction||"");
 const away = home && LIC_DIR[home] && jur!==home;
 const hasLink = hits.length>0;
 const awayNote = away? `<div class="banner info" style="margin-bottom:8px"><div><b>Issued in ${esc(J.n)}, and you are in ${esc(LIC_DIR[home].n)}.</b>
-      That is common and often perfectly fine \u2014 a compact licence, a federal employer, or simply a licence they hold from elsewhere. Whether it lets them work for you here is a question for you and your own advisers; Weeksolved has no view on it and records no answer. ${hasLink? "Anything below goes to "+esc(J.n)+", which is the board that actually holds the record." : "It is "+esc(J.n)+" that holds the record, so that is where to check."}</div></div>` : "";
+      That is common and often perfectly fine \u2014 a compact license, a federal employer, or simply a license they hold from elsewhere. Whether it lets them work for you here is a question for you and your own advisers; Weeksolved has no view on it and records no answer. ${hasLink? "Anything below goes to "+esc(J.n)+", which is the board that actually holds the record." : "It is "+esc(J.n)+" that holds the record, so that is where to check."}</div></div>` : "";
 if(!hits.length) return awayNote + `<div class="help">Weeksolved does not have a page on file for ${esc(licTypeName(type).toLowerCase())} in ${esc(J.n)} \u2014 rather than send you somewhere that might be wrong, it sends you nowhere. Check it however you normally would; the expiry date above still works.</div>`
 + (comp.length? `<div class="card" style="margin-top:4px"><div class="body">
         <div class="mini" style="margin-bottom:6px">There is a compact page for this profession, which is a different thing from the state board:</div>
@@ -6761,7 +7015,7 @@ return awayNote + `<div class="card" style="margin-top:4px"><div class="body">
 `<a class="btn sm" href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.l)} \u2197</a>`).join("")}
       ${comp.map(x=>`<a class="btn sm" href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.l)} \u2197</a>`).join("")}</div>
     ${hits.filter(h=>h.note).map(h=>`<div class="mini" style="margin-top:6px">${esc(h.note)}</div>`).join("")}
-    ${["rn","lpn","np"].includes(type)? '<div class="mini" style="margin-top:6px">If they hold a multistate licence under the Nurse Licensure Compact, it was issued by the state they live in, not the one they work in \u2014 so set that state above.</div>':""}
+    ${["rn","lpn","np"].includes(type)? '<div class="mini" style="margin-top:6px">If they hold a multistate license under the Nurse Licensure Compact, it was issued by the state they live in, not the one they work in \u2014 so set that state above.</div>':""}
     ${foot}</div></div>`;
 }
 function licLinks(jur, type){
@@ -7535,7 +7789,7 @@ const SHIFT_PATTERNS=[
 set:{maxD:5, maxShiftH:8, maxH:40, cycle:null}},
 {id:"4x10", t:"4 \u00d7 10", d:"Four ten-hour days, three off.",
 set:{maxD:4, maxShiftH:10, maxH:40, maxConsecDays:4, cycle:null}},
-{id:"9x80", t:"9/80 \u2014 every other Friday off", d:"Eight nine-hour days and one eight-hour day across a fortnight: eighty hours, one extra day off every two weeks.",
+{id:"9x80", t:"9/80 \u2014 every other Friday off", d:"Eight nine-hour days and one eight-hour day across two weeks: eighty hours, one extra day off every two weeks.",
 set:{maxD:5, maxShiftH:9, maxH:0, cycle:{type:"average", hours:80, weeks:2}}},
 {id:"3x12", t:"3 \u00d7 12", d:"Three twelve-hour days, thirty-six hours.",
 set:{maxD:3, maxShiftH:12, maxH:36, maxConsecDays:3, cycle:null}},
@@ -8283,7 +8537,8 @@ return {idx:y*12+(m-1), from, to, label:prettyDate(from)+" \u2013 "+prettyDate(t
 }
 const span = t==="biweekly"? 14 : 7;
 const a=payAnchor();
-const days=Math.floor((parseYmd(date)-parseYmd(a))/86400000);
+ 
+const days=Math.round((parseYmd(date)-parseYmd(a))/86400000);
 const idx=Math.floor(days/span);
 const from=addDays(a, idx*span), to=addDays(from, span-1);
 return {idx, from, to, label:prettyDate(from)+" \u2013 "+prettyDate(to)};
@@ -8318,9 +8573,10 @@ acc=days/7*(p.rate||0);
 acc=ptoWorkedMin(e.id, anchor, asOf)/60/(p.per==="per30"?30:40)*(p.rate||1);
 } else if(p.per==="month" || p.per==="year"){
  
-let n=0, k=anchor, guard=0;
+ 
+let n=0, guard=0;
 while(guard++<600){
-k = p.per==="month"? addMonths(k,1) : addMonths(k,12);
+const k = addMonths(anchor, (n+1)*(p.per==="month"? 1 : 12));
 if(k>asOf) break;
 n++;
 }
@@ -8350,8 +8606,8 @@ let k=anchor, guard=0;
 while(k<=today && guard++<800) k=addDays(k,7);
 return {when:k, amount:p.rate||0, say:(p.rate||0)+"h on "+prettyDate(k)};
 }
-let k=anchor, guard=0;
-while(k<=today && guard++<600) k = p.per==="month"? addMonths(k,1) : addMonths(k,12);
+let k=anchor, n=0;
+while(k<=today && n++<600) k = addMonths(anchor, n*(p.per==="month"? 1 : 12));
 return {when:k, amount:p.rate||0, say:(p.rate||0)+"h on "+prettyDate(k)};
 }
 
@@ -8551,13 +8807,13 @@ mine.forEach(a=>{ (byDate[a.date]=byDate[a.date]||[]).push(a); });
 Object.keys(byDate).forEach(d=>{
 const list=byDate[d], dm=list.reduce((t,a)=>t+paidMinutes(a),0), dow=parseYmd(d).getDay();
 if(list.length>1) push("crit","Double-booked — "+e.name, DSHORT[dow]+" has "+list.length+" overlapping shifts.", {date:d,empId:e.id});
-if(dm > (S.org.otDailyH||8)*60+1)
+if(otDailyMin() && dm > otDailyMin()+1)
 push("info","Daily overtime — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+S.org.otDailyH+"h).", {date:d,empId:e.id});
-if(unionOn() && union().otDailyH && union().otDailyH < (S.org.otDailyH||8) && dm > union().otDailyH*60+1)
+if(unionOn() && union().otDailyH && (!otDailyMin() || union().otDailyH*60 < otDailyMin()) && dm > union().otDailyH*60+1)
 push("warn","Daily overtime under "+unionLabel()+" — "+e.name,
-DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+", past the "+union().otDailyH+"h your agreement sets \u2014 sooner than the "+(S.org.otDailyH||8)+"h one.",
+DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+", past the "+union().otDailyH+"h your agreement sets"+(otDailyMin()? " \u2014 sooner than the "+S.org.otDailyH+"h one":"")+".",
 {date:d,empId:e.id,premium:true,posted:!!wk.published && !postPending(wk)});
-if(dm > (S.org.dtDailyH||12)*60+1)
+if(dtDailyMin() && dm > dtDailyMin()+1)
 push("warn","Double time — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+S.org.dtDailyH+"h).", {date:d,empId:e.id});
 list.forEach(a=>{
 if(!availOk(e,dow,a.startMin,a.endMin))
@@ -8970,7 +9226,7 @@ try{
 window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); INSTALL_EVT=e;
 try{ if(VIEW==="home") render(); }catch(err){} });
 window.addEventListener("appinstalled", ()=>{ INSTALL_EVT=null;
-S.ui=S.ui||{}; S.ui.a2hs="done"; try{ save(); if(VIEW==="home") render(); }catch(err){} });
+try{ S.ui=S.ui||{}; S.ui.a2hs="done"; save(); if(VIEW==="home") render(); }catch(err){} });
 }catch(e){}
  
 function a2hsPlatform(){
@@ -9155,6 +9411,7 @@ const typed = el.tagName==="TEXTAREA" ||
 const commit=()=>{
 let v = el.type==="checkbox"? el.checked : (el.type==="number"? (el.value===""?0:parseFloat(el.value)) : el.value);
 if(path==="rules.stationFamilies" || path==="rules.skillsOn") v = v===true || v==="1" || v===1;
+if(path==="org.jurisdiction") otFollowState(v);
 setPath(S,path,v);
 if(path==="org.name" && S.sample) S.sample=false;    
 };
@@ -9392,7 +9649,7 @@ const su=root.querySelector("#ovsetup");
 if(su) su.onclick=()=>{ wizClearDraft(); wizard(); };
 const rsm=root.querySelector("#ovresume"); if(rsm) rsm.onclick=()=>wizard(false, true);
 const b=root.querySelector("#ovgen");
-if(b) b.onclick=()=>withLicenceCheck(S.currentWeek, 1, ()=>{
+if(b) b.onclick=()=>withLicenseCheck(S.currentWeek, 1, ()=>{
 const r=generateSchedule(); save();
 toast("Drafted "+r.filled+" shifts"+(r.perDiem? " · "+r.perDiem+" per diem called in":"")+(r.unfilled.length?" · "+r.unfilled.length+" could not be filled":""));
 go("week"); });
@@ -9447,6 +9704,7 @@ return `
     ${a2hsOffer()? `<div class="hnotice"><span>Weeksolved can sit on your home screen with its own icon and open full screen \u2014 same account, nothing to install.</span>
       <span class="row" style="gap:6px;flex:none"><button class="btn sm primary" id="a2hsshow">Show me how</button>
       <button class="btn sm" id="a2hsno">No thanks</button></span></div>`:""}
+    ${opActivityHtml()}
     ${graceBanner(ws)}
     ${tellBanner(ws)}
     ${wk.auto && wk.suggested && !wk.published && !(S.ui&&S.ui.autoTipSeen)? `<div class="hnotice"><span><b>Weeksolved drafted this week when you opened it</b> \u2014 a starting point, nothing more. It is not posted, nobody has seen it, and Draft again gives you a different take.</span>
@@ -9491,7 +9749,7 @@ return `
       <button class="tile" data-go="requests">
         <span class="tn">${live.length}</span>
         <span class="tlab">request${live.length===1?"":"s"} this week</span>
-        <span class="td">${wk.assignments.length&&live.length? reqOk+" honoured"+(reqNo?", "+reqNo+" not":"") : "Add what people have asked for"}</span>
+        <span class="td">${wk.assignments.length&&live.length? reqOk+" honored"+(reqNo?", "+reqNo+" not":"") : "Add what people have asked for"}</span>
       </button>
       <button class="tile" data-go="week">
         <span class="tn">${wk.assignments.length}<span class="of">/${wantSlots}</span></span>
@@ -9592,6 +9850,7 @@ on("#hsetup2",()=>wizard());
 on("#homesetup",()=>wizard());
 on("#reptipok",()=>{ S.ui=S.ui||{}; S.ui.repTip=true; save(); render(); });
 on("#a2hsshow",()=>a2hsModal());
+on("#opsee",()=>codesModal());
 on("#a2hsno",()=>{ S.ui=S.ui||{}; S.ui.a2hs="no"; save(); render();
 toast("Hidden. It is still under Help & FAQ if you change your mind"); });
 on("#autotipok",()=>{ S.ui=S.ui||{}; S.ui.autoTipSeen=true; save(); render(); });
@@ -9655,7 +9914,7 @@ return `<div class="card"><header><h3>Your account</h3>
       ${(()=>{ const F=accessFacts(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM);
 return setRow("Your access", esc(F.title)+" \u2014 "+esc(F.who), `<button class="btn sm" id="setaccess">What that means</button>`); })()}
       ${window.TESTER_ID==="FOUNDER"? setRow("Who is testing",
-"Every access code, who redeemed it and when, how long each tester has been at it, and what they have sent in \u2014 so a code that has travelled further than you meant, and a tester who has gone quiet, both show up at a glance.",
+"Every access code, who redeemed it and when, how long each tester has been at it, and what they have sent in \u2014 so a code that has traveled further than you meant, and a tester who has gone quiet, both show up at a glance.",
 `<button class="btn sm" id="setcodes">Show me</button>`) : ""}
       ${setRow("Plan and billing", (()=>{
 if(window.TESTER_LIFE) return "Nothing to pay, ever. This account is free for life \u2014 when paid plans open it is not billed and nothing will be asked of you.";
@@ -9664,7 +9923,7 @@ return "See what each plan covers and what it costs.";
 })(), `<a class="btn sm" href="/pricing.html" target="_blank" rel="noopener">See the plans</a>`)}
       ${setRow("Delete this account", "Removes the account and everything in it, for good. Take a backup first \u2014 nothing can be brought back afterwards"+((typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.on)? ", and your access code stays used either way":"")+".",
 `<button class="btn sm danger" id="setdelacct">Delete account</button>`)}
-      ${setRow("How many places this covers", "One location: one roster, one set of hours, holidays and rules. A second site gets its own account and its own login \u2014 that keeps the two from overwriting each other. Three or more sites are priced together on the Multi plan.", "")}
+      ${setRow("How many places this covers", "One location: one roster, one set of hours, holidays and rules. A second site gets its own account and its own login \u2014 that keeps the two from overwriting each other. Each site is the same flat price, with no bundle and no minimum; if you run several, get in touch.", "")}
       ${swap? `<div class="setrow"><div class="sq"><strong style="color:var(--warn)">This board was replaced with a different team</strong>
         <div class="mini">A different business name and a completely different roster arrived from another device. Nothing has been changed or blocked \u2014 but two locations sharing one login will keep overwriting each other's week. Each site works far better on its own account.</div></div>
         <div class="sc"><button class="btn sm" id="setswapok">Got it</button></div></div>` : ""}
@@ -9709,9 +9968,9 @@ add("Time-off balances", ptoOn(), "team",
 add("Labor cost", costOn(), "settings|Money",
 "Hourly rates roll up into a cost for the week against your budget",
 "No pay information is held at all");
-add("Licence expiry", licenseOn(), "team",
-"Warns before somebody\u2019s licence lapses, and won\u2019t schedule them after",
-"No licence dates are tracked");
+add("License expiry", licenseOn(), "team",
+"Warns before somebody\u2019s license lapses, and won\u2019t schedule them after",
+"No license dates are tracked");
 add("Stations on the floor", skillsOn(), "stations",
 "People are placed on named posts, with cover for each other\u2019s meals",
 "Shifts only \u2014 no named posts within a shift");
@@ -9779,7 +10038,7 @@ return head+`<div class="body"><div class="banner info"><div><b>You switched thi
     <div class="setbody">
       ${setRow("Do you work under a written agreement?", "Turn this off and everything below stops being recorded and stops being checked.",
 `<select data-set="union.on"><option value="0">Off</option><option value="1" selected>On</option></select>`)}
-      ${setRow("What do you call it?", "Used in the wording of every warning, so people recognise where the rule comes from",
+      ${setRow("What do you call it?", "Used in the wording of every warning, so people recognize where the rule comes from",
 `<input type="text" data-bind="union.name" value="${esc(u.name||"")}" data-rerender="no" placeholder="e.g. Local 5 agreement" style="min-width:200px">`)}
       ${setRow("Seniority decides, rather than counts for something", u.seniorityRules
 ? "On \u2014 the longest-serving person who fits gets the shift, and shift priority is locked to start dates"
@@ -10342,6 +10601,7 @@ if(path==="rules.newDeviceConfirm" && v===true && FB && FB.user){
 try{ FB.db.doc("users/"+FB.user.uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true}); }catch(e){}
 toast("On \u2014 this device stays trusted; any new one confirms by email");
 }
+if(path==="org.jurisdiction") otFollowState(v);
 setPath(S,path,v);
 if(path==="rules.auditKeep") auditPrune();
 if(path.indexOf("rules.meal")===0 || path==="rules.breakMode" || path==="rules.restMode"
@@ -10563,9 +10823,9 @@ return `
     </div>
 
     <div class="card"><header><h3>Overtime thresholds</h3></header><div class="body grid3">
-      <div class="field"><label>Daily overtime after</label><input type="number" inputmode="decimal" step="0.5" min="0" data-bind="org.otDailyH" value="${S.org.otDailyH}"><span class="mini">hours in a day</span></div>
-      <div class="field"><label>Weekly overtime after</label><input type="number" inputmode="decimal" step="1" min="0" data-bind="org.otWeeklyH" value="${S.org.otWeeklyH}"><span class="mini">hours in a week</span></div>
-      <div class="field"><label>Double time after</label><input type="number" inputmode="decimal" step="0.5" min="0" data-bind="org.dtDailyH" value="${S.org.dtDailyH}"><span class="mini">hours in a day (CA)</span></div>
+      <div class="field"><label>Daily overtime after</label><input type="number" inputmode="decimal" step="0.5" min="0" data-bind="org.otDailyH" value="${S.org.otDailyH}"><span class="mini">hours in a day \u2014 0 for none. Most states only have the weekly line; California, Colorado and Nevada have a daily one.</span></div>
+      <div class="field"><label>Weekly overtime after</label><input type="number" inputmode="decimal" step="1" min="0" data-bind="org.otWeeklyH" value="${S.org.otWeeklyH}"><span class="mini">hours in a week (federal law says 40)</span></div>
+      <div class="field"><label>Double time after</label><input type="number" inputmode="decimal" step="0.5" min="0" data-bind="org.dtDailyH" value="${S.org.dtDailyH}"><span class="mini">hours in a day \u2014 0 for none. California pays double past 12.</span></div>
     </div></div>
 
     <div class="card"><header><h3>Labor cost</h3>
@@ -10986,7 +11246,7 @@ modal(id?"Edit "+g.name:"New staff group", `
       <div class="field"><label>Applies to</label><select id="gscope">
         <option value="pick" ${((M.roleIds||[]).length||(M.types||[]).length||!id)?"selected":""}>People I pick below</option>
         <option value="all" ${(id && !(M.roleIds||[]).length && !(M.types||[]).length)?"selected":""}>Everyone on the roster</option>
-      </select><span class="mini">Tick a role and a type together and someone has to match both — a part-time technician, say.</span></div>
+      </select><span class="mini">Check a role and a type together and someone has to match both — a part-time technician, say.</span></div>
       <div class="field"><label>Roles</label><div class="row" id="gr">
         ${S.roles.length? S.roles.map(r=>`<label class="switch" style="border:1px solid var(--line);padding:4px 9px;border-radius:6px;font-size:12px">
           <input type="checkbox" data-r="${r.id}" ${(M.roleIds||[]).includes(r.id)?"checked":""}> <span class="tag" style="--sc:${r.color}">${esc(r.name)}</span></label>`).join("")
@@ -11052,7 +11312,7 @@ box.className = "banner "+(hit.length? (scope==="all"&&strict?"warn":"info") : "
 box.innerHTML = hit.length
 ? `<div><b>${hit.length} ${hit.length===1?"person":"people"} would be in this group.</b> ${esc(hit.slice(0,8).map(e=>e.name).join(", "))}${hit.length>8?" and "+(hit.length-8)+" more":""}.${
 scope==="all"&&strict? " That's your whole roster, and a "+draft.rules.maxShiftH+"-hour shift cap would leave your longer shifts unfillable — worth narrowing it." : ""}</div>`
-: `<div><b>Nobody matches yet.</b> Tick a role or an employment type below, or set “Applies to” to everyone.</div>`;
+: `<div><b>Nobody matches yet.</b> Check a role or an employment type below, or set “Applies to” to everyone.</div>`;
 };
 const gp=r.querySelector("#gpat");
 if(gp){
@@ -11090,7 +11350,7 @@ const set=(id,v)=>{ const el=r.querySelector(id); if(el) el.value=String(v||0); 
 set("#gexh",R2.exactH); set("#gminh",R2.minH); set("#gmaxh",R2.maxH); set("#gmaxd",R2.maxD);
 set("#gmaxs",R2.maxShiftH); set("#gminr",R2.minRestH); set("#gmaxc",R2.maxConsecDays);
 r.querySelector("#galone").value = R2.canBeAlone===false? "0":"1";
-if(x.pick) toast("Now tick the role these people are in — otherwise it would apply to everyone");
+if(x.pick) toast("Now check the role these people are in — otherwise it would apply to everyone");
 prev();
 };
 r.querySelector("#gsave").onclick=()=>{
@@ -11115,7 +11375,7 @@ if(!S.employees.length){ toast("Add someone to the team first"); return; }
 const today=ymd(new Date());
 modal("Take someone off the schedule for a stretch",`
     <div class="stack">
-      <div class="help">Vacation, parental leave, a secondment to another site — anything that takes someone out of the rota for a run of days. They won't be scheduled at all in that window, and the week grid shows why.</div>
+      <div class="help">Vacation, parental leave, a secondment to another site — anything that takes someone out of the schedule for a run of days. They won't be scheduled at all in that window, and the week grid shows why.</div>
       <div class="grid2">
       <div class="field"><label>Who</label><select id="te">${S.employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></div>
       <div class="field"><label>Why they're away</label><select id="tt">
@@ -11204,7 +11464,7 @@ else cb.checked = cb.dataset.t===k;
 });
 r.querySelector("#bpsave").onclick=()=>{
 const ids=[...r.querySelectorAll(".bpe")].filter(x=>x.checked).map(x=>x.dataset.id);
-if(!ids.length){ toast("Tick at least one person"); return; }
+if(!ids.length){ toast("Check at least one person"); return; }
 const P=patternById(sel.value);
 if(P.set.cycle && !cyclesOn()){ S.rules.useCycles=true; }
 const anchor=weekStartOf(ymd(new Date()), S.org.weekStart);
@@ -11546,7 +11806,7 @@ modal(id?"Edit "+e.name:"Add someone", `
     </div>`:""}
     ${(S.roles||[]).some(r=>r.licensed)? `<div id="elicwrap" style="display:${(e.roleIds||[]).some(id=>{const rr=roleById(id);return rr&&rr.licensed;})?"":"none"}">
       <div class="grid2">
-        <div class="field"><label>What kind of licence is it?</label>
+        <div class="field"><label>What kind of license is it?</label>
           <select id="elick">
             <option value="">Not saying \u2014 skip this</option>
             ${LIC_TYPES.map(t=>`<option value="${t.k}" ${e.licKind===t.k?"selected":""}>${esc(t.t)}</option>`).join("")}
@@ -11561,13 +11821,13 @@ return Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)
             <option value="__fed" ${e.licJur==="__fed"?"selected":""}>A federal employer \u2014 VA, IHS, military</option>
             <option value="__other" ${e.licJur==="__other"?"selected":""}>Somewhere else, or I\u2019m not sure</option>
           </select>
-          <span class="mini">The state that <em>issued</em> the licence, which is not always the state you are in.</span></div>
+          <span class="mini">The state that <em>issued</em> the license, which is not always the state you are in.</span></div>
       </div>
       <div class="grid2">
-        <div class="field"><label>Licence number (optional)</label><input type="text" id="elicno" value="${esc(e.licNo||"")}" placeholder="As printed on it"></div>
+        <div class="field"><label>License number (optional)</label><input type="text" id="elicno" value="${esc(e.licNo||"")}" placeholder="As printed on it"></div>
         <div class="field"><label>What it is (optional)</label><input type="text" id="elicn" value="${esc(e.licLabel||"")}" placeholder="RPh license \u00b7 CPR certification"></div>
       </div>
-      <div class="field"><label>Licence or certification expires</label><input type="date" id="elic" value="${esc(e.licExp||"")}">
+      <div class="field"><label>License or certification expires</label><input type="date" id="elic" value="${esc(e.licExp||"")}">
         <span class="mini">Optional. With a date set, the drafter never schedules them past it and starts warning 30 days out.</span></div>
       <div id="eliclink"></div>
     </div>`:""}
@@ -11578,7 +11838,7 @@ return Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)
             ${[1,0,2].map(v=>`<option value="${v}" ${skillOf(e,st.id)===v?"selected":""}>${esc(SKILL_LEVEL[v])}</option>`).join("")}
           </select></div>`).join("")}</div>
       <span class="mini"><b>Only you can see this.</b> It never appears on the schedule, the day sheet, a printout, an export, or anything sent to staff \u2014 there is no trace of it anywhere they can reach.
-      It is a note about <b>training and development on each post</b>, not a judgement of the person: "could use more time here" covers someone fully trained who still wants support on that post, not just a new starter.
+      It is a note about <b>training and development on each post</b>, not a judgment of the person: "could use more time here" covers someone fully trained who still wants support on that post, not just a new starter.
       It only ever nudges which post they are handed on the day \u2014 never their hours, their pay, or how many shifts they get. Set it on one post of a rotation and its siblings follow.</span></div>`:""}
     ${ptoOn()? `<div class="field"><label>PTO</label><div class="grid3" style="align-items:end">
       <div class="field"><label class="mini">Balance now (hours)</label><input type="number" inputmode="decimal" step="0.5" id="eptob" value="${(e.pto&&e.pto.bal)||0}"></div>
@@ -12550,13 +12810,14 @@ return `<tr><td><strong>${esc(e.name)}</strong></td><td><span class="chip acc">$
     </div>
 
     ${!costOn()? "" : haveRates()? (()=>{
-const perDay = dates.map(d=>wk.assignments.filter(a=>a.date===d.date).reduce((t,a)=>t+costOf(a),0));
+const costMap = weekCostByDay(ws);
+const perDay = dates.map(d=>costMap[d.date]||0);
 const mx = Math.max(1,...perDay);
 const hol = holidayPayCost(ws);
 const total = perDay.reduce((a,b)=>a+b,0) + hol;
 const dayBudget = S.org.budget? S.org.budget/7 : 0;
 return `<div class="card"><header><h3>Labor cost</h3>
-        <span class="hint">Paid hours at each person's rate, overtime at time and a half. Meals come out; paid rest breaks stay in.</span></header>
+        <span class="hint">Paid hours at each person's rate; overtime at time and a half${dtDailyMin()? ", double time past "+S.org.dtDailyH+" hours":""}, and the ${S.org.otWeeklyH||40}-hour week counted the way a pay run does. Meals come out; paid rest breaks stay in.</span></header>
         <div class="body grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)">
           <div class="grid3" style="grid-template-columns:1fr 1fr">
             <div class="kpi ${S.org.budget&&total>S.org.budget?"warn":"ok"}"><span class="k">This week</span><span class="v">${money(total)}</span>
@@ -13030,6 +13291,7 @@ modal(prettyDate(ws)+" – "+prettyDate(addDays(ws,6)), `
         <button class="btn" id="wkredraft">Draft it again${state==="posted"?" (unposts it first)":""}</button>
         <button class="btn" id="wkshape">Change its shape — ${esc(patternName(ws))}</button>
         <button class="btn" id="wkprint">Print…</button>
+        <button class="btn" id="wkpdf">Save as PDF</button>
         ${st.open? `<button class="btn" id="wkfix">Cover the ${st.open} open shift${st.open===1?"":"s"}</button>`:""}
       </div>
       <div class="sep"></div>
@@ -13055,7 +13317,7 @@ const commitNote=()=>{ const w=getWeek(ws); const n=noteOf(); if(n) w.note=n; el
 r.querySelector("#wknoteinp").addEventListener("change",()=>{ commitNote(); save(); });
 const on=(id,fn)=>{ const b=r.querySelector(id); if(b) b.onclick=()=>{ commitNote(); fn(); }; };
 on("#wkopen",()=>{ S.currentWeek=ws; save(); closeModal(); go("week"); });
-on("#wkredraft",()=>{ closeModal(true); withLicenceCheck(ws, 1, ()=>{
+on("#wkredraft",()=>{ closeModal(true); withLicenseCheck(ws, 1, ()=>{
 const w=getWeek(ws); w.published=false; delete w.publishedAt;
 w.assignments=w.assignments.filter(a=>a.locked);
 const res=generateSchedule(ws); w.suggested=true; w.touched=true;
@@ -13065,6 +13327,9 @@ toast(res.filled+" shifts drafted"+(res.perDiem? " · "+res.perDiem+" per diem c
 on("#wkshape",()=>{ S.currentWeek=ws; closeModal(); weekPatternModal(ws); });
 on("#wkfix",()=>{ S.currentWeek=ws; closeModal(); fixModal(ws); });
 on("#wkprint",()=>{ S.currentWeek=ws; closeModal(true); printModal(); });
+on("#wkpdf",()=>{ S.currentWeek=ws; closeModal(true);
+exportWeekPDF().then(ok=>{ const wk=peekWeek(ws); if(ok&&wk&&wk.published&&!postPending(wk)){ markTold(ws,"pdf"); render(); } })
+.catch(()=>pdfUnavailable()); });
 on("#wkdup",()=>{ closeModal(); duplicateWeekModal(ws); });
 on("#wkpost",()=>{ const changes=weekDiff(ws); closeModal(true);
 repostGuard(ws, choice=>{ const w=getWeek(ws); beginPost(ws, w, choice); snapWeek(w);
@@ -13362,7 +13627,7 @@ return `${tellBanner(ws)}<div class="card review">
       ${(()=>{ const p=reqPeriod(ws,1); const live=(S.requests||[]).filter(r=>r.status!=="declined" && (r.kind==="maxh" || !(r.to<p.from||r.from>p.to)));
 if(!live.length) return "";
 const res=live.map(r=>reqOutcome(r,ws,1)); const ok=res.filter(x=>x.ok===true).length, no=res.filter(x=>x.ok===false).length;
-return `<div class="banner ${no?"warn":"info"}"><div><b>${ok} of ${ok+no} requests honoured.</b>
+return `<div class="banner ${no?"warn":"info"}"><div><b>${ok} of ${ok+no} requests honored.</b>
             ${no? "The rest are listed under Requests with the reason each one couldn't be met." : "Everything people asked for this week landed."}</div>
             <button class="btn sm" ${no?'data-denyreq="1"':'data-go="requests"'} style="flex:none;margin-left:auto">${no?"Decide what to drop":"See them"}</button></div>`; })()}
       ${openShifts.length? `<div class="banner crit"><div><b>${openShifts.length} shift${openShifts.length===1?"":"s"} nobody could take.</b> There's usually a way — someone on call, an hour of overtime, a request you could decline. It's worked out the options for you.</div>
@@ -13737,7 +14002,7 @@ return m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+
 const sp=payOn()? paySplit(ws):null;
 return `<div class="${inRun?"":"sheet"}">
     <h1${inRun?' style="font-size:13px;margin-top:6px"':""}>${inRun? "Week of "+esc(prettyFull(ws)) : esc(S.org.name||"Schedule")+" \u2014 week of "+esc(prettyFull(ws))}</h1>
-    ${inRun? "" : `<div class="sub">${esc(S.org.site||"")}${S.org.site?" \u00b7 ":""}${roster.length} on the rota${
+    ${inRun? "" : `<div class="sub">${esc(S.org.site||"")}${S.org.site?" \u00b7 ":""}${roster.length} on the schedule${
 payOn()? " \u00b7 pay period "+esc((payPeriod(ws)||{label:""}).label):""}${
 sp? " (changes on "+esc(prettyDate(sp.date))+")":""}</div>`}
     ${forName? `<div class="forwho">Copy for: <b>${esc(forName)}</b></div>`:""}
@@ -13948,17 +14213,22 @@ body=repTable(["Person","Week of","Hours","Over the line","Extra at half rate"],
 '<p class="foot">The line is '+(S.org.otWeeklyH||40)+' hours a week. The last column is the premium only \u2014 the half \u2014 not the whole overtime hour.</p>';
 }
 else if(k==="cost"){
+ 
+const cost={}, prem={};
+wks.forEach(w=>{ const d=weekCostDetail(w);
+Object.keys(d.byPerson).forEach(id=>{ cost[id]=(cost[id]||0)+d.byPerson[id]; prem[id]=(prem[id]||0)+(d.premium[id]||0); }); });
+let premTot=0;
 const rows=roster.map(e=>{
 const mine=all.filter(a=>a.empId===e.id);
 const mins=mine.reduce((t,a)=>t+paidMinutes(a),0);
 if(!mins) return null;
-return [esc(e.name), H(mins), e.rate? money(e.rate):"\u2014", e.rate? money(mins/60*e.rate):"\u2014"];
+premTot+=prem[e.id]||0;
+return [esc(e.name), H(mins), e.rate? money(e.rate):"\u2014", e.rate? money(prem[e.id]||0):"\u2014", e.rate? money(cost[e.id]||0):"\u2014"];
 }).filter(Boolean);
-const tot=roster.reduce((t,e)=>{
-const mins=all.filter(a=>a.empId===e.id).reduce((x,a)=>x+paidMinutes(a),0);
-return t + (e.rate? mins/60*e.rate : 0); },0);
-rows.push(["<b>Everyone</b>","","","<b>"+money(tot)+"</b>"]);
-body=repTable(["Person","Hours","Rate","Cost"], rows, {num:[1,2,3]})+
+const tot=roster.reduce((t,e)=>t+(cost[e.id]||0),0);
+rows.push(["<b>Everyone</b>","","","<b>"+money(premTot)+"</b>","<b>"+money(tot)+"</b>"]);
+body=repTable(["Person","Hours","Rate","Of which premiums","Cost"], rows, {num:[1,2,3,4]})+
+'<p class="foot">Overtime at time and a half'+(dtDailyMin()? ', double time past '+S.org.dtDailyH+' hours':'')+', and the '+(S.org.otWeeklyH||40)+'-hour week counted the way a pay run does. Premiums are the extra over straight time. Holiday pay is not in this table.</p>'+
 (S.org.budget? '<p class="foot">Weekly budget '+money(S.org.budget)+' \u00d7 '+wks.length+' week'+(wks.length===1?"":"s")+' = '+
 money(S.org.budget*wks.length)+'. This period came to '+money(tot)+'.</p>' : "");
 }
@@ -14555,7 +14825,7 @@ r.querySelector("#rpall").onclick=()=>{ r.querySelectorAll(".rpk").forEach(c=>c.
 r.querySelector("#rpnone").onclick=()=>{ r.querySelectorAll(".rpk").forEach(c=>c.checked=false); syncOpts(); };
 r.querySelector("#rpgo").onclick=()=>{
 const keys=[...r.querySelectorAll(".rpk:checked")].map(c=>c.value);
-if(!keys.length){ toast("Tick at least one report"); return; }
+if(!keys.length){ toast("Check at least one report"); return; }
 let from, to;
 if(per.value==="week"){ from=ws; to=addDays(ws,6); }
 else if(per.value==="ytd"){ from=ws.slice(0,4)+"-01-01"; to=addDays(ws,6); }
@@ -14632,9 +14902,9 @@ modal("Print", `
         <span class="mini" id="prcopnote"></span></div>
       <div class="field" id="prnWrap" style="display:none"><label>How many</label>
         <input type="number" inputmode="decimal" id="prn" min="1" max="200" value="5" style="width:110px"></div>
-      <div class="help">It comes out ready: <b>the week landscape, a day sheet portrait</b>, scaled to the page, with no browser header or web address across the top. Just press print when it opens \u2014 nothing to set up.</div>
+      <div class="help">It comes out ready: <b>the week landscape, a day sheet portrait</b>, scaled to the page, with no browser header or web address across the top. Just press print when it opens \u2014 nothing to set up. Want a file rather than paper? The print dialog itself offers <b>Save as PDF</b> as a destination, or use the button below for a PDF built by Weeksolved.</div>
     </div>`,
-`<button class="btn" data-close>Cancel</button><button class="btn primary" id="prgo">Make it</button>`,
+`<button class="btn" data-close>Cancel</button><button class="btn" id="prpdf">Save as PDF instead</button><button class="btn primary" id="prgo">Make it</button>`,
 r=>{
 const what=r.querySelector("#prwhat"), which=r.querySelector("#prwhich"), cop=r.querySelector("#prcop");
 const sync=()=>{
@@ -14660,6 +14930,16 @@ note.textContent = cop.value==="onday"? "The number changes day by day \u2014 ea
 what.onchange=sync; which.onchange=sync; cop.onchange=sync;
 r.querySelector("#prwk").onchange=sync; r.querySelector("#prwkn").oninput=sync;
 sync();
+ 
+r.querySelector("#prpdf").onclick=()=>{
+const isDay = what.value==="day";
+closeModal(true);
+(isDay? exportDayPDF() : exportWeekPDF()).then(ok=>{
+if(!ok) return;
+const wk=peekWeek(ws);
+if(!isDay && wk && wk.published && !postPending(wk)){ markTold(ws,"pdf"); render(); }
+}).catch(()=>pdfUnavailable());
+};
 r.querySelector("#prgo").onclick=()=>{
 let list=[], useWs=ws;
 if(what.value==="day"){
@@ -14906,7 +15186,7 @@ if(k==="biz") return `
         <div class="grid2">
           <div class="field"><label>What should this schedule be called?</label>
             <input type="text" id="wn" value="${esc(W.name)}" placeholder="e.g. Riverside Pharmacy, or Outpatient Front Desk">
-            <span class="mini">The business, or just your department inside a bigger one &mdash; whatever people will recognise at the top of the printed schedule.</span></div>
+            <span class="mini">The business, or just your department inside a bigger one &mdash; whatever people will recognize at the top of the printed schedule.</span></div>
           <div class="field"><label>Site or location (optional)</label><input type="text" id="ws" value="${esc(W.site)}" placeholder="e.g. North Branch"></div>
         </div>
       </div>`;
@@ -15088,7 +15368,7 @@ return `
         <div class="field"><label>And what should it do with anyone left over?</label>
           <div class="wopts">${
 opt("fillMode","demand",W.fillMode,"Stop at the floor","It fills those numbers and stops. Anyone not needed simply isn't scheduled that day \u2014 you can still add them yourself.")+
-opt("fillMode","full",W.fillMode,"Keep going until everyone has their contracted hours","For union agreements, government rotas, or anywhere full-timers must be fully scheduled. The extra hands go down as project time rather than sitting idle.")}</div></div>
+opt("fillMode","full",W.fillMode,"Keep going until everyone has their contracted hours","For union agreements, government schedules, or anywhere full-timers must be fully scheduled. The extra hands go down as project time rather than sitting idle.")}</div></div>
         ${W.fillMode==="full"? `
         <div class="field"><label>What do you call that extra time?</label>
           <input type="text" data-w="topUpLabel" value="${esc(W.topUpLabel)}" placeholder="Project time"></div>
@@ -15262,7 +15542,7 @@ return `
         ${X("xPto", W.xPto, "Time-off balances",
 "Balances that grow as they work and come down when they take time off.")}
         ${X("xLic", W.xLic, "License and certification expiry",
-"Nobody is ever scheduled past a lapsed licence, and you get 30 days\u2019 warning.")}
+"Nobody is ever scheduled past a lapsed license, and you get 30 days\u2019 warning.")}
         ${X("xCycles", W.xCycles, "Work patterns like 7 on, 7 off",
 "Seven on and seven off, alternating weeks, or hours averaged over a period.")}
         ${X("xNotice", W.xNotice, "Advance-notice warnings",
@@ -15368,7 +15648,7 @@ opt("sendOut",true,W.sendOut,"Send it from here, by email or text","One button. 
 [24,"The day before","One day\u2019s notice, same time."]].map(x=>
 opt("remindH",x[0],W.remindH,x[1],x[2])).join("")}</div>
         <div class="help" style="margin-bottom:10px">The reminder rides along inside the calendar file, so it goes off on their own phone. Nothing to install, no account for them, and nothing you have to remember to send.</div>
-        ${W.sendOut? `<div class="banner info"><div><b>You'll need a mobile number or an email for each person.</b>
+        ${W.sendOut? `<div class="banner info"><div><b>You'll need a cell number or an email for each person.</b>
           Add them on their profile under Team whenever you like \u2014 Weeksolved tells you who's missing one before it sends anything, and skips them rather than failing.</div></div>
           <div class="help">Nothing is sent by Weeksolved itself. It writes the message and opens your own mail or messages app with it ready, so you press send and it comes from you.</div>`
 : `<span class="mini">You can switch this on any time under Settings. Until then it stays out of the way entirely.</span>`}
@@ -15419,7 +15699,7 @@ W.hoursPreset==="wkend"&&cur.shifts.length? [
             <div class="ln"><span>Cover you asked for</span><b>${W.fillMode==="full"?"a floor — everyone fully scheduled":"exactly that many"}</b></div>
             <div class="ln"><span>Handing it out</span><b>${W.sendOut?"emailed or texted from here":"however you do it now"}</b></div>
             ${W.fillMode==="full"? `<div class="ln"><span>${esc(W.topUpLabel||"Project time")}</span><b>${W.projectShape==="chunk"?"in blocks":"wherever it fits"}, ${W.projectShare==="best"?"stacked on your best":"shared round"}</b></div>`:""}
-            ${(()=>{const on=[W.xPto&&"time-off balances", W.xLic&&"licence expiry", W.xCycles&&"work patterns",
+            ${(()=>{const on=[W.xPto&&"time-off balances", W.xLic&&"license expiry", W.xCycles&&"work patterns",
 W.xNotice&&"notice warnings", W.xWaiver&&"meal waivers", W.xSkills&&"post training",
 W.xTrainee&&"new hires who aren\u2019t cover yet", W.xMinors&&"under-18 hour limits",
 W.xMsg&&"ready-written messages", W.xFww&&"scheduling-law help", W.xPay&&"pay period markers"].filter(Boolean);
@@ -15446,7 +15726,7 @@ const listed=allNames().length;
 box.innerHTML = `
       <div class="banner ${listed? (W.headcount && listed<W.headcount ? "warn":"info") : "warn"}"><div>
         ${listed? `<b>${listed} listed.</b>${W.headcount? (listed<W.headcount? " You said about "+W.headcount+" — "+(W.headcount-listed)+" to go." : listed>W.headcount? " That's more than the "+W.headcount+" you said, which is fine." : " That matches what you said.") : ""}`
-: "<b>Nothing listed yet.</b> Add at least one name to carry on."}</div></div>
+: "<b>Nothing listed yet.</b> Add at least one name to continue."}</div></div>
       ${listed? `<div class="scroll" style="max-height:210px;margin-top:12px"><table>
         <thead><tr><th>Name</th><th style="width:130px">Bucket</th><th style="width:130px">Type</th><th style="width:92px">Min hrs</th><th style="width:92px">Max hrs</th></tr></thead>
         <tbody>${allNames().map(pn=>{ const key=pn.b+":"+pn.i, pp=W.people[key]||{};
@@ -15703,6 +15983,7 @@ if(g("#wbud")) W.budget=+g("#wbud").value||0;
 function apply(){
 const N=blankState();
 N.org.name=W.name; N.org.site=W.site; N.org.jurisdiction=W.juris; N.org.weekStart=1;
+Object.assign(N.org, otDefaults(W.juris));
 N.org.trackCost=!!W.trackCost; N.org.budget=W.trackCost?(W.budget||0):0;
 N.org.bizType=W.biz;
 for(let d=0;d<7;d++){
@@ -15923,7 +16204,7 @@ return `<div class="card">
           <span class="hint">${live? back+" of "+team+" answered" : "No accounts, no app \u2014 one page they open on a phone"}</span>
           ${live? `<button class="btn sm" id="qaskread">Read a reply</button>`:""}
           <button class="btn sm ${live?"":"primary"}" id="qask">${live? "The form" : "Make a form"}</button></header>
-        ${live? "" : `<div class="body"><div class="help">Rather than punching in every text and email yourself, send your team one page. They tick what they need \u2014 a day off, a shift they\u2019d like, a time they can\u2019t start before \u2014 and send back a short code. You read it here and add the ones you\u2019re granting. Nobody signs in and nothing lands on the schedule unless you put it there.</div></div>`}
+        ${live? "" : `<div class="body"><div class="help">Rather than punching in every text and email yourself, send your team one page. They check what they need \u2014 a day off, a shift they\u2019d like, a time they can\u2019t start before \u2014 and send back a short code. You read it here and add the ones you\u2019re granting. Nobody signs in and nothing lands on the schedule unless you put it there.</div></div>`}
       </div>`; })() : ""}
 
     ${!S.employees.some(e=>e.active)? `<div class="card"><header><h3>Add a request</h3></header>
@@ -15978,7 +16259,7 @@ o.push(`<option value="${d}">${DAYS[parseYmd(d).getDay()]}, ${prettyDate(d)}</op
 const res=inPeriod.filter(r=>r.status!=="declined").map(r=>reqOutcome(r,ws,weeks));
 const ok=res.filter(x=>x.ok===true).length, no=res.filter(x=>x.ok===false).length;
 return `<div class="body" style="border-top:1px solid var(--line)"><div class="banner ${no?"warn":"info"}">
-          <div><b>${ok} of ${ok+no} honoured.</b> ${no? "The ones it couldn't are marked above with the reason — usually the only person who could cover was the one who asked off." : "Every request in this stretch landed the way it was asked."}</div></div></div>`;
+          <div><b>${ok} of ${ok+no} honored.</b> ${no? "The ones it couldn't are marked above with the reason — usually the only person who could cover was the one who asked off." : "Every request in this stretch landed the way it was asked."}</div></div></div>`;
 })():""}
     </div>
 
@@ -16163,7 +16444,7 @@ const co=root.querySelector("#qclearold");
 if(co) co.onclick=()=>{ const p=reqPeriod(S.currentWeek,S.horizon||1);
 S.requests=(S.requests||[]).filter(r=>r.kind==="maxh"||r.to>=p.from); save(); render(); toast("Cleared"); };
 const qd=root.querySelector("#qdraft");
-if(qd) qd.onclick=()=>withLicenceCheck(S.currentWeek, S.horizon||1, ()=>{
+if(qd) qd.onclick=()=>withLicenseCheck(S.currentWeek, S.horizon||1, ()=>{
 const res=generateRange(S.currentWeek, S.horizon||1); save(); render();
 toast(res.filled+" shifts drafted"+(res.unfilled? " · "+res.unfilled+" left open":""));
 });
@@ -16215,7 +16496,7 @@ return `
             <div class="seg" id="papp">
               <button data-v="desirable" aria-pressed="${P.applyTo==="desirable"}">Wanted and unwanted shifts only</button>
               <button data-v="all" aria-pressed="${P.applyTo==="all"}">Every shift</button></div>
-            <span class="mini">${P.applyTo==="desirable"? "Neutral shifts are assigned purely on fit — standing only comes into play where it matters." : "Standing colours every assignment, including the ones nobody feels strongly about."}</span></div>
+            <span class="mini">${P.applyTo==="desirable"? "Neutral shifts are assigned purely on fit — standing only comes into play where it matters." : "Standing colors every assignment, including the ones nobody feels strongly about."}</span></div>
         </div>` : ""}
         ${P.mode==="lottery"? `<div class="row"><span class="chip mono">seed ${P.seed}</span>
           <button class="btn sm" id="preroll">Re-roll the draw</button>
@@ -16491,7 +16772,7 @@ return fam.length>1? `<span class="chip acc">${esc(f)} rotation</span><div class
 
     ${posts.length? `<div class="card">
       <header><h3>Who covers whom at lunch</h3>
-        <span class="hint">Tick the posts that look after each other &mdash; that is the whole setup</span>
+        <span class="hint">Check the posts that look after each other &mdash; that is the whole setup</span>
         <button class="btn sm" id="cgnew">New cover group</button></header>
       <div class="scroll">${(S.coverGroups||[]).length? `<table>
         <thead><tr><th>Group</th><th>Posts in it</th><th style="width:80px"></th></tr></thead>
@@ -16555,7 +16836,7 @@ const posts=(S.stations||[]).filter(x=>x.kind!=="admin" && !x.off);
 const takenBy={}; (S.coverGroups||[]).forEach(x=>{ if(x.id!==g.id) (x.sts||[]).forEach(sid=>{ takenBy[sid]=x; }); });
 modal(id? "Edit cover group" : "Posts that cover each other", `
     <div class="stack">
-      <p class="whead">Tick every post in the arrangement. Each one is held by somebody from the same group while its person is at lunch, and their meals are kept apart so the group is never two people short at once.</p>
+      <p class="whead">Check every post in the arrangement. Each one is held by somebody from the same group while its person is at lunch, and their meals are kept apart so the group is never two people short at once.</p>
       <div class="stack" style="gap:4px">${posts.map(st=>{
 const other=takenBy[st.id];
 return `<label class="switch" style="border:1px solid var(--line);padding:7px 10px;border-radius:7px${other?";opacity:.55":""}">
@@ -17160,7 +17441,7 @@ return `<b>${paid} of ${tot} are paid for holidays</b>, ${fmtHrs(hrs*60)} in tot
         </div>
         ${H.length? handOutRow("polh") : ""}
         <div class="help" style="max-width:78ch">The poll form is a single HTML file that works offline on any phone or laptop — attach it to an email or drop it in a group chat. Whoever fills it out gets a short reply code to send back. Paste the codes below and the ranking is read straight in, so nobody has to trust a link or make an account.</div>
-        ${S.employees.filter(e=>e.email||e.phone).length? `<div class="mini">On file: ${S.employees.filter(e=>e.email).length} email${S.employees.filter(e=>e.email).length===1?"":"s"}, ${S.employees.filter(e=>e.phone).length} mobile number${S.employees.filter(e=>e.phone).length===1?"":"s"} — add the rest under Team.</div>`:`<div class="mini">No emails or numbers on file yet — add them under Team so the addresses are ready to paste.</div>`}
+        ${S.employees.filter(e=>e.email||e.phone).length? `<div class="mini">On file: ${S.employees.filter(e=>e.email).length} email${S.employees.filter(e=>e.email).length===1?"":"s"}, ${S.employees.filter(e=>e.phone).length} cell number${S.employees.filter(e=>e.phone).length===1?"":"s"} — add the rest under Team.</div>`:`<div class="mini">No emails or numbers on file yet — add them under Team so the addresses are ready to paste.</div>`}
       </div>
     </div>
 
@@ -17286,7 +17567,7 @@ modal("About "+nm+" on "+hn, `
           <button class="btn" id="twavoidall" style="justify-content:flex-start;text-align:left">
             <span><b>Keep ${esc(nm)} off holidays altogether</b><span class="mini" style="display:block">For this season\u2019s split only.</span></span></button>
           <button class="btn" id="twmust" style="justify-content:flex-start;text-align:left">
-            <span><b>Hold ${esc(nm)} to ${esc(hn)}</b><span class="mini" style="display:block">Use this when you\u2019ve agreed it with them, or it was their first pick and you want it honoured.</span></span></button>
+            <span><b>Hold ${esc(nm)} to ${esc(hn)}</b><span class="mini" style="display:block">Use this when you\u2019ve agreed it with them, or it was their first pick and you want it honored.</span></span></button>
         </div>
       </div>`, `<button class="btn" data-close>Cancel</button>`, r2=>{
 const add=(kind, holidayId)=>{
@@ -18031,7 +18312,11 @@ saveFile("requests-record.csv", rows.map(csvRow).join("\n"));
  
 
  
+ 
+function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
+{t:"Can I sign in with Google?", k:"google sign in login gmail account password continue with google link", go:null, when:()=>GOOGLE_SIGNIN,
+a:"Yes. On the sign-in screen press Continue with Google. If you already have a Weeksolved account under the same email address, it is the same account \u2014 your board is there, nothing moves. If you are new, you are asked for your access code after Google confirms who you are, and that is the whole of it. Under Settings \u2192 Your account you can attach Google to an account that has a password, or add a password to one that only has Google. One place it is not offered: the home-screen icon on an iPhone, where the Google window cannot hand the answer back to the app \u2014 there, use your email and password."},
 {t:"How many people can one account hold?", k:"limit maximum how many people employees staff cap size big large headcount roster limit", go:"team",
 a:"Two hundred and fifty. That is a tested figure, not a guess: a Weeksolved account saves your team and each week as single records, the storage behind it accepts about a megabyte at a time, and a fully-scheduled week of 500 people would sit right on that ceiling. At 250 an account uses about half of it, drafts a full week in a second or so, and every screen and printout stays quick. Inactive people count toward the 250, because their history is still stored \u2014 so if somebody has genuinely gone for good, remove them rather than deactivating them. If one site really does need more than 250, say so: it means splitting the way weeks are stored, which is a change worth making for a real customer rather than a hypothetical one."},
 {t:"Draft the week", k:"draft generate build schedule create week make auto", go:"home",
@@ -18083,16 +18368,16 @@ a:"On the sign-in screen, type your email in the box, then press 'Forgot your pa
 {t:"Working offline", k:"offline internet connection lost wifi airplane sync later", go:null,
 a:"Keep working — everything saves on the device and sends itself up the moment you're back online. The footer tells you which state you're in."},
 {t:"Is my data private", k:"privacy data private secure safe hidden visible others tech techs coworkers employees read access account each other", go:null,
-a:"Your board is yours alone: it's stored under your account and no other user can read it — that's enforced by the database itself, not just the app. Nothing about your schedule appears anywhere public, and nothing leaves the app unless you send it.\n\nYour people's details are the same. Names, phone numbers, pay rates, accrued time off, licence dates, notes, the lot — never sold, never handed to anyone for their own purposes, never used to train anything. That is written into the Terms as a promise we owe you, not just a policy we could rewrite. It leaves your account three ways only: you send it, our database provider stores it so the app can exist, or a court order compels it — and then we tell you first unless a judge forbids it."},
+a:"Your board is yours alone: it's stored under your account and no other user can read it — that's enforced by the database itself, not just the app. Nothing about your schedule appears anywhere public, and nothing leaves the app unless you send it.\n\nYour people's details are the same. Names, phone numbers, pay rates, accrued time off, license dates, notes, the lot — never sold, never handed to anyone for their own purposes, never used to train anything. That is written into the Terms as a promise we owe you, not just a policy we could rewrite. It leaves your account three ways only: you send it, our database provider stores it so the app can exist, or a court order compels it — and then we tell you first unless a judge forbids it."},
 {t:"Do you share my staff's names or pay?", k:"share sell disclose staff names pay rate contact phone email confidential private third party sold train ai", go:null,
-a:"No. Nothing that identifies one of your people — name, phone, email, hourly rate, time-off balance, licence dates, your notes, or their schedule history — is sold, rented, published, given to anyone for their own purposes, or used to train a model. Section 3.1 of the Terms says so in writing. The only ways it goes anywhere: you send it, our database provider holds it to run the service, or valid legal process compels it.\n\nAlso worth knowing: none of it is required. Weeksolved drafts a full week with nothing but first names. Contact details and rates are there if they help you — leave them blank and everything still works."},
+a:"No. Nothing that identifies one of your people — name, phone, email, hourly rate, time-off balance, license dates, your notes, or their schedule history — is sold, rented, published, given to anyone for their own purposes, or used to train a model. Section 3.1 of the Terms says so in writing. The only ways it goes anywhere: you send it, our database provider holds it to run the service, or valid legal process compels it.\n\nAlso worth knowing: none of it is required. Weeksolved drafts a full week with nothing but first names. Contact details and rates are there if they help you — leave them blank and everything still works."},
 {t:"Ask the team what they need", k:"request form survey ask team availability preferences intake day off collect gather poll code reply", go:"requests",
 a:"On the Requests page, press Ask the team. Weeksolved writes one page — send it however you already talk to your staff. They open it on a phone, add what they need (a day off, a shift they'd prefer, a time they can't start before), and get a short code. Paste the code into Read a reply and you see everything they asked for, with a button to add each one.\n\nNobody signs in and nothing is sent anywhere by the form — the code is the only thing that leaves, and they send it themselves. Nothing lands on the schedule until you press. You set how firm each one is, not them: the form records what they said, the dropdown decides what the scheduler is actually held to."},
 {t:"Starter form for a new hire", k:"starter form new hire onboarding intake about you details contact availability preferences add someone roster setup", go:"team",
 a:"On the Team page, press Starter form. It writes one page a new hire fills in on their phone: contact details, what they're trained for, when they can work, and what they'd prefer. They send back a code; you paste it into Read a reply, look at everything before you keep it, and press once to add or update them.\n\nThe form promises them nothing. It says at the top, and again over the preference sections, that these are preferences rather than promises, that you build the schedule around the business first, and that shifts, posts and rotations are your workplace's decision. Their hours, employment type, rate and start date are never asked — those are yours to set."},
-{t:"Checking a licence with the issuing board", k:"license licence verify check board state link lookup issuing jurisdiction compact federal VA out of state", go:"team",
-a:"On someone's file, say what kind of licence it is and which state issued it. If there is an official page for checking that licence, a link to it appears underneath. It opens the board's own site in a new tab.\n\nThat is all it does. Weeksolved never opens the page for you, never reads a result, and never records an answer \u2014 so nothing in the app ever says a licence is valid, current or checked. You look, and you decide. The only thing Weeksolved watches is the expiry date you typed in.\n\nThe state that matters is the one that ISSUED the licence, not the one you are in. Those are often different and that is normal: a federal employer such as the VA can take a licence from any state whatever state the site is in, a nurse on a compact licence holds it in the state they live in, and plenty of people simply keep a licence from somewhere they used to live. Set the issuing state and the link goes to the right board. If you pick a federal employer, you get no link at all \u2014 there is no board to send you to, and a link to the wrong one would be worse than none.\n\nWhere Weeksolved has no page on file for that state and licence, it says so plainly rather than guessing. Whether a licence from elsewhere lets someone work for you here is a question for you and your own advisers; the app has no view on it and keeps no record of one."},
-{t:"Expired licenses and drafting", k:"license licence expired expiry lapsed block draft schedule certification registration renew warn stop", go:"team",
+{t:"Checking a license with the issuing board", k:"license license verify check board state link lookup issuing jurisdiction compact federal VA out of state", go:"team",
+a:"On someone's file, say what kind of license it is and which state issued it. If there is an official page for checking that license, a link to it appears underneath. It opens the board's own site in a new tab.\n\nThat is all it does. Weeksolved never opens the page for you, never reads a result, and never records an answer \u2014 so nothing in the app ever says a license is valid, current or checked. You look, and you decide. The only thing Weeksolved watches is the expiry date you typed in.\n\nThe state that matters is the one that ISSUED the license, not the one you are in. Those are often different and that is normal: a federal employer such as the VA can take a license from any state whatever state the site is in, a nurse on a compact license holds it in the state they live in, and plenty of people simply keep a license from somewhere they used to live. Set the issuing state and the link goes to the right board. If you pick a federal employer, you get no link at all \u2014 there is no board to send you to, and a link to the wrong one would be worse than none.\n\nWhere Weeksolved has no page on file for that state and license, it says so plainly rather than guessing. Whether a license from elsewhere lets someone work for you here is a question for you and your own advisers; the app has no view on it and keeps no record of one."},
+{t:"Expired licenses and drafting", k:"license license expired expiry lapsed block draft schedule certification registration renew warn stop", go:"team",
 a:"If someone is in a role you marked as licensed and you have put an expiry date on their file, the drafter will not give them a shift dated after that date. That is not a setting and cannot be switched off — it is the one thing the scheduler simply refuses to do.\n\nWhen you press Draft, anything expiring inside the stretch is put in front of you first: who, what date, and whether it takes out the whole stretch or only part of it. You can open their file and put the new date in, or carry on and have the week built around it. If the renewal came through and you just have not typed it yet, fixing it there is the quickest route.\n\nNothing happens for anyone with no license details on file. A blank is not treated as a problem — Weeksolved has no date, so it makes no claim either way, and those people are scheduled normally."},
 {t:"Someone has no preferences on file", k:"blank preferences empty availability open nothing on file new person default flag", go:"team",
 a:"That's fine, and it costs you nothing. Anyone with nothing on file is treated as available whenever you're open, and the scheduler uses them normally. The Team page just shows a quiet 'nothing on file' note against them and a count in the header, so you know who you've never asked — not because anything is wrong. Press Starter form if you'd like to collect it, or leave it: plenty of rosters run perfectly well with nobody's preferences entered at all."},
@@ -18112,7 +18397,7 @@ a:"Turn it on in Settings (or in setup) and a Vacations page appears. Download t
 a:"Assigned holidays are staffed by the holiday poll, so a vacation can't swallow one. The usual order: assign holidays first, run the vacation draw second, and handle day-to-day requests after. A request that touches a holiday is skipped with a note, and the person's next choice is tried instead."},
 {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
 a:"On the Holidays page (or in setup), say whether business spikes the day before a holiday, after, or both. Those days then count one step busier: spare hands are steered there first, drafts fill them first, and thin cover next to a holiday gets flagged. It never adds shifts on its own."},
-{t:"Light and dark do nothing when I press them", k:"dark light theme colour color mode toggle night day not working stuck browser force invert", go:null,
+{t:"Light and dark do nothing when I press them", k:"dark light theme color color mode toggle night day not working stuck browser force invert", go:null,
 a:"Almost always the browser rather than Weeksolved. Some browsers have a setting that forces every website to dark whatever the site asks for, and while it is on no site's light and dark buttons will appear to do anything. An easy way to tell: open any ordinary page, Wikipedia say \u2014 if that is dark too, it is the browser doing it everywhere. In Chrome it is chrome://flags, search \u201cAuto Dark Mode for Web Contents\u201d, set it to Disabled and relaunch; some versions keep it under Settings, Appearance. Weeksolved now tells the browser it handles its own light and dark, which is enough for most versions to leave it alone."},
 {t:"Put Weeksolved on your home screen", k:"home screen install app icon phone shortcut add pin homescreen", go:null,
 act:"a2hs", actLabel:"Show me the steps for this device",
@@ -18126,7 +18411,7 @@ a:"Switch it on and the first thing Weeksolved does is tell you whether any of i
 a:"Set someone\u2019s employment type to \u201cIn training\u201d and you choose one thing: are they an extra pair of hands, or one of the team? As an extra, they are scheduled on top of the cover you need \u2014 a gap is never filled by someone still learning, they land on your busiest days, and they are never on the floor alone. The day sheet names who they are with, so they know who to report to. Give them a finish date and their profile moves itself on that day, to whatever type and group you picked \u2014 a technician training as a pharmacist becomes a pharmacist, on the date, with nothing for you to remember. Each trainee can also have their own plan for posts: one post until they have it, a rotation of a few for a set number of shifts each, or no preference.",
 },
 {t:"Post training \u2014 who needs more time on what (optional)", k:"skill training learning comfortable signed off strong weak level qualified competency bias posts stations", go:"stations",
-a:"Optional and off unless you switch it on under Stations. It records what each person is trained on, post by post — still learning, can work it, or signed off to train others — and nothing else. It only ever affects which post someone is handed on the day sheet; it never changes anyone's hours or pay, and staff never see it. You choose when it applies (every day, only busy days, only when the floor is thin, or busy days for the trained and quiet days for learners to practise) and how strongly it leans (gentle nudge, balanced, strong). A post can also be marked so a learner is never left there alone. Deliberately a training record and not a rating of people — that keeps it useful and fair."},
+a:"Optional and off unless you switch it on under Stations. It records what each person is trained on, post by post — still learning, can work it, or signed off to train others — and nothing else. It only ever affects which post someone is handed on the day sheet; it never changes anyone's hours or pay, and staff never see it. You choose when it applies (every day, only busy days, only when the floor is thin, or busy days for the trained and quiet days for learners to practice) and how strongly it leans (gentle nudge, balanced, strong). A post can also be marked so a learner is never left there alone. Deliberately a training record and not a rating of people — that keeps it useful and fair."},
 {t:"Stations and how the rotation works", k:"station post typist checker rotation family bucket daily sheet where people stand rotate two hours", go:"stations",
 a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Typist 1, Typist 2) share one rotation by default, so a turn on either counts as a turn on Typist and that person is less likely to draw it again; you can switch to counting every post separately under Stations. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
 {t:"Which holidays we close for", k:"holiday closed open christmas eve thanksgiving new year observe list closures skeleton", go:"holidays",
@@ -18158,11 +18443,11 @@ a:"Switch on Under-18 hour limits in Settings, put a date of birth on anyone sti
 {t:"Why the app won't give a shift to my teenager", k:"minor blocked under 18 school day three hours cannot schedule teen", go:"week",
 a:"Because it would break an under-18 limit. The three usual reasons: the shift is longer than they may work that day (3 hours on a school day at 14\u201315), it would take them past their weekly limit, or it finishes later than they may work. Cover the gaps names which one. If the shift looks fine to you, check the school-year dates in Settings \u2014 without them every day counts as a non-school day, and with them a term-time Wednesday is a school day."},
 {t:"Offering an open shift to the team", k:"open shift offer spare cover claim pick up extra volunteer gap fill", go:"week",
-a:"When a shift can't be filled, Cover the gaps offers to send it out. You get a one-page file — save it, attach it to an email or drop it in the group chat with the message it writes for you. Your team open it, tick what they'd take, and it gives them a short code to send back. Nobody needs an account or an app, and ticking commits them to nothing until you confirm."},
+a:"When a shift can't be filled, Cover the gaps offers to send it out. You get a one-page file — save it, attach it to an email or drop it in the group chat with the message it writes for you. Your team open it, check what they'd take, and it gives them a short code to send back. Nobody needs an account or an app, and ticking commits them to nothing until you confirm."},
 {t:"A reply code came back", k:"reply code claim paste open shift confirm give shift accept", go:"week",
 a:"Cover the gaps → Enter a reply code. Paste what they sent and you'll see exactly what they're offering to take, with each shift checked again against every rule — hours, turnaround, availability, licenses, the lot. A shift someone else already took shows as covered, and one that would break a limit says which limit and can't be given. Nothing is ever placed quietly: you press the button for each one."},
 {t:"Devices on your account", k:"device login sign in sessions sharing password security signed out everywhere account", go:"settings",
-a:"Settings \u2192 Your account (it appears once you are signed in) lists every browser your login has been opened in, when it was last used, and roughly where. Remove one you don't recognise, or sign every other device out at once — and change your password at the same time if you want to be certain. You'll also get a quiet note if the account is in use in several places at the same time. One account covers one location: a second site works far better on its own login, since two rosters on one account overwrite each other's week."},
+a:"Settings \u2192 Your account (it appears once you are signed in) lists every browser your login has been opened in, when it was last used, and roughly where. Remove one you don't recognize, or sign every other device out at once — and change your password at the same time if you want to be certain. You'll also get a quiet note if the account is in use in several places at the same time. One account covers one location: a second site works far better on its own login, since two rosters on one account overwrite each other's week."},
 {t:"Confirming a new device", k:"two step 2fa verification email code new device confirm login", go:"settings",
 a:"Optional, and off unless you turn it on. With it on, the first time your account is opened on a device it has never been used on, you get an email with a link — open it on that device and it never asks again. If the email can't be sent for any reason, the check turns itself off and lets you straight in, so it can never lock you out of your own schedule."},
 {t:"The record of changes", k:"audit trail history log who changed what retention record changes", go:"analytics",
@@ -18177,7 +18462,7 @@ function kbAsk(q){
 const words=(q||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w.length>2);
 if(!words.length) return {best:null, more:[]};
 const GENERIC={work:1,works:1,working:1,week:1,shift:1,shifts:1,schedule:1,schedules:1,people:1,person:1,staff:1,how:1,whole:1,see:1,the:1,does:1,doesnt:1,make:1,need:1};
-const scored=KB.map(e=>{
+const scored=kbList().map(e=>{
 let sc=0;
 const kt=e.k+" "+e.t.toLowerCase();
 const body=e.a.toLowerCase();
@@ -18212,7 +18497,7 @@ return `
     </div>
     <div class="card"><header><h3>Frequently asked</h3><span class="hint">Tap a question to open the answer</span></header>
       <div class="body stack" style="gap:6px">
-        ${KB.map((e,i)=>`<div class="faqi" style="border:1px solid var(--line);border-radius:7px">
+        ${kbList().map((e,i)=>`<div class="faqi" style="border:1px solid var(--line);border-radius:7px">
           <button class="faqq" data-faq="${i}" aria-expanded="false" style="all:unset;display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box;padding:10px 12px;cursor:pointer;font-weight:600;font-size:13.5px">${esc(e.t)}<span class="mini" style="flex:none">+</span></button>
           <div class="faqa" hidden style="padding:0 12px 11px;font-size:13px;color:var(--ink2)">${esc(e.a)}${e.go? ` <a href="#" data-go="${e.go}" style="color:var(--accent)">Take me there →</a>`:""}${e.act? ` <a href="#" data-faqact="${esc(e.act)}" style="color:var(--accent)">${esc(e.actLabel||"Show me")} →</a>`:""}</div>
         </div>`).join("")}
@@ -18340,14 +18625,14 @@ return d.replace(/-/g,"")+"T"+p(Math.floor(m/60))+p(m%60)+"00"; }
 function icsEsc(x){ return String(x||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
  
 const REMIND_KINDS = [
-{k:"lic",  t:"A licence or certification running out",
+{k:"lic",  t:"A license or certification running out",
 d:"60 days before, 14 days before, and on the day itself — the three moments when doing something about it is still possible.",
-why:"A lapsed licence is the one thing on this list that can close a pharmacy for a day."},
+why:"A lapsed license is the one thing on this list that can close a pharmacy for a day."},
 {k:"post", t:"Post next week's schedule",
 d:"Once a week, timed off how far ahead you have said you want to post.",
 why:"The commonest way a good schedule goes wrong is being late rather than being wrong."},
-{k:"poll", t:"A holiday poll or vacation round closing",
-d:"The day before the deadline you set, so there is still time to chase whoever has not answered.",
+{k:"poll", t:"The vacation round closing",
+d:"The day before the deadline you set for vacation requests, so there is still time to chase whoever has not sent a code back.",
 why:""},
 {k:"hol",  t:"A holiday you have not decided about",
 d:"30 days before any holiday still set to your default, so closing or thinning it is your choice rather than an accident.",
@@ -18373,14 +18658,14 @@ out.push({date, kind, title, detail:detail||""});
 
 if(R.lic){
 S.employees.filter(e=>e.active && e.licExp && empLicensed(e)).forEach(e=>{
-const what=e.licLabel || licTypeName(e.licKind) || "licence";
+const what=e.licLabel || licTypeName(e.licKind) || "license";
 const first=(e.name||"They").split(" ")[0];
 [[60,"in two months"],[14,"in two weeks"],[0,"today"]].forEach(([n,when])=>{
 push(addDays(e.licExp, -n),
 "lic",
 n? first+"'s "+what+" runs out "+when : first+"'s "+what+" runs out today",
 e.name+" — "+what+" expires "+prettyFull(e.licExp)+
-(n? ". Weeksolved stops scheduling them past that date, so a gap appears in the rota if it is not renewed."
+(n? ". Weeksolved stops scheduling them past that date, so a gap appears in the schedule if it is not renewed."
 : ". From tomorrow Weeksolved will not put them on a shift."));
 });
 });
@@ -18410,10 +18695,7 @@ const V=S.vacations||{};
 if(V.on && V.deadline)
 push(addDays(V.deadline,-1), "poll", "Vacation requests close tomorrow",
 "Anybody who has not sent a code back still can today. After the deadline you can still read codes in, but the round is meant to be settled.");
-const H=S.holidays||{};
-if(H.poll && H.poll.by)
-push(addDays(H.poll.by,-1), "poll", "The holiday poll closes tomorrow",
-"Chase whoever has not answered before you work the holidays out.");
+ 
 }
 
 if(R.hol){
@@ -18518,7 +18800,7 @@ modal("What you would actually get", `
         ${C.rep.length? " The weekly one goes in as a single repeating entry, so it is one line in your calendar and one thing to delete, not fifty-two." : ""}
         ${C.one.length? " Days with more than one land as a single entry, never two." : ""}
         ${C.one.length>26? " That is more one-offs than most people want. Turn something off below and look again." : ""}</div></div>`
-: `<div class="banner info"><div><b>Nothing at all, as things stand.</b> Reminders come from dates already on your board — a licence expiry on somebody's profile, a poll deadline, a holiday you have not decided about. Put one of those in and this fills up.</div></div>`}
+: `<div class="banner info"><div><b>Nothing at all, as things stand.</b> Reminders come from dates already on your board — a license expiry on somebody's profile, a poll deadline, a holiday you have not decided about. Put one of those in and this fills up.</div></div>`}
       ${soon.length? `<div class="scroll"><table>
         <thead><tr><th style="width:120px">When</th><th>What</th></tr></thead>
         <tbody>${soon.map(x=>`<tr>
@@ -18811,8 +19093,11 @@ document.body.classList.toggle("compact", density()==="compact");
  
 function themeLanded(want){
 try{
-const m=/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(getComputedStyle(document.body).backgroundColor);
-if(!m) return true;                                      
+let bg=getComputedStyle(document.body).backgroundColor;
+ 
+if(/rgba\([^)]*,\s*0\)$/.test(bg)) bg=getComputedStyle(document.documentElement).backgroundColor;
+const m=/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(bg);
+if(!m || /rgba\([^)]*,\s*0\)$/.test(bg)) return true;    
 const lum=(0.2126*+m[1] + 0.7152*+m[2] + 0.0722*+m[3])/255;
 if(want==="light") return lum > 0.5;
 if(want==="dark")  return lum < 0.5;
@@ -18825,7 +19110,7 @@ if(S.ui.themeNote) return;
 S.ui.themeNote=true; try{ save(); }catch(e){}
 const ua=navigator.userAgent||"";
 const chrome=/Chrome|Chromium|Edg/.test(ua) && !/Firefox/.test(ua);
-modal("Your browser is overriding the colours", `
+modal("Your browser is overriding the colors", `
     <div class="stack">
       <div class="banner info"><div><b>The button worked — something outside Weeksolved is repainting the page afterwards.</b>
         Some browsers have a setting that forces every site to dark, whatever the site itself asks for. While it is on, no site's
@@ -18837,7 +19122,7 @@ modal("Your browser is overriding the colours", `
         Settings → Appearance instead.</div>`
 : `<div class="help">Look for a setting named something like <b>force dark</b>, <b>auto dark</b> or <b>dark reader</b> in your
         browser's settings or extensions, and turn it off for this site.</div>`}
-      <div class="help">Nothing is wrong with your schedule, and nothing needs fixing here. This is only about colour.</div>
+      <div class="help">Nothing is wrong with your schedule, and nothing needs fixing here. This is only about color.</div>
     </div>`,
 `<button class="btn primary" data-close>Got it</button>`);
 }
@@ -19021,10 +19306,39 @@ return t + hp.hours*(e.rate||0);
 }
 function costOf(a){ const e=empById(a.empId); if(!e||!e.rate) return 0;
 const paid=paidMinutes(a)/60;
-const ot=Math.max(0,paid-(S.org.otDailyH||8)), reg=paid-ot;
-return reg*e.rate + ot*e.rate*1.5;
+const dtH=S.org.dtDailyH>0? S.org.dtDailyH : Infinity, otH=S.org.otDailyH>0? S.org.otDailyH : Infinity;
+const dt=Math.max(0,paid-dtH), ot=Math.max(0,paid-dt-otH), reg=paid-ot-dt;
+return reg*e.rate + ot*e.rate*1.5 + dt*e.rate*2;
 }
-function weekCost(ws){ return peekWeek(ws).assignments.reduce((t,a)=>t+costOf(a),0) + holidayPayCost(ws); }
+ 
+function weekCostDetail(ws){
+const wk=peekWeek(ws), byDay={}, byPerson={}, premium={};
+const otD=otDailyMin(), dtD=dtDailyMin(), otW=otWeeklyMin();
+const byEmp={};
+wk.assignments.forEach(a=>{ (byEmp[a.empId]=byEmp[a.empId]||[]).push(a); });
+Object.keys(byEmp).forEach(id=>{
+const e=empById(id); if(!e||!e.rate) return;
+const perMin=e.rate/60;
+const days={};
+byEmp[id].forEach(a=>{ days[a.date]=(days[a.date]||0)+paidMinutes(a); });
+let straight=0;
+Object.keys(days).sort().forEach(d=>{
+const mins=days[d];
+const dt=dtD? Math.max(0,mins-dtD):0;
+let ot=otD? Math.max(0,mins-dt-otD):0;
+let reg=mins-ot-dt;
+if(straight+reg>otW){ const shift=Math.min(reg, straight+reg-otW); reg-=shift; ot+=shift; }
+straight+=reg;
+const cost=reg*perMin + ot*perMin*1.5 + dt*perMin*2;
+byDay[d]=(byDay[d]||0)+cost;
+byPerson[id]=(byPerson[id]||0)+cost;
+premium[id]=(premium[id]||0) + ot*perMin*0.5 + dt*perMin;    
+});
+});
+return {byDay, byPerson, premium};
+}
+function weekCostByDay(ws){ return weekCostDetail(ws).byDay; }
+function weekCost(ws){ const m=weekCostByDay(ws); let t=0; for(const k in m) t+=m[k]; return t + holidayPayCost(ws); }
 function money(n){ return "$"+Math.round(n).toLocaleString(); }
 function haveRates(){ return !!S.org.trackCost && S.employees.some(e=>e.rate>0); }
 function costOn(){ return !!S.org.trackCost; }
@@ -19402,7 +19716,13 @@ return {empId:emp.id, date:dates[idx].date, dow:dates[idx].dow};
  
 boot();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- The PDF engine is only needed when somebody exports, so it must never hold
+     the page up: on a network that quietly swallows requests to this host, a
+     plain script tag here leaves the tab spinning until the browser gives up.
+     defer keeps the two in order and keeps the app's own start independent of
+     whether this host can be reached. The build inlines both from assets/ when
+     the files are there, at which point no outside host is involved at all. -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </body>
 </html>

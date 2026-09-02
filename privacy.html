@@ -142,6 +142,13 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 <td>While your account is active</td>
 </tr>
 <tr>
+<td>Identifiers, if you sign in with Google</td>
+<td>The name, email address and profile-picture link on your Google account</td>
+<td>Google, when you choose "Sign in with Google"</td>
+<td>Authentication. <strong>We use the email address only; the name and picture sit unused in the sign-in record.</strong></td>
+<td>While your account is active, then 30 days</td>
+</tr>
+<tr>
 <td>Commercial information</td>
 <td>Your invitation code; your plan; subscription status</td>
 <td>You and our merchant of record</td>
@@ -266,7 +273,7 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 <h3>3.1 Where it lives</h3>
 <p><strong>In your browser.</strong> Weeksolved is a single-page application: the whole program runs in your browser. Your data is stored there, in browser localStorage, which is why the app keeps working when you are offline. That copy is on your device and under your control. Clearing your browser data clears it.</p>
 <p><strong>On Google Firebase, if you sign in.</strong> If you sign in, your data also syncs to <strong>Google Firebase / Cloud Firestore, hosted in the United States</strong>. It is protected in transit and at rest by Google's platform encryption, and by per-account Firestore security rules under which each account can read only its own data.</p>
-<p><strong>Firebase Authentication</strong> holds your password. It is stored hashed by Google. We never see it and cannot recover it — if you lose it, you reset it.</p>
+<p><strong>Firebase Authentication</strong> holds your password. It is stored hashed by Google. We never see it and cannot recover it — if you lose it, you reset it. If you choose <strong>Sign in with Google</strong> instead, Google confirms who you are and passes us the name, email address and profile-picture link on your Google account; we use the email address only, and no password is created unless you add one yourself.</p>
 <h3>3.2 Who can reach it — read this part</h3>
 <p>Your data is protected from <em>other customers</em> by per-account security rules. Those rules are how accounts are kept apart, and they are enforced by Google's infrastructure, not by our application code alone.</p>
 <p><strong>They do not, and cannot, keep us out.</strong></p>
@@ -304,8 +311,8 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 </tr>
 <tr>
 <td><strong>Google LLC — Firebase Authentication</strong></td>
-<td>Sign-in; password storage</td>
-<td>Your email address and hashed password</td>
+<td>Sign-in; password storage; Sign in with Google</td>
+<td>Your email address and hashed password; with Google sign-in, the name, email address and profile-picture link Google provides</td>
 <td>United States</td>
 <td><strong>Live</strong></td>
 </tr>
