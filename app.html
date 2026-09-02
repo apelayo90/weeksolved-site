@@ -1009,8 +1009,22 @@ function prettyFull(s){ const d=parseYmd(s);
 return d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
 
  
+ 
+function uiRoot(id, attrs){
+let el=document.getElementById(id);
+if(!el){
+el=document.createElement("div");
+el.id=id;
+if(attrs) Object.keys(attrs).forEach(k=>el.setAttribute(k, attrs[k]));
+document.body.appendChild(el);
+}
+return el;
+}
+function modalRoot(){ return uiRoot("modalroot"); }
+function toastRoot(){ return uiRoot("toastroot", {role:"status", "aria-live":"polite"}); }
+
 function toast(msg, act){
-const r=$("#toastroot");
+const r=toastRoot();
 r.innerHTML='<div class="toast"><span>'+esc(msg)+'</span>'+
 (act? '<button type="button" class="tact" id="toastact">'+esc(act.label||"Undo")+'</button>' : '')+'</div>';
 if(act){
@@ -1834,8 +1848,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "07ce500e";       
-const BUILD_AT = "2026-09-02 00:56 UTC";       
+const BUILD_ID = "d6494322";       
+const BUILD_AT = "2026-09-02 04:30 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -8799,7 +8813,7 @@ else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventD
 }
 function modal(title, bodyHtml, footHtml, onMount){
 MODAL_GUARD=null;
-const r=$("#modalroot");
+const r=modalRoot();
  
 MODAL_OPENER = (document.activeElement && document.activeElement!==document.body)? document.activeElement : null;
 const ttlId="mdt_"+Math.random().toString(36).slice(2,8);
@@ -8830,13 +8844,13 @@ let MODAL_OPENER=null;
 function closeModal(force){
 if(MODAL_GUARD && !force){ MODAL_GUARD(); return; }
 if(MODAL_DIRTY && !force){ askKeepEditing(); return; }
-MODAL_GUARD=null; MODAL_DIRTY=false; $("#modalroot").innerHTML="";
+MODAL_GUARD=null; MODAL_DIRTY=false; modalRoot().innerHTML="";
 if(MODAL_OPENER && MODAL_OPENER.isConnected){ try{ MODAL_OPENER.focus({preventScroll:true}); }catch(e){} }
 MODAL_OPENER=null;
 }
  
 function askKeepEditing(){
-const box=$("#modalroot").querySelector(".modal");
+const box=modalRoot().querySelector(".modal");
 if(!box || box.querySelector("#mdkeep")) return;
 const foot=box.querySelector("footer");
 const bar=document.createElement("div");
@@ -14967,7 +14981,7 @@ return (c+l+nn)? [c?c+" closed":"", l?l+" lighter":"", nn?nn+" normal":""].filte
 }
 
 function teamSummary(){
-const r=$("#modalroot"), box=r.querySelector("#wteamsum");
+const r=modalRoot(), box=r.querySelector("#wteamsum");
 if(!box) return;
  
 if(box.contains(document.activeElement)) return;
@@ -15000,7 +15014,7 @@ W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
 
 let PAINT_STEP=-1;
 function paint(){
-const r=$("#modalroot");
+const r=modalRoot();
 const prevBody=r.querySelector(".modal .body");
 const keep = (PAINT_STEP===W.step && prevBody)? prevBody.scrollTop : 0;
 const sameStep = PAINT_STEP===W.step;
@@ -15031,7 +15045,7 @@ const wex=r.querySelector("#wexplore");
 if(wex) wex.onclick=()=>{ closeModal(true); toast("Look around — Set up my business on the Home screen restarts the questions any time"); };
  
 MODAL_GUARD = W.step>0 ? ()=>{
-const foot=$("#modalroot").querySelector(".modal footer");
+const foot=modalRoot().querySelector(".modal footer");
 if(foot && !foot.querySelector("#wleave")){
 const b=document.createElement("div");
 b.id="wleave"; b.style.cssText="flex:1;display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)";
@@ -15094,7 +15108,7 @@ const back=r.querySelector("#wback"); if(back) back.onclick=()=>{ collect(); W.s
 if(sk) sk.onclick=()=>{ collect();
 if(!String(W.name||"").trim()){
 toast("Give it a name \u2014 it goes at the top of every schedule you print");
-W.step=0; paint(); setTimeout(()=>{ const nf=$("#modalroot").querySelector("#wn"); if(nf) nf.focus(); },60); return; }
+W.step=0; paint(); setTimeout(()=>{ const nf=modalRoot().querySelector("#wn"); if(nf) nf.focus(); },60); return; }
 if(W.step===STEPS.length-1) apply(); else { W.step=STEPS.length-1; paint(); } }; }
 r.querySelector("#wnext").onclick=()=>{
 collect();
@@ -15199,7 +15213,7 @@ r.querySelectorAll("[data-wqdel]").forEach(b=>b.onclick=()=>{ W.reqs.splice(+b.d
 }
 
 function collect(){
-const r=$("#modalroot"); const g=sel=>r.querySelector(sel);
+const r=modalRoot(); const g=sel=>r.querySelector(sel);
 if(g("#wn")) W.name=g("#wn").value.trim();
 if(g("#ws")) W.site=g("#ws").value.trim();
 if(g("#wj")) W.juris=g("#wj").value;
@@ -16096,7 +16110,7 @@ return `<label class="switch" style="border:1px solid var(--line);padding:7px 10
       <div class="help">A post can only be in one group. For cover that goes one way only \u2014 the booth covers the vault, but not the reverse \u2014 leave the vault out of any group and set it on the vault itself under <b>Who steps in while they eat</b>.</div>
     </div>`,
 `${id?'<button class="btn danger" id="cgdel">Remove group</button>':""}<button class="btn" data-close>Cancel</button><button class="btn primary" id="cgsave">Save</button>`);
-const r=$("#modalroot");
+const r=modalRoot();
 const del=r.querySelector("#cgdel");
 if(del) del.onclick=()=>{
 (S.coverGroups||[]).filter(x=>x.id===g.id).forEach(x=>(x.sts||[]).forEach(sid=>{
@@ -18407,7 +18421,7 @@ const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName||""));
 if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); palette(); return; }
 if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="z" && !typing){ e.preventDefault(); undo(); return; }
 if(typing || e.metaKey || e.ctrlKey || e.altKey) return;
-if($("#modalroot").innerHTML || $("#palroot")) return;
+if(modalRoot().innerHTML || $("#palroot")) return;
 if(e.key==="/"){ e.preventDefault(); palette(); }
 else if(e.key==="w"){ go("week"); } else if(e.key==="d"){ go("day"); }
 else if(e.key==="t"){ go("team"); } else if(e.key==="o"){ go("home"); }
