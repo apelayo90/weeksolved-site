@@ -15,6 +15,9 @@
 <meta name="keywords" content="employee scheduling software, staff scheduling, shift scheduler, work schedule maker, shift planner, staff rota software, employee rota, break compliance, meal break law, rest break scheduling, California meal break, labor law scheduling, coverage planning, shift rotation, seniority scheduling, healthcare staff scheduling, pharmacy staff scheduling, clinic scheduling software, small business scheduling">
 <meta name="author" content="Weeksolved">
 <meta name="robots" content="index,follow">
+
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#1c6a66">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Weeksolved">
@@ -354,6 +357,8 @@ tr:last-child td{border-bottom:0}
 .shiftblk.chg::before{content:"";position:absolute;top:3px;left:3px;width:6px;height:6px;border-radius:50%;background:var(--warn)}
 .card.folded>*:not(header){display:none}
 .fixopt.bestfix{border-color:var(--ok);background:var(--surface);background:color-mix(in srgb,var(--ok) 5%,var(--surface))}
+ol.a2hs{margin:0;padding-left:22px;display:grid;gap:9px;font-size:14px;line-height:1.5}
+ol.a2hs li{padding-left:2px}
 .hnotice{display:flex;align-items:center;gap:10px;justify-content:space-between;
   border-left:3px solid var(--accent);background:var(--surface);border-radius:0 7px 7px 0;
   padding:9px 12px;font-size:13px;color:var(--ink2)}
@@ -881,8 +886,11 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   input[type=text],input[type=number],input[type=time],input[type=date],input[type=email],input[type=tel],select,textarea{font-size:16px}
   #reportbtn .replbl{display:none}
   #reportbtn{border-radius:99px;width:30px;height:30px;padding:0}
-  /* fingers, not cursors: keep every tap target comfortable */
-  .btn.sm{padding:10px 12px}
+  /* fingers, not cursors: keep every tap target comfortable. 44px is the number
+     the rest of this file already uses for anything a finger lands on - every
+     input, every day toggle - and a small button was coming out at 40, which is
+     the one control on a phone that was quietly below the app's own standard. */
+  .btn.sm{padding:10px 12px;min-height:44px}
   .daytog{padding:10px 12px}
   .switch{padding:8px 0}
   .addbtn{min-width:40px;min-height:36px}
@@ -976,6 +984,30 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 
  
 const $ = (s,r)=> (r||document).querySelector(s);
+ 
+function secureBytes(n){
+try{
+const c=(window.crypto||window.msCrypto);
+if(c && c.getRandomValues){ const a=new Uint8Array(n); c.getRandomValues(a); return a; }
+}catch(e){}
+const a=new Uint8Array(n);
+for(let i=0;i<n;i++) a[i]=Math.floor(Math.random()*256);
+return a;
+}
+ 
+function securePick(alphabet, n){
+const A=String(alphabet), L=A.length, limit=Math.floor(256/L)*L;
+let out="", need=n;
+while(need>0){
+const buf=secureBytes(need*2);
+for(let i=0;i<buf.length && need>0;i++){
+if(buf[i]>=limit) continue;
+out+=A[buf[i]%L]; need--;
+}
+}
+return out;
+}
+const B36="abcdefghijklmnopqrstuvwxyz0123456789";
 const uid = p => (p||"id")+"_"+Math.random().toString(36).slice(2,9);
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -1021,6 +1053,7 @@ document.body.appendChild(el);
 return el;
 }
 function modalRoot(){ return uiRoot("modalroot"); }
+function sheetRoot(){ return uiRoot("sheetroot"); }
 function toastRoot(){ return uiRoot("toastroot", {role:"status", "aria-live":"polite"}); }
 
 function toast(msg, act){
@@ -1323,18 +1356,31 @@ const LSKEY = "dowel.v3";
  
 function lsKeyFor(uid){ return uid? "dowel.v3:"+uid : LSKEY; }
 let LS_UID = "";         
+let SIGNED_OUT = false;  
 function lsKey(){ return lsKeyFor(LS_UID); }
 const LSKEY_OLD = "coveragedesk.v3";    
  
 function signOutClean(){
+ 
+SIGNED_OUT = true;
 try{ LS_UID=""; }catch(e){}
-try{ localStorage.removeItem(LSKEY); localStorage.removeItem(LSKEY_OLD); }catch(e){}
+ 
 try{ if(cloudUnsub) cloudUnsub(); }catch(e){}
+try{ if(kickUnsub) kickUnsub(); }catch(e){}
+try{ clearTimeout(bindSaveTimer); }catch(e){}
+try{ clearTimeout(saveTimer); }catch(e){}
+try{ clearInterval(GRACE_TIMER); GRACE_TIMER=null; }catch(e){}
+try{ clearInterval(DEVTIMER); DEVTIMER=null; }catch(e){}
 try{ window.TESTER_ID=""; window.TESTER_LIFE=false; window.TESTER_DAYS=0; window.TESTER_FROM=0; }catch(e){}
-const go=()=>{ try{ location.reload(); }catch(e){} };
+let went=false;
+const go=()=>{ if(went) return; went=true; try{ location.reload(); }catch(e){} };
+setTimeout(go, 1500);                  
 try{ return FB.auth.signOut().then(go).catch(go); }catch(e){ go(); }
 }
-function lsSave(){ try{ S._at=Date.now(); S._uid=LS_UID||""; localStorage.setItem(lsKey(), JSON.stringify(S)); }catch(e){} }
+function lsSave(){
+if(SIGNED_OUT) return;    
+try{ S._at=Date.now(); S._uid=LS_UID||""; localStorage.setItem(lsKey(), JSON.stringify(S)); }catch(e){}
+}
 function lsLoad(){ try{
 let r=localStorage.getItem(lsKey());
  
@@ -1612,7 +1658,7 @@ const sub=(S.org.name||"Work")+" schedule — week of "+prettyDate(ws);
 const txt=wholeWeekText(ws);
 if(how==="email") openMail(reachable.map(e=>contactOf(e).email).join(","), sub, txt);
 else openSms(reachable.map(e=>contactOf(e).phone).join(","), txt);
-wk.sentAt=Date.now(); wk.sentTo=reachable.length; wk.toldHow=how; snapWeek(wk); save(); closeModal(); render();
+markTold(ws, how, reachable.length); snapWeek(wk); save(); closeModal(); render();
 toast("Opened your "+(how==="sms"?"messages":"mail")+" app with all "+reachable.length+" on it");
 return;
 }
@@ -1626,7 +1672,7 @@ else openSms(contactOf(e).phone, personalText(e.id,ws));
 }
 at++;
 if(at>=queue.length){
-wk.sentAt=Date.now(); wk.sentTo=queue.length; wk.toldHow=how; snapWeek(wk); save(); closeModal(); render();
+markTold(ws, how, queue.length); snapWeek(wk); save(); closeModal(); render();
 toast("That's all "+queue.length+" — check your sent folder to be sure");
 } else paint(r);
 };
@@ -1848,8 +1894,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "d6494322";       
-const BUILD_AT = "2026-09-02 04:30 UTC";       
+const BUILD_ID = "c4bd75b1";       
+const BUILD_AT = "2026-09-02 05:57 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -2008,6 +2054,9 @@ if(leg && (leg.employees||[]).length){
 const co=(leg.org&&leg.org.name)? String(leg.org.name) : "an unnamed business";
 const n=(leg.employees||[]).filter(e=>e.active).length;
 const keep=await new Promise(res=>{
+ 
+let settled=false;
+const finish=v=>{ if(settled) return; settled=true; res(v); };
 modal("There is a schedule saved on this device", `
           <div class="stack">
             <div class="banner warn"><div>This browser has a saved schedule for <b>${esc(co)}</b>
@@ -2019,8 +2068,12 @@ modal("There is a schedule saved on this device", `
           </div>`,
 `<button class="btn" id="lgno">Not mine \u2014 start fresh</button>
            <button class="btn primary" id="lgyes">Yes, that is my business</button>`,
-r=>{ r.querySelector("#lgyes").onclick=()=>{ closeModal(true); res(true); };
-r.querySelector("#lgno").onclick =()=>{ closeModal(true); res(false); }; });
+r=>{
+MODAL_GUARD=()=>{ closeModal(true); finish(false); };    
+r.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{ closeModal(true); finish(false); });
+r.querySelector("#lgyes").onclick=()=>{ closeModal(true); finish(true); };
+r.querySelector("#lgno").onclick =()=>{ closeModal(true); finish(false); };
+});
 });
 if(keep){ S=migrate(leg); dropLegacy(); }
 else { S=seedState(); }
@@ -2059,7 +2112,7 @@ function deviceId(){
 let d="";
 try{ d=localStorage.getItem(DEVKEY)||""; }catch(e){}
 if(!d){
-d="d"+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+d="d"+securePick(B36,8)+Date.now().toString(36).slice(-4);
 try{ localStorage.setItem(DEVKEY,d); }catch(e){}
 }
 return d;
@@ -2332,6 +2385,16 @@ try{
 const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
 FB.user=cred.user;
  
+try{
+await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
+.set({codeId:hit.id, days:hit.days||30, life:!!hit.life, activated:Date.now(),
+email:String(email||"").trim().slice(0,120)});
+}catch(e){
+await cred.user.delete().catch(()=>{});
+await FB.auth.signOut().catch(()=>{});
+throw {message:"Something went wrong setting the account up. Nothing was saved and your code has not been used \u2014 please try again."};
+}
+ 
 try{ await FB.db.doc("codes/"+h).set({
 uid:cred.user.uid, id:hit.id, h:h, at:Date.now(),
 email:String(email||"").trim().slice(0,120),
@@ -2340,12 +2403,11 @@ loc:String((navigator.languages&&navigator.languages[0])||navigator.language||""
 ua:String(navigator.userAgent||"").slice(0,180)
 }); }
 catch(e){
+await FB.db.doc("users/"+cred.user.uid+"/meta/profile").delete().catch(()=>{});
 await cred.user.delete().catch(()=>{});
 await FB.auth.signOut().catch(()=>{});
 throw {message:"That code has already been used to create an account. Each code works once."};
 }
-await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
-.set({codeId:hit.id, days:hit.days||30, life:!!hit.life, activated:Date.now(), email:email.trim()});
  
 try{
 const tz=(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||""); }catch(e){ return ""; } })();
@@ -2583,14 +2645,19 @@ modal(F.title, `
 }
  
 async function wipeCloudData(uid){
+ 
+let failed=0;
 const kill=[];
+const track=pr=>pr.then(()=>true).catch(()=>{ failed++; return false; });
 const drop=async(path)=>{ try{ const c=await FB.db.collection(path).get();
-(c.docs||[]).forEach(d=>kill.push(d.ref.delete().catch(()=>{}))); }catch(e){} };
+(c.docs||[]).forEach(d=>kill.push(track(d.ref.delete()))); }
+catch(e){ failed++; } };
 await drop("users/"+uid+"/weeks");
 await drop("users/"+uid+"/devices");
 ["board/current","meta/kick","meta/profile"].forEach(d=>{
-try{ kill.push(FB.db.doc("users/"+uid+"/"+d).delete().catch(()=>{})); }catch(e){} });
+try{ kill.push(track(FB.db.doc("users/"+uid+"/"+d).delete())); }catch(e){ failed++; } });
 await Promise.all(kill);
+return failed;
 }
  
 async function codesModal(){
@@ -2681,7 +2748,14 @@ try{
 const u=FB.auth.currentUser;
 const cred=firebase.auth.EmailAuthProvider.credential(u.email, pass);
 await u.reauthenticateWithCredential(cred);
-await wipeCloudData(u.uid);
+const leftBehind = await wipeCloudData(u.uid);
+if(leftBehind){
+ 
+btn.disabled=false; btn.textContent="Delete it for good";
+err("Some of your data could not be removed just now, so the account has been left alone rather than half-deleted. "+
+"That is usually the connection. Try again in a moment, and if it keeps happening write to support@weeksolved.com and it will be done by hand.");
+return;
+}
 if(cloudUnsub){ try{ cloudUnsub(); }catch(e){} cloudUnsub=null; }
 await u.delete();
 try{ localStorage.clear(); }catch(e){}
@@ -2711,7 +2785,32 @@ document.body.innerHTML =
 document.getElementById("gout").onclick=()=>{ signOutClean(); };
 }
 
+ 
+function framedByStranger(){
+let framed=false;
+try{ framed = window.top !== window.self; }catch(e){ framed = true; }    
+if(!framed) return false;
+try{ if(window.top && window.top.location && window.top.location.origin === window.location.origin) return false; }catch(e){}
+return true;
+}
+function paintFrameRefusal(){
+const html =
+'<div style="margin:0;display:grid;place-items:center;min-height:100vh;'+
+'font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#fff;color:#14201f">'+
+'<div style="max-width:26rem;padding:24px;text-align:center">'+
+'<p style="font-weight:700;margin:0 0 8px">This page is inside another site.</p>'+
+'<p style="margin:0 0 14px">Weeksolved will not open in someone else\u2019s frame. Open it directly.</p>'+
+'<p style="margin:0"><a href="https://weeksolved.com/app.html" target="_top" rel="noopener" '+
+'style="color:#1c6a66;font-weight:600">weeksolved.com/app.html</a></p></div></div>';
+try{ document.body.innerHTML = html; document.body.style.cssText="margin:0;background:#fff"; }catch(e){}
+}
+const FRAMED = framedByStranger();
+if(FRAMED){
+try{ document.addEventListener("DOMContentLoaded", paintFrameRefusal); }catch(e){}
+try{ if(document.body) paintFrameRefusal(); }catch(e){}
+}
 async function boot(){
+if(FRAMED){ paintFrameRefusal(); return; }     
 if(cloudOn()){ cloudBoot(); return; }          
 if(!accessOk()){ gateScreen(); return; }
 const local = lsLoad();
@@ -2805,7 +2904,7 @@ if(!Array.isArray(s.audit)) s.audit=[];
 Object.keys(s.weeks||{}).forEach(k=>{ if(!s.weeks[k].shiftNotes) s.weeks[k].shiftNotes={}; });
 if(typeof s.rules.deviceWatch!=="boolean") s.rules.deviceWatch=true;
 if(typeof s.rules.newDeviceConfirm!=="boolean") s.rules.newDeviceConfirm=false;
-if(!s.org.rosterId) s.org.rosterId="r"+Math.random().toString(36).slice(2,10);
+if(!s.org.rosterId) s.org.rosterId="r"+securePick(B36,8);
 if(!s.rules.skillsWhen) s.rules.skillsWhen="always";
 if(!s.rules.skillsStrength) s.rules.skillsStrength="medium";
 s.employees.forEach(e=>{ if(!e.skills) e.skills={}; });
@@ -3121,6 +3220,18 @@ return theirs && set.has(theirs);
 });
 });
 };
+ 
+const neverAlone = new Set();
+day.forEach(a=>{ const e=empById(a.empId); if(e && effLimits(e, a.date).canBeAlone===false) neverAlone.add(a.empId); });
+const aloneCost = (from, to) => {
+if(!neverAlone.size) return 0;
+let n=0;
+for(let t=from;t<to;t+=15){
+const on=day.filter(x=>onDutyAt([x],t,null)===1);
+if(on.length===1 && neverAlone.has(on[0].empId)) n++;
+}
+return n;
+};
 withMeals.sort((a,b)=>a.startMin-b.startMin);
 const taken = [];
  
@@ -3144,16 +3255,19 @@ cands = cands.filter(t=>t>=lo && t<=hi);
 }
 if(!cands.length) cands=[clamp(home, lo, Math.max(lo,hi))];
 const win=[Math.min.apply(null,cands), Math.max.apply(null,cands)+m.len];
-const base = rules.map(r=>{ m.start=home; m.end=home+m.len; return ruleShort(day,r,win[0],win[1]); });
+m.start=home; m.end=home+m.len;
+const base = rules.map(r=>ruleShort(day,r,win[0],win[1]));
+const aloneBase = aloneCost(win[0], win[1]);
 let best=null;
 cands.forEach(t=>{
 m.start=t; m.end=t+m.len;
 const v = rules.map(r=>ruleShort(day,r,win[0],win[1]));
-const regress = v.some((x,i)=>x>base[i]) ? 1 : 0;
+const alone = aloneCost(win[0], win[1]);
+const regress = (v.some((x,i)=>x>base[i]) || alone>aloneBase) ? 1 : 0;
 const total = v.reduce((x,y)=>x+y,0);
 const spread = taken.length? Math.min.apply(null,taken.map(x=>Math.abs(x-t))) : 999;
 const clash = partnerClash(a, t, m.len) ? 1 : 0;
-const sc = regress*1e6 + clash*5e5 + total*1000 - Math.min(spread,60)*(slots?2:5) + Math.abs(t-home)/60;
+const sc = regress*1e6 + clash*5e5 + alone*4e4 + total*1000 - Math.min(spread,60)*(slots?2:5) + Math.abs(t-home)/60;
 if(!best || sc<best.sc) best={t,sc};
 });
 m.start=best.t; m.end=best.t+m.len; m.late = best.t>m.deadline;
@@ -5076,7 +5190,7 @@ slots:g[k].sort((a,b)=> dateLoad(b.date,b.dow)-dateLoad(a.date,a.dow) || a.date.
 
  
 function slotKey(sl){ return sl.date+"|"+sl.shiftId+"|"+(sl.roleId||""); }
-function offerToken(){ return Math.random().toString(36).slice(2,8).toUpperCase(); }
+function offerToken(){ return securePick("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6); }
 
 function openOffer(ws){ const wk=peekWeek(ws||S.currentWeek); return (wk&&wk.offer)||null; }
 
@@ -5178,9 +5292,8 @@ return "Subject: Shifts going spare \u2014 week of "+prettyDate(ws)+"\n\n"+
 
  
 function askCode(){
-const A="ACDEFHJKMNPQRTVWXY3479";
-let c=""; for(let i=0;i<4;i++) c+=A[Math.floor(Math.random()*A.length)];
-return c;
+ 
+return securePick("ACDEFHJKMNPQRTVWXY3479", 4);
 }
  
 function askWindowH(dateStr){
@@ -6364,15 +6477,16 @@ try{
  
 url=URL.createObjectURL(new Blob([html], {type:"text/html"}));
 }catch(e){ url=""; }
-const w = url? window.open(url, "_blank", "noopener") : window.open("", "_blank");
+const w = url? window.open(url, "_blank") : window.open("", "_blank");
 if(!w){
 if(url) URL.revokeObjectURL(url);
 toast("Your browser blocked the print window \u2014 allow pop-ups, or save it and print from there");
 return false;
 }
-if(!url){
  
 try{ w.opener=null; }catch(e){}
+if(!url){
+ 
 w.document.open(); w.document.write(html); w.document.close();
 try{ w.document.title=title||"Print"; }catch(e){}
 }
@@ -7596,7 +7710,10 @@ return [a.date,a.empId,a.shiftId,a.roleId||"",a.startMin,a.endMin,a.station||"",
 }
 function toldIsStale(ws){
 const wk=peekWeek(ws);
-return !!(wk && wk.sentAt && wk.toldStamp!=null && wk.toldStamp !== weekStamp(ws));
+if(!(wk && wk.sentAt)) return false;
+ 
+if(wk.toldStamp==null){ wk.toldStamp=weekStamp(ws); return false; }
+return wk.toldStamp !== weekStamp(ws);
 }
 function markTold(ws, how, n){
 const wk=peekWeek(ws||S.currentWeek); if(!wk) return;
@@ -7680,6 +7797,7 @@ try{ await navigator.clipboard.writeText(wholeWeekText(ws)); toast("Copied \u201
 catch(err){ toast("Couldn\u2019t copy on this device \u2014 print it or save the PDF instead"); }
 };
 const sd=r.querySelector("#tlsend"); if(sd) sd.onclick=()=>{ closeModal(); setTimeout(()=>sendModal(ws), 250); };
+const tt=r.querySelector("#tlturn"); if(tt) tt.onclick=()=>{ closeModal(true); go("settings"); };
 });
 }
 function postSecsLeft(wk){ return Math.max(0, Math.ceil((goesLiveAt(wk)-Date.now())/1000)); }
@@ -8579,7 +8697,7 @@ t.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
 if(b.dataset.tab==="more") moreSheet(); else go(b.dataset.tab);
 });
 }
-function closeSheet(){ $("#sheetroot").innerHTML=""; }
+function closeSheet(){ sheetRoot().innerHTML=""; }
 function moreSheet(){
 const items = NAV.filter(x=>x.id && !TABS.some(t=>t.id===x.id)).filter(x=>!x.when || x.when());
 const setup = items.filter(x=>!x.simple);
@@ -8588,7 +8706,7 @@ const row = x=>{ const c=x.n? x.n():null;
 return '<button data-sheetgo="'+x.id+'" aria-current="'+(VIEW===x.id)+'">'+esc(x.label)+
 (c!=null? '<span class="n">'+esc(String(c))+'</span>':"")+'</button>'; };
 const pending=bugsSince((S.support||{}).lastSent||0).length;
-$("#sheetroot").innerHTML =
+sheetRoot().innerHTML =
 '<div class="sheet"><div class="sheetbox" role="dialog" aria-modal="true" aria-label="More">'+
 '<div class="grab"></div>'+
 '<h4>Account</h4><div class="sheetlist"><button data-sheetacct="1">'+
@@ -8605,7 +8723,7 @@ esc(((typeof FB!=="undefined" && FB && FB.user && FB.user.email) || "Not signed 
 '<button data-t="light">Light</button><button data-t="system">System</button><button data-t="dark">Dark</button></div>'+
 '<div class="mini" style="margin-top:12px;text-align:center" id="sheetsync">'+esc(($("#syncmsg")||{textContent:""}).textContent)+'</div>'+
 '</div></div>';
-const r=$("#sheetroot");
+const r=sheetRoot();
 r.querySelector(".sheet").addEventListener("mousedown",e=>{ if(e.target.classList.contains("sheet")) closeSheet(); });
 r.querySelectorAll("[data-sheetacct]").forEach(b=>b.onclick=()=>{ closeSheet(); accountModal(); });
 r.querySelectorAll("[data-sheetgo]").forEach(b=>b.onclick=()=>{ closeSheet();
@@ -8620,6 +8738,82 @@ b.onclick=()=>{ applyTheme(b.dataset.t); closeSheet(); };
 }
 
  
+ 
+function isStandalone(){
+try{
+if(window.navigator.standalone === true) return true;               
+return window.matchMedia("(display-mode: standalone)").matches
+|| window.matchMedia("(display-mode: window-controls-overlay)").matches
+|| window.matchMedia("(display-mode: minimal-ui)").matches;
+}catch(e){ return false; }
+}
+let INSTALL_EVT = null;
+try{
+window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); INSTALL_EVT=e;
+try{ if(VIEW==="home") render(); }catch(err){} });
+window.addEventListener("appinstalled", ()=>{ INSTALL_EVT=null;
+S.ui=S.ui||{}; S.ui.a2hs="done"; try{ save(); if(VIEW==="home") render(); }catch(err){} });
+}catch(e){}
+ 
+function a2hsPlatform(){
+const ua=(navigator.userAgent||"");
+const iOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints||0) > 1);
+if(iOS) return /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua) ? "ios-other" : "ios";
+if(/Android/.test(ua)) return "android";
+return "desktop";
+}
+function a2hsOffer(){
+if(isStandalone()) return false;                        
+if((S.ui&&S.ui.a2hs)) return false;                     
+if(!S.setupDone) return false;                          
+const plat=a2hsPlatform();
+if(plat==="desktop" && !INSTALL_EVT) return false;      
+return true;
+}
+function a2hsSteps(plat){
+if(plat==="ios") return [
+"Tap the Share button at the bottom of Safari — the square with an arrow coming out of it.",
+"Scroll down the list and tap <b>Add to Home Screen</b>.",
+"Tap <b>Add</b>, top right. The icon appears on your home screen."];
+if(plat==="ios-other") return [
+"Home screen icons on iPhone and iPad can only be made from <b>Safari</b>.",
+"Open <b>weeksolved.com/app.html</b> in Safari, then tap the Share button — the square with an arrow.",
+"Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>."];
+if(plat==="android") return [
+"Tap the three-dot menu, top right of Chrome.",
+"Tap <b>Add to Home screen</b> (some versions call it <b>Install app</b>).",
+"Confirm. The icon appears with your other apps."];
+return [
+"Look for the install icon at the right-hand end of the address bar — a small screen with an arrow.",
+"Click it, then click <b>Install</b>.",
+"Weeksolved opens in its own window from then on, with no address bar."];
+}
+function a2hsModal(){
+const plat=a2hsPlatform();
+const canPrompt = !!INSTALL_EVT;
+modal("Put Weeksolved on your home screen", `
+    <div class="stack">
+      <div class="banner info"><div><b>It is the same Weeksolved, opened a faster way.</b> Same account, same schedule,
+        the same data on every device you sign in on. Nothing is downloaded and nothing is installed — the icon is a
+        shortcut that opens full screen, without the browser's address bar taking up the top of every page.</div></div>
+      ${canPrompt? `<div class="help">Your browser can do this in one tap.</div>` : ""}
+      <ol class="a2hs">${a2hsSteps(plat).map(x=>"<li>"+x+"</li>").join("")}</ol>
+      <div class="mini">If you are signed in, you stay signed in. If you ever want it gone, delete the icon the way you
+        would any other — nothing about your account changes.</div>
+    </div>`,
+`<button class="btn" data-close>Close</button>`+
+(canPrompt? `<button class="btn primary" id="a2hsgo">Add it now</button>`:""),
+r=>{
+const g=r.querySelector("#a2hsgo");
+if(g) g.onclick=async ()=>{
+const e=INSTALL_EVT; if(!e){ toast("Your browser has closed that offer — use the steps above"); return; }
+closeModal(true);
+try{ e.prompt(); const c=await e.userChoice;
+if(c && c.outcome==="accepted"){ INSTALL_EVT=null; S.ui=S.ui||{}; S.ui.a2hs="done"; save(); render(); }
+}catch(err){ toast("That didn’t open — use the steps under Help instead"); }
+};
+});
+}
 function isPhone(){ try{ return window.matchMedia("(max-width:700px)").matches; }catch(e){ return false; } }
  
 let DAYOPEN = new Set([new Date().getDay()]);
@@ -9032,6 +9226,9 @@ return `
   <div class="stack home">
     ${ACCESS.on && !(S.ui&&S.ui.repTip)? `<div class="hnotice"><span>Spot something wrong while testing? The <b>⚑ Report</b> button up top sends it straight to the fix list — ten seconds, no email needed.</span>
       <button class="btn sm" id="reptipok" style="flex:none">Got it</button></div>`:""}
+    ${a2hsOffer()? `<div class="hnotice"><span>Weeksolved can sit on your home screen with its own icon and open full screen \u2014 same account, nothing to install.</span>
+      <span class="row" style="gap:6px;flex:none"><button class="btn sm primary" id="a2hsshow">Show me how</button>
+      <button class="btn sm" id="a2hsno">No thanks</button></span></div>`:""}
     ${graceBanner(ws)}
     ${tellBanner(ws)}
     ${wk.auto && wk.suggested && !wk.published && !(S.ui&&S.ui.autoTipSeen)? `<div class="hnotice"><span><b>Weeksolved drafted this week when you opened it</b> \u2014 a starting point, nothing more. It is not posted, nobody has seen it, and Draft again gives you a different take.</span>
@@ -9176,6 +9373,9 @@ on("#hsetup",()=>wizard());
 on("#hsetup2",()=>wizard());
 on("#homesetup",()=>wizard());
 on("#reptipok",()=>{ S.ui=S.ui||{}; S.ui.repTip=true; save(); render(); });
+on("#a2hsshow",()=>a2hsModal());
+on("#a2hsno",()=>{ S.ui=S.ui||{}; S.ui.a2hs="no"; save(); render();
+toast("Hidden. It is still under Help & FAQ if you change your mind"); });
 on("#autotipok",()=>{ S.ui=S.ui||{}; S.ui.autoTipSeen=true; save(); render(); });
 on("#updgo",()=>updModal());
 on("#hdraft",()=>draftModal());
@@ -9775,7 +9975,7 @@ sel("rules.mealPlan", [["auto","Work them out for me"],["slots","Use the times I
       ${setRow("Anything waiting to be sent", (()=>{const n=bugsSince((S.support||{}).lastSent||0).length;
 return n? n+" item"+(n===1?"":"s")+" since you last sent a report" : "nothing at the moment";})(),
 `<button class="btn sm" data-bugopen="1">Report a problem</button>${bugsSince((S.support||{}).lastSent||0).length?' <button class="btn sm primary" data-bugsend="1">See the report</button>':""}`)}
-      ${setRow("Where reports should go", ((S.support||{}).email||"not set — you can still copy or download it"),
+      ${setRow("Where reports should go", esc((S.support||{}).email||"not set — you can still copy or download it"),
 `<input type="email" data-bind="support.email" value="${esc((S.support||{}).email||"")}" placeholder="weeksolved@gmail.com" data-rerender="no" style="min-width:190px">`)}
       ${setRow("Weekly reminder", (S.support||{}).remind!==false? "On — a nudge once a week when something is waiting" : "Off",
 sel("support.remind", [[1,"On"],[0,"Off"]], (S.support||{}).remind!==false?1:0))}
@@ -11397,7 +11597,7 @@ const [a,b]=shiftMinutes(sh);
 return `<tr>
               <td style="width:170px"><span class="tag" style="--sc:${sh.color}">${esc(sh.label)}</span></td>
               <td class="mono" style="width:130px">${m2disp(a)}–${m2disp(b)}</td>
-              <td style="width:190px">${roleName(r.roleId)}</td>
+              <td style="width:190px">${esc(roleName(r.roleId))}</td>
               <td style="width:110px"><span class="chip acc">${r.count||1} needed</span></td>
               <td class="mini">${fmtHrs(b-a)} each</td>
               <td style="width:90px;text-align:right"><button class="btn sm danger" data-deldem="${i}:${ri}">Remove</button></td></tr>`;
@@ -13814,7 +14014,8 @@ method:"POST",
 headers:{"Content-Type":"application/json", "Authorization":"Bearer "+token},
 body:JSON.stringify({
 to, subject:msg.subject||"", text:msg.body||"",
-fromName:mailFromName(), replyTo:mailReplyTo(),
+ 
+replyTo:mailReplyTo(),
 kind:msg.kind||"note"
 })
 });
@@ -17537,7 +17738,7 @@ const ea=root.querySelector("#anaud");
 if(ea) ea.onclick=()=>{
 const rows=[["When","What","Detail","By"]].concat((S.audit||[]).slice().reverse()
 .map(x=>[new Date(x.at).toISOString(), (AUDIT_KIND[x.kind]||x.kind), x.txt, x.who||""]));
-saveFile("schedule-changes.csv", rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\r\n"));
+saveFile("schedule-changes.csv", rows.map(csvRow).join("\r\n"));
 };
 const e1=root.querySelector("#anexp");
 if(e1) e1.onclick=()=>{
@@ -17656,6 +17857,7 @@ a:"Assigned holidays are staffed by the holiday poll, so a vacation can't swallo
 {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
 a:"On the Holidays page (or in setup), say whether business spikes the day before a holiday, after, or both. Those days then count one step busier: spare hands are steered there first, drafts fill them first, and thin cover next to a holiday gets flagged. It never adds shifts on its own."},
 {t:"Put Weeksolved on your home screen", k:"home screen install app icon phone shortcut add pin homescreen", go:null,
+act:"a2hs", actLabel:"Show me the steps for this device",
 a:"On iPhone: open weeksolved.com in Safari, tap the Share button (the square with the arrow), scroll down, tap 'Add to Home Screen', then Add. On Android: open it in Chrome, tap the three-dot menu, tap 'Add to home screen'. You get a real app icon that opens full screen — same account, same data, nothing to install."},
 {t:"Working before opening or after closing", k:"hours open close prep before after doors staffing window overnight stock cleanup setup", go:null,
 a:"The hours you set are staffing hours — the window shifts can be placed in — not your door hours. If a crew preps before you open to the public or closes down after, set the day to start earlier and end later, then add a shift covering that stretch. To change them, re-run the setup questions (Help & FAQ → Change what setup decided)."},
@@ -17754,7 +17956,7 @@ return `
       <div class="body stack" style="gap:6px">
         ${KB.map((e,i)=>`<div class="faqi" style="border:1px solid var(--line);border-radius:7px">
           <button class="faqq" data-faq="${i}" aria-expanded="false" style="all:unset;display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box;padding:10px 12px;cursor:pointer;font-weight:600;font-size:13.5px">${esc(e.t)}<span class="mini" style="flex:none">+</span></button>
-          <div class="faqa" hidden style="padding:0 12px 11px;font-size:13px;color:var(--ink2)">${esc(e.a)}${e.go? ` <a href="#" data-go="${e.go}" style="color:var(--accent)">Take me there →</a>`:""}</div>
+          <div class="faqa" hidden style="padding:0 12px 11px;font-size:13px;color:var(--ink2)">${esc(e.a)}${e.go? ` <a href="#" data-go="${e.go}" style="color:var(--accent)">Take me there →</a>`:""}${e.act? ` <a href="#" data-faqact="${esc(e.act)}" style="color:var(--accent)">${esc(e.actLabel||"Show me")} →</a>`:""}</div>
         </div>`).join("")}
       </div>
     </div>
@@ -17852,6 +18054,10 @@ const a=b.parentElement.querySelector(".faqa");
 a.hidden=!a.hidden;
 b.setAttribute("aria-expanded", String(!a.hidden));
 b.querySelector(".mini").textContent=a.hidden? "+":"–";
+});
+root.querySelectorAll("[data-faqact]").forEach(a=>a.onclick=ev=>{
+ev.preventDefault();
+if(a.dataset.faqact==="a2hs") a2hsModal();
 });
 root.querySelector("#hbug").onclick=()=>bugModal();
 const ct=root.querySelector("#ctsend");
