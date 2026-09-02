@@ -12,7 +12,7 @@
 header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
 .mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px}
 .brand{font-weight:800;font-size:18px}
-header.top a{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:600;font-size:13.5px}
+header.top a{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:600;font-size:13.5px;padding:11px 0;display:inline-block}
 h1{font-size:28px;letter-spacing:-.02em;margin:22px 0 4px}
 .eff{color:var(--muted);font-size:13px;margin-bottom:26px}
 h2{font-size:19px;margin:34px 0 8px;letter-spacing:-.01em;padding-top:8px;border-top:1px solid var(--line)}
@@ -28,7 +28,7 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;pad
 pre code{border:0;background:none;padding:0;font-size:12.5px;line-height:1.5}
 hr{border:0;border-top:1px solid var(--line);margin:34px 0}
 table{border-collapse:collapse;width:100%;margin:12px 0;display:block;overflow-x:auto}
-th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+th{text-align:left;font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
    font-weight:700;padding:7px 9px;border-bottom:2px solid var(--line);white-space:nowrap}
 td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
 /* A warranty disclaimer is only enforceable if a reasonable person would notice
@@ -38,14 +38,21 @@ blockquote{margin:16px 0;padding:14px 16px;background:var(--warn-soft);border:2p
 blockquote p{color:var(--ink);font-weight:600}
 blockquote strong{font-weight:800}
 footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
-footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inline-block}
+footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inline-block;white-space:nowrap;padding:7px 0}
 .toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 26px}
-.toc h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
-.toc a{display:inline-block;margin:0 14px 4px 0;font-size:13px;text-decoration:none}
+.toc h4{margin:0 0 6px;font-size:12.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.toc a{display:inline-block;margin:0 14px 2px 0;padding:6px 0;font-size:13.5px;text-decoration:none}
+@media (max-width:520px){
+  p,li,td,th{font-size:15px}
+  .toc a{font-size:14px;padding:8px 0;margin-right:16px}
+  header.top a{padding:8px 0;display:inline-block}
+  footer a{padding:9px 0}
+  strong{font-size:inherit}
+}
 @media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
 </style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
 <h1>Terms of Service</h1>
-<nav class="toc"><h4>On this page</h4><a href="#1-what-the-service-is">1. What the service is</a><a href="#2-who-can-use-it-and-accounts">2. Who can use it, and accounts</a><a href="#3-your-data-is-yours">3. Your data is yours</a><a href="#4-your-responsibilities-for-employee-information">4. Your responsibilities for employee information</a><a href="#5-minors">5. Minors</a><a href="#6-acceptable-use">6. Acceptable use</a><a href="#7-intellectual-property">7. Intellectual property</a><a href="#8-feedback">8. Feedback</a><a href="#9-tester-program">9. Tester program</a><a href="#10-payment">10. Payment</a><a href="#11-warranty-disclaimer">11. WARRANTY DISCLAIMER</a><a href="#12-limitation-of-liability">12. LIMITATION OF LIABILITY</a><a href="#13-indemnity">13. Indemnity</a><a href="#14-term-termination-and-suspension">14. Term, termination, and suspension</a><a href="#15-notices">15. Notices</a><a href="#16-dispute-resolution">16. Dispute resolution</a><a href="#17-governing-law">17. Governing law</a><a href="#18-assignment">18. Assignment</a><a href="#19-force-majeure">19. Force majeure</a><a href="#20-changes-to-these-terms">20. Changes to these terms</a><a href="#21-survival">21. Survival</a><a href="#22-severability">22. Severability</a><a href="#23-no-waiver">23. No waiver</a><a href="#24-relationship-of-the-parties">24. Relationship of the parties</a><a href="#25-entire-agreement">25. Entire agreement</a><a href="#26-contact">26. Contact</a><a href="#">---</a></nav>
+<nav class="toc"><h4>On this page</h4><a href="#1-what-the-service-is">1. What the service is</a><a href="#2-who-can-use-it-and-accounts">2. Who can use it, and accounts</a><a href="#3-your-data-is-yours">3. Your data is yours</a><a href="#4-your-responsibilities-for-employee-information">4. Your responsibilities for employee information</a><a href="#5-minors">5. Minors</a><a href="#6-acceptable-use">6. Acceptable use</a><a href="#7-intellectual-property">7. Intellectual property</a><a href="#8-feedback">8. Feedback</a><a href="#9-tester-program">9. Tester program</a><a href="#10-payment">10. Payment</a><a href="#11-warranty-disclaimer">11. WARRANTY DISCLAIMER</a><a href="#12-limitation-of-liability">12. LIMITATION OF LIABILITY</a><a href="#13-indemnity">13. Indemnity</a><a href="#14-term-termination-and-suspension">14. Term, termination, and suspension</a><a href="#15-notices">15. Notices</a><a href="#16-dispute-resolution">16. Dispute resolution</a><a href="#17-governing-law">17. Governing law</a><a href="#18-assignment">18. Assignment</a><a href="#19-force-majeure">19. Force majeure</a><a href="#20-changes-to-these-terms">20. Changes to these terms</a><a href="#21-survival">21. Survival</a><a href="#22-severability">22. Severability</a><a href="#23-no-waiver">23. No waiver</a><a href="#24-relationship-of-the-parties">24. Relationship of the parties</a><a href="#25-entire-agreement">25. Entire agreement</a><a href="#26-contact">26. Contact</a></nav>
 <p><strong>Effective date: [EFFECTIVE DATE]</strong>
 <strong>Last updated: [EFFECTIVE DATE]</strong></p>
 <p>Weeksolved is staff-scheduling software at weeksolved.com. These terms are the agreement between you and [ENTITY NAME] ("Weeksolved", "we", "us") for use of the service.</p>
@@ -246,7 +253,7 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 <p>[ENTITY NAME]
 [ENTITY ADDRESS]
 [SUPPORT EMAIL]</p>
-<h2 id="">---</h2>
+<hr />
 <!--
 =========================================================================
 FILL-IN CHECKLIST — every placeholder in this document
@@ -334,4 +341,4 @@ Build the sign-up screen this way:
 
 =========================================================================
 -->
-<footer><a href="/">Home</a><a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>
+<footer><a href="/">Home</a> <a href="/app.html">Open the app</a> <a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a> <a href="/about.html">About</a> <a href="/security.html">Security</a><a href="/contact.html">Contact</a> <a href="/terms.html">Terms</a> <a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a> <a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a> <a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>
