@@ -1263,6 +1263,7 @@ bugs:[], callouts:[], audit:[], support:{email:"weeksolved@gmail.com", lastSent:
 remind:{on:false, lic:true, post:true, poll:true, hol:true, at:"08:00",
 made:0, madeSig:"", madeCount:0, offered:{}},
 holidays:{ list:[], poll:null, responses:[], result:null, mode:"same", demand:[], tweaks:[] },
+apart:[],    
 vacations:{ on:false, rule:"fairness", maxOff:1, opCheck:false, minDays:5, maxPicks:3,
 deadline:"", openFrom:"", windowFrom:"", windowTo:"", responses:[], seed:1234,
 notifyH:8, tweaks:[] }
@@ -1546,7 +1547,7 @@ const ways=[pw? "email and password":"", g? "Google":""].filter(Boolean).join(" 
 return '<div class="lab">Ways to sign in</div><div class="mini">'+esc(ways||"\u2014")+'</div>'+
 (!g && googleAvailable()? '<div class="row" style="margin-top:8px"><button class="btn sm" id="aclinkg">'+GOOGLE_MARK+'<span>Add Google sign-in</span></button></div>' : '')+
 (g && !pw? '<div class="row" style="margin-top:8px"><button class="btn sm" id="acaddpw">Add a password</button></div>'+
-'<div class="mini" style="margin-top:4px">Handy for the home-screen icon on an iPhone, where the Google window cannot come back to the app.</div>' : '')+
+'<div class="mini" style="margin-top:4px">Handy on an iPhone or iPad, where Google sign-in is not offered yet.</div>' : '')+
 '<div class="mini" id="acwaysnote" style="margin-top:6px"></div>';
 }
 function wireSignInWays(root){
@@ -2014,8 +2015,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "92b292b6";       
-const BUILD_AT = "2026-09-02 19:36 UTC";       
+const BUILD_ID = "5b3f98db";       
+const BUILD_AT = "2026-09-02 20:12 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -2117,6 +2118,7 @@ if(APPCHECK_KEY && firebase.appCheck){
 try{ firebase.appCheck().activate(APPCHECK_KEY, true); window.APPCHECK_ON=true; }catch(e){ window.APPCHECK_ON=false; }
 }
 FB={ auth: firebase.auth(), db: firebase.firestore() };
+collectRedirectResult();
 FB.auth.onAuthStateChanged(async u=>{
 if(SIGNING_UP) return;                     
 if(!u){ FB.user=null; authScreen(); return; }
@@ -2510,11 +2512,22 @@ return raw.replace(/\s*\(auth\/[a-z-]+\)\.?/i,"").trim() || "Something went wron
 }
 
  
+ 
+function sameOriginAuth(){
+try{ return !!(CLOUD && CLOUD.authDomain && String(CLOUD.authDomain).toLowerCase()===location.hostname.toLowerCase()); }catch(e){ return false; }
+}
 function googleAvailable(){
 if(!GOOGLE_SIGNIN) return false;
 if(typeof firebase==="undefined" || !firebase.auth || !firebase.auth.GoogleAuthProvider) return false;
-try{ if(isStandalone() && /^ios/.test(a2hsPlatform())) return false; }catch(e){}
+try{
+const plat=a2hsPlatform();
+if(isStandalone() && /^ios/.test(plat)) return false;       
+if(/^ios/.test(plat) && !sameOriginAuth()) return false;    
+}catch(e){}
 return true;
+}
+function googleUsesRedirect(){
+try{ return sameOriginAuth() && /^(ios|android)/.test(a2hsPlatform()); }catch(e){ return false; }
 }
 function googleProvider(){
 const p=new firebase.auth.GoogleAuthProvider();
@@ -2537,8 +2550,19 @@ return authErrSay(e);
 }
  
 async function googleSignIn(err){
-try{ await FB.auth.signInWithPopup(googleProvider()); }
+try{
+if(googleUsesRedirect()){ await FB.auth.signInWithRedirect(googleProvider()); return; }    
+await FB.auth.signInWithPopup(googleProvider());
+}
 catch(e){ const m=googleErrSay(e); if(m && err) err(m); }
+}
+ 
+let GOOGLE_REDIRECT_ERR="";
+function collectRedirectResult(){
+try{
+if(!FB || !FB.auth || !FB.auth.getRedirectResult) return;
+FB.auth.getRedirectResult().catch(e=>{ GOOGLE_REDIRECT_ERR=googleErrSay(e); if(document.getElementById("gerr") && GATE_ERR) GATE_ERR(GOOGLE_REDIRECT_ERR); });
+}catch(e){}
 }
 const GOOGLE_MARK='<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true" style="flex:none"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.7 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
 function googleButtonHtml(id, label){
@@ -2578,7 +2602,8 @@ const out=(t.match(/.{1,4}/g)||[]).join("-");
 if(out!==before){ gc.value=out; if(atEnd){ try{ gc.setSelectionRange(out.length,out.length); }catch(e){} } }
 });
 gc.onkeydown=e=>{ if(e.key==="Enter") document.getElementById("gGo").click(); };
-if(window.GCODE_PRE){ gc.value=window.GCODE_PRE; window.GCODE_PRE=""; gc.dispatchEvent(new Event("input")); }
+try{ const pre=sessionStorage.getItem("ws.gcode")||""; sessionStorage.removeItem("ws.gcode");
+if(pre){ gc.value=pre; gc.dispatchEvent(new Event("input")); } }catch(e){}
 gc.focus(); }
 document.getElementById("gother").onclick=async ()=>{ await signOutQuiet(); authScreen(""); };
 const busy=b=>{ const g=document.getElementById("gGo"); if(!g) return; g.disabled=b; g.textContent=b? "One moment\u2026" : "Create my account"; };
@@ -2790,7 +2815,7 @@ pwField("gpass", "Password"+(tab==="new"?" \u2014 8+ characters":""), (tab==="ne
 '<button class="btn primary big" id="gGo" style="margin-top:12px">'+(tab==="new"?"Create my account":"Sign in")+'</button>'+
 (tab==="new"? '<div class="gnote">Pressing <b>Create my account</b> means you agree to both.</div>' : '')+
 (googleAvailable()? googleButtonHtml("ggoogle", tab==="new"? "Continue with Google" : "Sign in with Google") : '')+
-'<div class="gerr" id="gerr">'+(msg||"")+'</div>'+
+'<div class="gerr" id="gerr">'+(msg||GOOGLE_REDIRECT_ERR||"")+'</div>'+
 '<button class="btn ghost sm" id="gdiag" style="margin-top:8px">Having trouble? Check this device</button>'+
 '<div class="gnote" style="opacity:.65;font-size:11px">Build '+esc(BUILD_ID||"dev")+(BUILD_AT? " \u00b7 "+esc(BUILD_AT):"")+'</div>'+
 (tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot your password? Send me a reset link</button>'+
@@ -2805,6 +2830,7 @@ pwField("gpass", "Password"+(tab==="new"?" \u2014 8+ characters":""), (tab==="ne
 const err=(t,good)=>{ const e=document.getElementById("gerr"); if(!e) return;
 e.textContent=t; e.classList.toggle("ok", !!good); };
 GATE_ERR = err;
+GOOGLE_REDIRECT_ERR="";    
 { const d=document.getElementById("gdiag"); if(d) d.onclick=gateDiagModal; }
 wirePwEyes(document);
  
@@ -2820,7 +2846,7 @@ document.getElementById("tabnew").onclick=()=>authScreen("", "new");
 { const gg=document.getElementById("ggoogle");
 if(gg) gg.onclick=async ()=>{ gg.disabled=true; err("");
  
-try{ const gc=document.getElementById("gcode"); window.GCODE_PRE = gc? gc.value : ""; }catch(e){}
+try{ const gc=document.getElementById("gcode"); sessionStorage.setItem("ws.gcode", gc? gc.value : ""); }catch(e){}
 try{ await googleSignIn(err); } finally{ const b=document.getElementById("ggoogle"); if(b) b.disabled=false; } }; }
 const busy=(b)=>{ const g=document.getElementById("gGo"); g.disabled=b; g.textContent=b? "One moment…" : (tab==="new"?"Create my account":"Sign in"); };
 document.getElementById("gGo").onclick=async ()=>{
@@ -3252,6 +3278,9 @@ if(!Array.isArray(s.union.mandations)) s.union.mandations=[];
 s.coverGroups.forEach(g=>{ g.sts=(g.sts||[]).filter(id=>s.stations.some(x=>x.id===id)); });
 s.coverGroups=s.coverGroups.filter(g=>(g.sts||[]).length>1);
 if(!Array.isArray(s.bugs)) s.bugs=[];
+if(!Array.isArray(s.apart)) s.apart=[];
+s.apart=s.apart.filter(p=>p && p.a && p.b && p.a!==p.b && s.employees.some(e=>e.id===p.a) && s.employees.some(e=>e.id===p.b));
+s.apart.forEach(p=>{ if(!["day","shift","post"].includes(p.level)) p.level="day"; if(typeof p.note!=="string") p.note=""; if(!p.id) p.id=uid("ap"); });
 s.support = Object.assign({email:"", lastSent:0, remind:true}, o.support||{});
 if(!s.support.email || s.support.email==="hello@weeksolved.com") s.support.email="weeksolved@gmail.com";
 s.stations.forEach(x=>{ if(typeof x.double!=="boolean") x.double=false;
@@ -4569,6 +4598,10 @@ note("their "+(e.licLabel||"license")+" expired "+prettyDate(e.licExp)); return;
 if(cyclesOn() && !cycleWorksOn(e,d.date)){ note("their work pattern has them off"); return; }
 if(L.maxD && state[e.id].days.size>=L.maxD && !state[e.id].days.has(d.date)){
 note("they're already on "+state[e.id].days.size+" days, their limit"); return; }
+if(apartOn()){
+const ab=apartPairs(e.id).filter(p=>p.level==="day").find(p=>((state[p.other]||{byDate:{}}).byDate[d.date]||[]).length);
+if(ab){ note("they are kept apart from "+(empById(ab.other)||{name:"someone"}).name+", who is on that day"); return; }
+}
 S.shifts.forEach(sh=>{
 const [aMin,bMin]=shiftMinutes(sh);
 const gapM=(()=>{const g=shiftGap(sh); return g? g.to-g.from : 0;})();
@@ -4986,6 +5019,86 @@ return null;
 }
 function minorsListed(){ return S.employees.filter(e=>e.active && e.birth && ageOnDate(e, ymd(new Date()))<18); }
 
+ 
+const APART_LEVELS=[
+{id:"day",   t:"Never on the same day",            d:"Not both scheduled on any one date, whatever the hours."},
+{id:"shift", t:"Never on overlapping shifts",      d:"The same day is fine as long as their hours never overlap."},
+{id:"post",  t:"Same shift is fine \u2014 never the same post, or one alongside it", d:"They can be on together, but not on the same post, its linked twin, a post in the same family, or one that covers it at meals."}];
+function apartLevelName(l){ return (APART_LEVELS.find(x=>x.id===l)||APART_LEVELS[0]).t; }
+function apartRank(l){ return l==="day"?3 : l==="shift"?2 : 1; }
+function apartOn(){ return (S.apart||[]).length>0; }
+function apartPairs(empId){
+return (S.apart||[]).filter(p=>p.a===empId||p.b===empId).map(p=>Object.assign({}, p, {other: p.a===empId? p.b : p.a}));
+}
+function spansOverlap(a1,b1,a2,b2){ return a1<b2 && a2<b1; }
+ 
+function postsAlongside(stId){
+const out=new Set([stId]);
+const st=stationById(stId); if(!st) return out;
+if(st.linkedTo) out.add(st.linkedTo);
+const fam=stFamily(st);
+(S.stations||[]).forEach(o=>{ if(o.linkedTo===st.id) out.add(o.id); if(fam && stFamily(o)===fam) out.add(o.id); });
+(S.coverGroups||[]).forEach(g=>{ if((g.sts||[]).includes(st.id)) (g.sts||[]).forEach(id=>out.add(id)); });
+return out;
+}
+ 
+function apartBlockWith(empId, aMin, bMin, theirsFn){
+const pairs=apartPairs(empId); if(!pairs.length) return null;
+for(const p of pairs){
+if(p.level==="post") continue;
+const theirs=theirsFn(p.other)||[];
+if(!theirs.length) continue;
+if(p.level==="day") return {other:p.other, level:"day"};
+if(theirs.some(x=>spansOverlap(aMin,bMin,x.startMin,x.endMin))) return {other:p.other, level:"shift"};
+}
+return null;
+}
+function apartBlock(empId, date, aMin, bMin, assignments){
+return apartBlockWith(empId, aMin, bMin, id=>(assignments||[]).filter(x=>x.empId===id && x.date===date));
+}
+function apartWhy(b){
+const nm=(empById(b.other)||{name:"someone"}).name;
+return b.level==="day"? "they are kept apart from "+nm+", who is on that day"
+: "their hours would overlap "+nm+"\u2019s, and the two are kept apart";
+}
+ 
+function postSpots(x){
+if(x.stationPlan && x.stationPlan.length) return x.stationPlan.map(b=>({st:b.st, from:b.from, to:b.to}));
+return [x.station, x.station2].filter(Boolean).map(st=>({st, from:x.startMin, to:x.endMin}));
+}
+ 
+function apartPostBlock(empId, a, st, dayList, from, to){
+const pairs=apartPairs(empId).filter(p=>p.level==="post"); if(!pairs.length) return null;
+const near=postsAlongside(st.id);
+const f=from==null? a.startMin : from, t=to==null? a.endMin : to;
+for(const p of pairs){
+const theirs=(dayList||[]).filter(x=>x.empId===p.other && spansOverlap(f,t,x.startMin,x.endMin));
+const hit=theirs.some(x=>postSpots(x).some(b=>near.has(b.st) && spansOverlap(f,t,b.from,b.to)));
+if(hit) return {other:p.other, level:"post"};
+}
+return null;
+}
+ 
+function apartBreaches(ws){
+const wk=peekWeek(ws), out=[];
+(S.apart||[]).forEach(p=>{
+const A=empById(p.a), B=empById(p.b); if(!A||!B) return;
+const dates=[...new Set(wk.assignments.filter(x=>x.empId===p.a).map(x=>x.date))];
+dates.forEach(date=>{
+const as=wk.assignments.filter(x=>x.empId===p.a && x.date===date);
+const bs=wk.assignments.filter(x=>x.empId===p.b && x.date===date);
+if(!bs.length) return;
+if(p.level==="day"){ out.push({p, A, B, date, how:"both on the schedule"}); return; }
+const over=as.some(x=>bs.some(y=>spansOverlap(x.startMin,x.endMin,y.startMin,y.endMin)));
+if(!over) return;
+if(p.level==="shift"){ out.push({p, A, B, date, how:"their hours overlap"}); return; }
+const hit=as.some(x=>bs.some(y=>postSpots(x).some(sx=>postSpots(y).some(sy=>spansOverlap(sx.from,sx.to,sy.from,sy.to) && postsAlongside(sx.st).has(sy.st)))));
+if(hit) out.push({p, A, B, date, how:"on the same post, or posts that work together"});
+});
+});
+return out;
+}
+
 function hardOk(e, slot, date, dow, state, assignments){
 if(!e.active) return false;
 if(e.onCall && !slot._allowOnCall) return false;    
@@ -5001,6 +5114,7 @@ if(minorsOn() && minorBlock(e, date, dow, aMin, bMin, (state[e.id]||{min:0}).min
 if(traineeExtra() && isTrainee(e, date) && !slot._allowTrainee) return false;    
 const st = state[e.id], lim = effLimits(e, date);
 if(st.byDate[date] && st.byDate[date].length) return false;            
+if(apartOn() && apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).byDate[date]||[])) return false;   
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return false;  
 const add = paidEstimate(aMin,bMin);
 if(lim.maxH && (st.min + add) > lim.maxH*60 + 1) return false;         
@@ -5056,6 +5170,13 @@ const avail = need.filter(e=>availOk(e,dow,aMin,bMin));
 if(!avail.length) return "nobody qualified is available "+DSHORT[dow]+" at that time";
 const free = avail.filter(e=>!onTimeOff(e.id,date) && !(state[e.id].byDate[date]||[]).length);
 if(!free.length) return "everyone qualified is already scheduled or off that day";
+if(apartOn()){
+const kept=free.filter(e=>apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).byDate[date]||[]));
+if(kept.length===free.length){
+const who=kept.map(e=>{ const b=apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).byDate[date]||[]); return e.name.split(" ")[0]+" (kept apart from "+((empById(b.other)||{name:"someone"}).name.split(" ")[0])+")"; });
+return "the only people left are kept apart from someone already on: "+who.join(", ");
+}
+}
 if(free.length){
 const [aM,bM]=shiftMinutes(slot.sh);
 const why=free.map(e=>reqBlocks(e,date,aM,bM,state[e.id].min)).filter(Boolean);
@@ -5317,6 +5438,7 @@ if(onTimeOff(e.id,slot.date)) return;
  
 if(empLicensed(e) && e.licExp && slot.date > e.licExp) return;
 if(lim.maxShiftH && paidSpan(aMin,bMin,0) > lim.maxShiftH*60) return; 
+if(apartOn() && apartBlock(e.id, slot.date, aMin, bMin, wk.assignments)) return;    
 
 const reqBlock=reqBlocks(e,slot.date,aMin,bMin,mins);
 const overCap = lim.maxH && total > lim.maxH*60+1;
@@ -7034,6 +7156,7 @@ if(sl.roleId && !e.roleIds.includes(sl.roleId)) return "they\u2019re not in the 
 if(onTimeOff(e.id, sl.date)) return "they have time off that day";
 if(!availOk(e, sl.dow, a, b)) return DAYS[sl.dow]+" is a day they don\u2019t work";
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return "they\u2019re already on the schedule that day";
+{ const ab=apartOn()? apartBlock(e.id, sl.date, a, b, getWeek(ws).assignments) : null; if(ab) return apartWhy(ab); }
 {
 const mb=minorBlock(e, sl.date, sl.dow, a, b, empWeekMinutes(e.id,ws), ws);
 if(mb) return "they\u2019re "+ageOnDate(e, sl.date)+" and it\u2019s "+mb;
@@ -7366,6 +7489,7 @@ let fit=onFloor.filter(x=>(!st.roleId || x.e.roleIds.includes(st.roleId)) &&
 (!st.slots || !st.slots.length || st.slots.includes(x.a.shiftId)));
  
 if(st.needSkilled && skillsOn()) fit=fit.filter(x=>skillOf(x.e, st.id)>0);
+if(apartOn()) fit=fit.filter(x=>!apartPostBlock(x.e.id, x.a, st, list, bFrom, bTo));    
 if(!fit.length) return;
 fit.sort((x,y)=> score(x,st)-score(y,st) || x.e.name.localeCompare(y.e.name));
 const pick=fit[0];
@@ -7459,6 +7583,7 @@ let fit=people.filter(x=>(!st.roleId || x.e.roleIds.includes(st.roleId)) && cove
 if(!fit.length && (st.from||st.to||(st.slots&&st.slots.length)))
 fit=people.filter(x=>!st.roleId || x.e.roleIds.includes(st.roleId));    
 if(st.needSkilled && skillsOn()) fit=fit.filter(x=>skillOf(x.e, st.id)>0);
+if(apartOn()) fit=fit.filter(x=>!apartPostBlock(x.e.id, x.a, st, list));    
 if(!fit.length) return null;
 fit.sort((x,y)=> score(x,st)-score(y,st) || x.e.name.localeCompare(y.e.name));
 const pick=fit[0];
@@ -8893,6 +9018,14 @@ who.map(x=>x.name.split(" ")[0]+" ("+x.at.slice(0,3).join(", ")+")").join("; ")+
 " to be legal, so each keeps a compliant time of its own.");
 }
 
+ 
+if(apartOn()) apartBreaches(ws).forEach(x=>{
+const dow=parseYmd(x.date).getDay();
+push("crit","Kept apart \u2014 "+x.A.name.split(" ")[0]+" and "+x.B.name.split(" ")[0],
+DSHORT[dow]+" "+prettyDate(x.date)+": "+x.how+", and you have asked that they be kept apart ("+apartLevelName(x.p.level).toLowerCase()+"). Move one of them.",
+{date:x.date, empId:x.A.id});
+});
+
 const order={crit:0,warn:1,info:2};
 return V.sort((a,b)=>order[a.sev]-order[b.sev]);
 }
@@ -9956,6 +10089,9 @@ add("Vacation draw", S.vacations&&S.vacations.on, "vacation",
 add("Holidays", (S.holidays.list||[]).length, "holidays",
 (S.holidays.list||[]).length+" on the calendar, split fairly by poll",
 "No holidays set up yet");
+add("People kept apart", apartOn(), "team",
+(S.apart||[]).length+" pair"+((S.apart||[]).length===1?"":"s")+" the drafter never puts together \u2014 set on each person\u2019s file, private to you",
+"Set on a person\u2019s file under Team when two people must not work together");
 add("Rotating patterns", cyclesOn(), "team",
 "Seven on seven off, alternating weeks, hours averaged over a period",
 "Everyone works the same shape every week");
@@ -11095,6 +11231,7 @@ return `
 return n? `<span class="chip" title="They can still be scheduled \u2014 nothing on file means available whenever you are open.">${n} with nothing on file</span>` : "";})()}<span class="hint">Hours, availability, and what each person would rather work.${
 staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places used":""}</span>
         ${otLedgerOn() && S.employees.length? `<button class="btn sm" id="otoffer">Offer overtime</button>`:""}
+        ${apartOn()? `<span class="chip" title="Set on each person\u2019s file. Private to you \u2014 never printed, sent or exported.">${(S.apart||[]).length} pair${(S.apart||[]).length===1?"":"s"} kept apart</span>`:""}
         ${S.employees.length? `<button class="btn sm" id="histadd">Add past time off, callouts or requests</button>`:""}
         ${S.employees.length>1? `<button class="btn sm" id="bulkpat">Put several on a layout</button>`:""}
         <button class="btn sm" id="addtoff">Take someone off for a stretch</button>
@@ -11678,6 +11815,58 @@ return `<div class="mini" style="margin-top:3px;display:flex;gap:5px;flex-wrap:w
     <button class="btn sm" data-licnew="${esc(e.id)}">Put the new date in</button></div>`;
 }
 
+ 
+function apartSection(e){
+const others=S.employees.filter(x=>x.id!==e.id && x.active);
+const postsExist=(S.stations||[]).some(x=>x.kind!=="admin");
+const levels=APART_LEVELS.filter(l=>l.id!=="post" || postsExist);
+const pairs=apartPairs(e.id);
+return `<div class="field" id="apartwrap" data-pairs="${esc(JSON.stringify(pairs.map(p=>({id:p.id,other:p.other,level:p.level,note:p.note||""}))))}">
+    <label>Keep apart from someone</label>
+    <div class="help" style="margin:2px 0 8px"><b>Private \u2014 only you ever see this.</b> For a grievance, family who cannot share a till, a separation, a legal order. The drafter treats it as a rule it may not break, the checks panel flags any hand edit that breaks it, and nothing about it appears on a printout, a message, a calendar file or an export.</div>
+    <div id="apartlist"></div>
+    ${others.length? `<div class="row" style="gap:6px;flex-wrap:wrap;align-items:flex-end">
+      <div class="field" style="flex:1;min-width:140px;margin:0"><label>Person</label><select id="apwho"><option value="">Choose\u2026</option>${others.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div>
+      <div class="field" style="flex:2;min-width:200px;margin:0"><label>How far apart</label><select id="aplevel">${levels.map(l=>`<option value="${l.id}">${esc(l.t)}</option>`).join("")}</select></div>
+      <div class="field" style="flex:2;min-width:160px;margin:0"><label>Private note (optional)</label><input type="text" id="apnote" maxlength="120" placeholder="stays on this screen"></div>
+      <button type="button" class="btn sm" id="apadd" style="flex:none">Add</button>
+    </div><span class="mini" id="aplevelnote"></span>` : `<span class="mini">Add the other person to the team first.</span>`}
+  </div>`;
+}
+function wireApartSection(root, e){
+const wrap=root.querySelector("#apartwrap"); if(!wrap) return;
+let pairs=[]; try{ pairs=JSON.parse(wrap.dataset.pairs||"[]"); }catch(err){ pairs=[]; }
+const list=wrap.querySelector("#apartlist");
+const paint=()=>{
+wrap.dataset.pairs=JSON.stringify(pairs);
+list.innerHTML = pairs.length? pairs.map((p,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)">
+        <div style="min-width:0"><b>${esc((empById(p.other)||{name:"(removed)"}).name)}</b> <span class="mini">\u2014 ${esc(apartLevelName(p.level))}${p.note? " \u00b7 "+esc(p.note):""}</span></div>
+        <button type="button" class="btn sm ghost" data-aprm="${i}" style="flex:none">Remove</button></div>`).join("")
+: `<div class="mini" style="margin-bottom:6px">Nobody yet.</div>`;
+list.querySelectorAll("[data-aprm]").forEach(b=>b.onclick=()=>{ pairs.splice(+b.dataset.aprm,1); paint(); });
+};
+paint();
+const lv=wrap.querySelector("#aplevel"), ln=wrap.querySelector("#aplevelnote");
+const paintLevel=()=>{ if(lv && ln) ln.textContent=(APART_LEVELS.find(x=>x.id===lv.value)||{}).d||""; };
+if(lv){ lv.onchange=paintLevel; paintLevel(); }
+const add=wrap.querySelector("#apadd");
+if(add) add.onclick=()=>{
+const who=wrap.querySelector("#apwho").value; if(!who){ toast("Choose the other person first"); return; }
+const level=lv.value, note=(wrap.querySelector("#apnote").value||"").trim().slice(0,120);
+const i=pairs.findIndex(p=>p.other===who);
+if(i>=0) pairs[i]={id:pairs[i].id, other:who, level, note}; else pairs.push({id:uid("ap"), other:who, level, note});
+wrap.querySelector("#apwho").value=""; wrap.querySelector("#apnote").value="";
+paint();
+};
+}
+function apartCommit(root, e){
+const wrap=root.querySelector("#apartwrap"); if(!wrap) return;
+let pairs=[]; try{ pairs=JSON.parse(wrap.dataset.pairs||"[]"); }catch(err){ return; }
+const before=(S.apart||[]).filter(p=>p.a===e.id||p.b===e.id).length;
+S.apart=(S.apart||[]).filter(p=>p.a!==e.id && p.b!==e.id)
+.concat(pairs.filter(p=>p.other && p.other!==e.id && empById(p.other)).map(p=>({id:p.id||uid("ap"), a:e.id, b:p.other, level:p.level, note:p.note||""})));
+if(pairs.length!==before) logIt("change", pairs.length>before? "Kept-apart rule added for "+e.name : "Kept-apart rule removed for "+e.name);
+}
 function empModal(id){
 const blankAvail=()=>[0,1,2,3,4,5,6].map(()=>({ok:true,from:"06:00",to:"22:00"}));
 const e = id? JSON.parse(JSON.stringify(empById(id))) :
@@ -11856,6 +12045,7 @@ return Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)
       ${(function(){ const nx=ptoNextAccrual(e); const bal=ptoBalance(e);
 return (bal==null? "" : "<br><b>Balance today: "+bal+"h.</b>")+
 (nx? " Next lot: "+esc(nx.say)+"." : " Nothing more accrues \u2014 the balance only goes down."); })()}</span></div>`:""}
+    ${apartSection(e)}
     <div class="field"><label>Notes (optional)</label><input type="text" id="enotes" value="${esc(e.notes||"")}" placeholder="Immunization certified · nursing student"></div>
     <label class="switch"><input type="checkbox" id="eact" ${e.active?"checked":""}> Currently on the roster</label>
   </div>`,
@@ -12041,6 +12231,7 @@ return sk; })()
 };
 const i=S.employees.findIndex(x=>x.id===e.id);
 if(i>=0) S.employees[i]=rec; else S.employees.push(rec);
+apartCommit(root, e);
  
 const newLicDate = rec.licExp && rec.licExp!==(e.licExp||"") && rec.active;
 save(); closeModal(); render();
@@ -12051,8 +12242,10 @@ if(d) d.onclick=()=>{
 S.employees=S.employees.filter(x=>x.id!==e.id);
 Object.values(S.weeks).forEach(w=>w.assignments=w.assignments.filter(a=>a.empId!==e.id));
 S.timeoff=S.timeoff.filter(t=>t.empId!==e.id);
+S.apart=(S.apart||[]).filter(p=>p.a!==e.id && p.b!==e.id);
 save(); closeModal(); render();
 };
+wireApartSection(root, e);
 });
 }
 
@@ -13655,19 +13848,20 @@ function stretchOptions(date, ws, g){
 const wk=S.weeks[ws]; if(!wk) return [];
 const maxLen=(S.rules.maxShiftH||12)*60, otLine=(S.org.otWeeklyH||40)*60;
 const out=[];
+const others=id=>wk.assignments.filter(x=>x.date===date && x.id!==id);
 wk.assignments.filter(a=>a.date===date && !a.topUp && !a.callout).forEach(a=>{
 const e=empById(a.empId); if(!e||!e.active) return;
  
 if(a.endMin<=g.from && g.to-a.endMin<=300){
 const add=g.to-a.endMin;
-if((a.endMin+add)-a.startMin<=maxLen && add>0)
+if((a.endMin+add)-a.startMin<=maxLen && add>0 && !(apartOn() && apartBlock(e.id, date, a.startMin, a.endMin+add, others(a.id))))
 out.push({aId:a.id, e, side:"end", add, newT:a.endMin+add,
 label:"Keep "+e.name+" until "+m2disp(a.endMin+add)});
 }
  
 if(a.startMin>=g.to && a.startMin-g.from<=300){
 const add=a.startMin-g.from;
-if(a.endMin-(a.startMin-add)<=maxLen && add>0)
+if(a.endMin-(a.startMin-add)<=maxLen && add>0 && !(apartOn() && apartBlock(e.id, date, a.startMin-add, a.endMin, others(a.id))))
 out.push({aId:a.id, e, side:"start", add, newT:a.startMin-add,
 label:"Bring "+e.name+" in at "+m2disp(a.startMin-add)});
 }
@@ -18315,8 +18509,10 @@ saveFile("requests-record.csv", rows.map(csvRow).join("\n"));
  
 function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
+{t:"Keep two people from working together", k:"keep apart separate conflict grievance siblings family divorce lawsuit restraining order not together same shift same day same station post never schedule together", go:"team",
+a:"Open either person under Team and use Keep apart from someone. Pick the other person and how far apart: never on the same day, never on overlapping shifts, or the same shift is fine but never the same post or one alongside it (its linked twin, a post in the same family, or one that covers it at meals). The drafter treats it as a rule it may not break, Cover the gaps never offers a blocked person, and if you move somebody by hand into a breach the checks panel says so. It is private to you: nothing about it appears on a printout, a message, a calendar file or an export, and the optional note stays on that screen only."},
 {t:"Can I sign in with Google?", k:"google sign in login gmail account password continue with google link", go:null, when:()=>GOOGLE_SIGNIN,
-a:"Yes. On the sign-in screen press Continue with Google. If you already have a Weeksolved account under the same email address, it is the same account \u2014 your board is there, nothing moves. If you are new, you are asked for your access code after Google confirms who you are, and that is the whole of it. Under Settings \u2192 Your account you can attach Google to an account that has a password, or add a password to one that only has Google. One place it is not offered: the home-screen icon on an iPhone, where the Google window cannot hand the answer back to the app \u2014 there, use your email and password."},
+a:"Yes. On the sign-in screen press Continue with Google. If you already have a Weeksolved account under the same email address, it is the same account \u2014 your board is there, nothing moves. If you are new, you are asked for your access code after Google confirms who you are, and that is the whole of it. Under Settings \u2192 Your account you can attach Google to an account that has a password, or add a password to one that only has Google. Not yet offered on an iPhone or iPad, where the Google window cannot reliably hand the answer back to the page \u2014 there, use your email and password for now."},
 {t:"How many people can one account hold?", k:"limit maximum how many people employees staff cap size big large headcount roster limit", go:"team",
 a:"Two hundred and fifty. That is a tested figure, not a guess: a Weeksolved account saves your team and each week as single records, the storage behind it accepts about a megabyte at a time, and a fully-scheduled week of 500 people would sit right on that ceiling. At 250 an account uses about half of it, drafts a full week in a second or so, and every screen and printout stays quick. Inactive people count toward the 250, because their history is still stored \u2014 so if somebody has genuinely gone for good, remove them rather than deactivating them. If one site really does need more than 250, say so: it means splitting the way weeks are stored, which is a change worth making for a real customer rather than a hypothetical one."},
 {t:"Draft the week", k:"draft generate build schedule create week make auto", go:"home",
@@ -19254,6 +19450,8 @@ blocks.push("under-18 hour limits");
 if(!cycleWorksOn(e, date)) blocks.push("not on their work pattern that day");
 const sameDay = wk.assignments.filter(a=>a.empId===e.id && a.date===date);
 if(sameDay.length) blocks.push("already on "+(shiftById(sameDay[0].shiftId)||{label:"a shift"}).label);
+{ const ab=apartOn()? apartBlock(e.id, date, aMin, bMin, wk.assignments.filter(a=>a.empId!==excludeEmpId)) : null;
+if(ab) blocks.push("kept apart from "+(empById(ab.other)||{name:"someone"}).name); }
 const mins = empWeekMinutes(e.id,ws), add = paidEstimate(aMin,bMin);
 if(e.maxH && mins+add > e.maxH*60+1) blocks.push("would hit "+fmtHrs(mins+add)+" against a "+e.maxH+"h cap");
 const days = empDays(e.id,ws);
