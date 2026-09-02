@@ -729,6 +729,10 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   th{font-size:12px;letter-spacing:.05em;padding:9px 9px}
   .tag{font-size:12px;padding:2px 7px}
   kbd{font-size:12px;padding:2px 6px}
+  /* The on/off badge stamped on every switch question. At 10.5px it was the one
+     thing on the settings page below the floor everything else here holds to,
+     and it is the very thing somebody scans to answer "is this on?". */
+  .statepill{font-size:11.5px;padding:2px 9px;letter-spacing:.05em}
   .kpi .k{font-size:12px;letter-spacing:.06em}
   .week .hcell .dd{font-size:12px}
   .daycard .dd,.daycard .dl{font-size:12px}
@@ -1236,6 +1240,8 @@ fillMode:"demand", topUpLabel:"Project time",
 allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
 weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
 bugs:[], callouts:[], audit:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
+remind:{on:false, lic:true, post:true, poll:true, hol:true, at:"08:00",
+made:0, madeSig:"", madeCount:0, offered:{}},
 holidays:{ list:[], poll:null, responses:[], result:null, mode:"same", demand:[], tweaks:[] },
 vacations:{ on:false, rule:"fairness", maxOff:1, opCheck:false, minDays:5, maxPicks:3,
 deadline:"", openFrom:"", windowFrom:"", windowTo:"", responses:[], seed:1234,
@@ -1360,8 +1366,8 @@ let SIGNED_OUT = false;
 function lsKey(){ return lsKeyFor(LS_UID); }
 const LSKEY_OLD = "coveragedesk.v3";    
  
-function signOutClean(){
  
+function forgetSession(){
 SIGNED_OUT = true;
 try{ LS_UID=""; }catch(e){}
  
@@ -1372,10 +1378,20 @@ try{ clearTimeout(saveTimer); }catch(e){}
 try{ clearInterval(GRACE_TIMER); GRACE_TIMER=null; }catch(e){}
 try{ clearInterval(DEVTIMER); DEVTIMER=null; }catch(e){}
 try{ window.TESTER_ID=""; window.TESTER_LIFE=false; window.TESTER_DAYS=0; window.TESTER_FROM=0; }catch(e){}
+}
+ 
+function signOutClean(){
+ 
+forgetSession();
 let went=false;
 const go=()=>{ if(went) return; went=true; try{ location.reload(); }catch(e){} };
 setTimeout(go, 1500);                  
 try{ return FB.auth.signOut().then(go).catch(go); }catch(e){ go(); }
+}
+ 
+function signOutQuiet(){
+forgetSession();
+try{ return FB.auth.signOut().catch(()=>{}); }catch(e){ return Promise.resolve(); }
 }
 function lsSave(){
 if(SIGNED_OUT) return;    
@@ -1457,6 +1473,7 @@ modal("Your account", `
           <div class="lab">Signed in as</div>
           <div style="font-size:15px;font-weight:600;word-break:break-all">${esc(em)}</div>
           <div class="mini" style="margin-top:4px">Your board saves to this account and follows you to any browser you sign into.</div>
+          <div id="acver" style="margin-top:10px"></div>
         </div></div>`
 : `<div class="banner info"><div><b>Not signed in.</b> This board lives in this browser only. Nothing is being saved to an account, and nothing leaves this device.</div></div>`}
       <div class="stack" style="gap:8px">
@@ -1484,7 +1501,43 @@ r.querySelector("#acset").onclick=()=>{ closeModal(true); go("settings"); };
 { const ac=r.querySelector("#acacc");
 if(ac) ac.onclick=()=>{ closeModal(true);
 accessWelcome(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM); }; }
+wireEmailCheck(r);
 });
+}
+ 
+function wireEmailCheck(root){
+const slot=root.querySelector("#acver"); if(!slot) return;
+const paint=(state, note)=>{
+if(state==="checking"){ slot.innerHTML='<span class="mini">Checking whether the address is confirmed\u2026</span>'; return; }
+if(state==="ok"){ slot.innerHTML='<span class="chip ok">Email confirmed</span>'; return; }
+if(state==="unknown"){ slot.innerHTML='<span class="mini">'+esc(note||"Couldn\u2019t check just now \u2014 you are still signed in and nothing is wrong.")+'</span>'; return; }
+slot.innerHTML=
+'<div class="banner warn" style="margin:0"><div><b>This address has not been confirmed yet.</b> '+
+'The confirmation comes from a <b>noreply</b> address at Google, so look in Spam and Promotions as well as your inbox. '+
+'Until it is confirmed a password reset would go to an address nobody has proved is reachable.'+
+(note? " "+esc(note) : "")+'</div></div>'+
+'<div class="row" style="margin-top:8px"><button class="btn sm" id="acresend">Send it again</button></div>';
+const b=slot.querySelector("#acresend");
+if(b) b.onclick=async ()=>{
+b.disabled=true; b.textContent="Sending\u2026";
+try{
+await FB.user.sendEmailVerification();
+paint("no","Sent again just now \u2014 give it a minute, and check Spam and Promotions.");
+}catch(e){
+const code=(e&&e.code)||"";
+paint("no", code==="auth/too-many-requests"
+? "Too many just went out. Wait a few minutes and try again \u2014 the earlier ones are still valid."
+: "That didn\u2019t send. Check you are online and try again in a moment.");
+}
+};
+};
+if(!(typeof FB!=="undefined" && FB && FB.user)){ slot.innerHTML=""; return; }
+paint("checking");
+ 
+Promise.resolve()
+.then(()=>FB.user.reload())
+.then(()=>{ paint(FB.user.emailVerified? "ok" : "no"); })
+.catch(()=>{ paint(FB.user.emailVerified? "ok" : "unknown"); });
 }
 
  
@@ -1894,8 +1947,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "c4bd75b1";       
-const BUILD_AT = "2026-09-02 05:57 UTC";       
+const BUILD_ID = "f02e5a7d";       
+const BUILD_AT = "2026-09-02 08:44 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -2006,7 +2059,7 @@ async function cloudEnter(){
 const uid=FB.user.uid;
 const prof=await FB.db.doc("users/"+uid+"/meta/profile").get();
 if(!prof.exists){
-await FB.auth.signOut().catch(()=>{});
+await signOutQuiet();
 authScreen("That account isn't part of this test. Create one with the access code you were given.");
 return;
 }
@@ -2037,6 +2090,8 @@ else { termsUpdateScreen(); return; }
 }
 
 WKHASH={};
+ 
+SIGNED_OUT = false;
 LS_UID = uid;                        
 const remote=await cloudFetchAll(uid);
 const local=lsLoad();                
@@ -2296,7 +2351,13 @@ if(n>DOC_SAFE && (!worst||n>worst.bytes)) worst={what:"the week of "+prettyDate(
 });
 return worst;
 }
-function coreJson(){ const c=Object.assign({}, S); c.weeks={}; return JSON.stringify(c); }
+ 
+function coreJson(){
+const c=Object.assign({}, S);
+c.weeks={};
+delete c._uid; delete c._at;
+return JSON.stringify(c);
+}
 function cloudPushNow(){
 if(!FB || !FB.user) return;
  
@@ -2391,7 +2452,7 @@ await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
 email:String(email||"").trim().slice(0,120)});
 }catch(e){
 await cred.user.delete().catch(()=>{});
-await FB.auth.signOut().catch(()=>{});
+await signOutQuiet();
 throw {message:"Something went wrong setting the account up. Nothing was saved and your code has not been used \u2014 please try again."};
 }
  
@@ -2405,7 +2466,7 @@ ua:String(navigator.userAgent||"").slice(0,180)
 catch(e){
 await FB.db.doc("users/"+cred.user.uid+"/meta/profile").delete().catch(()=>{});
 await cred.user.delete().catch(()=>{});
-await FB.auth.signOut().catch(()=>{});
+await signOutQuiet();
 throw {message:"That code has already been used to create an account. Each code works once."};
 }
  
@@ -2661,41 +2722,125 @@ return failed;
 }
  
 async function codesModal(){
-modal("Who is testing", `<div class="stack"><div class="help">Reading the codes\u2026</div></div>`,
+modal("Who is testing", `<div class="stack"><div class="help">Reading…</div></div>`,
 `<button class="btn" data-close>Close</button>`);
-let rows=[], err=null;
+let rows=[], reps=[], err=null, repErr=null;
 try{
 const snap=await FB.db.collection("codes").get();
 (snap.docs||[]).forEach(d=>rows.push(d.data()||{}));
-}catch(e){
-const m=String((e&&e.message)||"").toLowerCase();
-err = /permission|insufficient/.test(m)
-? "the database would not let this account read the codes. The rule that allows the founder account to see them may not have been published yet"
-: /offline|unavailable|network/.test(m)
-? "your device could not reach the database. That is usually the internet dropping out"
-: ((e&&e.message)||"they could not be read");
-}
+}catch(e){ err=readWhy(e, "codes"); }
+ 
+try{
+const snap=await FB.db.collection("reports").get();
+(snap.docs||[]).forEach(d=>reps.push(d.data()||{}));
+}catch(e){ repErr=readWhy(e, "reports"); }
+
 rows.sort((a,b)=>(b.at||0)-(a.at||0));
-const known=(typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes.map(c=>c.id) : [];
+const known=(typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes : [];
+const knownIds=known.map(c=>c.id);
 const used=new Set(rows.map(r=>r.id));
-const spare=known.filter(id=>!used.has(id));
-const body = err
-? `<div class="banner crit"><div><b>Could not read them.</b> ${esc(err)}<div class="mini" style="margin-top:4px">If this says permission denied, the database rules that allow the founder account to read this have not been published yet.</div></div></div>`
+const spare=knownIds.filter(id=>!used.has(id));
+const now=Date.now(), DAY=86400000;
+const days=ms=>Math.max(0, Math.floor(ms/DAY));
+
+ 
+const byTester={};
+reps.forEach(r=>{
+const k=String(r.tester||"?");
+const t=byTester[k]=byTester[k]||{n:0, crash:0, contact:0, kbmiss:0, repeat:0, last:0, first:0};
+if(r.kind==="redeem") return;                        
+t.n++;
+if(r.auto) t.crash++;
+if(r.kind==="contact") t.contact++;
+if(r.kind==="kbmiss") t.kbmiss++;
+if((r.seen||1)>1) t.repeat++;
+const at=+(r.at||0);
+if(at>t.last) t.last=at;
+if(at && (!t.first || at<t.first)) t.first=at;
+});
+
+const people = rows.map(r=>{
+const meta=known.find(c=>c.id===r.id) || {};
+const t=byTester[String(r.id||"?")] || {n:0,crash:0,contact:0,kbmiss:0,repeat:0,last:0};
+const life=!!meta.life;
+const span=meta.days||0;
+const started=+(r.at||0);
+const testingFor = started? days(now-started) : null;
+const leftDays = (life||!span||!started)? null : Math.ceil((started+span*DAY-now)/DAY);
+return {r, meta, t, life, span, started, testingFor, leftDays,
+quiet: t.n===0, lastGap: t.last? days(now-t.last) : null};
+});
+
+const engaged = people.filter(x=>x.t.n>0).length;
+const quiet   = people.filter(x=>x.quiet).length;
+const totalReports = people.reduce((a,x)=>a+x.t.n,0);
+const totalCrashes = people.reduce((a,x)=>a+x.t.crash,0);
+const expiring = people.filter(x=>x.leftDays!=null && x.leftDays<=7 && x.leftDays>=0).length;
+const lapsed   = people.filter(x=>x.leftDays!=null && x.leftDays<0).length;
+
+const pill=(n,lab,cls)=>n? `<span class="chip ${cls||""}">${n} ${esc(lab)}</span>` : "";
+const line=(x)=>{
+const r=x.r, t=x.t;
+const when = r.at? new Date(r.at).toLocaleDateString([],{dateStyle:"medium"}) : "—";
+const life = x.life? "lifetime"
+: x.leftDays==null? (x.span? x.span+" days":"")
+: x.leftDays<0? "ran out "+Math.abs(x.leftDays)+"d ago"
+: x.leftDays+"d left";
+return `<tr>
+      <td><span class="chip ${(r.id==="FOUNDER"||r.id==="GIFT")?"acc":""}">${esc(r.id||"?")}</span></td>
+      <td><strong>${esc(r.email||"(no address recorded)")}</strong>
+        <div class="mini">${esc(r.tz||"time zone not recorded")}${r.loc? " · "+esc(r.loc):""}</div>
+        ${r.ua? `<div class="mini" style="opacity:.7">${esc(String(r.ua).slice(0,80))}</div>`:""}</td>
+      <td class="mini">${esc(when)}<div class="mini" style="opacity:.75">${x.testingFor!=null? x.testingFor+" day"+(x.testingFor===1?"":"s")+" in":""}</div></td>
+      <td class="mini">${esc(life)}</td>
+      <td>${t.n
+? `<div class="row" style="gap:4px;flex-wrap:wrap">${pill(t.n,"report"+(t.n===1?"":"s"))}${pill(t.crash,"crash"+(t.crash===1?"":"es"),"warn")}${pill(t.contact,"message"+(t.contact===1?"":"s"),"acc")}${pill(t.kbmiss,"help gap")}</div>
+           <div class="mini" style="margin-top:3px">${x.lastGap===0? "last one today" : "last one "+x.lastGap+"d ago"}${t.repeat? " · "+t.repeat+" hit more than once":""}</div>`
+: `<span class="mini">nothing sent in yet</span>`}</td>
+    </tr>`;
+};
+
+const body = (err && repErr)
+? `<div class="banner crit"><div><b>Could not read any of it.</b> ${esc(err)}</div>
+        <div class="mini" style="margin-top:6px">${esc(codesFixHint())}</div></div>`
 : `<div class="stack">
-        <div class="banner info"><div><b>${rows.length} redeemed \u00b7 ${spare.length} still unused.</b> ${spare.length? "Unused: "+esc(spare.join(", ")) : "Every code has been claimed."}</div></div>
-        ${rows.length? `<div class="scroll"><table><thead><tr><th style="width:80px">Code</th><th>Who</th><th style="width:120px">When</th></tr></thead>
-          <tbody>${rows.map(r=>`<tr>
-            <td><span class="chip ${(r.id==="FOUNDER"||r.id==="GIFT")?"acc":""}">${esc(r.id||"?")}</span></td>
-            <td><strong>${esc(r.email||"(no address recorded)")}</strong>
-              <div class="mini">${esc(r.tz||"time zone not recorded")}${r.loc? " \u00b7 "+esc(r.loc):""}</div>
-              ${r.ua? `<div class="mini" style="opacity:.7">${esc(String(r.ua).slice(0,90))}</div>`:""}</td>
-            <td class="mini">${r.at? esc(new Date(r.at).toLocaleString([],{dateStyle:"medium",timeStyle:"short"})) : "\u2014"}</td>
-          </tr>`).join("")}</tbody></table></div>`
+        <div class="banner info"><div><b>${rows.length} redeemed · ${spare.length} still unused${totalReports? " · "+totalReports+" report"+(totalReports===1?"":"s"):""}.</b>
+          ${spare.length? "Unused: "+esc(spare.join(", ")) : "Every code has been claimed."}</div></div>
+        ${err? `<div class="banner warn"><div><b>The redemption list could not be read.</b> ${esc(err)}</div></div>`:""}
+        ${repErr? `<div class="banner warn"><div><b>The reports could not be read, so the columns on the right are empty.</b> ${esc(repErr)}
+          <div class="mini" style="margin-top:4px">${esc(codesFixHint())}</div></div></div>`:""}
+        ${(!err && rows.length)? `<div class="row" style="gap:6px;flex-wrap:wrap">
+          ${pill(engaged,"have sent something in","ok")}
+          ${pill(quiet,"have sent nothing yet")}
+          ${pill(totalCrashes,"crash"+(totalCrashes===1?"":"es")+" in total","warn")}
+          ${pill(expiring,"end within a week","warn")}
+          ${pill(lapsed,"already ran out")}
+        </div>`:""}
+        ${rows.length? `<div class="scroll"><table>
+          <thead><tr><th style="width:74px">Code</th><th>Who</th><th style="width:110px">Started</th><th style="width:96px">Access</th><th style="width:200px">What they have sent</th></tr></thead>
+          <tbody>${people.map(line).join("")}</tbody></table></div>`
 : `<div class="empty"><strong>Nothing redeemed yet</strong>Codes appear here the moment somebody signs up with one.</div>`}
-        <div class="help">Rows older than the change that started recording addresses will show the code and the date but no address \u2014 there was nothing to record at the time. A time zone that does not match where you expect somebody to be is worth a question.</div>
+        ${quiet && rows.length? `<div class="help"><b>${quiet} ${quiet===1?"tester has":"testers have"} sent nothing at all.</b> That is not the same as not using it — people who are getting on fine have nothing to report. It is worth one friendly message asking how it is going, because a quiet tester and a stuck tester look identical from here.</div>`:""}
+        <div class="help">All of this is worked out from two things people already gave you: the moment a code was redeemed, and the problem reports they chose to send. Weeksolved does not record when anyone opens the app, what they look at, or what is on their board — so "last one 6d ago" means the last report, not the last visit. A time zone that does not match where you expect somebody to be is worth a question.</div>
       </div>`;
 const b2=document.querySelector("#modalroot .modal .body");
 if(b2) b2.innerHTML=body;
+}
+ 
+function readWhy(e, what){
+const m=String((e&&e.message)||"").toLowerCase();
+if(/permission|insufficient/.test(m))
+return "the database would not let this account read the "+what+".";
+if(/offline|unavailable|network|failed to get/.test(m))
+return "your device could not reach the database — usually the internet dropping out.";
+return (e&&e.message)||"they could not be read.";
+}
+ 
+function codesFixHint(){
+const uid=(typeof FB!=="undefined" && FB && FB.user && FB.user.uid)? FB.user.uid : "";
+return "This screen reads two collections the database only opens to named operator accounts. "+
+(uid? "This account's user ID is "+uid+" — add it beside the existing one in the codes and reports read rules, then publish."
+: "Add this account's user ID beside the existing one in the codes and reports read rules, then publish.");
 }
 function deleteAccountModal(){
 const em=acctEmail();
@@ -6511,7 +6656,8 @@ return `<div class="row" style="gap:6px;flex-wrap:wrap">
 function wireHandOut(root, id, get){
 const q=x=>root.querySelector("#"+id+x);
 const P=q("print"); if(P) P.onclick=()=>{ const g=get(); if(!g.file){ toast("Make the form first"); return; }
-if(printDoc(g.file, g.title)) logIt("post","Printed "+(g.what||"a form")+" to hand out"); save(); };
+ 
+if(printDoc(g.file, g.title)){ logIt("post","Printed "+(g.what||"a form")+" to hand out"); save(); } };
 const C=q("copy"); if(C) C.onclick=()=>copyText(get().msg||"", "Copied \u2014 paste it wherever you like");
 const M=q("mail"); if(M) M.onclick=()=>{ const g=get();
 mailOutAndSay({to:withEmail().map(e=>e.email.trim()), subject:g.subject||"A form to fill in", body:g.msg||"", kind:"note"}, g.what||"A form"); };
@@ -6561,6 +6707,7 @@ e.licNo=(r.querySelector("#lrn").value||"").trim().slice(0,40);
 logIt("change",(e.name||"Someone")+"\u2019s "+(e.licLabel||"licence")+" date updated"+(was? " from "+prettyDate(was):"")+" to "+prettyDate(d));
 save(); closeModal(); render();
 toast(d>ymd(new Date())? (e.name||"They")+" is current again \u2014 good until "+prettyDate(d) : "Saved \u2014 note that date is already past");
+if(d>ymd(new Date())) remindOffer("lic");
 };
 });
 }
@@ -7884,14 +8031,58 @@ r.querySelector("#rpall").onclick=()=>{ closeModal(true); doPost("all"); };
 }
 function repostNotify(ws, choice, changes){
 if(!choice || choice==="none") return;
-if(sendOn()){ setTimeout(()=>sendModal(ws),300); return; }
-const lines=(changes||weekDiff(ws)).map(d=>d.name+" — "+prettyDate(d.date)+": "+d.say);
-modal("Tell "+(choice==="all"?"everyone":"the affected people"), `
-    <div class="stack"><div class="help">Sending isn't switched on, so here's the change list ready to paste into a text or email.</div>
-    <textarea style="min-height:120px" id="rptxt">Schedule update for the week of ${esc(prettyDate(ws))}:
-${lines.join("\n")}</textarea></div>`,
-`<button class="btn" data-close>Done</button><button class="btn primary" id="rpcopy">Copy it</button>`,
-r=>{ r.querySelector("#rpcopy").onclick=()=>copyText(r.querySelector("#rptxt").value,"Copied"); });
+const diff = (changes && changes.length? changes : weekDiff(ws)) || [];
+if(!diff.length){ toast("Posted \u2014 nothing about anybody\u2019s shifts actually changed"); return; }
+
+ 
+const byEmp={};
+diff.forEach(d=>{ (byEmp[d.empId]=byEmp[d.empId]||[]).push(d); });
+const notes = Object.keys(byEmp).map(id=>{
+const rows=byEmp[id];
+const e=empById(id) || {id, name:rows[0].name, email:"", phone:""};
+const change = rows.map(d=>prettyDate(d.date)+" \u2014 "+d.say).join("; ");
+return {emp:e, change, text: msgFill("changed", {name:(e.name||"").split(" ")[0], change})};
+}).sort((a,b)=>(a.emp.name||"").localeCompare(b.emp.name||""));
+
+ 
+const summary = "Schedule update for the week of "+prettyDate(ws)+":\n"+
+diff.map(d=>d.name+" \u2014 "+prettyDate(d.date)+": "+d.say).join("\n");
+
+const canSend = sendOn();
+modal("Tell "+(choice==="all"?"everyone":"the affected people"),
+`<div class="stack">
+      <div class="help">${canSend
+? "Weeksolved has written one message per person from your \u201cwhen a posted week changes\u201d wording. Nothing sends on its own \u2014 open each one and press send in your own app."
+: "Sending isn\u2019t switched on, so here they are ready to copy into a text or an email."}
+        You can change the wording for good under Settings \u2192 Messages.</div>
+      ${notes.map((n,i)=>`<div class="card"><div class="body stack" style="gap:8px">
+        <div class="spread"><b>${esc(n.emp.name||"Someone")}</b>
+          <span class="mini">${esc(hasContact(n.emp,"email")? contactOf(n.emp).email
+: hasContact(n.emp,"sms")? contactOf(n.emp).phone
+: "no email or mobile on file")}</span></div>
+        <textarea rows="3" id="rpt${i}" style="font-size:13px">${esc(n.text)}</textarea>
+        <div class="row" style="gap:6px">
+          <button class="btn sm" data-rpcopy="${i}">Copy</button>
+          ${canSend? `<button class="btn sm primary" data-rpsend="${i}">Open a message</button>`:""}
+        </div></div></div>`).join("")}
+      ${choice==="all"? `<div class="card"><div class="body stack" style="gap:8px">
+        <div class="spread"><b>The whole team</b><span class="mini">one list, everybody</span></div>
+        <textarea rows="5" id="rpall" style="font-size:13px">${esc(summary)}</textarea>
+        <div class="row"><button class="btn sm" id="rpcopyall">Copy the list</button></div>
+      </div></div>`:""}
+    </div>`,
+`<button class="btn primary" data-close>Done</button>`,
+r=>{
+r.querySelectorAll("[data-rpcopy]").forEach(b=>b.onclick=()=>
+copyText(r.querySelector("#rpt"+b.dataset.rpcopy).value, "Copied"));
+r.querySelectorAll("[data-rpsend]").forEach(b=>b.onclick=()=>{
+const n=notes[+b.dataset.rpsend];
+tellModal("Tell "+(n.emp.name||"them")+" what changed",
+r.querySelector("#rpt"+b.dataset.rpsend).value, {emp:n.emp});
+});
+const all=r.querySelector("#rpcopyall");
+if(all) all.onclick=()=>copyText(r.querySelector("#rpall").value, "Copied");
+});
 }
  
  
@@ -9598,7 +9789,7 @@ sel("union.otLedger", [[1,"On"],[0,"Off"]], u.otLedger?1:0))}
  
 const SET_GROUPS=[
 {k:"business", t:"Your business",
-cards:["What\u2019s switched on","Your business","Where you operate","When you're open","Days that don't work"]},
+cards:["What\u2019s switched on","Your business","Where you operate","When you're open","Days that don't work","Reminders"]},
 {k:"team", t:"Team and shifts",
 cards:["Your people","Shifts and cover","Who gets first pick"]},
 {k:"rules", t:"Rules and drafting",
@@ -9749,6 +9940,39 @@ sel("org.bizType", BIZ_TYPES.map(x=>[x.id,x.t]), S.org.bizType||"other"))}
         </tr>`).join("")||`<tr><td colspan="2" class="mini">No one on the roster yet.</td></tr>`}</tbody></table></div>
       <div class="body" style="border-top:1px solid var(--line)"><div class="help">For a one-off — a week's holiday, a single Tuesday — use a request instead. For "every Wednesday until June", a standing request carries the end date.</div></div>
     </div>
+
+    ${(()=>{ const R=remindCfg(); const items=R.on? remindItems() : [];
+const stale=remindStale(); const n=items.length;
+const TIMES=[["06:00","6am"],["07:00","7am"],["08:00","8am"],["09:00","9am"],
+["12:00","midday"],["17:00","5pm"],["19:00","7pm"]];
+return `<div class="card"><header><h3>Reminders</h3>
+        <span class="hint">Put into your own calendar, so they reach you when this is closed</span></header><div class="setbody">
+      ${setRow("Remind me about things before they happen",
+R.on? (n? esc(remindCounts().words+" over the next year, from the dates already on your board")
+: "On, but nothing on your board has a date worth reminding you about yet")
+: "Off — nothing is written anywhere and nothing appears elsewhere in the app",
+sel("remind.on", [[1,"On"],[0,"Off"]], R.on?1:0))}
+      ${R.on? REMIND_KINDS.map(K=>setRow(K.t, esc(R[K.k]!==false? K.d : "Off"),
+sel("remind."+K.k, [[1,"On"],[0,"Off"]], R[K.k]!==false?1:0))).join("") : ""}
+      ${R.on? setRow("What time of day they land",
+"Whatever your calendar does with a reminder is what happens — your own quiet hours and Do Not Disturb still apply",
+sel("remind.at", TIMES, R.at||"08:00")) : ""}
+      </div>
+      ${R.on? `<div class="body" style="border-top:1px solid var(--line)" class="stack">
+        <div class="banner ${stale? "warn" : (R.made? "ok" : "info")}"><div>
+          ${R.made
+? (stale
+? "<b>Your calendar is out of date.</b> It has "+esc(String(R.madeCount||"the old set"))+" in it from "+esc(prettyFull(ymd(new Date(R.made))))+", and the board has changed since. Put them in again and the old ones are replaced, not duplicated."
+: "<b>"+esc(String(R.madeCount||"Your reminders"))+" are in your calendar,</b> put there "+esc(prettyFull(ymd(new Date(R.made))))+". Nothing has changed since.")
+: "<b>Nothing is in your calendar yet.</b> Have a look at what you would get first — it is the whole list, with dates, before you commit to any of it."}
+        </div></div>
+        <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn" id="rmsee">See what I would get</button>
+          <button class="btn ${R.made&&!stale? "" : "primary"}" id="rmgo">${R.made? "Put them in again":"Put them in my calendar"}</button>
+        </div>
+        <div class="help" style="margin-top:10px">Weeksolved has no server that runs while your browser is shut, so it cannot email or text you — and building one would mean a key to your staff records sitting on a machine you do not control, checked every night, for something your calendar already does properly. So it writes the entries and your phone delivers them. Nothing about your team leaves this device to make this work, and deleting the entries takes nothing else with them.</div>
+      </div>`:""}
+      </div>`; })()}
 
     <div class="card"><header><h3>Shifts and cover</h3></header><div class="setbody">
       ${setRow("Your named shifts", esc(S.shifts.map(x=>x.label+" "+m2disp(t2m(x.start))+"–"+m2disp(t2m(x.end))).join(" · ")||"none yet"), "", "shifts")}
@@ -10068,7 +10292,7 @@ const t=root.querySelector("#aptheme"); if(t) t.onchange=()=>applyTheme(t.value)
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","msg.on","fww.on","union.on","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
+const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
 const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.maxSpanH","org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
@@ -10125,6 +10349,8 @@ const nm=root.querySelector("#setname");
 if(nm) nm.addEventListener("change",()=>{ myName=nm.value.trim();
 try{ localStorage.setItem("dowel.myname", myName); }catch(e){}
 save(); toast(myName? "Colleagues will see changes as "+myName : "Name cleared"); });
+{ const b1=root.querySelector("#rmsee"); if(b1) b1.onclick=()=>remindPreview();
+const b2=root.querySelector("#rmgo");  if(b2) b2.onclick=()=>remindPut(); }
 { const cb=root.querySelector("#setcodes"); if(cb) cb.onclick=()=>codesModal(); }
 { const a=root.querySelector("#setaccess");
 if(a) a.onclick=()=>accessWelcome(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM);
@@ -11528,7 +11754,10 @@ return sk; })()
 };
 const i=S.employees.findIndex(x=>x.id===e.id);
 if(i>=0) S.employees[i]=rec; else S.employees.push(rec);
+ 
+const newLicDate = rec.licExp && rec.licExp!==(e.licExp||"") && rec.active;
 save(); closeModal(); render();
+if(newLicDate && empLicensed(rec) && rec.licExp>ymd(new Date())) remindOffer("lic");
 };
 const d=root.querySelector("#delemp");
 if(d) d.onclick=()=>{
@@ -18080,6 +18309,224 @@ function icsDT(date, min){ const d=min>=1440? addDays(date,1):date; const m=((mi
 const p=n=>String(n).padStart(2,"0");
 return d.replace(/-/g,"")+"T"+p(Math.floor(m/60))+p(m%60)+"00"; }
 function icsEsc(x){ return String(x||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+ 
+const REMIND_KINDS = [
+{k:"lic",  t:"A licence or certification running out",
+d:"60 days before, 14 days before, and on the day itself — the three moments when doing something about it is still possible.",
+why:"A lapsed licence is the one thing on this list that can close a pharmacy for a day."},
+{k:"post", t:"Post next week's schedule",
+d:"Once a week, timed off how far ahead you have said you want to post.",
+why:"The commonest way a good schedule goes wrong is being late rather than being wrong."},
+{k:"poll", t:"A holiday poll or vacation round closing",
+d:"The day before the deadline you set, so there is still time to chase whoever has not answered.",
+why:""},
+{k:"hol",  t:"A holiday you have not decided about",
+d:"30 days before any holiday still set to your default, so closing or thinning it is your choice rather than an accident.",
+why:""}
+];
+function remindOn(){ return !!(S.remind && S.remind.on); }
+function remindCfg(){
+if(!S.remind) S.remind={on:false, lic:true, post:true, poll:true, hol:true,
+at:"08:00", made:0, madeSig:"", offered:{}};
+if(!S.remind.offered) S.remind.offered={};
+return S.remind;
+}
+ 
+function remindItems(){
+const R=remindCfg();
+const out=[];
+const today=ymd(new Date());
+const horizon=addDays(today, 365);
+const push=(date, kind, title, detail)=>{
+if(!date || date<today || date>horizon) return;
+out.push({date, kind, title, detail:detail||""});
+};
+
+if(R.lic){
+S.employees.filter(e=>e.active && e.licExp && empLicensed(e)).forEach(e=>{
+const what=e.licLabel || licTypeName(e.licKind) || "licence";
+const first=(e.name||"They").split(" ")[0];
+[[60,"in two months"],[14,"in two weeks"],[0,"today"]].forEach(([n,when])=>{
+push(addDays(e.licExp, -n),
+"lic",
+n? first+"'s "+what+" runs out "+when : first+"'s "+what+" runs out today",
+e.name+" — "+what+" expires "+prettyFull(e.licExp)+
+(n? ". Weeksolved stops scheduling them past that date, so a gap appears in the rota if it is not renewed."
+: ". From tomorrow Weeksolved will not put them on a shift."));
+});
+});
+}
+
+ 
+if(R.post && S.employees.some(e=>e.active)
+&& Object.keys(S.demand||{}).some(d=>(S.demand[d]||[]).length)){
+const lead=(S.rules.advanceNoticeDays||7);
+let ws=weekStartOf(ymd(new Date()), S.org.weekStart);
+let due="";
+for(let i=0;i<8 && !due;i++){
+ws=addDays(ws,7);
+const d=addDays(ws,-lead);
+if(d>=today) due=d;
+}
+if(due && due<=horizon)
+out.push({date:due, kind:"post", repeat:"weekly",
+title:"Post next week's schedule",
+detail:"Every week, "+lead+" day"+(lead===1?"":"s")+" before the week starts"+
+(S.rules.advanceNoticeDays? " — the notice period you set under Ground rules." : ".")+
+" The first one covers the week of "+prettyDate(ws)+"."});
+}
+
+if(R.poll){
+const V=S.vacations||{};
+if(V.on && V.deadline)
+push(addDays(V.deadline,-1), "poll", "Vacation requests close tomorrow",
+"Anybody who has not sent a code back still can today. After the deadline you can still read codes in, but the round is meant to be settled.");
+const H=S.holidays||{};
+if(H.poll && H.poll.by)
+push(addDays(H.poll.by,-1), "poll", "The holiday poll closes tomorrow",
+"Chase whoever has not answered before you work the holidays out.");
+}
+
+if(R.hol){
+(S.holidays.list||[]).forEach(h=>{
+if(h.hmode) return;                             
+push(addDays(h.date,-30), "hol", (h.name||"A holiday")+" is a month away",
+"Nothing has been decided for it, so it will be staffed like an ordinary day. Closing it or thinning it is a two-tap change on the Holidays page.");
+});
+}
+
+out.sort((a,b)=>a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+return out;
+}
+ 
+function remindSig(items){
+return (items||remindItems()).map(x=>x.date+"|"+x.kind+"|"+x.title).join(";");
+}
+function remindStale(){
+const R=remindCfg();
+if(!R.made) return false;
+return remindSig() !== R.madeSig;
+}
+ 
+function remindIcs(){
+const R=remindCfg();
+const items=remindItems();
+ 
+const repeats=items.filter(x=>x.repeat);
+const byDay={};
+items.filter(x=>!x.repeat).forEach(x=>{ (byDay[x.date]=byDay[x.date]||[]).push(x); });
+const at=t2m(R.at||"08:00");
+const stamp=icsStamp();
+const org=S.org.name||"Weeksolved";
+const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Weeksolved//Reminders//EN","CALSCALE:GREGORIAN",
+"METHOD:PUBLISH","X-WR-CALNAME:"+icsEsc(org+" — reminders")];
+Object.keys(byDay).sort().forEach(date=>{
+const day=byDay[date];
+const summary = day.length===1 ? day[0].title
+: day.length+" things need you — "+org;
+const desc = day.map(x=>"• "+x.title+"\n  "+x.detail).join("\n\n")+
+"\n\nPut here by Weeksolved. Delete this entry and nothing else changes.";
+L.push("BEGIN:VEVENT",
+ 
+"UID:remind-"+date+"-"+(S.org.rosterId||"ws")+"@weeksolved.com",
+"DTSTAMP:"+stamp,
+"DTSTART:"+icsDT(date, at),
+"DTEND:"+icsDT(date, at+30),
+"SUMMARY:"+icsEsc(summary),
+"DESCRIPTION:"+icsEsc(desc),
+"BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:PT0M","DESCRIPTION:"+icsEsc(summary),"END:VALARM",
+"END:VEVENT");
+});
+repeats.forEach((x,i)=>{
+L.push("BEGIN:VEVENT",
+"UID:remind-repeat-"+x.kind+"-"+(S.org.rosterId||"ws")+"@weeksolved.com",
+"DTSTAMP:"+stamp,
+"DTSTART:"+icsDT(x.date, at),
+"DTEND:"+icsDT(x.date, at+30),
+"RRULE:FREQ=WEEKLY;COUNT=52",
+"SUMMARY:"+icsEsc(x.title+" \u2014 "+org),
+"DESCRIPTION:"+icsEsc(x.detail+"\n\nPut here by Weeksolved. Delete this entry and every repeat of it goes with it."),
+"BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:PT0M","DESCRIPTION:"+icsEsc(x.title),"END:VALARM",
+"END:VEVENT");
+});
+L.push("END:VCALENDAR");
+return L.filter(Boolean).join("\r\n");
+}
+async function remindPut(){
+const items=remindItems();
+if(!items.length){ toast("Nothing to remind you about yet — the settings page says what would count"); return false; }
+const ok=await saveFile("weeksolved-reminders.ics", remindIcs());
+if(!ok) return false;
+const R=remindCfg();
+R.made=Date.now(); R.madeSig=remindSig(items); R.madeCount=remindCounts().words;
+save(); render();
+toast("Opened — add it to your calendar and the reminders are set");
+return true;
+}
+ 
+ 
+function remindCounts(){
+const items=remindItems();
+const rep=items.filter(x=>x.repeat);
+const one=items.filter(x=>!x.repeat);
+return {items, rep, one, entries: new Set(one.map(x=>x.date)).size + rep.length,
+words: (one.length? one.length+" one-off reminder"+(one.length===1?"":"s") : "")+
+((one.length&&rep.length)? " and " : "")+
+(rep.length? rep.length+" weekly repeat"+(rep.length===1?"":"s") : "")};
+}
+function remindPreview(){
+const C=remindCounts();
+const items=C.items;
+const soon=items.slice(0,12);
+const byMonth={};
+items.forEach(x=>{ const m=x.date.slice(0,7); byMonth[m]=(byMonth[m]||0)+1; });
+const months=Object.keys(byMonth).sort();
+const busiest=months.reduce((a,m)=>byMonth[m]>(byMonth[a]||0)? m:a, months[0]);
+modal("What you would actually get", `
+    <div class="stack">
+      ${items.length? `<div class="banner ${C.one.length>26?"warn":"info"}"><div>
+        <b>${esc(C.words)} over the next twelve months.</b>
+        ${C.rep.length? " The weekly one goes in as a single repeating entry, so it is one line in your calendar and one thing to delete, not fifty-two." : ""}
+        ${C.one.length? " Days with more than one land as a single entry, never two." : ""}
+        ${C.one.length>26? " That is more one-offs than most people want. Turn something off below and look again." : ""}</div></div>`
+: `<div class="banner info"><div><b>Nothing at all, as things stand.</b> Reminders come from dates already on your board — a licence expiry on somebody's profile, a poll deadline, a holiday you have not decided about. Put one of those in and this fills up.</div></div>`}
+      ${soon.length? `<div class="scroll"><table>
+        <thead><tr><th style="width:120px">When</th><th>What</th></tr></thead>
+        <tbody>${soon.map(x=>`<tr>
+          <td class="mini">${esc(prettyFull(x.date))}</td>
+          <td><strong>${esc(x.title)}</strong><div class="mini">${esc(x.detail)}</div></td>
+        </tr>`).join("")}</tbody></table></div>`:""}
+      ${items.length>soon.length? `<div class="mini">…and ${items.length-soon.length} more after that.</div>`:""}
+      <div class="help">Every one of these lands in your own calendar at ${esc(m2disp(t2m(remindCfg().at||"08:00")))}. Weeksolved sends nothing and cannot — there is no server here that runs while your browser is shut, and there is deliberately no key to your staff records sitting on one.</div>
+    </div>`,
+`<button class="btn" data-close>Close</button>`+
+(items.length? `<button class="btn primary" id="rmput">Put them in my calendar</button>`:""),
+r=>{ const b=r.querySelector("#rmput");
+if(b) b.onclick=async()=>{ closeModal(true); await remindPut(); }; });
+}
+function prettyMonth(ym){
+try{ const [y,m]=ym.split("-").map(Number);
+return new Date(y, m-1, 1).toLocaleDateString([],{month:"long", year:"numeric"}); }
+catch(e){ return ym; }
+}
+ 
+function remindOffer(kind){
+const R=remindCfg();
+if(R.on || R.offered[kind]) return;
+R.offered[kind]=true; save();
+const K=REMIND_KINDS.find(x=>x.k===kind)||{t:"this"};
+setTimeout(()=>{
+modal("Want a reminder?", `
+      <div class="stack">
+        <div class="banner info"><div><b>${esc(K.t)}.</b> ${esc(K.d)}</div></div>
+        ${K.why? `<div class="help">${esc(K.why)}</div>`:""}
+        <div class="help">The reminders go into your own calendar — Weeksolved writes the entries, your phone delivers them. Nothing is emailed, nothing is sent, and no part of your board leaves this device to make it work. You can change any of it, or take it all back, under <b>Settings → Reminders</b>.</div>
+      </div>`,
+`<button class="btn" data-close>Not now</button><button class="btn primary" id="rmyes">Set it up</button>`,
+r=>{ r.querySelector("#rmyes").onclick=()=>{ closeModal(true);
+const C=remindCfg(); C.on=true; C[kind]=true; save(); render(); remindPreview(); }; });
+}, 400);
+}
 function icsText(empId, ws){
 const wk=getWeek(ws);
 const list=wk.assignments.filter(a=>!empId || a.empId===empId)
