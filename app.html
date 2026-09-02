@@ -2015,8 +2015,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "b5a0c9d7";       
-const BUILD_AT = "2026-09-02 20:40 UTC";       
+const BUILD_ID = "49d21d6f";       
+const BUILD_AT = "2026-09-02 20:50 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -15446,7 +15446,32 @@ return h.common==="normal"? "skip" : h.common;
 };
 const opt=(group,val,cur,title,desc)=>`<button type="button" class="wopt ${cur===val?"on":""}" data-g="${group}" data-v="${val}">
     <span class="wt">${esc(title)}</span>${desc?`<span class="wd">${esc(desc)}</span>`:""}</button>`;
-const namesIn = b => (W.bucketNames[b]||"").split(/\n/).map(x=>x.trim()).filter(Boolean);
+ 
+const cleanNameLine = raw => {
+let t=String(raw||"")
+.replace(/^[\s\u2022\u25CF\u25AA\u2013\u2014\-\*]+/,"")            
+.replace(/^\d{1,3}[\.\)]\s+/,"")                                 
+.replace(/<[^>]*>/g," ")                                           
+.replace(/\S+@\S+\.\S+/g," ")                                      
+.replace(/\(?\+?\d[\d\s().\-]{6,}\d\)?/g," ")                        
+.trim();
+const parts=t.split(/\t|;|\|/).map(x=>x.trim()).filter(Boolean);     
+if(parts.length>1) t=parts[0];
+const ci=t.indexOf(",");
+if(ci>0){
+const head=t.slice(0,ci).trim(), tail=t.slice(ci+1).trim();
+const known=(W.buckets||[]).concat((S.roles||[]).map(r=>r.name)).filter(Boolean).map(x=>x.toLowerCase());
+const rolish = known.includes(tail.toLowerCase()) ||
+/\b(tech|technician|pharmacist|manager|clerk|cashier|assistant|nurse|driver|cook|server|host|lead|supervisor|intern|trainee|rph|pharmd|cpht|rn|lpn|lvn|cna|ma|md|do|np|pa|dds|dvm|cpa|ft|pt|prn|full[- ]time|part[- ]time|per diem)\b/i.test(tail);
+if(rolish) t=head;                                                 
+}
+t=t.replace(/\s+/g," ").trim();
+if(/^(name|names|employee|employees|staff|first name|last name|full name|team|role|roles)$/i.test(t)) return "";
+return t;
+};
+const namesIn = b => { const seen=new Set(), out=[];
+(W.bucketNames[b]||"").split(/\n/).map(cleanNameLine).filter(Boolean).forEach(n=>{ const k=n.toLowerCase(); if(seen.has(k)) return; seen.add(k); out.push(n); });
+return out; };
 const allNames = () => { const out=[];
 for(let b=0;b<W.bucketCount;b++) namesIn(b).forEach((n,i)=>out.push({name:n,b,i})); return out; };
 const curShifts = () => {
