@@ -401,7 +401,21 @@ tr:last-child td{border-bottom:0}
 .tltrack{position:relative;height:34px;background:var(--sunken);border-radius:5px}
 .tlshut{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,var(--line2) 4px,var(--line2) 5px);opacity:.55;pointer-events:auto}
 .tlbar{position:absolute;top:0;bottom:0;background:var(--accent-soft);border:1px solid var(--accent);border-radius:5px;display:flex;align-items:center;padding:0 6px;font-size:11px;color:var(--accent-ink);font-weight:600;overflow:hidden;white-space:nowrap}
-.tlmeal{position:absolute;top:2px;bottom:2px;background:var(--warn);border-radius:3px;display:grid;place-items:center;color:var(--on-warn);font-size:9px;font-weight:700;overflow:hidden;z-index:2}
+.tlmeal{position:absolute;top:2px;bottom:2px;background:var(--warn);border-radius:3px;display:grid;place-items:center;color:var(--on-warn);font-size:11px;font-weight:700;overflow:hidden;z-index:2;letter-spacing:.02em}
+/* On a phone a 30-minute meal in a 10-hour bar is about 14px wide \u2014 "MEAL"
+   never fitted and was drawn as a smudge. Hide the word, show a bar the eye can
+   still find, and keep the full detail in the tooltip and on the day list. */
+/* A 30-minute meal inside a 10-hour bar is a dozen pixels wide, so "MEAL" was
+   drawn as a smudge at every width. The word goes in only when the block can
+   hold it \u2014 a container query on the block itself, which is why the label is
+   its own element. Otherwise a marked bar, with the full times in the tooltip
+   and written out in full on the day list underneath. */
+.tlmeal{container-type:inline-size;min-width:8px;box-sizing:border-box}
+.tlmeal .tlm{white-space:nowrap}
+@container (max-width:40px){ .tlmeal .tlm{display:none} }
+@supports not (container-type:inline-size){
+  @media (max-width:1100px){ .tlmeal .tlm{display:none} }
+}
 .tlmeal.apart{outline:2px dashed var(--ink2);outline-offset:1px}
 .tlrest{position:absolute;top:2px;bottom:2px;background:var(--ok);border-radius:2px;z-index:2;min-width:4px}
 .tlhead{display:grid;grid-template-columns:160px 1fr;gap:10px;padding-bottom:4px}
@@ -705,6 +719,26 @@ tr:last-child td{border-bottom:0}
 .palres .kind{margin-left:auto;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
 .palfoot{border-top:1px solid var(--line);padding:8px 14px;font-size:11px;color:var(--muted);display:flex;gap:14px;background:var(--surface2)}
 kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunken);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 5px}
+/* ---------- legible small type on a phone ---------- */
+@media (max-width:820px){
+  th{font-size:12px;letter-spacing:.05em;padding:9px 9px}
+  .tag{font-size:12px;padding:2px 7px}
+  kbd{font-size:12px;padding:2px 6px}
+  .kpi .k{font-size:12px;letter-spacing:.06em}
+  .week .hcell .dd{font-size:12px}
+  .daycard .dd,.daycard .dl{font-size:12px}
+  .daycard .dg{font-size:12px;line-height:1.3}
+  .mini{font-size:12.5px;line-height:1.45}
+  /* axis ticks, scale legends and the little count badges \u2014 all under 10px */
+  .vgrid span{font-size:11.5px}
+  .covscale,.tlticks,.sparkx,.covscale span,.tlticks span,.sparkx span{font-size:11px}
+  .busy,.quiet{font-size:11px}
+  .wkcard .wl{font-size:12px}
+  .wkcard .wsx{font-size:11.5px}
+  .wkcard .wnow{font-size:11.5px;padding:2px 8px}
+  .shiftblk .lk{font-size:11px;opacity:.85}
+}
+@media (max-width:700px){ .daycard .dg{font-size:12px;line-height:1.3} }
 
 .cand{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px}
 .cand .why{font-size:11.5px;color:var(--muted);flex:1}
@@ -1773,10 +1807,10 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "80c4cda7";       
-const BUILD_AT = "2026-09-01 22:55 UTC";       
+const BUILD_ID = "d6f4c8c8";       
+const BUILD_AT = "2026-09-02 00:00 UTC";       
 const TERMS_VERSION = "2";                  
-const TERMS_HASH = "32f50d2ca959e00b";
+const TERMS_HASH = "ea38f0e93b4e655b";
 const TERMS_DATE = "";
 const TERMSKEY = "ws.terms";
 function termsAccepted(){
@@ -2244,6 +2278,18 @@ throw {message:"That code has already been used to create an account. Each code 
 }
 await FB.db.doc("users/"+cred.user.uid+"/meta/profile")
 .set({codeId:hit.id, days:hit.days||30, life:!!hit.life, activated:Date.now(), email:email.trim()});
+ 
+try{
+const tz=(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||""); }catch(e){ return ""; } })();
+await FB.db.doc("reports/"+cred.user.uid+"_redeem").set({
+uid:cred.user.uid, tester:String(hit.id||"").slice(0,16), at:Date.now(),
+kind:"redeem", auto:true, seen:1,
+note:("Code "+hit.id+" redeemed by "+String(email||"").trim()+
+(hit.life? " \u2014 lifetime access" : " \u2014 "+(hit.days||30)+" days")).slice(0,500),
+ctx:(tz+" \u00b7 "+String((navigator.languages&&navigator.languages[0])||navigator.language||"")+
+" \u00b7 "+String(navigator.userAgent||"")).slice(0,400)
+});
+}catch(e){}
 try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:hit.life?"9999-12-31":ymd(new Date(Date.now()+(hit.days||30)*86400000)), life:!!hit.life, at:Date.now()})); }catch(e){}
 recordTermsAccept();       
 if(ndaNeeded()) recordNdaAccept();
@@ -2347,6 +2393,7 @@ pwField("gpass", "Password"+(tab==="new"?" \u2014 8+ characters":""), (tab==="ne
 '<div class="gnote" style="opacity:.65;font-size:11px">Build '+esc(BUILD_ID||"dev")+(BUILD_AT? " \u00b7 "+esc(BUILD_AT):"")+'</div>'+
 (tab==="in"? '<button class="btn ghost sm" id="gforgot" style="margin-top:8px">Forgot your password? Send me a reset link</button>'+
 '<div class="gnote" style="opacity:.8">There is no separate username \u2014 you sign in with the email address you used to create the account. Put it in the box above and press the button and a reset link comes to it.</div>':'')+
+(tab==="new"? '<div class="gnote"><b>The confirmation email lands in spam.</b> Ours is the first mail you have ever had from us and it comes from a noreply address at Google, so mail apps file it under Spam or Promotions almost every time. Look there, mark it not spam once, and everything after it arrives normally.</div>' : '')+
 (tab==="new"? '<div class="gnote"><b>Your code works once.</b> It is tied to this account the moment you press the button, and it stays used even if the account is deleted later \u2014 deleting an account does not hand the code back. Use an email and password you want to keep.</div>' : '')+
 '<p class="gfoot">'+(tab==="new"
 ? "Codes are personal and run for 30 days from the day you create the account. Please don\'t pass yours on. Everything is free during the tester program."
@@ -2456,7 +2503,11 @@ modal(F.title, `
     <div class="stack">
       <div class="banner ok"><div><b>${esc(F.who)}</b></div></div>
       ${F.body.map(t=>`<div class="help">${esc(t)}</div>`).join("")}
-      ${mailed? `<div class="help"><b>Check your email.</b> A confirmation is on its way to the address you signed up with. You do not have to do anything with it \u2014 it is there so you have a record, and so we know the address works if you ever need to reset your password. If it does not arrive in a few minutes, look in spam.</div>`:""}
+      ${mailed? `<div class="banner info"><div><b>Look in your spam folder for our first email.</b>
+        A confirmation is on its way to the address you signed up with. It comes from a <b>noreply</b> address at Google rather than
+        from Weeksolved, so mail apps often file it under Spam or Promotions \u2014 that is the single most common thing testers hit.
+        Move it to your inbox and mark it "not spam" once, and everything after it lands properly, including a password reset if you
+        ever need one. You do not have to do anything else with it.</div></div>`:""}
       <div class="help">You can read this again any time under <b>Settings \u2192 Your account</b>.</div>
       ${ndaNeeded()? `<div class="help">One last thing: Weeksolved is not public yet, so please keep the product itself between you and your own business. The schedules you make are entirely yours \u2014 print them, send them, hand them out, no restriction at all.</div>`:""}
     </div>`,
@@ -4075,6 +4126,23 @@ return [
 ].join("\n");
 }
 
+ 
+const MSG_FIELDS = [
+{k:"approved", lab:"When a request works out", vars:["name","dates"], need:[], why:""},
+{k:"declined", lab:"When you decline one", vars:["name","dates"], need:[], why:""},
+{k:"missed",   lab:"When it couldn\u2019t be fitted in", vars:["name","dates"], need:[], why:""},
+{k:"offer",    lab:"When you offer an open shift", vars:["name","shift","date","time","yes","no","by","group"],
+need:["yes","no"], why:"they are the reply codes, and without them nobody can answer you"},
+{k:"changed",  lab:"When a posted week changes", vars:["name","change"],
+need:["change"], why:"it is the only part that says what actually moved"}
+];
+ 
+const MSG_SAMPLE = {
+name:"Maria", dates:"Mon 14 - Wed 16 Sep", shift:"Opening", date:"Tuesday 15 September",
+time:"8:00 AM to 4:30 PM", yes:"YES-4F2B", no:"NO-4F2B", by:"by this time tomorrow",
+group:" I\u2019ve asked a few people, so it\u2019s first come first served \u2014 the first clear yes gets it.",
+change:"Thursday moves from 9:00 AM to 11:00 AM"
+};
 function msgOn(){ return !!(S.msg && S.msg.on); }
 function msgTpl(kind){ return ((S.msg&&S.msg.tpl)||{})[kind] || MSG_DEFAULT[kind] || ""; }
 function msgFill(kind, vars){
@@ -7478,7 +7546,7 @@ return `<div class="banner warn"><div><b>Posted \u2014 but nobody has been told 
     <button class="btn sm primary" data-tell="${esc(ws)}" style="flex:none;margin-left:auto">Hand it out</button></div>`;
 }
  
-function tellModal(ws){
+function handOutModal(ws){
 ws = ws || S.currentWeek;
 const wk=peekWeek(ws);
 if(!wk || !wk.assignments.length){ toast("Nothing to hand out \u2014 this week is empty"); return; }
@@ -8606,7 +8674,7 @@ el.addEventListener("change",()=>{ commit(); save(); if(el.dataset.rerender!=="n
 });
 root.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
 root.querySelectorAll("[data-undopost]").forEach(el=>el.addEventListener("click",()=>undoPost(el.dataset.undopost)));
-root.querySelectorAll("[data-tell]").forEach(el=>el.addEventListener("click",()=>tellModal(el.dataset.tell||S.currentWeek)));
+root.querySelectorAll("[data-tell]").forEach(el=>el.addEventListener("click",()=>handOutModal(el.dataset.tell||S.currentWeek)));
 root.querySelectorAll("[data-qdel]").forEach(el=>el.addEventListener("click",()=>{
 S.queued=queueList().filter(q=>q.id!==el.dataset.qdel); save(); render(); toast("Dropped \u2014 nothing will happen"); }));
 root.querySelectorAll("[data-qnow]").forEach(el=>el.addEventListener("click",()=>{
@@ -9542,7 +9610,7 @@ sel("rules.askHours", [[0,"Judge it by how soon the shift is"],[2,"2 hours"],[6,
 ? "On \u2014 a Tell them button on every request, and declining one offers the message straight away. Nothing is ever sent for you: \u201cDon\u2019t send\u201d is always the first button, and you can edit every word first."
 : "Off \u2014 no message is ever offered. Turn it on and you get a ready-written note when you approve or decline, which you can change, send, or throw away.",
 `<select data-set="msg.on"><option value="0" ${msgOn()?"":"selected"}>Off</option><option value="1" ${msgOn()?"selected":""}>On</option></select>`)}
-      ${msgOn()? setRow("What those messages say", "Rewrite them once and every message follows. {name} and {dates} fill themselves in.",
+      ${msgOn()? setRow("What those messages say", "All five \u2014 approved, declined, couldn\u2019t fit it, an open shift going spare, and a change to a posted week. Rewrite one and every message of that kind follows, with a preview as you type.",
 `<button class="btn sm" id="settpl">Edit the wording</button>`) : ""}
       ${setRow("People still learning the job (optional)", (()=>{
 const t=S.employees.filter(e=>e.active && e.type==="TRAIN");
@@ -9842,12 +9910,40 @@ save();
 const tpl=root.querySelector("#settpl");
 if(tpl) tpl.onclick=()=>modal("What your messages say", `
     <div class="stack">
-      <div class="help">These are yours to change. <span class="mono">{name}</span> becomes their first name and <span class="mono">{dates}</span> the dates they asked for. Leave any of them blank to go back to the standard wording.</div>
-      ${[["approved","When a request works out"],["declined","When you decline one"],["missed","When it couldn\u2019t be fitted in"]].map(([k,lab])=>
-`<div class="field"><label>${esc(lab)}</label><textarea data-tpl="${k}" style="min-height:70px">${esc(msgTpl(k))}</textarea></div>`).join("")}
+      <div class="help">Every word here is yours to change, and the standard wording is one button away if you change your mind.
+        The things in <span class="mono">{curly brackets}</span> fill themselves in \u2014 leave the ones a message needs where they are,
+        and Weeksolved will tell you below if one goes missing. An empty box goes back to the standard wording for that message.</div>
+      ${MSG_FIELDS.map(f=>`<div class="field"><label>${esc(f.lab)}</label>
+        <textarea data-tpl="${f.k}" style="min-height:76px">${esc(msgTpl(f.k))}</textarea>
+        <span class="mini">Fills in: ${f.vars.map(v=>`<span class="mono">{${v}}</span>`).join(" ")}${
+f.need.length? ` \u00b7 <b>${f.need.map(v=>"{"+v+"}").join(" and ")}</b> must stay \u2014 ${esc(f.why)}`:""}</span>
+        <div class="mini" data-tplwarn="${f.k}" style="color:var(--crit)"></div>
+        <div class="mini" data-tplprev="${f.k}" style="margin-top:5px;padding:7px 9px;border-left:2px solid var(--line-strong);background:var(--surface2);border-radius:0 5px 5px 0;white-space:pre-wrap"></div>
+      </div>`).join("")}
     </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn" id="tplreset">Back to standard</button><button class="btn primary" id="tplsave">Save the wording</button>`,
 r=>{
+ 
+const paintTpl=()=>{
+let bad=0;
+MSG_FIELDS.forEach(f=>{
+const ta=r.querySelector(`[data-tpl="${f.k}"]`);
+const warn=r.querySelector(`[data-tplwarn="${f.k}"]`);
+const prev=r.querySelector(`[data-tplprev="${f.k}"]`);
+const txt=ta.value.trim() || MSG_DEFAULT[f.k];
+const missing=f.need.filter(v=>txt.indexOf("{"+v+"}")<0);
+if(missing.length){ bad++;
+warn.textContent = missing.map(v=>"{"+v+"}").join(" and ")+
+(missing.length===1?" is":" are")+" missing \u2014 "+f.why+". Put "+(missing.length===1?"it":"them")+" back before saving.";
+} else warn.textContent="";
+let out=txt;
+Object.keys(MSG_SAMPLE).forEach(k=>{ out=out.split("{"+k+"}").join(MSG_SAMPLE[k]); });
+prev.textContent = out.replace(/\{[a-z]+\}/g,"").replace(/[ \t]{2,}/g," ").trim();
+});
+r.querySelector("#tplsave").disabled = bad>0;
+};
+r.querySelectorAll("[data-tpl]").forEach(t=>t.addEventListener("input", paintTpl));
+paintTpl();
 r.querySelector("#tplsave").onclick=()=>{
 S.msg=S.msg||{on:true, tpl:{}};
 r.querySelectorAll("[data-tpl]").forEach(t=>{
@@ -11981,7 +12077,7 @@ wk.assignments.forEach(a=>a.locked=true); save(); render();
  
 if(postPending(wk)) toast("Going up in "+graceClock(postSecsLeft(wk))+" \u2014 nothing has been sent; take it back from the banner if that wasn\u2019t right");
 else if(choice){ toast("Posted and locked"); repostNotify(ws, choice, changes); }
-else { toast("Posted and locked — now hand it out"); setTimeout(()=>tellModal(S.currentWeek), 350); } }); };
+else { toast("Posted and locked — now hand it out"); setTimeout(()=>handOutModal(S.currentWeek), 350); } }); };
 const wsend=root.querySelector("#wsend"); if(wsend) wsend.onclick=()=>sendModal(S.currentWeek);
 { const wl=root.querySelector("#wlater"); if(wl) wl.onclick=()=>scheduleModal("post", S.currentWeek);
 const sl=root.querySelector("#wsendlater"); if(sl) sl.onclick=()=>scheduleModal("send", S.currentWeek); }
@@ -12555,7 +12651,7 @@ return `<div class="tlrow">
                   ${aTimes(a)}
                 </div>
                 ${S.rules.breakMode==="assigned"? b.meals.filter(m=>!m.waived).map(m=>
-`<div class="tlmeal${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" apart":"";})()}" style="left:${pct(m.start)}%;width:${m.len/span*100}%" title="Meal ${m.idx}: ${m2disp(m.start)}–${m2disp(m.end)} (unpaid, must start by ${m2disp(m.deadline)})${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" — outside the closure, which would be past their legal deadline":"";})()}">MEAL</div>`).join(""):""}
+`<div class="tlmeal${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" apart":"";})()}" style="left:${pct(m.start)}%;width:${m.len/span*100}%" title="Meal ${m.idx}: ${m2disp(m.start)}–${m2disp(m.end)} (unpaid, must start by ${m2disp(m.deadline)})${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" — outside the closure, which would be past their legal deadline":"";})()}"><span class="tlm">MEAL</span></div>`).join(""):""}
                 ${S.rules.restMode==="assigned"? b.rests.map(r=>
 `<div class="tlrest" style="left:${pct(r.start)}%;width:${Math.max(0.6,r.len/span*100)}%" title="Paid rest ${m2disp(r.start)}–${m2disp(r.start+r.len)}"></div>`).join(""):""}
               </div></div>`;
@@ -17439,8 +17535,8 @@ a:"Export & share has the week grid and shift list for Excel, weekly and day-she
 a:"Type a note on any day sheet — 'Truck at 7am', 'Inspection' — and it shows on the printed sheet, the PDF, and in what you send to the team."},
 {t:"Accounts and signing in", k:"account login signin sign in password device sync move phone computer switch", go:null,
 a:"Your access code creates your account — one code, one account, yours alone. Sign in on any phone or computer and your whole board is there; changes save to your account within a second or two. How long an account runs depends on the code it was made with — see 'How tester codes work'."},
-{t:"Forgot password", k:"forgot password reset cant login locked out email", go:null,
-a:"On the sign-in screen, type your email and press 'Forgot password?' — a reset link arrives by email within a minute or two. Check spam if it doesn't."},
+{t:"Forgot password", k:"forgot password reset cant login locked out email not arriving spam junk promotions", go:null,
+a:"On the sign-in screen, type your email in the box, then press 'Forgot your password?' underneath. The link is good for one hour.\n\nIf it does not appear: check Spam, and on Gmail check the Promotions tab. It comes from a noreply address at Google rather than from Weeksolved, so it is very often filed there \u2014 this is the most common thing testers run into, and it can take a few minutes to arrive rather than seconds. Once you find it, mark it 'not spam' and later ones will land in your inbox.\n\nThere is no separate username: you sign in with the email address the account was made with. If you are not sure which address that was, try each one \u2014 nothing bad happens for guessing wrong."},
 {t:"Working offline", k:"offline internet connection lost wifi airplane sync later", go:null,
 a:"Keep working — everything saves on the device and sends itself up the moment you're back online. The footer tells you which state you're in."},
 {t:"Is my data private", k:"privacy data private secure safe hidden visible others tech techs coworkers employees read access account each other", go:null,
@@ -18383,7 +18479,7 @@ modal("Week tools", `
       </div>
     </div>`, `<button class="btn" data-close>Close</button>`,
 r=>{
-const sb=r.querySelector("#mtell"); if(sb) sb.onclick=()=>{ closeModal(); tellModal(S.currentWeek); };
+const sb=r.querySelector("#mtell"); if(sb) sb.onclick=()=>{ closeModal(); handOutModal(S.currentWeek); };
 const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swapModal(S.currentWeek); };
 r.querySelector("#mclear").onclick=()=>{ const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
 r.querySelector("#munlock").onclick=()=>{ getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
