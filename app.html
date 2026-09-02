@@ -57,6 +57,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
+/* Tell the browser this page dresses itself.
+   Chrome has a setting that force-inverts every site it thinks is light-only,
+   and it skips any page that declares color-scheme. Without this line, a
+   manager who has that setting on gets Chrome's algorithmic guess at a dark
+   theme instead of the one designed here - and the theme buttons appear to do
+   nothing, because Chrome overrules them after the fact. It also gets the parts
+   the page does not paint - scrollbars, dropdowns, date pickers, the caret -
+   to follow the chosen theme instead of the operating system's. */
+:root{ color-scheme: light dark; }
+:root[data-theme="light"]{ color-scheme: light; }
+:root[data-theme="dark"]{ color-scheme: dark; }
 :root{
   --ground:#eaedeb; --surface:#ffffff; --surface2:#f4f6f5; --sunken:#e2e6e4;
   --ink:#18211f; --ink2:#3c4a47; --muted:#5d6966; --faint:#5c6965;
@@ -889,7 +900,12 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .modal .body{padding-bottom:26px}
   input[type=text],input[type=number],input[type=time],input[type=date],input[type=email],input[type=tel],select,textarea{font-size:16px}
   #reportbtn .replbl{display:none}
-  #reportbtn{border-radius:99px;width:30px;height:30px;padding:0}
+  /* Both header buttons are round icons on a phone, so they need the SAME
+     square size and they need it to survive the 44px floor below - without an
+     explicit min-height that rule stretched a 30px circle into a 30x44 oval,
+     which is what a "circle" quietly became last night. */
+  #reportbtn,#helpbtn{border-radius:99px!important;width:40px!important;height:40px!important;
+    min-height:40px!important;padding:0!important;display:inline-flex;align-items:center;justify-content:center}
   /* fingers, not cursors: keep every tap target comfortable. 44px is the number
      the rest of this file already uses for anything a finger lands on - every
      input, every day toggle - and a small button was coming out at 40, which is
@@ -968,7 +984,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
       <div class="desc" id="tdesc"></div>
       <div id="tacts" class="row"></div>
       <button class="btn sm" id="reportbtn" aria-label="Report a problem" title="Report a problem" style="flex:none"><span class="repico">⚑</span><span class="replbl"> Report</span></button>
-      <button class="btn ghost sm" id="helpbtn" aria-label="Help and frequently asked questions" title="Help" style="flex:none;border-radius:99px;width:30px;height:30px;padding:0;font-weight:700">?</button>
+      <button class="btn ghost sm" id="helpbtn" aria-label="Help and frequently asked questions" title="Help" style="flex:none;border-radius:99px;width:28px;height:28px;padding:0;font-weight:700;line-height:1">?</button>
     </div>
     <main class="pane" id="pane" tabindex="-1"></main>
   </div>
@@ -1947,8 +1963,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "f02e5a7d";       
-const BUILD_AT = "2026-09-02 08:44 UTC";       
+const BUILD_ID = "5e7294a3";       
+const BUILD_AT = "2026-09-02 14:02 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -2742,6 +2758,14 @@ const used=new Set(rows.map(r=>r.id));
 const spare=knownIds.filter(id=>!used.has(id));
 const now=Date.now(), DAY=86400000;
 const days=ms=>Math.max(0, Math.floor(ms/DAY));
+ 
+const calDays=(a,b)=>{
+const d1=new Date(a), d2=new Date(b);
+const u1=Date.UTC(d1.getFullYear(),d1.getMonth(),d1.getDate());
+const u2=Date.UTC(d2.getFullYear(),d2.getMonth(),d2.getDate());
+return Math.max(0, Math.round((u2-u1)/DAY));
+};
+const sinceWords=n=> n===0? "started today" : n===1? "since yesterday" : n+" days in";
 
  
 const byTester={};
@@ -2765,7 +2789,7 @@ const t=byTester[String(r.id||"?")] || {n:0,crash:0,contact:0,kbmiss:0,repeat:0,
 const life=!!meta.life;
 const span=meta.days||0;
 const started=+(r.at||0);
-const testingFor = started? days(now-started) : null;
+const testingFor = started? calDays(started, now) : null;
 const leftDays = (life||!span||!started)? null : Math.ceil((started+span*DAY-now)/DAY);
 return {r, meta, t, life, span, started, testingFor, leftDays,
 quiet: t.n===0, lastGap: t.last? days(now-t.last) : null};
@@ -2791,7 +2815,7 @@ return `<tr>
       <td><strong>${esc(r.email||"(no address recorded)")}</strong>
         <div class="mini">${esc(r.tz||"time zone not recorded")}${r.loc? " · "+esc(r.loc):""}</div>
         ${r.ua? `<div class="mini" style="opacity:.7">${esc(String(r.ua).slice(0,80))}</div>`:""}</td>
-      <td class="mini">${esc(when)}<div class="mini" style="opacity:.75">${x.testingFor!=null? x.testingFor+" day"+(x.testingFor===1?"":"s")+" in":""}</div></td>
+      <td class="mini">${esc(when)}<div class="mini" style="opacity:.75">${x.testingFor!=null? esc(sinceWords(x.testingFor)):""}</div></td>
       <td class="mini">${esc(life)}</td>
       <td>${t.n
 ? `<div class="row" style="gap:4px;flex-wrap:wrap">${pill(t.n,"report"+(t.n===1?"":"s"))}${pill(t.crash,"crash"+(t.crash===1?"":"es"),"warn")}${pill(t.contact,"message"+(t.contact===1?"":"s"),"acc")}${pill(t.kbmiss,"help gap")}</div>
@@ -2821,6 +2845,7 @@ const body = (err && repErr)
           <tbody>${people.map(line).join("")}</tbody></table></div>`
 : `<div class="empty"><strong>Nothing redeemed yet</strong>Codes appear here the moment somebody signs up with one.</div>`}
         ${quiet && rows.length? `<div class="help"><b>${quiet} ${quiet===1?"tester has":"testers have"} sent nothing at all.</b> That is not the same as not using it — people who are getting on fine have nothing to report. It is worth one friendly message asking how it is going, because a quiet tester and a stuck tester look identical from here.</div>`:""}
+        ${people.some(x=>!x.r.email)? `<div class="help">A row with no address on it was redeemed before Weeksolved started recording one \u2014 there was nothing to record at the time, and nothing is missing from it now.</div>`:""}
         <div class="help">All of this is worked out from two things people already gave you: the moment a code was redeemed, and the problem reports they chose to send. Weeksolved does not record when anyone opens the app, what they look at, or what is on their board — so "last one 6d ago" means the last report, not the last visit. A time zone that does not match where you expect somebody to be is worth a question.</div>
       </div>`;
 const b2=document.querySelector("#modalroot .modal .body");
@@ -8924,7 +8949,9 @@ r.querySelectorAll("[data-sheetbug]").forEach(b=>b.onclick=()=>{ closeSheet(); b
 const cur=(function(){ try{ return localStorage.getItem("dowel.theme")||"system"; }catch(e){ return "system"; } })();
 r.querySelectorAll("#sheettheme button").forEach(b=>{
 b.setAttribute("aria-pressed", b.dataset.t===cur);
-b.onclick=()=>{ applyTheme(b.dataset.t); closeSheet(); };
+b.onclick=()=>{ const want=b.dataset.t; applyTheme(want); closeSheet();
+requestAnimationFrame(()=>requestAnimationFrame(()=>{
+if(want!=="system" && !themeLanded(want)) themeBlockedNote(); })); };
 });
 }
 
@@ -9628,7 +9655,7 @@ return `<div class="card"><header><h3>Your account</h3>
       ${(()=>{ const F=accessFacts(window.TESTER_ID, window.TESTER_LIFE, window.TESTER_DAYS, window.TESTER_FROM);
 return setRow("Your access", esc(F.title)+" \u2014 "+esc(F.who), `<button class="btn sm" id="setaccess">What that means</button>`); })()}
       ${window.TESTER_ID==="FOUNDER"? setRow("Who is testing",
-"Every access code, who redeemed it and when \u2014 so you can see at a glance which are still unused and spot one that has travelled further than you meant.",
+"Every access code, who redeemed it and when, how long each tester has been at it, and what they have sent in \u2014 so a code that has travelled further than you meant, and a tester who has gone quiet, both show up at a glance.",
 `<button class="btn sm" id="setcodes">Show me</button>`) : ""}
       ${setRow("Plan and billing", (()=>{
 if(window.TESTER_LIFE) return "Nothing to pay, ever. This account is free for life \u2014 when paid plans open it is not billed and nothing will be asked of you.";
@@ -18085,6 +18112,8 @@ a:"Turn it on in Settings (or in setup) and a Vacations page appears. Download t
 a:"Assigned holidays are staffed by the holiday poll, so a vacation can't swallow one. The usual order: assign holidays first, run the vacation draw second, and handle day-to-day requests after. A request that touches a holiday is skipped with a note, and the person's next choice is tried instead."},
 {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
 a:"On the Holidays page (or in setup), say whether business spikes the day before a holiday, after, or both. Those days then count one step busier: spare hands are steered there first, drafts fill them first, and thin cover next to a holiday gets flagged. It never adds shifts on its own."},
+{t:"Light and dark do nothing when I press them", k:"dark light theme colour color mode toggle night day not working stuck browser force invert", go:null,
+a:"Almost always the browser rather than Weeksolved. Some browsers have a setting that forces every website to dark whatever the site asks for, and while it is on no site's light and dark buttons will appear to do anything. An easy way to tell: open any ordinary page, Wikipedia say \u2014 if that is dark too, it is the browser doing it everywhere. In Chrome it is chrome://flags, search \u201cAuto Dark Mode for Web Contents\u201d, set it to Disabled and relaunch; some versions keep it under Settings, Appearance. Weeksolved now tells the browser it handles its own light and dark, which is enough for most versions to leave it alone."},
 {t:"Put Weeksolved on your home screen", k:"home screen install app icon phone shortcut add pin homescreen", go:null,
 act:"a2hs", actLabel:"Show me the steps for this device",
 a:"On iPhone: open weeksolved.com in Safari, tap the Share button (the square with the arrow), scroll down, tap 'Add to Home Screen', then Add. On Android: open it in Chrome, tap the three-dot menu, tap 'Add to home screen'. You get a real app icon that opens full screen — same account, same data, nothing to install."},
@@ -18779,12 +18808,53 @@ if(!isFinite(z) || z<0.75 || z>1.75) z=1;
 document.documentElement.style.zoom = z===1? "" : String(z);
 document.body.classList.toggle("compact", density()==="compact");
 }
+ 
+function themeLanded(want){
+try{
+const m=/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(getComputedStyle(document.body).backgroundColor);
+if(!m) return true;                                      
+const lum=(0.2126*+m[1] + 0.7152*+m[2] + 0.0722*+m[3])/255;
+if(want==="light") return lum > 0.5;
+if(want==="dark")  return lum < 0.5;
+}catch(e){}
+return true;
+}
+function themeBlockedNote(){
+S.ui=S.ui||{};
+if(S.ui.themeNote) return;                                 
+S.ui.themeNote=true; try{ save(); }catch(e){}
+const ua=navigator.userAgent||"";
+const chrome=/Chrome|Chromium|Edg/.test(ua) && !/Firefox/.test(ua);
+modal("Your browser is overriding the colours", `
+    <div class="stack">
+      <div class="banner info"><div><b>The button worked — something outside Weeksolved is repainting the page afterwards.</b>
+        Some browsers have a setting that forces every site to dark, whatever the site itself asks for. While it is on, no site's
+        light and dark buttons will appear to do anything, including this one.</div></div>
+      <div class="help"><b>An easy way to tell:</b> open any ordinary page — Wikipedia, say. If that is dark too, it is the
+        browser doing it to every site, and nothing here can change that from inside the page.</div>
+      ${chrome? `<div class="help"><b>To turn it off in Chrome:</b> type <b>chrome://flags</b> in the address bar, search for
+        <b>Auto Dark Mode for Web Contents</b>, set it to <b>Disabled</b>, then press Relaunch. Some versions keep it under
+        Settings → Appearance instead.</div>`
+: `<div class="help">Look for a setting named something like <b>force dark</b>, <b>auto dark</b> or <b>dark reader</b> in your
+        browser's settings or extensions, and turn it off for this site.</div>`}
+      <div class="help">Nothing is wrong with your schedule, and nothing needs fixing here. This is only about colour.</div>
+    </div>`,
+`<button class="btn primary" data-close>Got it</button>`);
+}
 function initTheme(){
 let t="system"; try{ t=localStorage.getItem("dowel.theme")||"system"; }catch(e){}
 applyTheme(t);
 applyAppearance();
-const g=$("#themetog");
-if(g) g.querySelectorAll("button").forEach(b=>b.onclick=()=>applyTheme(b.dataset.t));
+const wire=b=>{ b.onclick=()=>{
+const want=b.dataset.t;
+applyTheme(want);
+ 
+requestAnimationFrame(()=>requestAnimationFrame(()=>{
+if(want!=="system" && !themeLanded(want)) themeBlockedNote();
+}));
+}; };
+const g=$("#themetog"); if(g) g.querySelectorAll("button").forEach(wire);
+ 
 }
 
  
