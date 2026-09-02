@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data Processing Addendum — Weeksolved</title>
+<meta name="description" content="The data processing terms Weeksolved offers business and public-sector customers.">
+<link rel="canonical" href="https://weeksolved.com/dpa.html">
+<meta name="theme-color" content="#1c6a66">
+<style>
+:root{--bg:#f2f5f4;--surface:#fff;--ink:#18211f;--ink2:#3c4a47;--muted:#5d6966;--line:#d2d8d6;--accent:#1c6a66;--warn-soft:#f6ead4;--warn:#8d5c0f}
+@media (prefers-color-scheme: dark){:root{--bg:#101514;--surface:#191f1e;--ink:#e7ecea;--ink2:#c2ccc9;--muted:#8d9b97;--line:#2c3634;--accent:#4cb3a9;--warn-soft:#33260f;--warn:#d9a441}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:800px;margin:0 auto;padding:0 20px 60px}
+header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px}
+.brand{font-weight:800;font-size:18px}
+header.top a{margin-left:auto;color:var(--accent);text-decoration:none;font-weight:600;font-size:13.5px;padding:11px 0;display:inline-block}
+h1{font-size:28px;letter-spacing:-.02em;margin:22px 0 4px}
+.eff{color:var(--muted);font-size:13px;margin-bottom:26px}
+h2{font-size:19px;margin:34px 0 8px;letter-spacing:-.01em;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15.5px;margin:22px 0 6px;letter-spacing:-.005em}
+h4{font-size:14px;margin:16px 0 4px;color:var(--ink)}
+p,li,td,th{color:var(--ink2);font-size:14px}
+ul,ol{padding-left:22px}
+li{margin-bottom:5px}
+a{color:var(--accent)}
+strong{color:var(--ink)}
+code{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+pre code{border:0;background:none;padding:0;font-size:12.5px;line-height:1.5}
+hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+table{border-collapse:collapse;width:100%;margin:12px 0;display:block;overflow-x:auto}
+th{text-align:left;font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+   font-weight:700;padding:7px 9px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+/* A warranty disclaimer is only enforceable if a reasonable person would notice
+   it. That is judged on the rendered page, so it is built to be noticed here. */
+blockquote{margin:16px 0;padding:14px 16px;background:var(--warn-soft);border:2px solid var(--warn);
+  border-radius:8px}
+blockquote p{color:var(--ink);font-weight:600}
+blockquote strong{font-weight:800}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inline-block;white-space:nowrap;padding:7px 0}
+.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 26px}
+.toc h4{margin:0 0 6px;font-size:12.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.toc a{display:inline-block;margin:0 14px 2px 0;padding:6px 0;font-size:13.5px;text-decoration:none}
+@media (max-width:520px){
+  p,li,td,th{font-size:15px}
+  .toc a{font-size:14px;padding:8px 0;margin-right:16px}
+  header.top a{padding:8px 0;display:inline-block}
+  footer a{padding:9px 0}
+  strong{font-size:inherit}
+}
+@media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
+</style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
+<h1>Data Processing Addendum</h1>
+<nav class="toc"><h4>On this page</h4><a href="#1-definitions">1. Definitions</a><a href="#2-roles-of-the-parties">2. Roles of the parties</a><a href="#3-scope-of-processing">3. Scope of processing</a><a href="#4-our-obligations-as-a-service-provider-the-ccpa-contractual">4. Our obligations as a Service Provider — the CCPA contractual terms</a><a href="#5-subprocessors">5. Subprocessors</a><a href="#6-security">6. Security</a><a href="#7-security-incidents">7. Security Incidents</a><a href="#8-audit-and-assurance">8. Audit and assurance</a><a href="#9-assisting-you">9. Assisting you</a><a href="#10-return-and-deletion">10. Return and deletion</a><a href="#11-international-transfers">11. International transfers</a><a href="#12-general">12. General</a><a href="#annex-a-technical-and-organizational-measures">Annex A — Technical and organizational measures</a><a href="#signature">Signature</a></nav>
+<p><strong>Version 1.0 — Effective [EFFECTIVE DATE]</strong></p>
+<p>This Data Processing Addendum ("DPA") is part of the Weeksolved Terms of Service (the "Agreement") between <strong>[ENTITY NAME]</strong> ("Weeksolved", "we", "Service Provider") and the customer identified in the Agreement or an order form ("Customer", "you", "Business").</p>
+<p>It applies when we process personal information about your personnel on your behalf. Where this DPA and the Agreement conflict on a data protection matter, <strong>this DPA controls</strong>.</p>
+<p><strong>How to accept this DPA:</strong> by signing it at the end, by accepting it through the Weeksolved application, or by executing an order form that references it. No signature from us is needed beyond our published, countersigned version at [DPA URL].</p>
+<hr />
+<h2 id="1-definitions">1. Definitions</h2>
+<p>Terms defined in the California Consumer Privacy Act, Cal. Civ. Code §§ 1798.100 <em>et seq.</em>, as amended by the California Privacy Rights Act, and its implementing regulations at 11 CCR §§ 7000 <em>et seq.</em> (together, the <strong>"CCPA"</strong>), have the same meaning here. In particular: <strong>"business"</strong>, <strong>"business purpose"</strong>, <strong>"collect"</strong>, <strong>"commercial purpose"</strong>, <strong>"consumer"</strong>, <strong>"personal information"</strong>, <strong>"process"</strong>, <strong>"sell"</strong>, <strong>"service provider"</strong>, <strong>"share"</strong>, and <strong>"third party"</strong>.</p>
+<p><strong>"Customer Personal Information"</strong> means personal information within Customer Data that we process on your behalf under the Agreement.</p>
+<p><strong>"Customer Data"</strong> means the information you or your authorized users enter into or generate in the Service.</p>
+<p><strong>"Security Incident"</strong> means a breach of our security leading to the accidental or unlawful destruction, loss, alteration, or unauthorized disclosure of or access to Customer Personal Information in our possession. It does not include an unsuccessful attempt or an event that does not compromise the security of Customer Personal Information — pings, port scans, failed log-ins, denial-of-service attempts, and similar events that do not result in unauthorized access.</p>
+<p><strong>"Data Protection Law"</strong> means all privacy and data protection laws applicable to a party's processing under this DPA, including the CCPA and other US state privacy laws.</p>
+<hr />
+<h2 id="2-roles-of-the-parties">2. Roles of the parties</h2>
+<p><strong>2.1</strong> For Customer Personal Information, <strong>you are the Business and we are the Service Provider</strong>, as those terms are defined in Cal. Civ. Code § 1798.140. Under other US state privacy laws, you are the controller and we are the processor.</p>
+<p><strong>2.2 You determine the purposes and means.</strong> You decide what personal information to enter into the Service, about whom, and why. We do not.</p>
+<p><strong>2.3 Your responsibilities.</strong> You represent and warrant that:</p>
+<p>(a) you have the right to provide Customer Personal Information to us and to have us process it as described here;</p>
+<p>(b) you have given all notices and obtained all consents or other legal bases that Data Protection Law requires of you, including any notice at collection you owe your employees under Cal. Civ. Code § 1798.100(a) — an obligation that has applied to California employers since the CCPA's employee-data exemption expired on January 1, 2023;</p>
+<p>(c) your instructions to us do not require us to violate Data Protection Law; and</p>
+<p>(d) you will not enter into the Service any protected health information subject to HIPAA, payment card data subject to PCI DSS, Social Security or government identification numbers, or financial account numbers. <strong>We are not a HIPAA business associate and will not execute a business associate agreement.</strong></p>
+<p><strong>2.4 Automated decisionmaking.</strong> The Service produces draft schedules and warnings that your personnel review and publish. To the extent California's automated decisionmaking technology regulations (11 CCR §§ 7200 <em>et seq.</em>, applicable from January 1, 2027) or any comparable law apply to your use of the Service to make significant employment decisions, <strong>those obligations are yours as the Business</strong>, including pre-use notices, risk assessments, and access and opt-out rights. We will, on request and without additional charge, provide reasonable information about how the Service's logic and outputs work so you can complete a risk assessment or pre-use notice.</p>
+<hr />
+<h2 id="3-scope-of-processing">3. Scope of processing</h2>
+<p><strong>3.1 Subject matter.</strong> Provision of the Weeksolved staff-scheduling service.</p>
+<p><strong>3.2 Duration.</strong> For the term of the Agreement, plus the deletion window in section 10.</p>
+<p><strong>3.3 Nature and purpose.</strong> Storing, organizing, structuring, retrieving, displaying, and deleting Customer Personal Information so you can build, review, and publish staff schedules; providing support you request; maintaining and securing the Service.</p>
+<p><strong>3.4 Categories of data subject.</strong> Your personnel — the employees and workers you schedule — and your authorized users (managers and administrators). Your employees do not have accounts and do not access the Service.</p>
+<p><strong>3.5 Categories of personal information.</strong> As determined by you. The Service provides fields for: name; email address; telephone number; employment type; availability; scheduled and worked hours; hourly pay rate (optional); date of birth (optional, used to warn about work-hour limits for workers under 18); licence expiry dates; time-off and sick-leave records; callout and no-show records; and free-text notes. Where you enable optional features that are off by default, also: overtime offers and refusals; mandatory-overtime rotation position; and an audit log of changes made to schedules after posting.</p>
+<p><strong>3.6 Sensitive personal information.</strong> The Service provides no field for sensitive personal information as defined in Cal. Civ. Code § 1798.140(ae). We do not request it. Free-text note fields will accept whatever you enter; you agree not to enter sensitive personal information there.</p>
+<hr />
+<h2 id="4-our-obligations-as-a-service-provider-the-ccpa-contractual">4. Our obligations as a Service Provider — the CCPA contractual terms</h2>
+<p><strong>This section states the commitments Cal. Civ. Code § 1798.140(ag) and § 1798.100(d) require. It is drafted to satisfy both.</strong></p>
+<h3>4.1 Limited and specified purposes</h3>
+<p>Personal information is disclosed by you to us <strong>only for the limited and specified purpose</strong> of providing the Service to you as described in section 3 and in the Agreement. That is the "business purpose specified in the contract" for CCPA purposes.</p>
+<h3>4.2 The four statutory prohibitions</h3>
+<p>We are <strong>prohibited</strong> from, and we will not:</p>
+<p><strong>(A) Sell or share the personal information.</strong> We will not sell or share Customer Personal Information as "sell" and "share" are defined in Cal. Civ. Code § 1798.140(ad) and (ah). We do not sell or share personal information for monetary or other valuable consideration, and we do not disclose it for cross-context behavioral advertising.</p>
+<p><strong>(B) Retain, use, or disclose the personal information for any purpose other than for the business purposes specified in the contract</strong>, including retaining, using, or disclosing the personal information for a commercial purpose other than the business purposes specified in the contract with you, or as otherwise permitted by the CCPA.</p>
+<p><strong>(C) Retain, use, or disclose the information outside of the direct business relationship</strong> between us as service provider and you as business.</p>
+<p><strong>(D) Combine the personal information that we receive from, or on behalf of, you with personal information that we receive from, or on behalf of, another person or persons, or collect from our own interaction with the consumer</strong>, except as the CCPA and its regulations expressly permit.</p>
+<p>We will not use Customer Personal Information to build or improve profiles, for advertising, or <strong>to train, fine-tune, or evaluate any artificial intelligence or machine learning model</strong>.</p>
+<h3>4.3 Certification</h3>
+<p><strong>We certify that we understand the restrictions and obligations set out in section 4.1 and 4.2 and this DPA, and that we will comply with them.</strong> (Cal. Civ. Code § 1798.140(ag)(1).)</p>
+<h3>4.4 Same level of privacy protection</h3>
+<p>We will <strong>comply with our applicable obligations under the CCPA and provide the same level of privacy protection as the CCPA requires of you</strong>, with respect to Customer Personal Information. (Cal. Civ. Code § 1798.100(d)(2).)</p>
+<h3>4.5 Your right to monitor</h3>
+<p>You have the right to <strong>take reasonable and appropriate steps to help ensure that we use Customer Personal Information in a manner consistent with your obligations under the CCPA</strong> (Cal. Civ. Code § 1798.100(d)(3)), including by exercising the audit rights in section 8 of this DPA, and by ongoing manual review, automated scanning, regular assessments, or audits no more than once every twelve (12) months, as permitted by Cal. Civ. Code § 1798.140(ag)(1).</p>
+<h3>4.6 Our duty to notify you if we cannot comply</h3>
+<p>We will <strong>notify you if we make a determination that we can no longer meet our obligations under the CCPA</strong> (Cal. Civ. Code § 1798.100(d)(4)). We will do so promptly and in writing.</p>
+<h3>4.7 Your right to stop and remediate</h3>
+<p>On notice, including notice under section 4.6, you have the right to <strong>take reasonable and appropriate steps to stop and remediate unauthorized use of personal information</strong> (Cal. Civ. Code § 1798.100(d)(5)).</p>
+<h3>4.8 Instructions</h3>
+<p>We process Customer Personal Information only on your documented instructions. The Agreement, this DPA, and your use of the Service's features are your instructions. If we believe an instruction violates Data Protection Law, we will tell you and may pause that processing until it is resolved.</p>
+<h3>4.9 Compelled disclosure</h3>
+<p>If we receive a subpoena, warrant, court order, or other legally binding demand for Customer Personal Information, we will notify you before responding so you can seek protection, unless we are legally prohibited from notifying you. We will object to demands that are overbroad, improper, or not legally valid, and will disclose only the minimum required.</p>
+<h3>4.10 Confidentiality of our personnel</h3>
+<p>Everyone we authorize to process Customer Personal Information is bound by a written confidentiality obligation and is granted access only to what their role requires.</p>
+<hr />
+<h2 id="5-subprocessors">5. Subprocessors</h2>
+<p><strong>5.1 Authorization.</strong> You give us general written authorization to engage subprocessors, subject to this section.</p>
+<p><strong>5.2 Current subprocessors.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Subprocessor</th>
+<th>Purpose</th>
+<th>Data processed</th>
+<th>Location</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Google LLC — Firebase / Cloud Firestore</td>
+<td>Database, hosting, storage</td>
+<td>All Customer Personal Information synced to the account</td>
+<td>United States</td>
+<td>Live</td>
+</tr>
+<tr>
+<td>Google LLC — Firebase Authentication</td>
+<td>Authentication of Customer's authorized users</td>
+<td>Authorized user email address and hashed password</td>
+<td>United States</td>
+<td>Live</td>
+</tr>
+<tr>
+<td>[MERCHANT OF RECORD NAME]</td>
+<td>Merchant of record; payment and tax</td>
+<td>Customer billing contact and transaction records. No Customer Personal Information about your personnel.</td>
+<td>[MoR REGION]</td>
+<td>Not live</td>
+</tr>
+<tr>
+<td>[EMAIL SENDER NAME]</td>
+<td>Transactional email sending</td>
+<td>Recipient email address and message contents</td>
+<td>[SENDER REGION]</td>
+<td>Not live — planned January 2027</td>
+</tr>
+</tbody>
+</table>
+<p>The current list is maintained at <strong>[SUBPROCESSOR LIST URL]</strong>.</p>
+<p><strong>5.3 New subprocessors.</strong> We will give you at least <strong>30 days' written notice</strong> before a new subprocessor begins processing Customer Personal Information. You may subscribe to notifications at [SUBPROCESSOR LIST URL].</p>
+<p><strong>5.4 Your right to object.</strong> You may object in writing within 30 days of notice, on reasonable data-protection grounds. We will work with you in good faith to find an alternative. If we cannot within 30 days, <strong>you may terminate the Agreement without penalty and receive a pro-rata refund of prepaid unused fees</strong>.</p>
+<p><strong>5.5 Flow-down and responsibility.</strong> Every subprocessor is engaged under a written contract imposing obligations at least as protective as this DPA, including the CCPA service-provider terms in section 4. <strong>We remain fully responsible to you for each subprocessor's performance</strong> as if we performed it ourselves. (Cal. Civ. Code § 1798.140(ag)(2).)</p>
+<hr />
+<h2 id="6-security">6. Security</h2>
+<p><strong>6.1 Measures.</strong> We maintain the technical and organizational measures in <strong>Annex A</strong>, which are appropriate to the risk. We will not materially reduce them during the term.</p>
+<p><strong>6.2 Personnel.</strong> Access is limited to those who need it, protected by multi-factor authentication, and reviewed on role change and removed on departure.</p>
+<p><strong>6.3 Your responsibilities.</strong> You are responsible for your own account security: strong unique passwords, not sharing accounts, and promptly removing access for people who leave your organization.</p>
+<hr />
+<h2 id="7-security-incidents">7. Security Incidents</h2>
+<p><strong>7.1 Notification.</strong> We will notify you of a Security Incident affecting your Customer Personal Information <strong>without undue delay and no later than seventy-two (72) hours after we become aware of it</strong>.</p>
+<p><strong>7.2 Contents.</strong> Our notice will describe, to the extent known: the nature of the incident; the categories and approximate number of individuals and records affected; the likely consequences; the measures taken or proposed; and a contact point. If we cannot provide all of it at once, we will provide it in phases without undue delay rather than delaying the initial notice.</p>
+<p><strong>7.3 Cooperation.</strong> We will cooperate reasonably with your investigation and give you the information you reasonably need to meet <strong>your</strong> notification obligations under Cal. Civ. Code §§ 1798.29 and 1798.82 and any other applicable law.</p>
+<p><strong>7.4 Who notifies affected individuals.</strong> <strong>You</strong> are responsible for notifying your personnel and any regulator, because they are your personnel and the notification duty is yours as the Business. We will not contact your personnel about an incident without your written agreement, unless the law requires us to.</p>
+<p><strong>7.5 Notification is not an admission.</strong> Notifying you is not an acknowledgement of fault or liability.</p>
+<p><strong>7.6 Contact.</strong> We will notify the security contact you designate in the signature block, and the account owner email. <strong>Keep that contact current.</strong></p>
+<hr />
+<h2 id="8-audit-and-assurance">8. Audit and assurance</h2>
+<p><strong>8.1 Information.</strong> On written request, no more than once every twelve (12) months, we will provide the information reasonably necessary to demonstrate our compliance with this DPA — a completed security questionnaire, our Annex A measures, our subprocessor list, and our data flow description. We aim to respond within 30 days.</p>
+<p><strong>8.2 Audit.</strong> If that information is not sufficient, and where Data Protection Law gives you an audit right, you may audit our compliance:</p>
+<p>(a) on at least 30 days' written notice;
+(b) no more than once every 12 months, unless a Security Incident affecting your data has occurred or a regulator requires it;
+(c) during business hours, without unreasonable disruption;
+(d) subject to confidentiality obligations;
+(e) not extending to our other customers' data, our personnel records, or information subject to legal privilege; and
+(f) at your expense, unless the audit reveals our material non-compliance, in which case we bear the reasonable cost.</p>
+<p><strong>8.3 Our infrastructure providers.</strong> We do not control Google Cloud's data centers and cannot grant physical access to them. For infrastructure controls we will provide Google's published third-party audit reports and certifications to the extent Google makes them available for onward disclosure.</p>
+<p><strong>8.4 Honest disclosure of our current posture.</strong> As of the version date of this DPA, <strong>we hold no SOC 2 report, no ISO 27001 certification, and no third-party penetration test</strong>. We are a small company and we would rather state this plainly than have a procurement review discover it. If your procurement requires such an attestation as a condition of purchase, tell us before you sign so we can discuss what is realistic and on what timeline.</p>
+<hr />
+<h2 id="9-assisting-you">9. Assisting you</h2>
+<p>We will provide reasonable assistance, taking into account the nature of the processing and the information available to us, with:</p>
+<p><strong>9.1 Consumer rights requests.</strong> If one of your personnel exercises a right to know, access, correct, delete, or port their information, <strong>you handle the request</strong>. We will help you locate, export, correct, or delete the relevant data through the Service's features or, where those are not sufficient, by reasonable manual assistance. <strong>If your personnel contacts us directly, we will not act on the request. We will refer them to you and notify you within 5 business days.</strong></p>
+<p><strong>9.2 Risk assessments and pre-use notices.</strong> We will provide information about the Service's logic, inputs, and outputs to help you complete a risk assessment or ADMT pre-use notice as described in section 2.4.</p>
+<p><strong>9.3 Regulator inquiries.</strong> We will provide reasonable cooperation with a regulator's inquiry relating to our processing of your Customer Personal Information.</p>
+<p>Assistance under this section is provided at no additional charge unless the request is manifestly unfounded, excessive, or requires substantial engineering work, in which case we will agree a reasonable fee with you in advance and in writing.</p>
+<hr />
+<h2 id="10-return-and-deletion">10. Return and deletion</h2>
+<p><strong>10.1 Self-service, at any time.</strong> You can export Customer Data from within the Service at any time during the term. We recommend you do so regularly and before termination.</p>
+<p><strong>10.2 On termination.</strong> For <strong>30 days</strong> after the Agreement terminates, Customer Data remains available for you to export. On your written request during that window, we will provide it in a structured, commonly used, machine-readable format.</p>
+<p><strong>10.3 Deletion.</strong> After the 30-day window, or earlier on your written instruction, we will delete Customer Personal Information from live systems. Copies in routine backups are overwritten within <strong>[BACKUP RETENTION] days</strong> and are not restored to live systems in the interim.</p>
+<p><strong>10.4 Certification of deletion.</strong> We will confirm deletion in writing on request.</p>
+<p><strong>10.5 Exceptions.</strong> We may retain Customer Personal Information where the law requires it, or for the establishment or defense of legal claims, and only for as long and to the extent necessary. Retained information stays subject to this DPA.</p>
+<p><strong>10.6 Data in your browser.</strong> The Service stores a copy of Customer Data in your authorized users' browsers (localStorage) so the application works offline. <strong>That copy is on your devices and under your control.</strong> We cannot reach it or delete it for you. To remove it, clear the browser's site data for weeksolved.com, or use the Service's in-app clear function. Include this step in your own offboarding process.</p>
+<hr />
+<h2 id="11-international-transfers">11. International transfers</h2>
+<p><strong>11.1</strong> We process and store Customer Personal Information in <strong>the United States</strong>. Our live subprocessors, Google Firebase / Cloud Firestore and Firebase Authentication, are hosted in the United States.</p>
+<p><strong>11.2</strong> <strong>We do not currently transfer Customer Personal Information outside the United States.</strong> Standard Contractual Clauses, the EU–US Data Privacy Framework, the UK International Data Transfer Addendum, and similar transfer mechanisms are therefore <strong>not applicable</strong> to this DPA as of its version date.</p>
+<p><strong>11.3</strong> If we later process Customer Personal Information outside the United States, or engage a subprocessor that does, we will notify you under section 5.3, and the parties will put an appropriate transfer mechanism in place before the transfer begins. If we cannot agree one, you may terminate under section 5.4.</p>
+<p><strong>11.4</strong> If you are established outside the United States, or if you are subject to the GDPR or UK GDPR in a way that requires additional terms, contact us at [PRIVACY EMAIL] before signing.</p>
+<hr />
+<h2 id="12-general">12. General</h2>
+<p><strong>12.1 Term.</strong> This DPA takes effect on the date you accept it and continues while we process Customer Personal Information, then survives as to sections 4, 7, 10, and 12.</p>
+<p><strong>12.2 Liability.</strong> Each party's liability under this DPA is subject to the limitation of liability in the Agreement, including the savings clause. <strong>Nothing in this DPA or the Agreement limits either party's liability for its own fraud, its own willful injury to the person or property of another, or its own violation of law, whether willful or negligent.</strong></p>
+<p><strong>12.3 Changes in law.</strong> If Data Protection Law changes so that this DPA no longer satisfies it, the parties will negotiate an amendment in good faith. We may update this DPA to reflect a legal change or a new legally required term on 30 days' notice; if an update materially reduces your protections, you may terminate the Agreement without penalty within that period.</p>
+<p><strong>12.4 Order of precedence.</strong> This DPA controls over the Agreement on data protection matters. A signed order form controls over this DPA where it expressly says so.</p>
+<p><strong>12.5 Assignment.</strong> This DPA is assigned together with the Agreement, on the same terms as the Agreement's assignment clause, including assignment to a successor entity on conversion of the business from a sole proprietorship to a limited liability company. <strong>Your protections under this DPA transfer with it and are not reduced by the assignment.</strong> The successor is bound by every commitment in this DPA.</p>
+<p><strong>12.6 Governing law.</strong> As stated in the Agreement, except where Data Protection Law or your governing law as a public entity requires otherwise.</p>
+<p><strong>12.7 Public entities.</strong> If you are a government agency, and your governing law requires specific terms — venue, records retention, public records access, non-indemnification, audit rights, or accessibility — tell us before signing. We will negotiate in good faith. Where a provision of this DPA exceeds your legal authority to agree, that provision applies only to the extent your law permits, and the rest stays in effect.</p>
+<p><strong>12.8 Severability.</strong> If a provision is unenforceable, it is modified to the minimum extent needed, or severed, and the rest continues.</p>
+<p><strong>12.9 Counterparts and signature.</strong> This DPA may be signed in counterparts, including electronically, each of which is an original.</p>
+<hr />
+<h2 id="annex-a-technical-and-organizational-measures">Annex A — Technical and organizational measures</h2>
+<p>Accurate as of [EFFECTIVE DATE]. We will not materially reduce these during the term.</p>
+<h3>A.1 Architecture</h3>
+<p>Weeksolved is a single-page browser application. The application code is delivered as static assets and runs entirely in the authorized user's browser. <strong>We operate no application server that holds Customer Personal Information in transit.</strong> Data flows from the user's browser directly to Google Cloud Firestore.</p>
+<h3>A.2 Encryption</h3>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>In transit</td>
+<td>HTTPS/TLS between the browser and Google Cloud, and for all Firestore traffic</td>
+</tr>
+<tr>
+<td>At rest</td>
+<td>Google Cloud platform encryption for data stored in Cloud Firestore</td>
+</tr>
+<tr>
+<td>Passwords</td>
+<td>Held hashed by Google Firebase Authentication. <strong>Weeksolved personnel never see, receive, or store a user's password and cannot recover one.</strong></td>
+</tr>
+<tr>
+<td>Browser copy</td>
+<td>Stored in the browser's localStorage on the Customer's own device, under the Customer's control</td>
+</tr>
+</tbody>
+</table>
+<p><strong>We do not offer end-to-end encryption or customer-managed encryption keys.</strong> See A.6.</p>
+<h3>A.3 Access control — tenant isolation</h3>
+<p>Per-account Firestore security rules mean each account can read only its own data. These rules are enforced by Google's infrastructure at the database layer, not by application code alone, so a defect in the browser application does not by itself expose one customer's data to another.</p>
+<h3>A.4 Access control — authentication</h3>
+<ul>
+<li>Authentication via Google Firebase Authentication.</li>
+<li>Access to the Weeksolved production Firebase project is limited to <strong>[NUMBER]</strong> authorized personnel and protected by multi-factor authentication.</li>
+<li>Access is granted on a least-privilege basis, reviewed on role change, and revoked on departure.</li>
+<li>Authorized users are managed by the Customer. <strong>The Customer's employees have no logins and cannot access the Service.</strong></li>
+</ul>
+<h3>A.5 Operational security</h3>
+<ul>
+<li>Dependencies are kept patched; Google Cloud security advisories are monitored.</li>
+<li>Backups of Firestore data are retained for <strong>[BACKUP RETENTION] days</strong>.</li>
+<li>Incident response follows section 7 of this DPA.</li>
+<li>Vulnerability reports are accepted at [SECURITY EMAIL], acknowledged within 3 business days, under a good-faith safe harbor.</li>
+</ul>
+<h3>A.6 Operator access — stated plainly</h3>
+<p><strong>Weeksolved personnel can technically access Customer Personal Information stored in Firestore, through the Google Firebase console.</strong> This is true of the operator of any hosted service. We state it rather than implying technical impossibility.</p>
+<p>Our commitment is a limit on <strong>when</strong> we exercise that access. We access Customer Personal Information only:</p>
+<p>(a) when the Customer requests support that requires it;
+(b) to investigate or resolve a bug, outage, or data-integrity problem;
+(c) to investigate or respond to a Security Incident; or
+(d) where legally compelled, subject to section 4.9.</p>
+<p><strong>We do not access Customer Personal Information for product research, marketing, sales, analytics, model training, or curiosity.</strong></p>
+<h3>A.7 Measures we do NOT currently have</h3>
+<p>Stated so your review is accurate:</p>
+<ul>
+<li>No SOC 2 Type I or Type II report.</li>
+<li>No ISO 27001 certification.</li>
+<li>No third-party penetration test.</li>
+<li>No customer-managed encryption keys or end-to-end encryption.</li>
+<li>No formal 24×7 security operations center; we are a small company.</li>
+<li>No contractual uptime SLA with financial credits, unless a signed order form provides one.</li>
+<li>No data residency options outside the United States.</li>
+</ul>
+<p>If any of these is a hard requirement for you, raise it before signing.</p>
+<hr />
+<h2 id="signature">Signature</h2>
+<p><strong>Customer</strong></p>
+<p>Legal entity name: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Signature: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Name: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Title: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Date: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong></p>
+<p><strong>Security notification contact</strong> (section 7.6) — keep current:
+Name: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Email: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Phone: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong></p>
+<p><strong>Privacy contact:</strong>
+Name: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Email: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong></p>
+<p><strong>Weeksolved — [ENTITY NAME]</strong></p>
+<p>Signature: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Name: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Title: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
+Date: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong></p>
+<hr />
+<!--
+=========================================================================
+FILL-IN CHECKLIST
+=========================================================================
+
+  [ENTITY NAME]              Preamble, s.12.5, signature block.
+  [EFFECTIVE DATE]           Header, Annex A header, Annex A.
+  [DPA URL]                  Preamble — where the countersigned version
+                             lives. Must exist if you rely on it for
+                             click-acceptance.
+  [SUBPROCESSOR LIST URL]    s.5.2, s.5.3. Needs a real page with a real
+                             notification mechanism (an email list is fine)
+                             or s.5.3's 30-day notice promise is empty.
+  [MERCHANT OF RECORD NAME]  s.5.2 table.
+  [MoR REGION]               s.5.2. IMPORTANT: if the MoR is EU-based
+                             (Paddle is UK/EU), s.11 "no international
+                             transfers" becomes inaccurate for billing
+                             data. Check before filling s.11.
+  [EMAIL SENDER NAME]        s.5.2 table.
+  [SENDER REGION]            s.5.2. Same warning as above.
+  [BACKUP RETENTION]         s.10.3, Annex A.5. LOOK THIS UP in Firebase.
+                             Both places must match. Do not guess.
+  [NUMBER]                   Annex A.4 — people with production access.
+                             Must match the number in the Privacy Policy.
+  [PRIVACY EMAIL]            s.11.4.
+  [SECURITY EMAIL]           Annex A.5.
+
+=========================================================================
+HOW TO USE THIS DOCUMENT
+=========================================================================
+
+  - Publish it at [DPA URL] with your side already signed. Most buyers
+    will accept a countersigned standard DPA without negotiation, which
+    saves you the deal cycle.
+
+  - Offer click-acceptance in-app for smaller business buyers, and the
+    wet/e-signature version for enterprise and government.
+
+  - Sections 8.4 and Annex A.7 deliberately disclose what you do NOT
+    have. This will lose you some deals. It will also stop you from
+    making a false statement in a security questionnaire, which is far
+    worse than losing a deal — it is a misrepresentation you cannot
+    disclaim under Civil Code 1668, and for a government buyer it can be
+    a False Claims Act problem. Do not delete them.
+
+  - Government buyers: expect them to strike s.12.6 (governing law) and
+    the Agreement's indemnity, and to add their own terms on public
+    records, records retention, and accessibility (Section 508 / WCAG).
+    Section 12.7 is written to let that happen gracefully. Accessibility
+    is likely to be a real blocker with public-sector buyers and is NOT
+    addressed anywhere in these documents — see legal-changes.md.
+
+=========================================================================
+-->
+<footer><a href="/">Home</a> <a href="/app.html">Open the app</a> <a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a> <a href="/about.html">About</a> <a href="/security.html">Security</a><a href="/contact.html">Contact</a> <a href="/terms.html">Terms</a> <a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a> <a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a> <a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: weeksolved@gmail.com</div></footer></div></body></html>
