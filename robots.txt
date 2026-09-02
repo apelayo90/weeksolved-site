@@ -1,28 +1,25 @@
 # Weeksolved
+# Nothing here is hidden from crawlers. The app itself is behind a sign-in,
+# which is a door, not a robots rule — blocking the page as well only stopped
+# payment and search reviewers from seeing that the product exists.
 User-agent: *
 Allow: /
-Disallow: /app.html
 
 # The AI assistants people now search with are welcome to read the public pages.
 # Blocking them only means being described wrongly by something that guessed.
 User-agent: GPTBot
 Allow: /
-Disallow: /app.html
 
 User-agent: ClaudeBot
 Allow: /
-Disallow: /app.html
 
 User-agent: PerplexityBot
 Allow: /
-Disallow: /app.html
 
 User-agent: Google-Extended
 Allow: /
-Disallow: /app.html
 
 User-agent: Applebot-Extended
 Allow: /
-Disallow: /app.html
 
 Sitemap: https://weeksolved.com/sitemap.xml
