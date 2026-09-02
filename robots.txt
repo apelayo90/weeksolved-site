@@ -1,4 +1,27 @@
+# Weeksolved
 User-agent: *
+Allow: /
+Disallow: /app.html
+
+# The AI assistants people now search with are welcome to read the public pages.
+# Blocking them only means being described wrongly by something that guessed.
+User-agent: GPTBot
+Allow: /
+Disallow: /app.html
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /app.html
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /app.html
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /app.html
+
+User-agent: Applebot-Extended
 Allow: /
 Disallow: /app.html
 
