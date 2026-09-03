@@ -39,7 +39,7 @@
  "description":"Weeksolved turns a manager's coverage rules into a staff schedule with state meal and rest break rules applied. It handles required coverage by role and time of day, role ratios, staff groups and hour caps, individual availability and requests, seniority or lottery rotation for the sought-after shifts, and meal and rest breaks under the labor law of the state you pick. It produces a weekly grid, an hour-by-hour daily station sheet, Excel and PDF exports, and a ranked-choice holiday poll.",
  "featureList":["Automatic weekly schedule generation from your own rules","State meal and rest break law applied to every shift","Required coverage minimums, role ratios and pairing rules","Staff groups with their own hour, day and shift limits","Employee availability, preferences and time off","Requests inbox with a plain-English outcome for each one","Fair rotation of the sought-after shifts by seniority, fairness or lottery","Daily station sheet with meal and rest break times","Coverage-gap solutions naming who could cover and at what cost","Ranked-choice holiday poll","Excel (CSV) and PDF export"],
  "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
- "audience":{"@type":"BusinessAudience","audienceType":"Managers and schedulers in pharmacies, clinics, laboratories, veterinary practices, retail, hospitality, security and warehousing"}}
+ "audience":{"@type":"BusinessAudience","audienceType":"Managers and schedulers in restaurants and cafes, retail, hotels, salons, clinics, dental and veterinary practices, pharmacies, laboratories, warehouses, support desks and security"}}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -2113,8 +2113,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "ab3b4fd6";       
-const BUILD_AT = "2026-09-03 17:25 UTC";       
+const BUILD_ID = "53dd6df9";       
+const BUILD_AT = "2026-09-03 21:21 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -3598,6 +3598,9 @@ if(!Array.isArray(s.rules.askOrder)) s.rules.askOrder=[];
 if(!s.rules.sheetNotes) s.rules.sheetNotes="lines";            
 s.fww = Object.assign({on:false, city:"", staff:0, sites:1, asked:false}, s.fww||{});
 s.org.pay = Object.assign({type:"none", anchor:""}, s.org.pay||{});
+ 
+(s.employees||[]).forEach(e=>{ if(e.active===false && !e.aside) e.aside={why:"", from:"", back:"", note:""}; });
+
  
 if(typeof s.currentWeek!=="string" || !/^\d{4}-\d{2}-\d{2}$/.test(s.currentWeek)){
 if(s.setupDone) s.currentWeek = weekStartOf(ymd(new Date()), (s.org&&s.org.weekStart)||0);
@@ -12226,10 +12229,46 @@ groupsFor(e).forEach(g=>notes.push(`<span class="chip">${esc(g.name)}</span>`));
 const roles=e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span>`:"";}).join(" ");
 return {mins, target, bar, notes, lic, roles};
 }
+ 
+const ASIDE_WHY = [
+["leave",    "Extended leave",   "Parental, medical, sabbatical \u2014 they are coming back."],
+["furlough", "Furlough",         "Off the schedule for now, still on the books."],
+["seasonal", "Out of season",    "Back when the busy months are."],
+["left",     "Left the business","Kept for the record. History and past weeks stay as they were."],
+["other",    "Something else",   ""]
+];
+function asideOf(e){ const a=(e&&e.aside)||{}; return {why:a.why||"", from:a.from||"", back:a.back||"", note:a.note||""}; }
+function asideLabel(why){ const r=ASIDE_WHY.find(x=>x[0]===why); return r? r[1] : "Set aside"; }
+function asideSay(e){
+const a=asideOf(e); const bits=[a.why? asideLabel(a.why) : "Set aside"];
+if(a.back) bits.push(asideBack(e)? "expected back "+prettyDate(a.back) : "was expected back "+prettyDate(a.back));
+else if(a.why==="left" && a.from) bits.push("since "+prettyDate(a.from));
+else if(a.from) bits.push("since "+prettyDate(a.from));
+return bits.join(" \u00b7 ");
+}
+ 
+function asideBack(e){ const a=asideOf(e); return !!a.back && a.back >= ymd(new Date()); }
+ 
+function asideDue(e){ const a=asideOf(e); return !e.active && !!a.back && a.back < ymd(new Date()); }
+function asideList(){ return (S.employees||[]).filter(e=>!e.active); }
+function setAside(id, why, back, note){
+const e=empById(id); if(!e) return;
+e.active=false;
+e.aside=Object.assign({}, e.aside||{}, {why:why||"", back:back||"", note:note||"",
+from:(e.aside&&e.aside.from) || ymd(new Date())});
+save(); logIt("team", e.name+" set aside \u2014 "+asideLabel(why));
+}
+function bringBack(id){
+const e=empById(id); if(!e) return;
+e.active=true; delete e.aside;
+save(); logIt("team", e.name+" back on the roster");
+toast(e.name.split(" ")[0]+" is back on the roster \u2014 they will be in the next draft");
+render();
+}
 function teamRow(e, ws){
 const F=teamFacts(e, ws);
 return `<tr${e.active?"":' style="opacity:.5"'}>
-    <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}${e.active?"":'<div class="mini">inactive</div>'}</td>
+    <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}${e.active?"":`<div class="mini">${esc(asideSay(e))}</div>`}</td>
     <td>${F.roles}</td>
     <td>${typeChip(e)}${F.notes.map(n=>`<div class="mini">${n}</div>`).join("")}${F.lic? `<div class="mini">${F.lic}</div>`:""}</td>
     <td class="mono">${esc(F.target)}</td>
@@ -12240,7 +12279,7 @@ return `<tr${e.active?"":' style="opacity:.5"'}>
 function teamCard(e, ws){
 const F=teamFacts(e, ws);
 return `<div class="tcard ${e.active?"":"silent"}">
-    <div class="tt"><span class="who">${esc(e.name)}${e.active?"":' <span class="mini">(inactive)</span>'}</span>
+    <div class="tt"><span class="who">${esc(e.name)}${e.active?"":` <span class="mini">(${esc(asideLabel(asideOf(e).why).toLowerCase())})</span>`}</span>
       <button class="btn sm" data-editemp="${e.id}">Edit</button></div>
     <div class="meta"><span>${F.roles||'<span class="mini">no role</span>'}</span><span>${typeChip(e)}</span>${F.notes.map(n=>`<span>${n}</span>`).join("")}</div>
     ${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}
@@ -12270,14 +12309,35 @@ staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places u
           <span><span class="dpill off" style="width:22px;height:19px;font-size:10px">Sa</span> never scheduled that day</span>
           <span>Hover or press a day for the hours</span></div></div>`:""}
       ${S.employees.length? (isPhone()
-? `<div class="tlist" style="padding:12px">${S.employees.map(e=>teamCard(e, ws)).join("")}</div>`
+? `<div class="tlist" style="padding:12px">${S.employees.filter(e=>e.active).map(e=>teamCard(e, ws)).join("")}</div>`
 : `<div class="scroll"><table>
         <thead><tr><th>Name</th><th style="width:140px">Roles</th><th style="width:150px">Type &amp; notes</th><th style="width:110px">Hours target</th>
           <th style="width:120px">This week</th><th style="width:214px">Days they can work</th><th style="width:70px"></th></tr></thead>
-        <tbody>${S.employees.map(e=>teamRow(e, ws)).join("")}</tbody></table></div>`)
+        <tbody>${S.employees.filter(e=>e.active).map(e=>teamRow(e, ws)).join("")}</tbody></table></div>`)
 : `<div class="empty"><strong>No one on the roster</strong>Add your first person to start scheduling.</div>`}
       ${(S.groups||[]).length && S.employees.some(e=>{const L=effLimits(e); return (L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH);})? `<div class="body" style="border-top:1px solid var(--line)"><div class="mini">* tightened by a staff group.</div></div>`:""}
     </div>
+
+    ${asideList().length? `<div class="card ${folded("teamaside")?"folded":""}">
+      <header data-fold="teamaside" style="cursor:pointer"><h3>Set aside (${asideList().length})</h3>
+        <span class="hint">Kept in full, never scheduled \u2014 one press puts anyone back</span>
+        <span class="mini foldc" style="flex:none;font-size:15px">${folded("teamaside")?"+":"\u2013"}</span></header>
+      <div class="body">
+        <div class="stack" style="gap:8px">
+          ${asideList().map(e=>`<div class="setrow${asideDue(e)?" warn":""}">
+            <div class="sq"><strong>${esc(e.name)}</strong>
+              <div class="mini">${esc(asideSay(e))}${asideOf(e).note? " \u00b7 "+esc(asideOf(e).note):""}</div>
+              ${asideDue(e)? `<div class="mini" style="color:var(--warn)">The date they were expected back has passed. Nothing has changed on its own \u2014 put them back when it is right.</div>`:""}
+            </div>
+            <div class="sc" style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn sm" data-editemp="${e.id}">Open</button>
+              <button class="btn primary sm" data-backemp="${e.id}">Back on the roster</button>
+            </div></div>`).join("")}
+        </div>
+        <div class="help" style="margin-top:10px">Nobody here is scheduled, counted for coverage, or sent anything. Their
+        hours history, licenses, time off and notes are all still on file, and the weeks they already worked are unchanged.</div>
+      </div>
+    </div>`:""}
 
     <div class="card ${folded("teamgroups")?"folded":""}">
       ${(function(){const n=(S.groups||[]).length; return `<header data-fold="teamgroups" style="cursor:pointer"><h3>Staff groups${n?` (${n})`:""}</h3>
@@ -12359,6 +12419,14 @@ empModal(null);
 root.querySelector("#addgrp").onclick=()=>groupModal(null);
 root.querySelectorAll("[data-editgrp]").forEach(b=>b.onclick=()=>groupModal(b.dataset.editgrp));
 root.querySelectorAll("[data-editemp]").forEach(b=>b.onclick=()=>empModal(b.dataset.editemp));
+root.querySelectorAll("[data-backemp]").forEach(b=>b.onclick=()=>{
+const e=empById(b.dataset.backemp); if(!e) return;
+modal("Put "+esc(e.name.split(" ")[0])+" back on the roster?",
+`<div class="stack"><div class="help">They go back exactly as they were \u2014 same roles, hours, availability and history \u2014 and
+       will be included from the next draft. Weeks already posted are not changed.</div></div>`,
+`<button class="btn" data-close>Not yet</button><button class="btn primary" id="backgo">Back on the roster</button>`,
+r=>{ r.querySelector("#backgo").onclick=()=>{ closeModal(true); bringBack(e.id); }; });
+});
 root.querySelector("#addtoff").onclick=()=>toffModal();
 root.querySelectorAll("[data-deltoff]").forEach(b=>b.onclick=()=>{ S.timeoff=S.timeoff.filter(t=>t.id!==b.dataset.deltoff); save(); render(); });
 };
@@ -13068,10 +13136,37 @@ return (bal==null? "" : "<br><b>Balance today: "+bal+"h.</b>")+
 (nx? " Next lot: "+esc(nx.say)+"." : " Nothing more accrues \u2014 the balance only goes down."); })()}</span></div>`:""}
     ${apartSection(e)}
     <div class="field"><label>Notes (optional)</label><input type="text" id="enotes" value="${esc(e.notes||"")}" placeholder="Immunization certified · nursing student"></div>
-    <label class="switch"><input type="checkbox" id="eact" ${e.active?"checked":""}> Currently on the roster</label>
+    <div class="sep"></div>
+    <div class="field"><label>On the roster</label>
+      <div class="wopts">
+        <button type="button" class="wopt ${e.active!==false?"on":""}" data-eact="1">
+          <span class="wt">Scheduled as normal</span><span class="wd">Counts for coverage and appears in every draft.</span></button>
+        <button type="button" class="wopt ${e.active===false?"on":""}" data-eact="0">
+          <span class="wt">Set aside</span><span class="wd">Kept in full \u2014 hours, history, licenses, time off \u2014 but never scheduled until you bring them back.</span></button>
+      </div>
+      <input type="hidden" id="eact" value="${e.active===false?"0":"1"}">
+      <div id="easidewrap" style="display:${e.active===false?"":"none"};margin-top:10px">
+        <div class="grid2">
+          <div class="field"><label>Why</label>
+            <select id="easidewhy">${ASIDE_WHY.map(([k,t])=>`<option value="${k}" ${asideOf(e).why===k?"selected":""}>${t}</option>`).join("")}</select></div>
+          <div class="field"><label>Expected back (optional)</label>
+            <input type="date" id="easideback" value="${esc(asideOf(e).back)}"></div>
+        </div>
+        <div class="field"><label>Note (optional)</label>
+          <input type="text" id="easidenote" value="${esc(asideOf(e).note)}" placeholder="Back after the holidays \u00b7 keeping their Tuesday"></div>
+        <div class="help">Nothing is deleted. They stay in Team under <b>Set aside</b>, out of every draft and out of the
+        coverage count, and one press puts them back exactly as they were.</div>
+      </div>
+    </div>
   </div>`,
 `${id?'<button class="btn danger" id="delemp">Remove</button>':""}<button class="btn" data-close>Cancel</button><button class="btn primary" id="saveemp">Save</button>`,
 root=>{
+root.querySelectorAll("[data-eact]").forEach(b=>b.onclick=()=>{
+const on = b.dataset.eact==="1";
+root.querySelectorAll("[data-eact]").forEach(x=>x.classList.toggle("on", x===b));
+root.querySelector("#eact").value = on? "1":"0";
+const w=root.querySelector("#easidewrap"); if(w) w.style.display = on? "none":"";
+});
 const cyc=root.querySelector("#ecyc");
 if(cyc){
 const box=root.querySelector("#ecycopts"), cn=root.querySelector("#ecycnote");
@@ -13245,12 +13340,20 @@ licKind: root.querySelector("#elick")? root.querySelector("#elick").value : (e.l
 licJur:  root.querySelector("#elicj")? root.querySelector("#elicj").value : (e.licJur||""),
 licNo:  (root.querySelector("#elicno")? root.querySelector("#elicno").value : (e.licNo||"")).trim().slice(0,40),
 notes:root.querySelector("#enotes").value.trim(),
-seniority:root.querySelector("#esen").value, active:root.querySelector("#eact").checked,
+seniority:root.querySelector("#esen").value, active:root.querySelector("#eact").value!=="0",
 rate: root.querySelector("#erate")? (+root.querySelector("#erate").value||0) : (e.rate||0),
 skills: (()=>{ const sk=Object.assign({}, e.skills||{});
 root.querySelectorAll(".eskill").forEach(sel=>{ sk[sel.dataset.st]=+sel.value; });
-return sk; })()
+return sk; })(),
+ 
+aside: (root.querySelector("#eact").value==="0")
+? { why:  (root.querySelector("#easidewhy")||{}).value || "",
+back: (root.querySelector("#easideback")||{}).value || "",
+note: (root.querySelector("#easidenote")||{}).value || "",
+from: (e.aside&&e.aside.from) || ymd(new Date()) }
+: undefined
 };
+if(rec.aside===undefined) delete rec.aside;
 const i=S.employees.findIndex(x=>x.id===e.id);
 if(i>=0) S.employees[i]=rec; else S.employees.push(rec);
 apartCommit(root, e);
@@ -15461,6 +15564,11 @@ function adviceHidden(){ return ((S.ui||{}).adviceHidden)||{}; }
 function ruleAdvice(){
 const A=[]; const R=S.rules||{}; const L=law(); const act=(S.employees||[]).filter(e=>e.active);
 const add=(id,title,why,go,sev)=>A.push({id,title,why,go,sev:sev||"note"});
+ 
+(S.employees||[]).filter(e=>typeof asideDue==="function" && asideDue(e)).forEach(e=>
+add("aside:"+e.id, esc(e.name)+" was expected back on "+prettyDate(asideOf(e).back),
+"They are still set aside, so they are not in any draft and not counted for coverage. Open Team to put them back on the roster, or change the date.",
+"team"));
  
 if(R.minRestH!==undefined && +R.minRestH<8)
 add("rest8","Rest between shifts is set to "+R.minRestH+" hours",
@@ -20438,6 +20546,12 @@ saveFile("requests-record.csv", rows.map(csvRow).join("\n"));
  
 function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
+{t:"Somebody is on leave \u2014 how do I take them off without losing them?", k:"inactive set aside leave furlough maternity parental medical sabbatical seasonal quit left fired terminate delete remove keep history pause suspend hold off roster", go:"team",
+a:"Open them under Team and switch On the roster to Set aside. Say why \u2014 extended leave, furlough, out of season, or they have left \u2014 and add the date you expect them back if you know it. From that moment they are in no draft, counted for no coverage rule, and sent nothing, but nothing of theirs is deleted: roles, hours, availability, licenses, time-off balances, notes and every week they already worked stay exactly as they are. They sit in their own Set aside list under Team, and one press puts them back on the roster as they were. Posted weeks are never rewritten by any of this."},
+{t:"Delete someone, or set them aside?", k:"delete remove person employee leave company quit fired history keep records past weeks gone permanently", go:"team",
+a:"Set aside, almost always. Removing somebody deletes them and their history from your board; setting them aside keeps the record and simply stops them being scheduled, which is what you want even for a person who has left \u2014 last year\u2019s weeks still name them, and your own records stay honest. Remove is for a duplicate or a person added by mistake. One account holds 250 people, set-aside people included, so keeping a few former staff on file costs you nothing."},
+{t:"Will someone I set aside come back on their own?", k:"expected back return date automatic reactivate comes back leave ends", go:"team",
+a:"No, and deliberately. If you put an expected-back date on them, Weeksolved reminds you once the date has passed \u2014 on the Team list and under Worth a look \u2014 but it never puts anybody back by itself. Somebody returning from three months away may have different availability, a lapsed license or new hours, so the return is a decision you make, not one the app makes for you."},
 {t:"Send today's schedule on its own", k:"daily day sheet send today hand out per day one day day-of text email print copy each morning tomorrow separate from weekly", go:"week",
 a:"Open the Day sheet for the day and press Hand out the day. You pick which days (just today, the next few, or any days of a posted week), whether each person gets only their own lines or everyone gets the whole day, and how it goes: text, email, a copy to paste, or a printout. It is completely separate from posting the week — sending a day never re-posts or touches the weekly schedule, and the weekly hand-out never sends days. Both are listed under Settings so you can see which is which."},
 {t:"Have the day sheet go out by itself every morning", k:"automatic daily send auto send schedule send every morning at time lead toggle off by default confirm", go:"settings",

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weeksolved vs per-user scheduling apps — an honest comparison</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c6a66'/%3E%3Ctext x='32' y='43' font-family='Arial,Helvetica,sans-serif' font-size='28' font-weight='800' fill='%23fff' text-anchor='middle'%3EWS%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;600;700&display=swap">
+<meta name="description" content="How Weeksolved differs from per-user scheduling apps: flat pricing per location, no staff accounts, break law on every plan — and what it will not do.">
+<link rel="canonical" href="https://weeksolved.com/compare.html">
+<meta property="og:site_name" content="Weeksolved">
+<meta property="og:title" content="Weeksolved vs per-user scheduling apps — an honest comparison">
+<meta property="og:description" content="Flat per location, no staff accounts, break law on every plan — and a plain list of what Weeksolved does not do.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Weeksolved vs per-user scheduling apps">
+<meta name="twitter:description" content="Flat per location, no staff accounts, break law on every plan — and what it deliberately does not do.">
+<meta property="og:url" content="https://weeksolved.com/compare.html">
+<meta name="theme-color" content="#1c6a66">
+<style>
+:root{
+  --bg:#f2f5f4; --surface:#ffffff; --sunken:#e8edec;
+  --ink:#18211f; --ink2:#3c4a47; --muted:#697773;
+  --line:#d2d8d6; --line-strong:#7d8b87;
+  --accent:#1c6a66; --accent-soft:#dcebe9; --on-accent:#fff;
+  --ok:#2c7a4b; --ok-soft:#dcefe2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#101514; --surface:#191f1e; --sunken:#131817;
+    --ink:#e7ecea; --ink2:#c2ccc9; --muted:#8d9b97;
+    --line:#2c3634; --line-strong:#778682;
+    --accent:#4cb3a9; --accent-soft:#173432; --on-accent:#0c1211;
+    --ok:#5cb87f; --ok-soft:#1a2f22;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15.5px/1.6 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif;text-rendering:optimizeLegibility}
+h1,h2,h3,.tn,.price{font-family:"Archivo","Public Sans",sans-serif}
+.wrap{max-width:1020px;margin:0 auto;padding:0 20px 60px}
+header.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -20px;padding:0 20px}
+.topin{display:flex;align-items:center;gap:11px;padding:14px 0;max-width:980px;margin:0 auto}
+.mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#0d2f2d);color:#fff;
+  display:grid;place-items:center;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em}
+.brand{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
+nav.hn{margin-left:auto;display:flex;gap:20px;align-items:center}
+nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap;display:inline-block;padding:11px 2px}
+nav.hn a:hover{color:var(--accent)}
+nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:10px;padding:10px 18px}
+@media(max-width:560px){nav.hn a.plain{display:none}}
+@media(max-width:420px){.brand{font-size:17px}nav.hn a.go{padding:9px 14px;font-size:13.5px}.topin{gap:9px}}
+h1{font-size:clamp(28px,5.4vw,42px);letter-spacing:-.022em;line-height:1.12;margin:34px 0 12px;text-align:center;text-wrap:balance}
+.sub{color:var(--muted);text-align:center;max-width:56ch;margin:0 auto 8px;font-size:16px}
+.beta{display:flex;justify-content:center;margin:18px 0 30px}
+.beta span{background:var(--ok-soft);color:var(--ok);border-radius:99px;padding:8px 16px;font-weight:700;font-size:13.5px}
+.toggle{display:flex;justify-content:center;gap:0;margin-bottom:26px}
+.toggle button{font:inherit;font-weight:600;font-size:13.5px;padding:8px 18px;border:1px solid var(--line-strong);
+  background:var(--surface);color:var(--ink2);cursor:pointer}
+.toggle button:first-child{border-radius:8px 0 0 8px}
+.toggle button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.toggle button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.toggle .save{font-size:11.5px;font-weight:700;opacity:.85;margin-left:6px}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:16px;align-items:stretch}
+.tier{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px 22px;display:flex;flex-direction:column}
+.tier.hot{border-color:var(--accent);box-shadow:0 8px 28px rgba(28,106,102,.14);position:relative}
+.tier.hot .flag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;border-radius:99px;padding:4px 12px;white-space:nowrap}
+.tn{font-weight:800;font-size:16px}
+.tfor{color:var(--muted);font-size:12.5px;margin:2px 0 14px}
+.price{font-size:34px;font-weight:800;letter-spacing:-.02em}
+.price small{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0}
+.per{color:var(--muted);font-size:12px;margin:2px 0 16px;min-height:16px}
+ul.feats{list-style:none;margin:0 0 20px;padding:0;font-size:13.5px;color:var(--ink2)}
+ul.feats li{padding:5px 0 5px 24px;position:relative}
+ul.feats li::before{content:"✓";position:absolute;left:2px;color:var(--ok);font-weight:800}
+ul.feats li.hd{padding-left:0;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:4px}
+ul.feats li.hd::before{content:""}
+.cta{margin-top:auto;display:block;text-align:center;text-decoration:none;font-weight:700;font-size:14px;
+  border-radius:9px;padding:12px;border:1px solid var(--line-strong);color:var(--ink)}
+.tier.hot .cta{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.taxline{text-align:center;color:var(--muted);font-size:12.5px;margin:18px 0 40px}
+.why{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px;margin-bottom:40px}
+.why h2{margin:0 0 8px;font-size:20px;letter-spacing:-.01em}
+.why p{margin:0;color:var(--ink2);max-width:74ch}
+.why .math{margin-top:14px;background:var(--sunken);border-radius:9px;padding:14px 16px;font-size:13.5px;color:var(--ink2)}
+.faq{max-width:760px;margin:0 auto}
+.faq h2{font-size:20px;letter-spacing:-.01em;margin:0 0 14px}
+.faq details{border:1px solid var(--line);border-radius:9px;background:var(--surface);margin-bottom:8px;padding:0 16px}
+.faq summary{cursor:pointer;font-weight:600;font-size:14px;padding:13px 0}
+.faq details p{color:var(--ink2);font-size:13.5px;margin:0 0 14px}
+footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px}
+footer a{color:var(--accent);text-decoration:none;white-space:nowrap;display:inline-block;padding:7px 0}
+footer nav,footer .fnav{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:2px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="topin">
+      <div class="mark">WS</div><div class="brand">Weeksolved</div>
+      <nav class="hn">
+        <a class="plain" href="/#features">Features</a>
+        <a class="plain" href="/#compliance">Compliance</a>
+        <a class="go" href="/app.html">Open the app</a>
+      </nav>
+    </div>
+  </header>
+  <h1>How Weeksolved is different — and where it isn't</h1>
+  <p class="sub">Most scheduling apps are built the same way: everyone gets an account, everyone installs something,
+  and you pay by the head. Weeksolved is built the other way round. Here is the honest version of both, including
+  the parts where another tool is the better answer.</p>
+
+  <h2>The pricing model is the real difference</h2>
+  <p>Nearly every scheduling app charges per user per month. It sounds small — a couple of dollars a head — and it
+  is small, until you hire. The bill grows every time your team does, which is the one moment you least want a
+  new cost. Some tools also count managers and supervisors as paid users, and several charge more per head the
+  moment you run a second location.</p>
+  <p>Weeksolved charges one flat price for the location, whatever the headcount. A team of 8 and a team of 40 pay
+  the same. Your 30th hire costs nothing. There are no per-user fees, no admin seats, and no separate charge for
+  the manager who covers weekends.</p>
+
+  <h2>Your staff never get accounts</h2>
+  <p>The industry standard is an employee app: everyone downloads it, makes a password, and is expected to keep
+  using it. In practice somebody always can't log in, somebody never installs it, and the person who most needs
+  their schedule is the one locked out of it.</p>
+  <p>Weeksolved has exactly one account — yours. Staff get their schedule the way they already live: a text, an
+  email, a printout, or a calendar file that drops the shifts straight into the phone they already use. Nothing to
+  install, nothing to teach, nobody locked out. It is also why there are no seats to count.</p>
+
+  <h2>Break law is included, not a tier</h2>
+  <p>Scheduling tools that handle meal and rest break rules seriously tend to put that depth in a higher plan,
+  because compliance is what larger customers pay for. Weeksolved places every meal inside its legal window and
+  lays rest breaks around it on the cheapest plan and throughout the free trial, because a schedule that breaks
+  the law on the cheap plan is not a cheaper schedule — it is a liability with a discount.</p>
+
+  <h2>It explains itself</h2>
+  <p>An empty grid and an auto-fill button is the common shape. The gap is always the same: when a shift cannot be
+  filled, you are told that it cannot, not why. Weeksolved names the person and the exact rule that stopped them —
+  hour cap, turnaround, availability, a request you approved, a license, a coverage minimum — and then offers the
+  ways out, least disruptive first, with the overtime priced.</p>
+
+  <h2>Three things Weeksolved does not do</h2>
+  <p>These are deliberate, and for some businesses they are the reason to choose something else. Better you know now.</p>
+  <ul>
+    <li><b>No time clock.</b> Weeksolved schedules the week; it does not record who actually clocked in. If you
+    need punches, timesheets and hours feeding payroll from the same tool, several competitors bundle that and
+    you should use one of them. Weeksolved exports the schedule as a spreadsheet your payroll can read.</li>
+    <li><b>No shift-swap marketplace between staff.</b> Because nobody has an account, staff cannot trade shifts
+    with each other in the app. What you get instead: an open shift can be offered to the team as a one-page file
+    they answer from their phone, and you decide. That is a manager-in-the-middle design, on purpose.</li>
+    <li><b>No sales forecasting.</b> Some tools predict demand from your point-of-sale takings and staff to it.
+    Weeksolved schedules to coverage rules you set, not to a forecast.</li>
+  </ul>
+
+  <h2>Where Weeksolved fits</h2>
+  <p>It suits a business of roughly 5 to 100 people at one location, where the week is genuinely hard to work
+  out — licensed coverage, ratios between roles, meal breaks that have to land lawfully, availability that
+  changes, and a fairness argument about who gets the unpopular shifts. If your scheduling problem is really a
+  time-and-attendance problem, it is not the tool for you, and this page would rather say so than sell you.</p>
+
+  <p style="margin-top:26px"><a class="go" href="/app.html">Open Weeksolved</a>
+  &nbsp;<a href="/pricing.html" style="color:var(--accent);font-weight:700">See the pricing →</a></p>
+
+  <footer>
+    <a href="/">Home</a>&nbsp;· <a href="/app.html">Open Weeksolved</a>&nbsp;· <a href="/faq.html">FAQ</a> <a href="/updates.html">What's new</a>&nbsp;· <a href="/about.html">About</a>&nbsp;· <a href="/security.html">Security</a>&nbsp;· <a href="/contact.html">Contact</a>&nbsp;· <a href="/terms.html">Terms</a>&nbsp;· <a href="/privacy.html">Privacy</a>&nbsp;· <a href="/dpa.html">Data processing</a>&nbsp;· <a href="/accessibility.html">Accessibility</a>&nbsp;· <a href="/tester-agreement.html">Tester agreement</a>&nbsp;· <a href="/refunds.html">Refunds</a><br>
+    Questions? Use Contact us inside the app — a person reads every message.
+  </footer>
+</div>
+</body>
+</html>
