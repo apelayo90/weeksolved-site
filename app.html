@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -759,7 +759,7 @@ ol.a2hs li{padding-left:2px}
 .look{display:flex;gap:11px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface2)}
 .card.recur>header{border-left:4px solid var(--warn)}
 .look .sv{width:3px;align-self:stretch;border-radius:2px;flex:none;min-height:26px}
-.look .sv.crit{background:var(--crit)} .look .sv.warn{background:var(--warn)}
+.look .sv.crit{background:var(--crit)} .look .sv.warn{background:var(--warn)} .look .sv.ok{background:var(--accent)}
 .look strong{font-size:13.5px}
 @media (max-width:700px){.look{flex-wrap:wrap}}
 
@@ -966,9 +966,14 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .phonehide{display:none!important}
   .card>header{padding:10px 12px}
   .card>.body{padding:12px}
-  .modal{max-height:calc(100dvh - 96px)}
+  /* --kb is the height of the on-screen keyboard when one is up (set from the
+     visual viewport), 0 otherwise. Everything that has to stay reachable
+     shrinks or pads by it, so a Save button is never under the keys. */
+  .modal{max-height:calc(100dvh - 96px - var(--kb,0px))}
   .modal footer{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
-  .scrim{padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+  .scrim{padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px) + var(--kb,0px))}
+  .pane{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + var(--kb,0px))}
+  .tabbar.kbup{display:none}
   /* list screens (Who is testing) use nearly the whole width of a phone */
   .scrim.edge{padding:10px 6px calc(30px + env(safe-area-inset-bottom,0px))}
   .scrim.edge .modal{max-height:calc(100dvh - 60px)}
@@ -1048,7 +1053,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
       <span class="dot" id="syncdot"></span>
       <small id="syncmsg">Saved on this device</small>
       <button class="btn ghost sm" id="railset" title="Settings" style="padding:3px 8px;font-size:11.5px">Settings</button>
-      <button class="btn ghost sm" id="railbug" title="Report a problem" style="padding:3px 8px;font-size:11.5px">Report a problem</button>
+      <button class="btn ghost sm" id="railbug" title="Report a problem or suggest a feature" style="padding:3px 8px;font-size:11.5px">Report or suggest</button>
       <div class="themetog" id="themetog" role="group" aria-label="Color theme">
         <button data-t="light" title="Light">☀</button>
         <button data-t="system" title="Match my system">◐</button>
@@ -1061,7 +1066,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
       <h2 id="ttl">Overview</h2>
       <div class="desc" id="tdesc"></div>
       <div id="tacts" class="row"></div>
-      <button class="btn sm" id="reportbtn" aria-label="Report a problem" title="Report a problem" style="flex:none"><span class="repico">⚑</span><span class="replbl"> Report</span></button>
+      <button class="btn sm" id="reportbtn" aria-label="Report a problem or suggest a feature" title="Report a problem or suggest a feature" style="flex:none"><span class="repico">⚑</span><span class="replbl"> Report</span></button>
       <button class="btn ghost sm" id="helpbtn" aria-label="Help and frequently asked questions" title="Help" style="flex:none;border-radius:99px;width:28px;height:28px;padding:0;font-weight:700;line-height:1">?</button>
     </div>
     <main class="pane" id="pane" tabindex="-1"></main>
@@ -1331,7 +1336,7 @@ mealClose:{from:"13:00", to:"14:00", when:"all", days:[0,6]},
 useDaySheet:true, stationRotation:"fair", stationSpan:"day", stationFamilies:true, useCycles:false,
 skillsOn:false, skillsWhen:"always", skillsStrength:"medium",
 fillMode:"demand", topUpLabel:"Project time",
-allowMealWaiver:true, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
+allowMealWaiver:true, mealWaiverMode:"manual", honorPrefs:true, fairness:true, advanceNoticeDays:14 },
 weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
 bugs:[], callouts:[], audit:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
 remind:{on:false, lic:true, post:true, poll:true, hol:true, at:"08:00",
@@ -1900,7 +1905,7 @@ h[k]=(h[k]<<13|h[k]>>>19)>>>0;
 return h.map(x=>(x>>>0).toString(36).padStart(7,"0")).join("");
 }
  
-const UPDREV=8;
+const UPDREV=9;
 function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
 function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
 function updModal(){
@@ -1971,6 +1976,13 @@ modal("A few new questions from the latest update", `
           <option value="extra" ${traineeExtra()?"selected":""}>Yes \u2014 schedule them on top of my cover</option>
         </select>
         <span class="mini">New: an \u201cIn training\u201d employment type. As an extra pair of hands they never fill a gap, never work alone, and the day sheet names who they\u2019re with. Give them a finish date and the profile moves itself on.</span></div>
+      ${waiverPossible()? `<div class="field"><label>Meal waivers \u2014 how far should they go?</label>
+        <select id="u_wv">
+          <option value="off" ${waiverMode()==="off"?"selected":""}>Not used \u2014 every meal goes on the schedule</option>
+          <option value="manual" ${waiverMode()==="manual"?"selected":""}>I decide, shift by shift (as before)</option>
+          <option value="auto" ${waiverMode()==="auto"?"selected":""}>Automatic \u2014 waive every meal the law allows</option>
+        </select>
+        <span class="mini">New: waivers can now be automatic, so a shift short enough to waive stays short without you marking it. Each person can be set to always or never on their Team profile, and the shift editor now offers to trim a shift that runs a few minutes past a meal line.</span></div>`:""}
       <div class="field"><label>Do you employ anyone under 18?</label>
         <select id="u_min">
           <option value="0" ${S.rules.minorsOn?"":"selected"}>No</option>
@@ -2002,6 +2014,7 @@ S.vacations.on = r.querySelector("#u_vac").value==="1";
 const sp=r.querySelector("#u_span"); if(sp) S.rules.stationSpan=sp.value;
 const rm=r.querySelector("#u_rem"); if(rm) S.rules.remindH=+rm.value||0;
 const mn=r.querySelector("#u_min"); if(mn) S.rules.minorsOn=mn.value==="1";
+const wv=r.querySelector("#u_wv"); if(wv && wv.value!==waiverMode()){ S.rules.mealWaiverMode=wv.value; S.rules.allowMealWaiver=wv.value!=="off"; rebuildBreaks(); }
 const tr=r.querySelector("#u_tr"); if(tr) S.rules.traineeCover=tr.value;
 r.querySelectorAll("[data-uhol]").forEach(sel=>{
 const h=S.holidays.list.find(x=>x.id===sel.dataset.uhol);
@@ -2092,8 +2105,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "c996ad79";       
-const BUILD_AT = "2026-09-03 12:48 UTC";       
+const BUILD_ID = "69a3d143";       
+const BUILD_AT = "2026-09-03 15:45 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -2216,11 +2229,15 @@ authScreen("That account isn't part of this test. Create one with the access cod
 return;
 }
 const p=prof.data()||{};
+ 
+let extra=0;
+try{ const g=await FB.db.doc("grants/"+uid).get(); if(g.exists){ extra=+((g.data()||{}).extraDays||0)||0; } }catch(e){}
+window.TESTER_EXTRA=extra;
 window.TESTER_ID=p.codeId||"";
 window.TESTER_LIFE=!!p.life;
-window.TESTER_DAYS=p.days||30;
+window.TESTER_DAYS=(p.days||30)+extra;
 window.TESTER_FROM=p.activated||0;
-const expMs=(p.activated||0)+(p.days||30)*86400000;
+const expMs=(p.activated||0)+((p.days||30)+extra)*86400000;
 const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
 if(!p.life && (Date.now()>expMs || Date.now()>hardEnd)){ expiredScreen(); return; }
  
@@ -2748,6 +2765,10 @@ ctx:(tz+" \u00b7 "+String((navigator.languages&&navigator.languages[0])||navigat
 });
 }catch(e){}
 try{ localStorage.setItem(PASSKEY, JSON.stringify({id:hit.id, exp:hit.life?"9999-12-31":ymd(new Date(Date.now()+(hit.days||30)*86400000)), life:!!hit.life, at:Date.now()})); }catch(e){}
+notifyFounder("redeem", "new tester "+hit.id, "Code "+hit.id+" was just redeemed by "+String(email||"").trim()+
+(hit.life? " (lifetime)" : " ("+(hit.days||30)+" days)")+(hasProvider(user,"google.com")? ", Google sign-in":"")+
+".\n\nTime zone: "+(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||""); }catch(e){ return ""; } })()+
+"\nDevice: "+uaSummary(navigator.userAgent)+"\n\nOpen Weeksolved \u2192 Home \u2192 Who is testing for the full picture.");
 recordTermsAccept();       
 if(ndaNeeded()) recordNdaAccept();
  
@@ -3055,6 +3076,19 @@ return failed;
  
 let OP_ACT=null, OP_ACT_AT=0, OP_ACT_BUSY=false;
 function isFounder(){ return window.TESTER_ID==="FOUNDER" && !!(typeof FB!=="undefined" && FB && FB.user && FB.db); }
+ 
+const NOTIFY_TO = "weeksolved@gmail.com";
+function notifyFounder(kind, subject, text){
+try{
+if(!FB || !FB.user || !FB.db || !NOTIFY_TO) return;
+const id = FB.user.uid+"_"+kind+"_"+Date.now();
+FB.db.doc("mail/"+id).set({
+to:[NOTIFY_TO],
+message:{ subject:("Weeksolved \u2014 "+subject).slice(0,140), text:String(text||"").slice(0,1500) },
+kind:String(kind||"").slice(0,24), uid:FB.user.uid, at:Date.now()
+}).catch(()=>{});
+}catch(e){}
+}
 function opActivity(){
 if(!isFounder()) return null;
 if(OP_ACT && Date.now()-OP_ACT_AT < 10*60000) return OP_ACT;
@@ -3068,17 +3102,38 @@ OP_ACT={ total:reps.length, fresh:fresh.length,
 redeems:fresh.filter(r=>r.kind==="redeem").length,
 crashes:fresh.filter(r=>r.auto && r.kind!=="redeem").length,
 contacts:fresh.filter(r=>r.kind==="contact").length,
-problems:fresh.filter(r=>!r.auto && r.kind!=="redeem" && r.kind!=="contact" && r.kind!=="kbmiss").length,
+problems:fresh.filter(r=>!r.auto && !["redeem","contact","kbmiss","idea","extend"].includes(r.kind)).length,
 kbmiss:fresh.filter(r=>r.kind==="kbmiss").length,
+ideas:fresh.filter(r=>r.kind==="idea").length,
+extend:fresh.filter(r=>r.kind==="extend").length,
+extendAll:reps.filter(r=>r.kind==="extend").length,
+testers:new Set(reps.filter(r=>r.kind==="redeem").map(r=>r.tester)).size,
 latest:reps.reduce((m,r)=>Math.max(m,r.at||0),0) };
 OP_ACT_AT=Date.now(); OP_ACT_BUSY=false;
 if(VIEW==="home") render();
 }).catch(()=>{ OP_ACT_BUSY=false; OP_ACT_AT=Date.now(); OP_ACT={err:true}; });
 return OP_ACT;
 }
+ 
+function founderCard(){
+if(!isFounder()) return "";
+const a=opActivity();
+const stat=(n,lab,cls)=>`<div class="${cls||""}"><b>${n==null?"\u2026":n}</b><span>${esc(lab)}</span></div>`;
+const fresh = a && !a.err ? a.fresh : null;
+return `<div class="card founder"><header><h3>Your testers</h3><span class="hint">${a&&a.err? "Could not read the tester records \u2014 open Who is testing for the reason" : a? (a.fresh? a.fresh+" new since you last looked" : "Nothing new since you last looked") : "Reading\u2026"}</span>
+      <button class="btn sm primary" id="opsee2" style="flex:none">Who is testing</button></header>
+    <div class="tstats" style="padding:10px 16px 12px">
+      ${stat(a&&!a.err? a.testers : null, "signed up")}
+      ${stat(a&&!a.err? a.extendAll : null, "asked for more time", a&&a.extend? "warn":"")}
+      ${stat(a&&!a.err? a.problems : null, "new problem"+(a&&a.problems===1?"":"s"), a&&a.problems? "warn":"")}
+      ${stat(a&&!a.err? a.ideas : null, "new idea"+(a&&a.ideas===1?"":"s"), a&&a.ideas? "ok":"")}
+      ${stat(a&&!a.err? a.crashes : null, "new crash"+(a&&a.crashes===1?"":"es"), a&&a.crashes? "warn":"")}
+      ${stat(a&&!a.err? a.total : null, "on record")}
+    </div></div>`;
+}
 function opActivityHtml(){
 const a=opActivity(); if(!a || a.err || !a.fresh) return "";
-const bits=[[a.redeems,"code redeemed","codes redeemed"],[a.problems,"problem report","problem reports"],[a.crashes,"crash","crashes"],
+const bits=[[a.extend,"request for more time","requests for more time"],[a.redeems,"code redeemed","codes redeemed"],[a.problems,"problem report","problem reports"],[a.ideas,"feature idea","feature ideas"],[a.crashes,"crash","crashes"],
 [a.contacts,"message","messages"],[a.kbmiss,"help answer marked unhelpful","help answers marked unhelpful"]]
 .filter(x=>x[0]).map(x=>x[0]+" "+(x[0]===1?x[1]:x[2]));
 return `<div class="hnotice"><span><b>From your testers since you last looked:</b> ${esc(bits.join(", ")||a.fresh+" new")}. ${a.total} on record in all.</span>
@@ -3091,11 +3146,12 @@ modal("Who is testing", `<div class="stack"><div class="help">Reading…</div></
 `<button class="btn" data-close>Close</button>`);
  
 try{ document.querySelector("#modalroot .modal").classList.add("wide"); document.querySelector("#modalroot .scrim").classList.add("edge"); }catch(e){}
-let rows=[], reps=[], err=null, repErr=null;
+let rows=[], reps=[], err=null, repErr=null, grants={};
 try{
 const snap=await FB.db.collection("codes").get();
 (snap.docs||[]).forEach(d=>rows.push(d.data()||{}));
 }catch(e){ err=readWhy(e, "codes"); }
+try{ const gs=await FB.db.collection("grants").get(); (gs.docs||[]).forEach(d=>{ grants[d.id]=d.data()||{}; }); }catch(e){}
  
 try{
 const snap=await FB.db.collection("reports").get();
@@ -3122,9 +3178,11 @@ const sinceWords=n=> n===0? "started today" : n===1? "since yesterday" : n+" day
 const byTester={};
 reps.forEach(r=>{
 const k=String(r.tester||"?");
-const t=byTester[k]=byTester[k]||{n:0, crash:0, contact:0, kbmiss:0, repeat:0, last:0, first:0};
+const t=byTester[k]=byTester[k]||{n:0, crash:0, contact:0, kbmiss:0, repeat:0, last:0, first:0, ideas:0, extend:null};
 if(r.kind==="redeem") return;                        
+if(r.kind==="extend"){ if(!t.extend || (r.at||0)>(t.extend.at||0)) t.extend=r; return; }    
 t.n++;
+if(r.kind==="idea") t.ideas++;
 if(r.auto) t.crash++;
 if(r.kind==="contact") t.contact++;
 if(r.kind==="kbmiss") t.kbmiss++;
@@ -3136,9 +3194,10 @@ if(at && (!t.first || at<t.first)) t.first=at;
 
 const people = rows.map(r=>{
 const meta=known.find(c=>c.id===r.id) || {};
-const t=byTester[String(r.id||"?")] || {n:0,crash:0,contact:0,kbmiss:0,repeat:0,last:0};
+const t=byTester[String(r.id||"?")] || {n:0,crash:0,contact:0,kbmiss:0,repeat:0,last:0,ideas:0,extend:null};
 const life=!!meta.life;
-const span=meta.days||0;
+const g=grants[r.uid]||{};
+const span=(meta.days||0)+(+(g.extraDays||0)||0);
 const started=+(r.at||0);
 const testingFor = started? calDays(started, now) : null;
 const leftDays = (life||!span||!started)? null : Math.ceil((started+span*DAY-now)/DAY);
@@ -3182,8 +3241,11 @@ return `<div class="tcard ${x.quiet?"silent":""}">
       ${meta.length? `<div class="meta">${meta.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}
       <div class="meta"><span>${when? "Started "+esc(when):"Start date not recorded"}${x.testingFor!=null? " · "+esc(sinceWords(x.testingFor)):""}</span>${ends? `<span>Ends ${esc(ends)}</span>`:""}</div>
       ${pct!=null? `<div class="bar" title="${pct}% of the test window used"><i style="width:${pct}%"></i></div>`:""}
+      ${(t.extend && (!grants[r.uid] || (grants[r.uid].at||0) < (t.extend.at||0)))? `<div class="banner warn" style="margin:6px 0"><div><b>Asked for more time</b> on ${esc(new Date(t.extend.at).toLocaleDateString([],{month:"short",day:"numeric"}))}${t.extend.note && t.extend.note!=="(no note)"? " \u2014 \u201c"+esc(String(t.extend.note).slice(0,200))+"\u201d":""}
+          <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn sm primary" data-grant="${esc(r.uid||"")}" data-days="14">Give 14 more days</button><button class="btn sm primary" data-grant="${esc(r.uid||"")}" data-days="30">Give 30 days</button><button class="btn sm" data-grant="${esc(r.uid||"")}" data-days="0">Decline</button></div></div></div>`
+: (grants[r.uid] && grants[r.uid].extraDays? `<div class="mini">Extended by ${grants[r.uid].extraDays} days${grants[r.uid].at? " on "+esc(new Date(grants[r.uid].at).toLocaleDateString([],{month:"short",day:"numeric"})):""}</div>`:"")}
       <div class="sent">${t.n
-? `${pill(t.n,"report"+(t.n===1?"":"s"))}${pill(t.crash,"crash"+(t.crash===1?"":"es"),"warn")}${pill(t.contact,"message"+(t.contact===1?"":"s"),"acc")}${pill(t.kbmiss,"help gap"+(t.kbmiss===1?"":"s"))}<span class="mini">${x.lastGap===0? "last one today" : "last one "+x.lastGap+"d ago"}${t.repeat? " · "+t.repeat+" hit more than once":""}</span>`
+? `${pill(t.n,"report"+(t.n===1?"":"s"))}${pill(t.ideas,"idea"+(t.ideas===1?"":"s"),"acc")}${pill(t.crash,"crash"+(t.crash===1?"":"es"),"warn")}${pill(t.contact,"message"+(t.contact===1?"":"s"),"acc")}${pill(t.kbmiss,"help gap"+(t.kbmiss===1?"":"s"))}<span class="mini">${x.lastGap===0? "last one today" : "last one "+x.lastGap+"d ago"}${t.repeat? " · "+t.repeat+" hit more than once":""}</span>`
 : `<span class="none">Nothing sent in yet</span>`}</div>
     </div>`;
 };
@@ -3213,6 +3275,17 @@ const body = (err && repErr)
       </div>`;
 const b2=document.querySelector("#modalroot .modal .body");
 if(b2) b2.innerHTML=body;
+ 
+if(b2) b2.querySelectorAll("[data-grant]").forEach(bt=>bt.onclick=async ()=>{
+const uid=bt.dataset.grant, n=+bt.dataset.days||0; if(!uid) return;
+bt.disabled=true;
+try{
+const prev=+((grants[uid]||{}).extraDays||0)||0;
+await FB.db.doc("grants/"+uid).set({extraDays:prev+n, at:Date.now(), by:"founder", note:n? "+"+n+" days":"declined"});
+toast(n? "Extended by "+n+" days \u2014 they are back in the next time they sign in" : "Declined \u2014 noted, nothing changes for them");
+codesModal();
+}catch(e){ bt.disabled=false; toast("Could not write the grant: "+readWhy(e,"grants")+". The rules need the grants collection \u2014 see the notes."); }
+});
 }
  
 function uaSummary(ua){
@@ -3345,15 +3418,40 @@ err(c==="auth/wrong-password"||c==="auth/invalid-credential"? "That password is 
 });
 }
 function expiredScreen(){
+let asked=0; try{ asked=+(localStorage.getItem("ws.extendAsked")||0); }catch(e){}
 document.body.innerHTML =
 '<div class="gate"><div class="gatebox">'+
 '<div class="gatemark">WS</div>'+
 '<h1>Weeksolved</h1>'+
-'<p class="gsub">Your test window has ended — thank you for putting it through its paces.</p>'+
-'<p class="gfoot">Your board is kept safe in your account. Ask for a new code and everything picks up where it left off.</p>'+
+'<p class="gsub">Your test window has ended \u2014 thank you for putting it through its paces.</p>'+
+'<p class="gfoot">Your board is kept safe in your account. Nothing is deleted.</p>'+
+(asked
+? '<div class="banner info" style="text-align:left"><div><b>You asked for more time on '+esc(new Date(asked).toLocaleDateString([],{month:"short",day:"numeric"}))+'.</b> It goes to a person, not a machine, so it can take a day. Sign back in once you hear back \u2014 everything picks up where it left off.</div></div>'
+: '<div class="field" style="text-align:left;margin-top:12px"><label>Would you like more time?</label>'+
+'<textarea id="gext" rows="2" placeholder="Optional \u2014 a line about how it is going, or what you still want to try"></textarea></div>'+
+'<button class="btn primary big" id="gextgo">Ask for more time</button>'+
+'<div class="gnote">Extensions are granted by a person, not automatically. You will hear back at the email on your account.</div>'+
+'<div class="gerr" id="gexterr"></div>')+
 '<button class="btn ghost sm" id="gout" style="margin-top:10px">Sign out</button>'+
 '</div></div>';
 document.getElementById("gout").onclick=()=>{ signOutClean(); };
+const go=document.getElementById("gextgo");
+if(go) go.onclick=async ()=>{
+go.disabled=true; go.textContent="Sending\u2026";
+const note=String((document.getElementById("gext")||{}).value||"").trim().slice(0,400);
+try{
+const at=Date.now();
+await FB.db.doc("reports/"+FB.user.uid+"_extend_"+at).set({
+uid:FB.user.uid, tester:(window.TESTER_ID||""), at, kind:"extend", auto:false,
+note:(note||"(no note)"), ctx:String((FB.user.email||"")).slice(0,120), seen:1 });
+try{ localStorage.setItem("ws.extendAsked", String(at)); }catch(e){}
+notifyFounder("extend", "tester "+(window.TESTER_ID||"")+" asked for more time", (FB.user.email||"")+" ("+(window.TESTER_ID||"")+") asked for more time.\n\n"+(note? "\u201c"+note+"\u201d" : "(no note)")+"\n\nApprove or decline under Home \u2192 Who is testing. Nothing happens until you do.");
+expiredScreen();
+}catch(e){
+go.disabled=false; go.textContent="Ask for more time";
+const el=document.getElementById("gexterr"); if(el) el.textContent="That did not go through. Check the connection and try again, or email hello@weeksolved.com.";
+}
+};
 }
 
  
@@ -3520,6 +3618,9 @@ if(!s.org.rosterId) s.org.rosterId="r"+securePick(B36,8);
 if(!s.rules.skillsWhen) s.rules.skillsWhen="always";
 if(!s.rules.skillsStrength) s.rules.skillsStrength="medium";
 s.employees.forEach(e=>{ if(!e.skills) e.skills={}; });
+if(!["off","manual","auto"].includes(s.rules.mealWaiverMode)) s.rules.mealWaiverMode = s.rules.allowMealWaiver? "manual" : "off";
+s.rules.allowMealWaiver = s.rules.mealWaiverMode!=="off";
+s.employees.forEach(e=>{ if(e.mealWaiver!=="yes" && e.mealWaiver!=="no") e.mealWaiver="default"; });
 s.employees.forEach(e=>{ if(!e.hoursMode) e.hoursMode="range";
 if(!e.projectOk) e.projectOk="yes";
 if(typeof e.onCall!=="boolean") e.onCall = false;
@@ -3634,12 +3735,51 @@ return natural;
 }
 
  
+ 
+function mealEdge(a, b, gap, emp){
+if(!(b>a)) return null;
+const L=law(), M=L.meal; if(!M) return null;
+const gapLen = gap? gap.to-gap.from : 0;
+const worked = (b-a)-gapLen;
+const pol = emp? waiverPolicy(emp) : waiverMode();
+const cands=[];
+const add=(limit, gain, line)=>{ const cut=worked-limit; if(cut>0 && cut<=30) cands.push({cut, newEnd:b-cut, gain, line}); };
+ 
+if(M.firstAfterMin) add(M.firstAfterMin-1, "no meal period would be owed at all", "meal");
+ 
+if(pol!=="off" && M.waivableIfShiftUnderMin && worked>M.waivableIfShiftUnderMin)
+add(M.waivableIfShiftUnderMin, pol==="auto"? "the meal could be waived — and would be, automatically" : "the meal could be waived by written agreement", "waiver");
+const sec=M.second;
+if(sec){
+const off = M.lengthMin||30;
+const netAdj = sec.fromNet===false? 0 : off;
+if(sec.afterMin) add(sec.afterMin-1+netAdj, "a second meal period would not be owed", "meal2");
+if(pol!=="off" && sec.waivableIfShiftUnderMin && worked>sec.waivableIfShiftUnderMin+netAdj)
+add(sec.waivableIfShiftUnderMin+netAdj, pol==="auto"? "the second meal could be waived — automatically" : "the second meal could be waived by written agreement", "waiver2");
+}
+if(!cands.length) return null;
+cands.sort((x,y)=>x.cut-y.cut);
+return cands[0];
+}
+function mealEdgeHtml(edge, targetId){
+if(!edge) return "";
+return `<div class="banner warn" style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:180px"><b>${edge.cut} minute${edge.cut===1?"":"s"} over a line.</b> End it at <b>${esc(m2disp(edge.newEnd))}</b> instead and ${esc(edge.gain)}. Your call — the times you typed are kept unless you press it.</div><button type="button" class="btn sm" data-edge="${edge.newEnd}" data-edget="${esc(targetId)}">Make it ${esc(m2disp(edge.newEnd))}</button></div>`;
+}
+function wireEdge(root, after){
+root.querySelectorAll("[data-edge]").forEach(b=>b.onclick=()=>{
+const t=root.querySelector("#"+b.dataset.edget); if(!t) return;
+t.value=m2t((+b.dataset.edge)%1440);
+t.dispatchEvent(new Event("input",{bubbles:true}));
+if(after) after();
+});
+}
 function breakCliffs(a, b){
 if(!(b>a)) return "";
 const L=law(), M=L.meal||{};
 const snap=(end)=>{
 const br=computeBreaks(a, end);
-const worked=(end-a)-(br.unpaid||0);
+ 
+const worked=(end-a)-((br.gap&&br.gap.to>br.gap.from)? br.gap.to-br.gap.from : 0);
 return {m:br.owed.meals, r:br.owed.rests,
 w1: !!(M.waivableIfShiftUnderMin && br.owed.meals>0 && worked<=M.waivableIfShiftUnderMin),
 w2: !!(M.second && M.second.waivableIfShiftUnderMin && br.owed.meals>1
@@ -3714,6 +3854,35 @@ out.push({start:t,len:rlen});
 return out.sort((a,b)=>a.start-b.start);
 }
  
+function waiverMode(){
+const m=(S.rules||{}).mealWaiverMode;
+if(m==="off"||m==="manual"||m==="auto") return m;
+return (S.rules&&S.rules.allowMealWaiver)? "manual" : "off";
+}
+function empWaiver(e){ const w=e&&e.mealWaiver; return (w==="yes"||w==="no")? w : "default"; }
+function waiverPolicy(emp){
+const mode=waiverMode(); if(mode==="off") return "off";
+const w=empWaiver(emp);
+if(w==="no") return "off";
+if(w==="yes") return "auto";
+return mode;
+}
+ 
+function waiverPossible(){ const L=law(); return !!(L.meal && (L.meal.waivableIfShiftUnderMin || (L.meal.second && L.meal.second.waivableIfShiftUnderMin))); }
+const WAIVER_WORDS={off:"Not used", manual:"Manager decides, shift by shift", auto:"Automatic whenever the law allows"};
+function waiverCounts(){
+const act=(S.employees||[]).filter(e=>e.active);
+return {yes:act.filter(e=>empWaiver(e)==="yes").length, no:act.filter(e=>empWaiver(e)==="no").length, n:act.length};
+}
+function waiverSummary(){
+const c=waiverCounts(), m=waiverMode();
+const parts=[m==="auto"? "Automatic for everyone by default" : m==="manual"? "Waived only when you choose to" : "Nobody's meal is waived"];
+if(c.yes) parts.push(c.yes+" always (waiver on file)");
+if(c.no) parts.push(c.no+" never (not signed)");
+return parts.join(" \u00b7 ");
+}
+
+ 
 function computeBreaks(startMin, endMin, opts){
 opts = opts || {};
 const L = law();
@@ -3742,14 +3911,18 @@ if(L.meal && worked >= L.meal.firstAfterMin){
 out.owed.meals = 1;
 const len = L.meal.lengthMin;
 const deadline = W2C(L.meal.mustStartByMin);
-const waivable = S.rules.allowMealWaiver && L.meal.waivableIfShiftUnderMin && worked <= L.meal.waivableIfShiftUnderMin;
+ 
+const pol = opts.emp? waiverPolicy(opts.emp) : waiverMode();
+const ov = opts.waive||{};
+const waivable = pol!=="off" && !!L.meal.waivableIfShiftUnderMin && worked <= L.meal.waivableIfShiftUnderMin;
+const waived1 = ov[1]===true ? true : ov[1]===false ? false : (waivable && pol==="auto");
 let tw = Math.floor(worked/2) - len/2;                  
 if(opts.nudge) tw += opts.nudge;
 tw = clamp(tw, earliest, L.meal.mustStartByMin);
 if(tw+len > worked-30) tw = Math.max(earliest, worked-30-len);
 let target = fit(round5(W2C(tw)), len);
 target = fit(mealTarget(startMin, endMin, target, deadline, len, opts), len);
-out.meals.push({start:target,end:target+len,len,waivable,waived:false,deadline,late:target>deadline,idx:1});
+out.meals.push({start:target,end:target+len,len,waivable,waived:waived1,auto:waived1 && ov[1]!==true,deadline,late:target>deadline,idx:1});
 
  
 const sec = L.meal.second;
@@ -3758,7 +3931,9 @@ const workedForSecond = sec && sec.fromNet===false ? worked : worked - off;
 if(sec && workedForSecond >= sec.afterMin){
 out.owed.meals = 2;
 const dl2 = W2C(sec.mustStartByMin + (sec.fromNet===false? 0 : off));
-const w2 = sec.waivableIfShiftUnderMin && workedForSecond <= sec.waivableIfShiftUnderMin;
+const w2 = pol!=="off" && !!sec.waivableIfShiftUnderMin && workedForSecond <= sec.waivableIfShiftUnderMin
+&& !(sec.requiresFirstNotWaived && out.meals[0].waived);
+const waived2 = ov[2]===true ? true : ov[2]===false ? false : (w2 && pol==="auto");
 let t2w = Math.floor(worked*0.72) - len/2;
 t2w = clamp(t2w, C2W(target)+len+90, C2W(dl2));
 if(t2w+len > worked-30) t2w = Math.max(C2W(target)+len+60, worked-30-len);
@@ -3768,7 +3943,7 @@ const lo=W2C(C2W(target)+len+90), hi=Math.min(dl2, W2C(worked-30-len));
 const ok=mealSlotList().filter(x=>x>=lo && x<=hi && !(g && x<g.to && x+len>g.from));
 if(ok.length) t2 = ok.reduce((b,x)=>Math.abs(x-t2)<Math.abs(b-t2)?x:b, ok[0]);
 }
-out.meals.push({start:t2,end:t2+len,len,waivable:!!w2,waived:false,deadline:dl2,late:t2>dl2,idx:2});
+out.meals.push({start:t2,end:t2+len,len,waivable:!!w2,waived:waived2,auto:waived2 && ov[2]!==true,deadline:dl2,late:t2>dl2,idx:2});
 }
 }
 
@@ -3911,7 +4086,7 @@ a.breaks.rests.length, a.breaks.rests[0].len, aGap(a));
 }
 
 function applyBreaks(a){
-const b = computeBreaks(a.startMin, a.endMin, {gap:aGap(a), date:a.date, dow:a.dow});
+const b = computeBreaks(a.startMin, a.endMin, {gap:aGap(a), date:a.date, dow:a.dow, emp:empById(a.empId), waive:a.waive});
 a.breaks = b;
 return a;
 }
@@ -4604,17 +4779,35 @@ r.querySelector("#licgo").onclick=()=>{ closeModal(true); go(); };
 });
 }
 
+ 
+const TRIAL_HORIZON_WEEKS = 6;
+const TRIAL_SENDS_PER_MONTH = 200;
+const TRIAL_LIMIT_TESTERS = false;
+function trialLimited(){
+if(window.TESTER_LIFE) return false;
+if(window.ACCOUNT_PLAN==="trial") return true;                  
+if(window.ACCOUNT_PLAN) return false;                           
+return !!(TRIAL_LIMIT_TESTERS && typeof ACCESS!=="undefined" && ACCESS && ACCESS.on && window.TESTER_ID);
+}
+ 
+function trialLastWeek(){ return weekStartOf(addDays(ymd(new Date()), TRIAL_HORIZON_WEEKS*7), S.org.weekStart); }
+function trialWeekOk(ws){ return !trialLimited() || ws <= trialLastWeek(); }
+function trialNote(){
+if(!trialLimited()) return "";
+return "During the free trial you can draft up to "+TRIAL_HORIZON_WEEKS+" weeks ahead (through "+prettyDate(trialLastWeek())+"). Everything else is switched on.";
+}
 function generateRange(fromWs, nWeeks){
-let filled=0, unfilled=0, built=[];
+let filled=0, unfilled=0, built=[], held=0;
 for(let i=0;i<nWeeks;i++){
 const ws=addDays(fromWs, i*7);
+if(!trialWeekOk(ws)){ held++; continue; }    
 const wk=getWeek(ws);
 if(wk.published) continue;               
 const r=generateSchedule(ws);
 wk.suggested=true; wk.touched=true; wk.auto=false;
 filled+=r.filled; unfilled+=r.unfilled.length; built.push(ws);
 }
-return {filled, unfilled, built};
+return {filled, unfilled, built, held};
 }
 function draftModal(){
 const start=S.currentWeek;
@@ -4631,6 +4824,7 @@ modal("Draft a schedule", `
         <span class="mini">Snaps to the start of whichever week that date falls in.</span></div>
       <label class="switch"><input type="checkbox" id="dkeep" checked> Keep anything I've locked</label>
       <div class="mini">Weeks you've already posted are skipped — unpost one first if you want it redrafted.</div>
+      ${trialLimited()? `<div class="banner info"><div>${esc(trialNote())}</div></div>`:""}
     </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="ddraft">Draft it</button>`,
 r=>{
@@ -4646,7 +4840,7 @@ if(!keep) for(let i=0;i<n;i++){ const w=getWeek(addDays(from,i*7)); if(!w.publis
 S.horizon=n; S.currentWeek=from;
 const res=generateRange(from,n);
 save(); render();
-toast(res.filled+" shifts drafted across "+res.built.length+" week"+(res.built.length===1?"":"s")+(res.unfilled? " · "+res.unfilled+" left open":""));
+toast(res.filled+" shifts drafted across "+res.built.length+" week"+(res.built.length===1?"":"s")+(res.unfilled? " · "+res.unfilled+" left open":"")+(res.held? " · "+res.held+" week"+(res.held===1?"":"s")+" past the trial horizon left alone":""));
 });
 };
 });
@@ -6833,7 +7027,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<label class="f">What kind is it?</label><select id="lick"></select>',
 '<label class="f">Which state issued it?</label><select id="licj"></select>',
 '<div class="hint" style="margin-top:6px">The state that <b>issued</b> it, which may not be the state you work in \u2014 if you work for a federal employer, or hold a license from somewhere you used to live, say where it actually came from.</div>',
-'<label class="f">What it is called</label><input type="text" id="lic" placeholder="e.g. Pharmacy Technician">',
+'<label class="f">What it is called</label><input type="text" id="lic" placeholder="'+esc(bizEx().lic)+'">',
 '<label class="f">Expires</label><input type="date" id="licx">',
 '<div class="hint" style="margin-top:10px">So your manager can warn you before it lapses. Leave blank if you would rather they took it from your file.</div></div>',
 '<div class="card"><div class="step">When you can work</div>',
@@ -8474,6 +8668,222 @@ return `<div class="banner warn"><div><b>Posted \u2014 but nobody has been told 
     <button class="btn sm primary" data-tell="${esc(ws)}" style="flex:none;margin-left:auto">Hand it out</button></div>`;
 }
  
+ 
+function dailyCfg(){
+if(!S.daily) S.daily={on:false, at:"06:00", lead:"same", mode:"each", how:"email", days:"open"};
+return S.daily;
+}
+function personDayLines(a, ws){
+const L=[]; const sh=aShift(a);
+let line=m2disp(a.startMin)+"–"+m2disp(a.endMin)+"  "+sh.label; if(a.topUp) line+=" ("+(S.rules.topUpLabel||"project time")+")";
+L.push(line);
+const b=a.breaks||{meals:[],rests:[]};
+if(S.rules.breakMode==="assigned" && b.meals.length) L.push("   meal "+b.meals.filter(m=>!m.waived).map(m=>m2disp(m.start)).join(", ")+(b.meals.some(m=>m.waived)? (b.meals.every(m=>m.waived)? " — waived" : "") : ""));
+if(S.rules.restMode==="assigned" && b.rests && b.rests.length) L.push("   rest "+b.rests.map(r=>m2disp(r.start)).join(", "));
+const plan=(a.stationPlan||[]).slice().sort((x,y)=>x.from-y.from);
+if(plan.length>1) L.push("   posts: "+plan.map(x=>m2disp(x.from)+" "+((stationById(x.st)||{}).name||"")).join(" → "));
+else { const st=a.station? stationById(a.station):null; if(st) L.push("   post: "+st.name+(a.station2? ", then "+((stationById(a.station2)||{}).name||""):"")); }
+if(a.mentor) L.push("   training with "+((empById(a.mentor)||{}).name||""));
+const n=shiftNote(ws, a.date, a.empId, a.startMin); if(n) L.push("   note: "+n);
+return L;
+}
+function personalDayText(empId, date){
+const e=empById(empId); if(!e) return "";
+const ws=weekStartOf(date, S.org.weekStart), wk=peekWeek(ws);
+const mine=wk.assignments.filter(a=>a.empId===empId && a.date===date).sort((x,y)=>x.startMin-y.startMin);
+const L=[(S.org.name||"Work")+" — your day, "+prettyFull(date), ""];
+if((wk.dayNotes||{})[date]) L.push("NOTE: "+wk.dayNotes[date], "");
+if(!mine.length) L.push("You are not scheduled on "+prettyDate(date)+".");
+else mine.forEach(a=>L.push(...personDayLines(a, ws)));
+L.push("", "Times are the schedule, not a record of what was worked. Questions — ask your manager.");
+return L.join("\n");
+}
+function wholeDayText(date){
+const ws=weekStartOf(date, S.org.weekStart), wk=peekWeek(ws);
+const dow=parseYmd(date).getDay();
+const on=wk.assignments.filter(a=>a.date===date).sort((x,y)=>x.startMin-y.startMin);
+const L=[(S.org.name||"Work")+" — day sheet for "+prettyFull(date), ""];
+if(S.hours[dow] && S.hours[dow].closed) L.push("Closed today.");
+if((wk.dayNotes||{})[date]) L.push("NOTE: "+wk.dayNotes[date], "");
+{ const c=lunchClosure(dow, date); if(c) L.push("Doors shut "+m2disp(c.from)+"–"+m2disp(c.to)+" for lunch.", ""); }
+if(!on.length) L.push("Nobody scheduled.");
+on.forEach(a=>{ const e=empById(a.empId)||{name:"—"}; const ls=personDayLines(a, ws); L.push(e.name+"  "+ls[0]); ls.slice(1).forEach(x=>L.push("   "+x.trim())); });
+L.push("", "Times are the schedule, not a record of what was worked.");
+return L.join("\n");
+}
+ 
+function dayHandOutDays(from){
+const out=[];
+for(let i=0;i<10;i++){
+const d=addDays(from,i); const ws=weekStartOf(d, S.org.weekStart); const wk=S.weeks[ws];
+if(!wk || !wk.assignments.some(a=>a.date===d)) continue;
+out.push({date:d, posted:!!(wk.published && !postPending(wk)), n:wk.assignments.filter(a=>a.date===d).length});
+}
+return out;
+}
+function markDaySent(date, how){
+const ws=weekStartOf(date, S.org.weekStart); const wk=getWeek(ws);
+wk.daySent=wk.daySent||{}; wk.daySent[date]={at:Date.now(), how};
+delete (wk.dayReady||{})[date];
+}
+function dayHandOutModal(date, preset){
+date = date || ymd(new Date());
+const D=dayHandOutDays(date);
+const cfg=dailyCfg();
+let pick=new Set([date]), mode=(preset&&preset.mode)||cfg.mode||"each", how=(preset&&preset.how)||cfg.how||"email";
+let queue=[], at=0, step=1;
+modal("Hand out the day sheet", `<div class="stack" id="dbody"></div>`,
+`<button class="btn" data-close>Close</button><button class="btn primary" id="dgo">Send</button>`,
+r=>{
+const paint=()=>{
+const body=r.querySelector("#dbody"); const days=[...pick].sort();
+const people=(d)=>{ const ws=weekStartOf(d,S.org.weekStart); const wk=peekWeek(ws); return S.employees.filter(e=>e.active && wk.assignments.some(a=>a.empId===e.id && a.date===d)); };
+const everyone=S.employees.filter(e=>e.active);
+if(step===1){
+const anyDraft=days.some(d=>!(D.find(x=>x.date===d)||{}).posted);
+const who = mode==="each"? [...new Set(days.flatMap(d=>people(d).map(e=>e.id)))].map(empById).filter(Boolean) : everyone;
+const reach = who.filter(e=>hasContact(e,how)), miss=who.filter(e=>!hasContact(e,how));
+body.innerHTML=`
+            <p class="whead">Just the day: posts, meal times and the day’s note. The weekly schedule is a separate hand-out and is not touched by this.</p>
+            <div class="field"><label>Which day${D.length>1?"s":""}</label>
+              <div class="row" style="gap:6px;flex-wrap:wrap">${D.length? D.map(x=>`<button type="button" class="chip chipbtn ${pick.has(x.date)?"acc":""}" data-dd="${x.date}" aria-pressed="${pick.has(x.date)}" title="${x.n} scheduled${x.posted?"":" · not posted yet"}">${esc(prettyDate(x.date))}${x.posted?"":" · draft"}</button>`).join("") : '<span class="mini">No day with shifts on it in the next ten days.</span>'}</div>
+              <span class="mini">Tap more than one to send several days at once. Today only is the usual habit.</span></div>
+            ${anyDraft? `<div class="banner warn"><div>One of those days is in a week that is not posted yet. It can still go out, but what people get may change.</div></div>`:""}
+            <div class="field"><label>What each person gets</label>
+              <div class="wopts">
+                <button type="button" class="wopt ${mode==="each"?"on":""}" data-dmode="each"><span class="wt">Their own day</span><span class="wd">Start, finish, meal, post — only the people working ${days.length===1?"that day":"those days"}.</span></button>
+                <button type="button" class="wopt ${mode==="all"?"on":""}" data-dmode="all"><span class="wt">The whole day sheet</span><span class="wd">Everyone on the roster gets the full list for the day.</span></button>
+              </div></div>
+            <div class="field"><label>How</label>
+              <div class="seg" id="dhow">${[["email","Email"],["sms","Text"],["copy","Copy it"],["print","Print"]].map(x=>`<button type="button" data-dhow="${x[0]}" aria-pressed="${how===x[0]}">${x[1]}</button>`).join("")}</div></div>
+            ${(how==="email"||how==="sms")? `<div class="banner ${miss.length?"warn":"info"}"><div><b>${reach.length} of ${who.length} can be reached by ${how==="sms"?"text":"email"}.</b>${miss.length? " No "+(how==="sms"?"cell number":"email address")+" for "+esc(miss.map(e=>e.name.split(" ")[0]).join(", "))+".":""}</div></div>`:""}
+            <div class="field"><label>Preview${mode==="each"&&who.length? " — "+esc(who[0].name.split(" ")[0])+"’s copy":""}</label>
+              <textarea rows="8" readonly style="font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)">${esc(days.map(d=> mode==="each"? personalDayText((who[0]||{}).id, d) : wholeDayText(d)).join("\n\n———\n\n"))}</textarea></div>
+            <div class="sep"></div>
+            <label class="switch"><input type="checkbox" id="dauto" ${cfg.on?"checked":""}> Send the day sheet automatically, every day it is posted</label>
+            <div id="dautowrap" style="display:${cfg.on?"":"none"}" class="grid2">
+              <div class="field"><label>When</label><select id="dlead"><option value="same" ${cfg.lead!=="prev"?"selected":""}>The morning of</option><option value="prev" ${cfg.lead==="prev"?"selected":""}>The evening before</option></select></div>
+              <div class="field"><label>At</label><input type="time" id="dat" value="${esc(cfg.at||"06:00")}"></div>
+            </div>
+            ${cfg.on? `<div class="mini">${mailServerReady()? "Sent from Weeksolved without you doing anything, using the choices above." : "Weeksolved gets it ready at that time and Home shows one button to send it — it cannot send from your phone while the app is closed until Weeksolved’s own sender is live."} Only days inside a posted week go out; drafts never do.</div>`:""}`;
+body.querySelectorAll("[data-dd]").forEach(b=>b.onclick=()=>{ const d=b.dataset.dd; if(pick.has(d)){ if(pick.size>1) pick.delete(d); } else pick.add(d); paint(); });
+body.querySelectorAll("[data-dmode]").forEach(b=>b.onclick=()=>{ mode=b.dataset.dmode; cfg.mode=mode; paint(); });
+body.querySelectorAll("[data-dhow]").forEach(b=>b.onclick=()=>{ how=b.dataset.dhow; if(how==="email"||how==="sms") cfg.how=how; paint(); });
+const au=body.querySelector("#dauto"); au.onchange=()=>{
+if(!au.checked){ cfg.on=false; save(); paint(); return; }
+ 
+const keepPick=[...pick]; const keepMode=mode, keepHow=how;
+closeModal(true);
+autoSendConfirm(()=>{ cfg.on=true; save(); toast("On \u2014 the day sheet goes out on its own from now on"); dayHandOutModal(date,{mode:keepMode,how:keepHow}); },
+()=>{ cfg.on=false; save(); dayHandOutModal(date,{mode:keepMode,how:keepHow}); }); };
+const dl=body.querySelector("#dlead"); if(dl) dl.onchange=()=>{ cfg.lead=dl.value; save(); };
+const da=body.querySelector("#dat"); if(da) da.onchange=()=>{ cfg.at=da.value||"06:00"; save(); };
+const go=r.querySelector("#dgo");
+go.textContent = how==="copy"? "Copy it" : how==="print"? "Print" : (mode==="each" && !mailServerReady())? "Send — one at a time" : "Send";
+go.disabled = !days.length || ((how==="email"||how==="sms") && !reach.length);
+go.onclick=async ()=>{
+if(how==="copy"){ const t=days.map(d=>wholeDayText(d)).join("\n\n"); try{ await navigator.clipboard.writeText(t); toast("Copied"); }catch(e){ showText(t); } days.forEach(d=>markDaySent(d,"copy")); save(); closeModal(); render(); return; }
+if(how==="print"){ const html=`<html><head><meta charset="utf-8"><title>Day sheet</title><style>body{font:13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:26px;color:#182421} pre{font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;page-break-after:always}</style></head><body>${days.map(d=>"<pre>"+esc(wholeDayText(d))+"</pre>").join("")}</body></html>`;
+if(printDoc(html,"Day sheet")){ days.forEach(d=>markDaySent(d,"print")); save(); closeModal(); render(); } else toast("Your browser blocked the print window"); return; }
+if(mode==="all"){
+const to=reach.map(e=>contactOf(e)[how==="sms"?"phone":"email"]);
+const text=days.map(d=>wholeDayText(d)).join("\n\n");
+if(how==="sms"){ openSms(to.join(","), text); }
+else { const rr=await mailOutAndSay({to, subject:(S.org.name||"Work")+" — day sheet "+(days.length===1? prettyDate(days[0]) : prettyDate(days[0])+" to "+prettyDate(days[days.length-1])), body:text, kind:"day"}); if(rr.via==="cancelled") return; }
+days.forEach(d=>markDaySent(d,how)); save(); closeModal(); render(); return;
+}
+ 
+queue=reach.slice(); at=0;
+if(how==="email" && mailServerReady()){
+let n=0;
+for(const e of queue){ const body=days.map(d=>personalDayText(e.id,d)).join("\n\n"); const rr=await mailOut({to:[contactOf(e).email], subject:(S.org.name||"Work")+" — your day"+(days.length>1?"s":"")+", "+prettyDate(days[0]), body, kind:"day", confirmed:n>0}); if(rr.via==="cancelled") return; n+=rr.sent||0; }
+toast("Sent to "+n+" "+(n===1?"person":"people")); days.forEach(d=>markDaySent(d,"email")); logIt("send","Day sheet emailed to "+n); save(); closeModal(); render(); return;
+}
+step=2; paint();
+};
+} else {
+const e=queue[at];
+const text=days.map(d=>personalDayText(e.id,d)).join("\n\n");
+body.innerHTML=`<p class="whead">${at+1} of ${queue.length}. Your ${how==="sms"?"messages":"mail"} app opens with this ready — press send there, then come back for the next one.</p>
+            <div class="card"><div class="body"><b>${esc(e.name)}</b><div class="mini">${esc(how==="sms"? contactOf(e).phone : contactOf(e).email)}</div></div></div>
+            <div class="field"><label>What they get</label><textarea rows="8" readonly style="font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)">${esc(text)}</textarea></div>`;
+const go=r.querySelector("#dgo"); go.disabled=false; go.textContent = at+1>=queue.length? "Open the last one" : "Open this one";
+go.onclick=()=>{
+if(how==="sms") openSms(contactOf(e).phone, text); else openMail(contactOf(e).email, (S.org.name||"Work")+" — your day, "+prettyDate(days[0]), text);
+at++; if(at>=queue.length){ days.forEach(d=>markDaySent(d,how)); save(); closeModal(); render(); toast("All "+queue.length+" opened"); } else paint();
+};
+}
+};
+paint();
+});
+}
+ 
+function dailyTick(){
+const cfg=S.daily; if(!cfg || !cfg.on) return;
+const now=new Date(); const [hh,mm]=String(cfg.at||"06:00").split(":").map(Number);
+const today=ymd(now);
+const targets=[];  
+const dueFor=(date)=>{ const d=parseYmd(cfg.lead==="prev"? addDays(date,-1) : date); d.setHours(hh||0, mm||0, 0, 0); return d.getTime(); };
+[today, addDays(today,1)].forEach(date=>{ targets.push([date, dueFor(date)]); });
+let changed=false;
+targets.forEach(([date,due])=>{
+if(now.getTime()<due || now.getTime()-due > 6*3600*1000) return;
+const ws=weekStartOf(date, S.org.weekStart); const wk=S.weeks[ws];
+if(!wk || !wk.published || postPending(wk) || !wk.assignments.some(a=>a.date===date)) return;
+if((wk.daySent||{})[date] || (wk.dayReady||{})[date]) return;
+wk.dayReady=wk.dayReady||{};
+if(mailServerReady() && (cfg.how||"email")==="email"){
+wk.dayReady[date]="sending"; changed=true;
+dailyAutoSend(date).then(n=>{ markDaySent(date,"auto"); logIt("send","Day sheet for "+prettyDate(date)+" sent automatically to "+n); save(); if(VIEW==="home") render(); })
+.catch(()=>{ const w=S.weeks[ws]; if(w&&w.dayReady) w.dayReady[date]=true; save(); if(VIEW==="home") render(); });
+} else { wk.dayReady[date]=true; changed=true; }
+});
+if(changed){ save(); if(VIEW==="home") render(); }
+}
+async function dailyAutoSend(date){
+const cfg=dailyCfg(); const ws=weekStartOf(date, S.org.weekStart); const wk=peekWeek(ws);
+let n=0;
+if(cfg.mode==="all"){
+const to=S.employees.filter(e=>e.active && hasContact(e,"email")).map(e=>contactOf(e).email);
+const rr=await mailOut({to, subject:(S.org.name||"Work")+" — day sheet "+prettyDate(date), body:wholeDayText(date), kind:"day", confirmed:true}); n=rr.sent||0;
+} else {
+const who=S.employees.filter(e=>e.active && hasContact(e,"email") && wk.assignments.some(a=>a.empId===e.id && a.date===date));
+for(const e of who){ const rr=await mailOut({to:[contactOf(e).email], subject:(S.org.name||"Work")+" — your day, "+prettyDate(date), body:personalDayText(e.id,date), kind:"day", confirmed:true}); n+=rr.sent||0; }
+}
+return n;
+}
+ 
+function autoSendConfirm(then, cancel){
+const cfg=dailyCfg();
+modal("Send the day sheet automatically?", `
+    <div class="stack">
+      <div class="help">Every day that sits inside a <b>posted</b> week, Weeksolved ${mailServerReady()? "will send" : "will get ready"} the day sheet ${cfg.lead==="prev"? "the evening before" : "the morning of"} at <b>${esc(m2disp(t2m(cfg.at||"06:00")))}</b> — ${cfg.mode==="all"? "the whole sheet to everyone on the roster" : "each person their own day"}, by ${cfg.how==="sms"? "text" : "email"}.</div>
+      <div class="mini">${mailServerReady()? "It goes out without you pressing anything. Change your mind any time under Settings or from the Day sheet." : "Until Weeksolved’s own sender is live it cannot send while the app is closed: at that time Home shows one button, Send it now, and nothing goes out until you press it. Drafts never go out."}</div>
+    </div>`,
+`<button class="btn" data-close>Not now</button><button class="btn primary" id="ascgo">Yes, switch it on</button>`,
+r=>{ let ok=false; r.querySelector("#ascgo").onclick=()=>{ ok=true; closeModal(true); then(); };
+const box=r.querySelector(".modal"); const obs=new MutationObserver(()=>{ if(!r.contains(box)){ obs.disconnect(); if(!ok && cancel) cancel(); } }); obs.observe(r,{childList:true}); });
+}
+function dayReadyBanner(){
+const out=[];
+Object.keys(S.weeks||{}).forEach(ws=>{ const wk=S.weeks[ws]; Object.keys(wk.dayReady||{}).forEach(d=>{ if(wk.dayReady[d]===true) out.push(d); }); });
+if(!out.length) return "";
+const d=out.sort()[0];
+return `<div class="banner warn"><div><b>Today’s day sheet is ready to go</b> — ${esc(prettyFull(d))}. You asked for it to go out at ${esc(m2disp(t2m((S.daily||{}).at||"06:00")))}; it needs one press from here.</div>
+    <span class="row" style="gap:6px;flex:none;margin-left:auto"><button class="btn sm primary" data-dayout="${esc(d)}">Send it now</button><button class="btn sm" data-dayskip="${esc(d)}">Skip today</button></span></div>`;
+}
+ 
+function redoDaySheet(date){
+const ws=weekStartOf(date, S.org.weekStart); const wk=getWeek(ws);
+const all=wk.assignments.filter(a=>a.date===date);
+all.forEach(a=>{ if(!a.locked || wk.published){ a.waive=a.waive||{}; applyBreaks(a); } });
+staggerDay(all, all);
+try{ clearAdmin(date, ws); assignStations(date, ws); }catch(e){}
+try{ if(typeof assignMentors==="function") assignMentors(date, ws); }catch(e){}
+wk.dayRedone=wk.dayRedone||{}; wk.dayRedone[date]=Date.now();
+save(); render();
+toast("Day sheet redone for "+prettyDate(date)+" — shifts unchanged"+(wk.published? ", the posted week stands":""));
+}
 function handOutModal(ws){
 ws = ws || S.currentWeek;
 const wk=peekWeek(ws);
@@ -8503,6 +8913,7 @@ modal("Hand the week out", `
       </div>
       <div class="mini">${(!em&&!ph)? "No emails or mobiles are on file yet \u2014 printing and copying work without them."
 : em+" of your team have an email on file and "+ph+" have a mobile."}</div>
+      <div class="mini">This is the <b>week</b>. The <b>day sheet</b> \u2014 posts, meal times, the day\u2019s note \u2014 is handed out separately from the Day sheet page, the morning of if you like, and can go out on its own timer.</div>
     </div>`,
 `<button class="btn" data-close>Close</button>`,
 r=>{
@@ -8590,6 +9001,28 @@ return `<div class="banner warn" id="gracebar"><div><b>Going up in <span data-gr
 
  
  
+ 
+function postConfirm(ws, then){
+ws=ws||S.currentWeek;
+const wk=peekWeek(ws);
+const repostAsks = !!(wk && wk.postedOnce) && weekDiff(ws).length>0 && S.rules.confirmRepost!==false;
+if(S.rules.confirmPost===false || repostAsks){ then(); return; }
+const V=validate(ws); const crit=V.filter(v=>v.sev==="crit").length, warn=V.filter(v=>v.sev==="warn").length;
+const people=new Set(wk.assignments.map(a=>a.empId)).size;
+const open=wk.assignments.filter(a=>!a.empId).length;
+const g=graceSec();
+modal("Post this week?", `
+    <div class="stack">
+      <div class="help"><b>${esc(prettyDate(ws))} \u2013 ${esc(prettyDate(addDays(ws,6)))}</b> \u00b7 ${wk.assignments.length} shift${wk.assignments.length===1?"":"s"} across ${people} ${people===1?"person":"people"}${open? " \u00b7 "+open+" still open":""}.</div>
+      ${crit? `<div class="banner crit"><div><b>${crit} problem${crit===1?"":"s"} still flagged</b> \u2014 they go up as they are. Cancel and press Fix on each, or post and sort them after.</div></div>`
+: warn? `<div class="banner warn"><div>${warn} thing${warn===1?"":"s"} worth a look, nothing that breaks a rule.</div></div>`
+: `<div class="banner info"><div>Nothing flagged.</div></div>`}
+      <div class="mini">${g>0? "Posting locks every shift and starts a "+graceClock(g)+" window in which you can take it back from the banner on Home. Nobody is told until you send it."
+: "Posting locks every shift. Nobody is told until you send it \u2014 that is the next button, and it asks again."}</div>
+    </div>`,
+`<button class="btn" data-close>Not yet</button><button class="btn primary" id="pcgo">${crit? "Post it anyway":"Post it"}</button>`,
+r=>{ r.querySelector("#pcgo").onclick=()=>{ closeModal(true); then(); }; });
+}
 function repostGuard(ws, doPost){
 const wk=peekWeek(ws||S.currentWeek);
 const changes = wk && wk.postedOnce ? weekDiff(ws||S.currentWeek) : [];
@@ -9290,6 +9723,12 @@ if(S.bugs.length>200) S.bugs = S.bugs.slice(-200);
 lsSave();
  
 try{
+if(typeof FB!=="undefined" && FB && FB.user && !twin && (rec.kind==="idea" || rec.kind==="contact")){
+notifyFounder(rec.kind, (rec.kind==="idea"? "feature idea from " : "message from ")+(window.TESTER_ID||FB.user.email||"a user"),
+(FB.user.email||"")+(window.TESTER_ID? " ("+window.TESTER_ID+")":"")+" wrote:\n\n"+String(rec.note||"").slice(0,900)+"\n\nScreen: "+String(rec.where||"")+"\nBuild: "+(BUILD_ID||"dev"));
+}
+}catch(e){}
+try{
 if(typeof FB!=="undefined" && FB && FB.user){
 const b=twin||rec;
 FB.db.doc("reports/"+FB.user.uid+"_"+b.id).set({
@@ -9355,28 +9794,42 @@ L.push("— no staff names, addresses or hours are included in this report —")
 return L.join("\n");
 }
 
-function bugModal(){
+ 
+function bugModal(mode){
+mode = mode==="idea"? "idea" : "bug";
 const pending=bugsSince((S.support||{}).lastSent||0);
 const cloud=(typeof FB!=="undefined" && FB && FB.user);
 const here=(TITLES[VIEW]||["this screen"])[0];
-modal("Report a problem", `
+modal("Report a problem or suggest a feature", `
     <div class="stack">
-      <div class="field"><label>What went wrong?</label>
-        <textarea id="bgn" rows="4" placeholder="Say it in your own words — what you were doing, what happened, what you expected instead. One sentence is plenty."></textarea></div>
-      <div class="field"><label>What kind of problem is it? (optional)</label><select id="bgk">
-        ${BUG_KINDS.map(k=>`<option value="${k[0]}">${esc(k[1])}${k[2]?" — "+esc(k[2]):""}</option>`).join("")}</select></div>
-      <div class="mini">Attached automatically: the screen you're on (${esc(here)}), the app version, and your device type — never staff names, hours, or contact details.</div>
+      <div class="seg" id="bgmode" style="max-width:360px">
+        <button type="button" data-m="bug" aria-pressed="${mode==="bug"}">Something\u2019s wrong</button>
+        <button type="button" data-m="idea" aria-pressed="${mode==="idea"}">I have an idea</button></div>
+      <div class="field"><label id="bglab">${mode==="idea"? "What would you like it to do?" : "What went wrong?"}</label>
+        <textarea id="bgn" rows="4" placeholder="${mode==="idea"
+? "Say what you wish it did and why it would help — a sentence is plenty. If another tool does it well, name it."
+: "Say it in your own words — what you were doing, what happened, what you expected instead. One sentence is plenty."}"></textarea></div>
+      <div class="field" id="bgkwrap" style="display:${mode==="idea"?"none":""}"><label>What kind of problem is it? (optional)</label><select id="bgk">
+        ${BUG_KINDS.filter(k=>k[0]!=="idea").map(k=>`<option value="${k[0]}">${esc(k[1])}${k[2]?" — "+esc(k[2]):""}</option>`).join("")}</select></div>
+      <div class="mini" id="bgnote">${mode==="idea"
+? "Ideas go to the person who decides what gets built next. Every one is read; the good ones end up in What\u2019s new."
+: "Attached automatically: the screen you\u2019re on ("+esc(here)+"), the app version, and your device type \u2014 never staff names, hours, or contact details."}</div>
       ${pending.length && !cloud? `<div class="mini">${pending.length} earlier item${pending.length===1?"":"s"} will travel with it.</div>`:""}
     </div>`,
-`<button class="btn" data-close>Cancel</button><button class="btn primary" id="bgsave">${cloud? "Send report":"Add it to the report"}</button>`,
+`<button class="btn" data-close>Cancel</button><button class="btn primary" id="bgsave">${cloud? (mode==="idea"? "Send the idea":"Send report") : "Add it to the report"}</button>`,
 r=>{
 setTimeout(()=>{ const t=r.querySelector("#bgn"); if(t) t.focus(); }, 60);
+r.querySelectorAll("#bgmode button").forEach(b=>b.onclick=()=>{
+const keep=r.querySelector("#bgn").value;
+closeModal(true); bugModal(b.dataset.m);
+setTimeout(()=>{ const t=document.querySelector("#bgn"); if(t){ t.value=keep; } }, 0);
+});
 r.querySelector("#bgsave").onclick=()=>{
 const note=r.querySelector("#bgn").value.trim();
 if(!note){ toast("A few words first — even three will do"); r.querySelector("#bgn").focus(); return; }
-logBug({kind:r.querySelector("#bgk").value, where:here, note:note.slice(0,600)});
+logBug({kind: mode==="idea"? "idea" : r.querySelector("#bgk").value, where:here, note:note.slice(0,600)});
 save(); closeModal(); render();
-toast(cloud? "Sent — thank you. It goes straight onto the fix list." : "Added — it'll go out with this week's report");
+toast(cloud? (mode==="idea"? "Sent — thank you. Ideas go straight to the person deciding what comes next." : "Sent — thank you. It goes straight onto the fix list.") : "Added — it'll go out with this week's report");
 };
 });
 }
@@ -9638,6 +10091,42 @@ if(c && c.outcome==="accepted"){ INSTALL_EVT=null; S.ui=S.ui||{}; S.ui.a2hs="don
 }
 function isPhone(){ try{ return window.matchMedia("(max-width:700px)").matches; }catch(e){ return false; } }
  
+let KB_H=0;
+function kbMeasure(){
+const vv=window.visualViewport; if(!vv) return 0;
+const gap=Math.round(window.innerHeight - vv.height - (vv.offsetTop||0));
+return gap>120? gap : 0;
+}
+function kbApply(){
+const h=kbMeasure();
+if(h===KB_H) return;
+KB_H=h;
+document.documentElement.style.setProperty("--kb", h+"px");
+const tb=document.querySelector(".tabbar"); if(tb) tb.classList.toggle("kbup", h>0);
+if(h>0) kbReveal(document.activeElement);
+}
+function kbReveal(el){
+if(!el || !el.matches || !el.matches("input,textarea,select,[contenteditable]")) return;
+setTimeout(()=>{ try{ el.scrollIntoView({block:"center", behavior:"smooth"}); }catch(e){} }, 60);
+}
+if(window.visualViewport){
+window.visualViewport.addEventListener("resize", kbApply);
+window.visualViewport.addEventListener("scroll", kbApply);
+}
+document.addEventListener("focusin", e=>{
+if(!isPhone()) return;
+ 
+setTimeout(()=>{ kbApply(); kbReveal(e.target); }, 350);
+});
+document.addEventListener("focusout", ()=>{ setTimeout(kbApply, 350); });
+ 
+let KB_LASTH=window.innerHeight;
+window.addEventListener("resize", ()=>{
+const h=window.innerHeight;
+if(isPhone() && h < KB_LASTH-120) kbReveal(document.activeElement);
+KB_LASTH=h; kbApply();
+});
+ 
 let DAYOPEN = new Set([new Date().getDay()]);
 let WAS_PHONE = null;
 window.addEventListener("resize", ()=>{
@@ -9649,7 +10138,7 @@ else WAS_PHONE=now;
 let LAST_VIEW=null;
 function render(){
 WAS_PHONE = isPhone(); RECUR_CACHE=null;
-settlePending(); runQueued(); graceTick(); paintAccount();
+settlePending(); runQueued(); dailyTick(); graceTick(); paintAccount();
 const keepY = (LAST_VIEW===VIEW)? window.scrollY : null;
 LAST_VIEW=VIEW;
 initSwipe();
@@ -9936,6 +10425,7 @@ el.addEventListener("keydown", ev=>{ if(ev.key==="Enter"||ev.key===" ") open(ev)
 }
 function wireCommon(root){
 wireWhy(root);
+wireAdvice(root);
 root.querySelectorAll("[data-bind]").forEach(el=>{
 const path=el.dataset.bind;
 const typed = el.tagName==="TEXTAREA" ||
@@ -9945,6 +10435,7 @@ let v = el.type==="checkbox"? (el.dataset.invert? !el.checked : el.checked) : (e
 if(path==="rules.stationFamilies" || path==="rules.skillsOn") v = v===true || v==="1" || v===1;
 if(path==="org.jurisdiction") otFollowState(v);
 setPath(S,path,v);
+if(path==="rules.mealWaiverMode") S.rules.allowMealWaiver = v!=="off";
 if(path==="org.name" && S.sample) S.sample=false;    
 };
 if(typed){
@@ -9958,6 +10449,8 @@ el.addEventListener("change",()=>{ commit(); save(); if(el.dataset.rerender!=="n
 root.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
 root.querySelectorAll("[data-undopost]").forEach(el=>el.addEventListener("click",()=>undoPost(el.dataset.undopost)));
 root.querySelectorAll("[data-tell]").forEach(el=>el.addEventListener("click",()=>handOutModal(el.dataset.tell||S.currentWeek)));
+root.querySelectorAll("[data-dayout]").forEach(el=>el.addEventListener("click",()=>dayHandOutModal(el.dataset.dayout)));
+root.querySelectorAll("[data-dayskip]").forEach(el=>el.addEventListener("click",()=>{ const d=el.dataset.dayskip; const wk=S.weeks[weekStartOf(d,S.org.weekStart)]; if(wk&&wk.dayReady) delete wk.dayReady[d]; save(); render(); toast("Skipped \u2014 nothing sent for "+prettyDate(d)); }));
 root.querySelectorAll("[data-qdel]").forEach(el=>el.addEventListener("click",()=>{
 S.queued=queueList().filter(q=>q.id!==el.dataset.qdel); save(); render(); toast("Dropped \u2014 nothing will happen"); }));
 root.querySelectorAll("[data-qnow]").forEach(el=>el.addEventListener("click",()=>{
@@ -10234,6 +10727,7 @@ if(looks.length<3) V.filter(v=>v.sev==="warn").slice(0,3-looks.length).forEach(v
 
 return `
   <div class="stack home">
+    ${founderCard()}
     ${ACCESS.on && !(S.ui&&S.ui.repTip)? `<div class="hnotice"><span>Spot something wrong while testing? The <b>⚑ Report</b> button up top sends it straight to the fix list — ten seconds, no email needed.</span>
       <button class="btn sm" id="reptipok" style="flex:none">Got it</button></div>`:""}
     ${a2hsOffer()? `<div class="hnotice"><span>Weeksolved can sit on your home screen with its own icon and open full screen \u2014 same account, nothing to install.</span>
@@ -10242,6 +10736,7 @@ return `
     ${opActivityHtml()}
     ${graceBanner(ws)}
     ${tellBanner(ws)}
+    ${dayReadyBanner()}
     ${wk.auto && wk.suggested && !wk.published && !(S.ui&&S.ui.autoTipSeen)? `<div class="hnotice"><span><b>Weeksolved drafted this week when you opened it</b> \u2014 a starting point, nothing more. It is not posted, nobody has seen it, and Draft again gives you a different take.</span>
       <button class="btn sm" id="autotipok" style="flex:none">Got it</button></div>`:""}
     ${queueCard(null)}
@@ -10355,6 +10850,7 @@ return `<button class="wkcard ${state}" data-week="${w}">
           <div class="mini" style="margin-top:4px">${esc(LAWNOTE)}</div></div></div>`}
 
     ${recurCard(ws)}
+    ${adviceCard(true)}
 
     <div class="card"><header><h3>Hand it out</h3></header>
       <div class="body row">
@@ -10390,17 +10886,18 @@ on("#homesetup",()=>wizard());
 on("#reptipok",()=>{ S.ui=S.ui||{}; S.ui.repTip=true; save(); render(); });
 on("#a2hsshow",()=>a2hsModal());
 on("#opsee",()=>codesModal());
+on("#opsee2",()=>codesModal());
 on("#a2hsno",()=>{ S.ui=S.ui||{}; S.ui.a2hs="no"; save(); render();
 toast("Hidden. It is still under Help & FAQ if you change your mind"); });
 on("#autotipok",()=>{ S.ui=S.ui||{}; S.ui.autoTipSeen=true; save(); render(); });
 on("#updgo",()=>updModal());
 on("#hdraft",()=>draftModal());
 on("#hpost",()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
-repostGuard(ws, choice=>{ const wk=getWeek(); beginPost(ws, wk, choice); snapWeek(wk);
+postConfirm(ws, ()=>repostGuard(ws, choice=>{ const wk=getWeek(); beginPost(ws, wk, choice); snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true); save(); render();
 toast(postPending(wk)? "Going up in "+graceClock(postSecsLeft(wk))+" \u2014 take it back from the banner if that wasn\u2019t right"
 : "Posted and locked \u2014 nobody has been told yet");
-if(!postPending(wk)) repostNotify(ws, choice, changes); }); });
+if(!postPending(wk)) repostNotify(ws, choice, changes); })); });
 on("#hunpost",()=>unpostWeek(S.currentWeek, "Open for edits again"));
 on("#hlook",()=>go("week"));
 on("#hpdf",()=>{ const ws=S.currentWeek;
@@ -10876,6 +11373,18 @@ return f.length? esc(f.map(e=>e.name.split(" ")[0]+" — "+cycleLabel(e)).join("
 ? "On — a Vacations page runs a ranked survey and one fair draw for the season's time off"
 : "Off — longer time off is handled by hand under Team. Turn it on for a ranked survey where everyone asks at once and the fairest possible set gets granted.",
 `<select data-set="vacations.on"><option value="0" ${S.vacations.on?"":"selected"}>Off</option><option value="1" ${S.vacations.on?"selected":""}>On</option></select>`)}
+      ${setRow("Posting a schedule", S.rules.confirmPost!==false
+? "Asks first \u2014 one screen with the week, the shift count and anything still flagged, then Post."
+: "Posts straight away when you press the button.",
+`<select data-set="rules.confirmPost"><option value="1" ${S.rules.confirmPost!==false?"selected":""}>Ask first</option><option value="0" ${S.rules.confirmPost===false?"selected":""}>Don't ask</option></select>`)}
+      ${setRow("The day sheet, on its own", (S.daily&&S.daily.on)
+? "Goes out automatically "+((S.daily.lead==="prev")? "the evening before at " : "the morning of at ")+m2disp(t2m(S.daily.at||"06:00"))+" \u2014 "+(S.daily.mode==="all"? "the whole sheet to everyone" : "each person their own day")+", by "+(S.daily.how==="sms"?"text":"email")+". Only days inside a posted week."
+: "Handed out by hand from the Day sheet page (Hand out the day). Separate from the weekly schedule, so the week can go out a month ahead and the day the morning of.",
+`<select data-set="daily.on"><option value="0" ${!(S.daily&&S.daily.on)?"selected":""}>By hand, from the Day sheet</option><option value="1" ${(S.daily&&S.daily.on)?"selected":""}>Automatically, every posted day</option></select>`, "day")}
+      ${setRow("Sending from Weeksolved", S.rules.confirmSend!==false
+? "Asks first \u2014 who it goes to and what it says, then Send. Messages that open your own mail or text app already wait for you to press send there."
+: "Sends the moment you press the button.",
+`<select data-set="rules.confirmSend"><option value="1" ${S.rules.confirmSend!==false?"selected":""}>Ask first</option><option value="0" ${S.rules.confirmSend===false?"selected":""}>Don't ask</option></select>`)}
       ${setRow("Changing a posted schedule", S.rules.confirmRepost!==false
 ? "Asks before re-posting changes — with a choice to tell affected people, everyone, or no one"
 : "Re-posts silently. Turn the check on so nobody's plans change without them hearing about it.",
@@ -10998,7 +11507,7 @@ sel("rules.mealPlan", [["auto","Work them out for me"],["slots","Use the times I
 "rules") : ""}
       ${setRow("Rest breaks (the short paid ones)", "", sel("rules.restMode", [["self","Staff take them when they see fit"],["lengths","Say how many and how long"],["assigned","Put times on the schedule too"]], S.rules.restMode))}
       ${setRow("Stagger meals so the floor stays covered", "", sel("rules.staggerMeals", [[1,"Yes"],[0,"No"]], S.rules.staggerMeals?1:0))}
-      ${setRow("Allow meal waivers where the law permits", "", sel("rules.allowMealWaiver", [[1,"Yes"],[0,"No"]], S.rules.allowMealWaiver?1:0))}
+      ${waiverPossible()? setRow("Meal waivers", esc(waiverSummary()), sel("rules.mealWaiverMode", [["off","Not used"],["manual","Manager decides, shift by shift"],["auto","Automatic whenever the law allows"]], waiverMode()), "rules") : ""}
     </div></div>
 
     <div class="card"><header><h3>Where your schedule lives, and who can see it</h3></header>
@@ -11068,6 +11577,12 @@ sel("ui.advanced", [[0,"Keep it simple"],[1,"Show everything"]], advanced()?1:0)
 (((S.ui||{}).recurHidden && Object.keys(S.ui.recurHidden).length)? " "+Object.keys(S.ui.recurHidden).length+" hidden by you." : ""),
 sel("ui.recurOff", [[0,"On \u2014 point them out"],[1,"Off"]], (S.ui&&S.ui.recurOff)?1:0)+
 (((S.ui||{}).recurHidden && Object.keys(S.ui.recurHidden).length)? ` <button class="btn sm" id="recurunhide">Show the hidden ones again</button>`:""))}
+      ${setRow("Suggest improvements to the rules", (S.ui&&S.ui.adviceOff)
+? "Off \u2014 no second opinion on the settings"
+: "On \u2014 when a rule, the roster and the coverage do not add up, Home and Scheduling rules say so under Worth a look. Suggestions only; nothing is ever changed on its own."+
+(Object.keys(adviceHidden()).length? " "+Object.keys(adviceHidden()).length+" dismissed by you." : ""),
+sel("ui.adviceOff", [[0,"On \u2014 suggest"],[1,"Off"]], (S.ui&&S.ui.adviceOff)?1:0)+
+(Object.keys(adviceHidden()).length? ` <button class="btn sm" id="adviceunhide">Show the dismissed ones again</button>`:""))}
       ${setRow("Working with colleagues",
 "This copy saves to this browser alone. Hand a backup to a colleague and they can carry on with it, but two people can't edit the same board at once without a server behind it.", "")}
       ${setRow("Keep the record of changes for", ((S.audit||[]).length
@@ -11112,6 +11627,7 @@ return `<div class="card ${folded("setlinks")?"folded":""}">${foldHead("setlinks
   </div>`;
 }
 WIRE.settings = root=>{
+{ const au=root.querySelector("#adviceunhide"); if(au) au.onclick=()=>{ S.ui=S.ui||{}; S.ui.adviceHidden={}; save(); render(); toast("Every suggestion is listed again"); }; }
 { const ru=root.querySelector("#recurunhide"); if(ru) ru.onclick=()=>{ S.ui=S.ui||{}; S.ui.recurHidden={}; RECUR_CACHE=null; save(); render(); toast("Every repeat problem is listed again"); }; }
 { const pane=root.querySelector(".stack")||root;
 applySetGroup(pane);
@@ -11127,7 +11643,7 @@ const t=root.querySelector("#aptheme"); if(t) t.onchange=()=>applyTheme(t.value)
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","ui.recurOff","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
+const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","ui.recurOff","ui.adviceOff","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
 const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.maxSpanH","org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
@@ -11151,7 +11667,13 @@ try{ FB.db.doc("users/"+FB.user.uid+"/devices/"+deviceId()).set({ok:true, okAt:D
 toast("On \u2014 this device stays trusted; any new one confirms by email");
 }
 if(path==="org.jurisdiction") otFollowState(v);
+if(path.indexOf("daily.")===0) dailyCfg();
+if(path==="daily.on" && v===true && !S.daily.on){
+autoSendConfirm(()=>{ S.daily.on=true; save(); render(); toast("On \u2014 the day sheet goes out on its own from now on"); }, ()=>{ render(); });
+return;
+}
 setPath(S,path,v);
+if(path==="rules.mealWaiverMode") S.rules.allowMealWaiver = v!=="off";
 if(path==="rules.auditKeep") auditPrune();
 if(path.indexOf("rules.meal")===0 || path==="rules.breakMode" || path==="rules.restMode"
 || path==="rules.staggerMeals" || path==="rules.allowMealWaiver" || path==="org.jurisdiction")
@@ -11333,7 +11855,7 @@ const L=law();
 return `
   <div class="stack">
     <div class="card"><header><h3>Business</h3></header><div class="body grid2">
-      <div class="field"><label>Business or department name</label><input type="text" data-bind="org.name" value="${esc(S.org.name)}" placeholder="e.g. Riverside Pharmacy, or Outpatient Front Desk" data-rerender="no"></div>
+      <div class="field"><label>Business or department name</label><input type="text" data-bind="org.name" value="${esc(S.org.name)}" placeholder="${esc(bizEx().name)}" data-rerender="no"></div>
       <div class="field"><label>Location / site</label><input type="text" data-bind="org.site" value="${esc(S.org.site)}" placeholder="e.g. Main Campus, Suite 120" data-rerender="no"></div>
       <div class="field"><label>Week starts on</label><select data-bind="org.weekStart">
         ${DAYS.map((d,i)=>`<option value="${i}" ${S.org.weekStart===i?"selected":""}>${d}</option>`).join("")}</select></div>
@@ -11475,10 +11997,10 @@ const r = id? roleById(id) : {id:uid("r"),name:"",abbr:"",color:PALETTE[S.roles.
 modal(id?"Edit role":"New role", `
     <div class="stack">
       <div class="grid2">
-        <div class="field"><label>Role name</label><input type="text" id="rn" value="${esc(r.name)}" placeholder="Pharmacy Technician"></div>
+        <div class="field"><label>Role name</label><input type="text" id="rn" value="${esc(r.name)}" placeholder="${esc(bizEx().roles[1].replace(/^e\.g\. /,""))}"></div>
         <div class="field"><label>Short label</label><input type="text" id="ra" value="${esc(r.abbr||"")}" placeholder="Tech" maxlength="6"></div>
       </div>
-      <div class="field"><label>Requirement or note</label><input type="text" id="rnote" value="${esc(r.note||"")}" placeholder="State-registered technician"></div>
+      <div class="field"><label>Requirement or note</label><input type="text" id="rnote" value="${esc(r.note||"")}" placeholder="${esc(bizEx().roleNote)}"></div>
       <div class="field"><label>Color</label><div class="row" id="rcol">${PALETTE.map(c=>`<button class="btn sm" data-c="${c}" style="background:${c};border-color:${c};width:34px;height:26px;${r.color===c?"outline:2px solid var(--ink);outline-offset:2px":""}"></button>`).join("")}</div></div>
       <label class="switch"><input type="checkbox" id="rlic" ${r.licensed?"checked":""}> Requires an active license or certification</label>
     </div>`,
@@ -11532,7 +12054,7 @@ modal(id?"Edit shift":"New shift", `
         <div class="field"><label>Back at</label><input type="time" id="sgt" value="${esc(s.gapTo||"17:00")}"></div>
       </div>
       <div class="field"><label>Color</label><div class="row" id="scol">${PALETTE.map(c=>`<button class="btn sm" data-c="${c}" style="background:${c};border-color:${c};width:34px;height:26px;${s.color===c?"outline:2px solid var(--ink);outline-offset:2px":""}"></button>`).join("")}</div></div>
-      <div class="field"><label>Note on the schedule</label><input type="text" id="snote" value="${esc(s.note||"")}" placeholder="Opens the safe, runs the morning queue"></div>
+      <div class="field"><label>Note on the schedule</label><input type="text" id="snote" value="${esc(s.note||"")}" placeholder="${esc(bizEx().shiftNote)}"></div>
       <div class="field"><label>How people feel about this shift</label>
         <div class="seg" id="sdes">${[-2,-1,0,1,2].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(s.desire||0)===v}">${DESIRE_LABEL[v]}</button>`).join("")}</div>
         <span class="mini">Used by Shift priority to decide who gets first claim and who gets first refusal.</span></div>
@@ -11561,6 +12083,7 @@ root.querySelector("#brkprev").innerHTML = `<div>
 : ""}
           ${br.meals.length>1? "Second meal around "+m2disp(br.meals[1].start)+", latest "+m2disp(br.meals[1].deadline)+"." : ""}
           ${(()=>{const c=breakCliffs(a,b); return c? `<div style="margin-top:6px"><b>Close to a line:</b> ${esc(c)}</div>`:"";})()}
+          ${mealEdgeHtml(mealEdge(a,b,gg), "se")}
           ${(()=>{ const fx=(root.querySelector("#sflex")||{}).value;
 const lo=parseFloat((root.querySelector("#sflo")||{}).value)||0, hi=parseFloat((root.querySelector("#sfhi")||{}).value)||0;
 if(fx==="none"||!lo||!hi||hi<lo) return "";
@@ -11593,7 +12116,8 @@ paintFlex(); }
 { const sp=root.querySelector("#ssplit"), wrap=root.querySelector("#ssplitwrap");
 sp.onchange=()=>{ wrap.style.display=sp.checked?"":"none"; prev(); };
 root.querySelector("#sgf").oninput=prev; root.querySelector("#sgt").oninput=prev; }
-root.querySelector("#ss").oninput=prev; root.querySelector("#se").oninput=prev; prev();
+root.querySelector("#ss").oninput=prev; root.querySelector("#se").oninput=prev;
+const prev0=prev; const prevE=()=>{ prev0(); wireEdge(root, prevE); }; root.querySelector("#ss").oninput=prevE; root.querySelector("#se").oninput=prevE; prevE();
 let des = s.desire||0;
 root.querySelectorAll("#sdes button").forEach(b=>b.onclick=()=>{ des=+b.dataset.v;
 root.querySelectorAll("#sdes button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
@@ -11662,6 +12186,11 @@ const bar=`<div class="mono" style="font-size:12px">${fmtHrs(mins)}${over? ' <sp
 const notes=[];
 if(prefsBlank(e)) notes.push(`<span class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine — send the starter form if you would like their preferences.">nothing on file · open availability</span>`);
 if(e.onCall) notes.push(`<span class="mini">on call only</span>`);
+if(waiverPossible() && waiverMode()!=="off"){
+const w=empWaiver(e);
+if(w==="yes") notes.push(`<span class="chip acc"${whyAttrs(e.name.split(" ")[0]+" has a signed meal waiver on file, so on any shift short enough to waive under "+law().name+" rules the meal is left off and the shift stays short. Change it on their profile.", "emp:"+e.id)}>meal waiver on file</span>`);
+else if(w==="no") notes.push(`<span class="chip"${whyAttrs(e.name.split(" ")[0]+" has not signed a meal waiver, so their meal is always scheduled even when the board waives others. Change it on their profile once a form is signed.", "emp:"+e.id)}>never waives meals</span>`);
+}
 { const bl=ptoBalance(e); if(bl!==null) notes.push(`<span class="chip ${bl<0?"crit":""}"${bl<0? whyAttrs(e.name.split(" ")[0]+" has taken "+Math.abs(bl)+"h more time off than they have accrued. Adjust the balance or the accrual on their profile.", "emp:"+e.id):""}>${bl}h PTO</span>`); }
 { const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
 if(n) notes.push(`<span class="chip warn"${whyAttrs(n+" callout"+(n===1?"":"s")+" or no-show"+(n===1?"":"s")+" logged in the last 90 days"+(hn? " ("+hn+")":"")+". Logged from the shift itself, under Called out. It is a record for you, not a penalty — nothing in the drafter changes because of it.", "emp:"+e.id)}>${n} callout${n===1?"":"s"} / 90d</span>`); }
@@ -11711,6 +12240,7 @@ return n? `<span class="chip" title="They can still be scheduled \u2014 nothing 
 staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places used":""}</span>
         ${otLedgerOn() && S.employees.length? `<button class="btn sm" id="otoffer">Offer overtime</button>`:""}
         ${apartOn()? `<span class="chip" title="Set on each person\u2019s file. Private to you \u2014 never printed, sent or exported.">${(S.apart||[]).length} pair${(S.apart||[]).length===1?"":"s"} kept apart</span>`:""}
+        ${waiverPossible() && S.employees.length? `<span class="chip ${waiverMode()==="auto"?"acc":""} chipbtn"${whyAttrs("Meal waivers: "+waiverSummary()+". The board setting lives under Scheduling rules; each person can stand apart from it on their profile — always (a signed waiver is on file) or never (not signed). A waived meal keeps a short shift short; the signature stays on paper with you.", "go:rules")}>meal waivers: ${waiverMode()==="auto"?"automatic":waiverMode()==="manual"?"as needed":"off"}${(()=>{const c=waiverCounts(); return (c.yes||c.no)? " \u00b7 "+[c.yes? c.yes+" always":"", c.no? c.no+" never":""].filter(Boolean).join(", ") : "";})()}</span>`:""}
         ${S.employees.length? `<button class="btn sm" id="histadd">Add past time off, callouts or requests</button>`:""}
         ${S.employees.length>1? `<button class="btn sm" id="bulkpat">Put several on a layout</button>`:""}
         <button class="btn sm" id="addtoff">Take someone off for a stretch</button>
@@ -11843,7 +12373,7 @@ modal(id?"Edit "+g.name:"New staff group", `
       ${id? "" : `<div class="field"><label>Start from a common one</label><select id="gpre">
         ${GROUP_PRESETS.map(x=>`<option value="${x.id}">${esc(x.t)}</option>`).join("")}</select>
         <span class="mini">Fills the name and the limits below — change anything you like.</span></div>`}
-      <div class="field"><label>Name it</label><input type="text" id="gn" value="${esc(g.name)}" placeholder="Part-timers"></div>
+      <div class="field"><label>Name it</label><input type="text" id="gn" value="${esc(g.name)}" placeholder="${esc(bizEx().group.replace(/^e\.g\. /,""))}"></div>
       <div class="sep"></div>
       <div class="lab">Who's in it</div>
       <div class="field"><label>Applies to</label><select id="gscope">
@@ -12350,6 +12880,11 @@ modal(id?"Edit "+e.name:"Add someone", `
         <option value="0" ${e.onCall?"":"selected"}>Scheduled as normal</option>
         <option value="1" ${e.onCall?"selected":""}>Only called in when there's a gap</option></select>
         <span class="mini">On-call people are never given a shift by the draft — they're offered as a fix when something can't be covered.</span></div>
+      ${waiverPossible()? `<div class="field"><label>Meal waiver</label><select id="ewv">
+        <option value="default" ${empWaiver(e)==="default"?"selected":""}>Follow the board setting (${esc(WAIVER_WORDS[waiverMode()].toLowerCase())})</option>
+        <option value="yes" ${empWaiver(e)==="yes"?"selected":""}>Signed a waiver — waive their meal whenever the law allows</option>
+        <option value="no" ${empWaiver(e)==="no"?"selected":""}>Has not signed — never waive their meal</option></select>
+        <span class="mini">Only matters on shifts short enough to waive under ${esc(law().name)} rules. The signed form stays with you; this just tells the drafter what it may do.</span></div>`:""}
       ${S.rules.fillMode==="full"? `<div class="field"><label>${esc(S.rules.topUpLabel||"Project time")}</label><select id="epj">
         <option value="first" ${projectOk(e)==="first"?"selected":""}>First in line for it</option>
         <option value="yes" ${projectOk(e)==="yes"?"selected":""}>Takes their turn like everyone else</option>
@@ -12646,6 +13181,7 @@ email:root.querySelector("#eem").value.trim(), phone:root.querySelector("#eph").
 roleIds:[...root.querySelectorAll("#eroles input:checked")].map(x=>x.dataset.r),
 type:root.querySelector("#et").value,
 onCall:root.querySelector("#eoc").value==="1",
+mealWaiver:(root.querySelector("#ewv")||{}).value||empWaiver(e),
 projectOk:(root.querySelector("#epj")||{}).value || projectOk(e),
 cycle:(function(){
 const c=root.querySelector("#ecyc"); if(!c) return e.cycle||null;
@@ -13156,6 +13692,7 @@ const mode=(name,key,opts)=>`<div class="field"><label>${name}</label><div class
     <span class="mini">${opts.find(o=>o[0]===R[key])?opts.find(o=>o[0]===R[key])[2]:""}</span></div>`;
 return `
   <div class="stack">
+    ${adviceCard(false)}
     <div class="card"><header><h3>Meals and rest breaks</h3><span class="hint">${esc(L.name)} rules decide what is owed. You decide who picks the clock time.</span></header>
       <div class="body stack">
         ${mode("Meal periods","breakMode",[
@@ -13224,8 +13761,15 @@ return `
             <option value="240" ${(+R.mealEarliestMin)===240?"selected":""}>Not before 4 hours in</option>
           </select>
           <span class="mini">Some agreements set a floor as well as a deadline &mdash; "no less than three hours and no more than five hours before a meal" is in more than one union contract. The legal deadline still applies on top.</span></div>
-        <label class="switch"><input type="checkbox" data-bind="rules.allowMealWaiver" ${R.allowMealWaiver?"checked":""}> Allow meal waivers where the law permits them${L.meal&&L.meal.waivableIfShiftUnderMin?` (shifts under ${fmtHrs(L.meal.waivableIfShiftUnderMin)})`:""}</label>
-        ${L.meal? `<div class="help">A waiver has to be voluntary and in writing. Weeksolved marks the shift, it does not collect the signature.</div>`:""}
+        ${waiverPossible()? `<div class="field"><label>Meal waivers${L.meal.waivableIfShiftUnderMin?` <span class="mini">(allowed on shifts of ${fmtHrs(L.meal.waivableIfShiftUnderMin)} or less under ${esc(L.name)} rules)</span>`:""}</label>
+          <select data-bind="rules.mealWaiverMode">
+            <option value="off" ${waiverMode()==="off"?"selected":""}>Not used — every meal goes on the schedule</option>
+            <option value="manual" ${waiverMode()==="manual"?"selected":""}>Manager decides — waive a meal shift by shift when it helps</option>
+            <option value="auto" ${waiverMode()==="auto"?"selected":""}>Automatic — waive every meal the law allows, so short shifts stay short</option>
+          </select>
+          <span class="mini">${esc(waiverSummary())}</span></div>
+        <div class="help">A waiver has to be voluntary and in writing. Weeksolved marks the shift; it does not collect the signature. Anyone who has not signed can be set to <b>never waive</b> on their Team profile, and anyone who has can be set to <b>always</b> — that stands whatever the board setting is.</div>`
+: `<div class="help">Under ${esc(L.name)} rules a meal period cannot be waived, so there is nothing to switch on here.</div>`}
       </div></div>
 
     <div class="card"><header><h3>Between shifts</h3></header><div class="body grid3">
@@ -13530,12 +14074,12 @@ if(rg) rg.onclick=()=>redoModal(S.currentWeek);
 const wsh=root.querySelector("#wshape"); if(wsh) wsh.onclick=()=>weekPatternModal(S.currentWeek);
 const wp=root.querySelector("#wpost");
 if(wp) wp.onclick=()=>{ const ws=S.currentWeek, changes=weekDiff(ws);
-repostGuard(ws, choice=>{ const wk=getWeek(); beginPost(ws, wk, choice); snapWeek(wk);
+postConfirm(ws, ()=>repostGuard(ws, choice=>{ const wk=getWeek(); beginPost(ws, wk, choice); snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true); save(); render();
  
 if(postPending(wk)) toast("Going up in "+graceClock(postSecsLeft(wk))+" \u2014 nothing has been sent; take it back from the banner if that wasn\u2019t right");
 else if(choice){ toast("Posted and locked"); repostNotify(ws, choice, changes); }
-else { toast("Posted and locked — now hand it out"); setTimeout(()=>handOutModal(S.currentWeek), 350); } }); };
+else { toast("Posted and locked — now hand it out"); setTimeout(()=>handOutModal(S.currentWeek), 350); } })); };
 const wsend=root.querySelector("#wsend"); if(wsend) wsend.onclick=()=>sendModal(S.currentWeek);
 { const wl=root.querySelector("#wlater"); if(wl) wl.onclick=()=>scheduleModal("post", S.currentWeek);
 const sl=root.querySelector("#wsendlater"); if(sl) sl.onclick=()=>scheduleModal("send", S.currentWeek); }
@@ -13661,7 +14205,7 @@ return `<div class="mini">${f.end
 r=>{
 const paint=()=>{
 const s=t2m(r.querySelector("#as").value); let en=t2m(r.querySelector("#ae").value); if(en<=s)en+=1440;
-const bb=computeBreaks(s,en);
+const bb=computeBreaks(s,en,{emp:empById((r.querySelector("#am")||{}).value||a.empId), waive:a.waive});
 r.querySelector("#brklist").innerHTML = (bb.owed.meals||bb.owed.rests)? `
           <div class="stack" style="gap:7px">
             ${bb.meals.map((m,i)=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:7px 10px">
@@ -13675,10 +14219,13 @@ r.querySelector("#brklist").innerHTML = (bb.owed.meals||bb.owed.rests)? `
           </div>`
 : `<div class="mini">This shift is short enough that no meal or rest break is owed.</div>`;
 const cl=breakCliffs(s,en);
-r.querySelector("#brkcliff").innerHTML = cl? `<div><b>Close to a line:</b> ${esc(cl)}</div>` : "";
-r.querySelector("#brkcliff").style.display = cl? "":"none";
+const edge=mealEdge(s,en,aGap(a),empById((r.querySelector("#am")||{}).value||a.empId));
+r.querySelector("#brkcliff").innerHTML = (cl? `<div><b>Close to a line:</b> ${esc(cl)}</div>` : "") + mealEdgeHtml(edge, "ae");
+r.querySelector("#brkcliff").style.display = (cl||edge)? "":"none";
+wireEdge(r, paint);
 };
 r.querySelector("#as").oninput=paint; r.querySelector("#ae").oninput=paint; paint();
+{ const am=r.querySelector("#am"); if(am) am.addEventListener("change", paint); }
 const logOut=(kind)=>{
 S.callouts=S.callouts||[];
 S.callouts.push({id:uid("co"), empId:a.empId, date:a.date, shiftId:a.shiftId, kind, at:Date.now()});
@@ -13712,7 +14259,7 @@ r.querySelectorAll(".bm").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.mea
 while(v < a.startMin) v+=1440;
 a.breaks.meals[i].start=v; }
 a.breaks.meals[i].end=a.breaks.meals[i].start+a.breaks.meals[i].len; a.breaks.meals[i].late=a.breaks.meals[i].start>a.breaks.meals[i].deadline; } });
-r.querySelectorAll(".bw").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]) a.breaks.meals[i].waived=inp.checked; });
+r.querySelectorAll(".bw").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]){ a.waive=Object.assign({}, a.waive||{}, {[i+1]:inp.checked}); a.breaks.meals[i].waived=inp.checked; } });
 closeModal(); headsUp(()=>{ save(); render(); }, "Saved");
 };
 r.querySelector("#adel").onclick=()=>{ wk.assignments=wk.assignments.filter(x=>x.id!==aid); save(); closeModal(); render(); };
@@ -14002,10 +14549,10 @@ exportWeekPDF().then(ok=>{ const wk=peekWeek(ws); if(ok&&wk&&wk.published&&!post
 .catch(()=>pdfUnavailable()); });
 on("#wkdup",()=>{ closeModal(); duplicateWeekModal(ws); });
 on("#wkpost",()=>{ const changes=weekDiff(ws); closeModal(true);
-repostGuard(ws, choice=>{ const w=getWeek(ws); beginPost(ws, w, choice); snapWeek(w);
+postConfirm(ws, ()=>repostGuard(ws, choice=>{ const w=getWeek(ws); beginPost(ws, w, choice); snapWeek(w);
 w.assignments.forEach(a=>a.locked=true); save(); render();
 if(postPending(w)) toast("Going up in "+graceClock(postSecsLeft(w))+" \u2014 nothing has been sent yet");
-else { toast("Posted"); repostNotify(ws, choice, changes); } }); });
+else { toast("Posted"); repostNotify(ws, choice, changes); } })); });
 on("#wkunpost",()=>{ closeModal(true); unpostWeek(ws, "Unposted — open for edits"); });
 on("#wkclear",()=>{
 const w=getWeek(ws); w.assignments=[]; w.unfilled=[]; w.touched=true; w.suggested=false; w.auto=false;
@@ -14087,13 +14634,15 @@ esc(spanTxt(gapPts.length*STEP))} ${gapPts.every(p=>!p.staff)? "with nobody on":
 :`<span class="chip ok">coverage holds all day</span>`}
         ${(()=>{const c=lunchClosure(dow, date); return c? `<span class="chip">doors shut ${m2disp(c.from)}–${m2disp(c.to)}</span>`:"";})()}
         ${(S.stations||[]).length? `<button class="btn" id="dayrot">Rotate stations</button>`:`<button class="btn ghost" data-go="stations">Set up stations</button>`}
+        <button class="btn" id="dayredo" title="Lay out posts, meals and rest breaks again for this day only. Who works stays exactly as it is.">Redo the day sheet</button>
         <button class="btn" id="dayprint">Print\u2026</button>
         <button class="btn" id="daypdf">PDF</button>
+        <button class="btn primary" id="dayout">Hand out the day\u2026</button>
       </div>
     </div>
     <div class="body" style="padding:8px 14px;border-top:1px solid var(--line)">
       <input type="text" id="dnote" data-rerender="no" value="${esc((wk.dayNotes||{})[date]||"")}"
-        placeholder="Note for the day — truck at 7am, inspection, flu-shot clinic… shows on the printed sheet and in what you send" style="border:0;background:transparent;width:100%;padding:4px 0">
+        placeholder="Note for the day — ${esc(bizEx().dayNote)}, inspection, a visit… shows on the printed sheet and in what you send" style="border:0;background:transparent;width:100%;padding:4px 0">
     </div></div>
 
     ${!list.length? `<div class="empty card" style="padding:40px"><strong>Nobody scheduled ${DSHORT[dow]}</strong>Draft the week from This week.</div>` : `
@@ -14442,7 +14991,8 @@ save(); render();
 function waiveMeal(ws, a, mi){
 const meals=(a.breaks||{}).meals||[]; const m=meals[mi]; if(!m) return false;
 if(mi>0 && meals[0].waived){ toast("The first meal is already waived, so the second one cannot be"); return false; }
-m.waived=true; a.locked=true;
+a.waive=Object.assign({}, a.waive||{}, {[mi+1]:true});
+a.locked=true; applyBreaks(a);
 save(); render();
 return true;
 }
@@ -14654,7 +15204,7 @@ now("Move the meal to "+m2disp(m.deadline), "The latest legal start. Locks the s
 if(x && (v.sub==="missing"||v.sub==="rests"))
 now("Place the breaks again", "Works them out from the shift as it is now.", ()=>{ applyBreaks(x); save(); render(); toast("Breaks placed again"); }, true);
 if(x && v.sub==="waiver" && m)
-now("Take the waiver off", "The meal goes back on the schedule at a legal time.", ()=>{ m.waived=false; applyBreaks(x); save(); render(); toast("Meal restored"); }, true);
+now("Take the waiver off", "The meal goes back on the schedule at a legal time.", ()=>{ x.waive=Object.assign({}, x.waive||{}, {[(v.mi||0)+1]:false}); applyBreaks(x); save(); render(); toast("Meal restored"); }, true);
 if(x) editShift(x, "Set "+ownerOf(x)+"’s meal times by hand", "Every meal shows its latest legal start.");
 dayLink();
 later("Change how meals are handled", "Timed on the schedule, lengths only, or staff-timed — under Scheduling rules.", ()=>go("rules"));
@@ -14886,6 +15436,98 @@ const m=root.querySelector("#recurmute"); if(m) m.onclick=()=>{ S.ui=S.ui||{}; S
 });
 }
  
+ 
+function adviceHidden(){ return ((S.ui||{}).adviceHidden)||{}; }
+function ruleAdvice(){
+const A=[]; const R=S.rules||{}; const L=law(); const act=(S.employees||[]).filter(e=>e.active);
+const add=(id,title,why,go,sev)=>A.push({id,title,why,go,sev:sev||"note"});
+ 
+if(R.minRestH!==undefined && +R.minRestH<8)
+add("rest8","Rest between shifts is set to "+R.minRestH+" hours",
+"Most workplaces hold to at least 8, and a few states and many union agreements require 10 or more. A short gap is legal in most places, but it is where fatigue complaints and clopening grumbles start. If "+R.minRestH+" is deliberate, ignore this.", "rules");
+if((union().on && union().restH) && +R.minRestH < +union().restH)
+add("restunion","Your agreement says "+union().restH+" hours between shifts, the rule says "+R.minRestH,
+"The drafter follows the rule on this page, so it can place shifts closer together than the agreement allows and the union check will flag them afterwards. Raising the rule to "+union().restH+" stops that before it happens.", "rules","warn");
+ 
+if(+R.maxConsecDays>6)
+add("consec","Up to "+R.maxConsecDays+" days in a row is allowed",
+(S.org.jurisdiction==="CA"? "California pays a premium for the seventh day worked in a workweek, and " : "")+"a week without a day off is the most common thing staff push back on. Six keeps a day off in every week; if long runs are normal in your line of work, leave it.", "rules");
+ 
+if(+R.maxShiftH>12)
+add("longshift","Shifts may run up to "+R.maxShiftH+" hours",
+"Past twelve hours "+(L.meal&&L.meal.second? "a second meal period is owed and ":"")+"overtime and fatigue both climb. Nothing here is illegal on its own; it is worth a second look if you did not mean it.", "rules");
+ 
+(S.shifts||[]).forEach(sh=>{
+if(+R.maxShiftH && shiftSpan(sh)/60 > +R.maxShiftH+0.01)
+add("pool:"+sh.id, "“"+sh.label+"” is "+fmtHrs(shiftSpan(sh))+", longer than the "+R.maxShiftH+"-hour limit",
+"The drafter will never place it, so any coverage that asks for it stays open every week. Shorten the shift, raise the limit, or take it out of the coverage needs.", "shifts","warn");
+});
+ 
+try{
+const dem=S.demand||{}; let need=0;
+Object.keys(dem).forEach(d=>{ if((S.hours[d]||{}).closed) return; (dem[d]||[]).forEach(row=>{ const sh=shiftById(row.shiftId); if(sh) need+=shiftSpan(sh)*(row.count||1); }); });
+const give=act.filter(e=>!e.onCall).reduce((t,e)=>t+((e.maxH||0)*60),0);
+if(need && give && need>give*1.05)
+add("capacity","Coverage asks for about "+fmtHrs(need)+" a week; the team’s caps add up to "+fmtHrs(give),
+"Even with everyone at their cap there are "+fmtHrs(need-give)+" nobody can work, so some shifts will sit open or run into overtime every week. Add a person, raise a few caps, or trim the coverage needs.", "demand","warn");
+if(need && give && need<give*0.5 && act.length>2)
+add("slack","The team can give about "+fmtHrs(give)+" a week, coverage only asks for "+fmtHrs(need),
+"People with guaranteed hours will come up short and the under-guarantee flag will show. If that is the quiet season, fine; otherwise either the coverage needs are light or the caps are generous.", "demand");
+}catch(e){}
+ 
+(S.coverage||[]).forEach(c=>{
+if(c.kind && c.kind!=="min") return;
+const holders = c.roleId? act.filter(e=>(e.roleIds||[]).includes(c.roleId)).length : act.length;
+if(c.min && holders < c.min)
+add("cov:"+c.id, "“"+(c.label||"Coverage rule")+"” wants "+c.min+" "+(c.roleId? roleName(c.roleId)+"s":"people")+" on at once, and the roster has "+holders,
+"No draft can satisfy it, so it will be flagged every week it applies. Lower the minimum, add someone with that role, or retire the rule.", "demand","warn");
+});
+ 
+for(let d=0; d<7; d++){
+if((S.hours[d]||{}).closed) continue;
+const anyone = act.some(e=>!e.onCall && e.avail && e.avail[d] && e.avail[d].ok);
+if(act.length && !anyone) add("day:"+d, "You are open on "+DAYS[d]+"s but nobody is available that day",
+"Every "+DAYS[d]+" will draft empty. Check the availability on a few profiles, or close that day if it is not really open.", "team","warn");
+}
+ 
+act.forEach(e=>{
+if(e.hoursMode!=="exact" && e.minH && e.maxH && +e.minH > +e.maxH)
+add("emp:"+e.id, e.name+" is guaranteed "+e.minH+"h but capped at "+e.maxH+"h", "The two cannot both hold, so one flag or the other shows every week. Set the guarantee at or below the cap.", "team","warn");
+if(!e.onCall && e.maxH===0 && e.hoursMode!=="exact")
+add("cap0:"+e.id, e.name+" has a cap of 0 hours", "The drafter treats that as no limit, which is usually not what a zero means. Put in a real cap, or set them to on call only.", "team");
+});
+ 
+if(waiverPossible() && waiverMode()==="manual" && L.meal && L.meal.waivableIfShiftUnderMin){
+const lim=L.meal.waivableIfShiftUnderMin, lo=L.meal.firstAfterMin;
+const short=(S.shifts||[]).filter(sh=>{ const m=shiftSpan(sh); return m>=lo && m<=lim; }).length;
+if(short>=2) add("waiverauto", short+" of your shifts are short enough to waive the meal",
+"With waivers set to manager decides, each one is marked by hand. Automatic waives them as they are drafted, so a six-hour shift stays six hours. Only worth it if your people sign the waiver form; anyone who has not can be set to never on their profile.", "rules");
+}
+ 
+if(R.advanceNoticeDays && R.advanceNoticeDays<7 && fwwOn())
+add("notice","Advance notice is set to "+R.advanceNoticeDays+" days in a Fair Workweek city",
+"The local law expects the schedule up two weeks ahead. The check will flag short notice; setting the rule to 14 makes the drafter work to it.", "rules","warn");
+return A.filter(a=>!adviceHidden()[a.id]);
+}
+function adviceCard(compact){
+if(S.ui && S.ui.adviceOff) return "";
+const A=ruleAdvice(); if(!A.length) return "";
+const show=compact? A.slice(0,3) : A;
+return `<div class="card advice"><header><h3>Worth a look</h3><span class="hint">A second opinion on the settings — suggestions only, nothing is changed</span>
+      ${compact&&A.length>3? `<button class="btn sm" data-go="rules">All ${A.length}</button>`:""}</header>
+    <div class="stack" style="gap:7px;padding:12px 16px">
+      ${show.map(a=>`<div class="look"><span class="sv ${a.sev==="warn"?"warn":"ok"}"></span>
+        <div style="flex:1;min-width:0"><strong>${esc(a.title)}</strong><div class="mini">${esc(a.why)}</div></div>
+        <div class="row" style="gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end">${a.go&&a.go!==VIEW? `<button class="btn sm" data-go="${a.go}">Have a look</button>`:""}<button class="btn sm ghost" data-advhide="${esc(a.id)}" title="Hide this suggestion for good">Dismiss</button></div></div>`).join("")}
+      ${compact? "" : `<div class="mini">Dismissed suggestions come back under Settings → This board.</div>`}
+    </div></div>`;
+}
+function wireAdvice(root){
+root.querySelectorAll("[data-advhide]").forEach(b=>b.onclick=()=>{
+S.ui=S.ui||{}; S.ui.adviceHidden=Object.assign({}, S.ui.adviceHidden||{}, {[b.dataset.advhide]:true});
+save(); render(); toast("Hidden — bring it back under Settings if you change your mind");
+});
+}
 function recurCard(ws){
 if(S.ui && S.ui.recurOff) return "";
 const R=recurringProblems(ws); if(!R.length) return "";
@@ -14977,6 +15619,8 @@ if(seg) seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.dat
 const rot=root.querySelector("#dayrot");
 if(rot) rot.onclick=()=>{ const e=weekDates().find(d=>d.dow===DAYVIEW)||weekDates()[0];
 clearAdmin(e.date); assignStations(e.date); save(); render(); toast("Stations handed out again"); };
+{ const rd=root.querySelector("#dayredo"); if(rd) rd.onclick=()=>{ const e=weekDates().find(d=>d.dow===DAYVIEW)||weekDates()[0]; redoDaySheet(e.date); }; }
+{ const dh=root.querySelector("#dayout"); if(dh) dh.onclick=()=>{ const e=weekDates().find(d=>d.dow===DAYVIEW)||weekDates()[0]; dayHandOutModal(e.date); }; }
 const jg=root.querySelector("#dayjumpgap");
 if(jg) jg.onclick=()=>{ const c=root.querySelector("#daydips");
 if(c) c.scrollIntoView({behavior:"smooth", block:"center"}); };
@@ -15860,6 +16504,37 @@ const q="?bcc="+encodeURIComponent(to.join(","))+
 window.open("mailto:"+q);
 return {sent:to.length, failed:[], via:"client"};
 }
+ 
+if(trialLimited()){
+const mk=new Date().toISOString().slice(0,7);
+S.mail.sent=S.mail.sent||{}; const used=S.mail.sent[mk]||0;
+if(used+to.length > TRIAL_SENDS_PER_MONTH){
+toast("The free trial covers "+TRIAL_SENDS_PER_MONTH+" emails a month from Weeksolved \u2014 "+used+" used. Opening your own mail app instead.");
+const q="?bcc="+encodeURIComponent(to.join(","))+"&subject="+encodeURIComponent(msg.subject||"")+"&body="+encodeURIComponent(msg.body||"");
+window.open("mailto:"+q);
+return {sent:to.length, failed:[], via:"client"};
+}
+S.mail.sent[mk]=used+to.length;
+}
+ 
+if(S.rules.confirmSend!==false && !msg.confirmed){
+const ok = await new Promise(res=>{
+const names=to.map(x=>{ const e=(S.employees||[]).find(p=>String(p.email||"").trim().toLowerCase()===String(x).toLowerCase()); return e? e.name : x; });
+modal("Send this to "+to.length+" "+(to.length===1?"person":"people")+"?", `
+        <div class="stack">
+          <div class="help"><b>To:</b> ${esc(names.slice(0,12).join(", "))}${names.length>12? " and "+(names.length-12)+" more":""}</div>
+          <div class="field"><label>Subject</label><div class="mini" style="font-size:13px">${esc(msg.subject||"")}</div></div>
+          <div class="field"><label>Message</label><pre class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;font:inherit">${esc(String(msg.body||"").slice(0,1200))}${String(msg.body||"").length>1200? "\u2026":""}</pre></div>
+        </div>`,
+`<button class="btn" data-close>Cancel</button><button class="btn primary" id="sndgo">Send</button>`,
+r=>{ let done=false; const box=r.querySelector(".modal");
+r.querySelector("#sndgo").onclick=()=>{ done=true; closeModal(true); res(true); };
+ 
+const obs=new MutationObserver(()=>{ if(!done && !r.contains(box)){ obs.disconnect(); res(false); } });
+obs.observe(r,{childList:true}); });
+});
+if(!ok) return {sent:0, failed:[], via:"cancelled", why:"you cancelled it"};
+}
 let token="";
 try{ token = FB && FB.user? await FB.user.getIdToken() : ""; }catch(e){}
 try{
@@ -15907,6 +16582,7 @@ async function mailOutAndSay(msg, whatItWas){
 const r=await mailOut(msg);
 if(r.via==="client"){ toast("Your mail app is opening with it written"); return r; }
 if(r.via==="none"){ toast("Nobody on that list has an email address"); return r; }
+if(r.via==="cancelled"){ toast("Nothing sent"); return r; }
 if(r.sent && !r.failed.length){
 logIt("send", whatItWas+" emailed to "+r.sent+" "+(r.sent===1?"person":"people"));
 save(); toast("Sent to "+r.sent+" "+(r.sent===1?"person":"people"));
@@ -16351,6 +17027,32 @@ saveFile("day-sheet-"+entry.date+".html", html);
 
  
  
+ 
+const BIZ_EX={
+retail:   {name:"e.g. Maple Street Books, or Downtown store", roles:["e.g. Sales associate","e.g. Shift lead","e.g. Cashier","e.g. Stockroom"], roleProse:"Sales associate, Shift lead, Cashier", lic:"e.g. Forklift certificate", roleNote:"Handles returns and the safe",
+posts:["Register 1","Register 2","Fitting rooms","Floor","Stockroom"], postProse:"the registers, the fitting rooms, the floor", shiftNote:"Opens the tills, sets the displays", rush:"Shops rush the days before a closure and the sale morning after.", station:"e.g. Register 1", group:"e.g. Weekend crew", dayNote:"Delivery due 10a", holiday:"Thanksgiving"},
+food:     {name:"e.g. The Corner Bistro, or Harbor Grill", roles:["e.g. Server","e.g. Cook","e.g. Host","e.g. Busser"], roleProse:"Server, Cook, Host, Busser, Bartender", lic:"e.g. Food handler card", roleNote:"ServSafe certified",
+posts:["Grill","Sauté","Pass","Host stand","Section 1","Section 2","Bar"], postProse:"the grill, the pass, the host stand, the bar", shiftNote:"Preps the line, checks the walk-in", rush:"Restaurants rush the evening before a holiday and brunch the day after.", station:"e.g. Section 1", group:"e.g. Back of house", dayNote:"Private party 7p, 20 covers", holiday:"Mother\u2019s Day"},
+clinic:   {name:"e.g. Riverside Family Clinic, or Outpatient Front Desk", roles:["e.g. Provider","e.g. Medical assistant","e.g. Front desk","e.g. Nurse"], roleProse:"Provider, Medical assistant, Front desk, Nurse", lic:"e.g. RN license", roleNote:"BLS current",
+posts:["Room 1","Room 2","Room 3","Triage","Front desk","Lab"], postProse:"the exam rooms, triage, the front desk, the lab", shiftNote:"Opens the rooms, runs the morning huddle", rush:"Clinics rush the day before a long weekend and the Monday after.", station:"e.g. Room 1", group:"e.g. Nursing staff", dayNote:"Vaccine clinic 1\u20134p", holiday:"Christmas Day"},
+pharmacy: {name:"e.g. Riverside Pharmacy, or Outpatient Pharmacy", roles:["e.g. Pharmacist","e.g. Technician","e.g. Front counter","e.g. Clerk"], roleProse:"Pharmacist, Technician, Front counter", lic:"e.g. Pharmacy Technician", roleNote:"State-registered technician",
+posts:["Typist 1","Typist 2","Checker 1","Checker 2","Front counter","Drive-through"], postProse:"the typing window, the checking bench, the front counter", shiftNote:"Opens the safe, runs the morning queue", rush:"Pharmacies often rush the day before a closure and the morning after.", station:"e.g. Typist 1", group:"e.g. Part-timers", dayNote:"Order due 3p", holiday:"Christmas Day"},
+warehouse:{name:"e.g. Northgate Fulfillment, or Dock B", roles:["e.g. Picker","e.g. Forklift operator","e.g. Supervisor","e.g. Packer"], roleProse:"Picker, Forklift operator, Supervisor, Packer", lic:"e.g. Forklift certification", roleNote:"OSHA forklift card",
+posts:["Dock 1","Dock 2","Pick line A","Pick line B","Packing","Returns"], postProse:"the docks, the pick lines, packing", shiftNote:"Runs the start-of-shift safety brief", rush:"Warehouses rush the week before a holiday and the returns wave after.", station:"e.g. Dock 1", group:"e.g. Night crew", dayNote:"Truck at 6a", holiday:"Thanksgiving"},
+support:  {name:"e.g. Helpdesk Tier 1, or Customer Care", roles:["e.g. Agent","e.g. Team lead","e.g. Escalations","e.g. Trainee"], roleProse:"Agent, Team lead, Escalations", lic:"e.g. Product certification", roleNote:"Cleared for billing calls",
+posts:["Phones","Chat","Email queue","Escalations","Floor walker"], postProse:"phones, chat, the email queue, floor walking", shiftNote:"Opens the queues, checks overnight tickets", rush:"Support queues spike the morning after a holiday and after any outage.", station:"e.g. Phones", group:"e.g. Weekend line", dayNote:"Release day \u2014 expect volume", holiday:"New Year\u2019s Day"},
+salon:    {name:"e.g. Studio 9 Hair, or Willow Spa", roles:["e.g. Stylist","e.g. Assistant","e.g. Front desk","e.g. Esthetician"], roleProse:"Stylist, Assistant, Front desk, Esthetician", lic:"e.g. Cosmetology license", roleNote:"Color-certified",
+posts:["Chair 1","Chair 2","Chair 3","Shampoo","Front desk","Treatment room"], postProse:"the chairs, the shampoo bowls, the front desk", shiftNote:"Opens the books, sets up stations", rush:"Salons rush the days before a holiday weekend and prom season.", station:"e.g. Chair 1", group:"e.g. Stylists", dayNote:"Bridal party 9a", holiday:"Valentine\u2019s Day"},
+hotel:    {name:"e.g. The Harbor Inn, or Front Office", roles:["e.g. Front desk","e.g. Housekeeping","e.g. Maintenance","e.g. Night audit"], roleProse:"Front desk, Housekeeping, Maintenance, Night audit", lic:"e.g. Pool operator certificate", roleNote:"Trained on the property system",
+posts:["Front desk","Bell stand","Floor 2","Floor 3","Laundry","Pool"], postProse:"the front desk, the bell stand, the floors, laundry", shiftNote:"Runs the morning checkout rush", rush:"Hotels rush check-in the day before a holiday and checkout the morning after.", station:"e.g. Front desk", group:"e.g. Housekeeping", dayNote:"Wedding block checking in 3p", holiday:"Labor Day"},
+security: {name:"e.g. Westside Patrol, or Building 4 Security", roles:["e.g. Officer","e.g. Supervisor","e.g. Dispatcher","e.g. Rover"], roleProse:"Officer, Supervisor, Dispatcher", lic:"e.g. Guard card", roleNote:"Armed-qualified",
+posts:["Lobby","Loading dock","Patrol 1","Patrol 2","Control room","Gate"], postProse:"the lobby, the dock, the patrols, the control room", shiftNote:"Takes the handover log, walks the perimeter", rush:"Security posts rarely change around holidays; pick No change unless yours do.", station:"e.g. Lobby", group:"e.g. Night watch", dayNote:"Contractor access 8\u201311a", holiday:"Independence Day"},
+office:   {name:"e.g. Hillcrest Accounting, or Front Office", roles:["e.g. Staff","e.g. Manager","e.g. Receptionist","e.g. Specialist"], roleProse:"Staff, Manager, Receptionist", lic:"e.g. Notary commission", roleNote:"Notary on staff",
+posts:["Reception","Phones","Mail room","Front office"], postProse:"reception, the phones, the mail room", shiftNote:"Opens reception, checks the voicemail", rush:"Offices are usually quiet around holidays; pick No change unless yours are not.", station:"e.g. Reception", group:"e.g. Front office", dayNote:"Auditors on site", holiday:"Presidents\u2019 Day"},
+other:    {name:"e.g. Riverside Services, or the Downtown location", roles:["e.g. Staff","e.g. Lead","e.g. Assistant","e.g. Specialist"], roleProse:"Staff, Lead, Assistant", lic:"e.g. Trade license", roleNote:"Certified for the equipment",
+posts:["Station 1","Station 2","Front","Back"], postProse:"the front, the back, a bench or a window people take turns at", shiftNote:"Opens up, checks the day\u2019s list", rush:"Many businesses rush the day before a closure and the morning after.", station:"e.g. Station 1", group:"e.g. Weekend crew", dayNote:"Delivery due 10a", holiday:"Thanksgiving"}
+};
+function bizEx(id){ return BIZ_EX[id] || BIZ_EX[(S&&S.org&&S.org.bizType)] || BIZ_EX.other; }
 const BIZ_TYPES=[
 {id:"retail",   t:"Shop or retail",        d:"Store hours, opening and closing shifts", roles:["Sales associate","Shift lead","Cashier"], open:"09:00", close:"20:00", hours:"wkend", shifts:"openclose", rules:{holidayRush:"before", weekendDesire:"unwanted", breakMode:"lengths", restMode:"self", preferLong:false, noClopen:true}},
 {id:"food",     t:"Restaurant, café or bar",d:"Rushes, split cover, long days",         roles:["Server","Cook","Host"],                   open:"07:00", close:"22:00", hours:"same",  shifts:"three", rules:{holidayRush:"both", weekendDesire:"neutral", breakMode:"self", restMode:"self", noClopen:true, preferLong:false}},
@@ -16427,7 +17129,7 @@ juris:S.sample? "FED" : (S.org.jurisdiction||"FED"),
 hoursPreset:"same", open:"09:00", close:"17:00",
 dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false, hols:null,
 posts:"", postSpan:"day", postFam:"1", postRelief:"family",
-xPto:false, xCycles:false, xNotice:false, xWaiver:false, xLic:false, xSkills:false,
+xPto:false, xCycles:false, xNotice:false, xWaiver:false, waiverAuto:false, xLic:false, xSkills:false,
 satOpen:"10:00", satClose:"16:00", satClosed:false,
 sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
 dayOff:{},                       
@@ -16538,7 +17240,7 @@ if(k==="biz") return `
         <div class="wopts wcols">${BIZ_TYPES.map(x=>opt("biz",x.id,W.biz,x.t,x.d)).join("")}</div>
         <div class="grid2">
           <div class="field"><label>What should this schedule be called?</label>
-            <input type="text" id="wn" value="${esc(W.name)}" placeholder="e.g. Riverside Pharmacy, or Outpatient Front Desk">
+            <input type="text" id="wn" value="${esc(W.name)}" placeholder="${esc(bizEx(W.biz).name)}">
             <span class="mini">The business, or just your department inside a bigger one &mdash; whatever people will recognize at the top of the printed schedule.</span></div>
           <div class="field"><label>Site or location (optional)</label><input type="text" id="ws" value="${esc(W.site)}" placeholder="e.g. North Branch"></div>
         </div>
@@ -16613,18 +17315,18 @@ if(k==="busy") return `
             <option value="both" ${W.holidayRush==="both"?"selected":""}>Both</option>
           </select>
         </div>
-        <div class="help">Pharmacies often rush the day before a closure and the morning after. Pick it and those days count one step busier whenever a holiday you've listed is next to them.</div>
+        <div class="help">${esc(bizEx(W.biz).rush)} Pick it and those days count one step busier whenever a holiday you've listed is next to them.</div>
         <div class="help">Which holidays you close for, and time off already booked, come next.</div>
       </div>`;
 if(k==="buckets") return `
       <div class="stack">
         <p class="whead">What does someone have to be qualified as? A shift can require a role, and only people who hold that role will ever be scheduled into it.</p>
-        <div class="help"><b>A role is just a label for the job someone can do</b> — Pharmacist, Technician, Front counter; Cook, Server; Nurse, Aide. Every person on your team gets one. If everybody does the same job, pick <b>Everyone’s the same</b> and move on.</div>
+        <div class="help"><b>A role is just a label for the job someone can do</b> — ${esc(bizEx(W.biz).roleProse)}. Every person on your team gets one. If everybody does the same job, pick <b>Everyone’s the same</b> and move on.</div>
         <div class="wopts wcols">${[1,2,3,4].map(n=>opt("bucketCount",n,W.bucketCount,
 n===1?"Everyone's the same":n+" roles", n===1?"No qualifications to track":"")).join("")}</div>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,i)=>`
           <div class="field"><label>Role ${i+1}</label><input type="text" class="wrole" data-i="${i}"
-            value="${esc(W.buckets[i]||"")}" placeholder="${["e.g. Pharmacist","e.g. Technician","e.g. Front counter","e.g. Clerk"][i]||"Role name"}">
+            value="${esc(W.buckets[i]||"")}" placeholder="${esc(bizEx(W.biz).roles[i]||"Role name")}">
             <label class="switch" style="margin-top:6px;font-size:12.5px"><input type="checkbox" class="wlic" data-i="${i}" ${W.bucketLic&&W.bucketLic[i]?"checked":""}> Needs an active license or certification</label></div>`).join("")}</div>
         <div class="help">Later on you can hang rules off a role — "part-timers cap at 28 hours", "trainees never work alone", "one supervisor for every four assistants". Mark a role as licensed and you can track each person's expiry date — the drafter will never schedule someone past a lapsed license. Skip it if licenses aren't your world.</div>
       </div>`;
@@ -16777,12 +17479,12 @@ return `
 }
 if(k==="posts") return `
       <div class="stack">
-        <p class="whead">Some floors run on posts — the typing window, the checking bench, the front counter —
+        <p class="whead">Some floors run on posts — ${esc(bizEx(W.biz).postProse)} —
           and people move between them during the day. This is separate from who works when:
           <b>posts never appear on the weekly schedule, only on the day sheet.</b> Skip it if your floor doesn't work that way.</p>
         <div class="field"><label>Your posts — one per line</label>
-          <textarea id="wposts" rows="5" placeholder="Typist 1&#10;Typist 2&#10;Checker 1&#10;Checker 2&#10;Front counter">${esc(W.posts||"")}</textarea>
-          <span class="mini">Leave it empty if you don't assign posts. Numbered posts like <b>Typist 1</b> and <b>Typist 2</b> are treated as one rotation called Typist.</span></div>
+          <textarea id="wposts" rows="5" placeholder="${esc(bizEx(W.biz).posts.join("\n"))}">${esc(W.posts||"")}</textarea>
+          <span class="mini">Leave it empty if you don't assign posts. Numbered posts like <b>${esc((bizEx(W.biz).posts[0]||"Post 1"))}</b> and <b>${esc((bizEx(W.biz).posts[1]||"Post 2"))}</b> are treated as one rotation${/\s\d+$/.test(bizEx(W.biz).posts[0]||"")? " called "+esc((bizEx(W.biz).posts[0]||"").replace(/\s\d+$/,"")) : " when they share a name and a number"}.</span></div>
         ${(W.posts||"").trim()? `
         <div class="field"><label>How long does someone hold a post?</label>
           <select id="wpspan">
@@ -16915,6 +17617,12 @@ return `
 "Anyone under 18 is kept inside the hours the law allows for their age.")}
         ${X("xWaiver", W.xWaiver, "Meal waivers where the law allows them",
 "Where the law allows a meal to be waived on a short shift, mark it. You still collect the signature.")}
+        <div class="field" id="xwaiverhow" style="margin:-4px 0 10px 14px;display:${W.xWaiver?"":"none"}"><label>How far?</label>
+          <select data-wv="1">
+            <option value="manual" ${W.waiverAuto?"":"selected"}>I decide shift by shift</option>
+            <option value="auto" ${W.waiverAuto?"selected":""}>Waive every meal the law allows — keep short shifts short</option>
+          </select>
+          <span class="mini">Either way, anyone who has not signed can be set to never waive on their Team profile.</span></div>
         <div class="help">Not listed here but always available once you're in: staff groups with their own limits,
           week patterns for holiday weeks, shift trades, callout logging, and the ranked holiday poll.</div>
       </div>`;
@@ -17233,7 +17941,9 @@ if(wp){ wp.addEventListener("blur",()=>{ const v=wp.value;
 if(v===W.posts) return; W.posts=v; setTimeout(paint,0); }); }    
 ["wpspan","wpfam","wprelief"].forEach(id=>{ const el=r.querySelector("#"+id);
 if(el) el.onchange=()=>{ if(id==="wpspan") W.postSpan=el.value; if(id==="wpfam") W.postFam=el.value; if(id==="wprelief") W.postRelief=el.value; paint(); }; });
-r.querySelectorAll("[data-x]").forEach(cb=>cb.onchange=()=>{ W[cb.dataset.x]=cb.checked; });
+r.querySelectorAll("[data-x]").forEach(cb=>cb.onchange=()=>{ W[cb.dataset.x]=cb.checked;
+if(cb.dataset.x==="xWaiver"){ const h=r.querySelector("#xwaiverhow"); if(h) h.style.display=cb.checked?"":"none"; } });
+r.querySelectorAll("[data-wv]").forEach(sel=>sel.onchange=()=>{ W.waiverAuto = sel.value==="auto"; });
 r.querySelectorAll("[data-hall]").forEach(b2=>b2.onclick=()=>{ W.hols=W.hols||{};
 holidayCandidates().forEach(h=>{ W.hols[h.key]=b2.dataset.hall; }); paint(); });
 r.querySelectorAll(".daytog").forEach(btn=>btn.onclick=()=>{
@@ -17445,6 +18155,7 @@ N.org.trackPto = !!W.xPto;
 N.rules.useCycles = !!W.xCycles;       
 N.rules.advanceNoticeDays = W.xNotice? 14 : 0;
 N.rules.allowMealWaiver = !!W.xWaiver;
+N.rules.mealWaiverMode = W.xWaiver? (W.waiverAuto? "auto":"manual") : "off";
 N.rules.trackLic = !!W.xLic;
 N.rules.skillsOn = !!W.xSkills;
  
@@ -18236,7 +18947,7 @@ const others=(S.stations||[]).filter(x=>x.kind!=="admin" && x.id!==st.id);
 modal(id? "Edit "+st.name : isAdmin? "New administrative duty" : "New station", `
     <div class="stack">
       <div class="field"><label>${isAdmin?"What's the duty?":"What's it called?"}</label>
-        <input type="text" id="stn" value="${esc(st.name)}" placeholder="${isAdmin?"Backup duties":"Room 1"}"></div>
+        <input type="text" id="stn" value="${esc(st.name)}" placeholder="${isAdmin?"Backup duties":esc(bizEx().station.replace(/^e\.g\. /,""))}"></div>
       <div class="field"><label>Note on the day sheet</label>
         <input type="text" id="stnote" value="${esc(st.note||"")}" placeholder="${isAdmin?"Cover the phones and the queue":"Consultation room, door side"}"></div>
       ${isAdmin? `
@@ -19707,6 +20418,26 @@ saveFile("requests-record.csv", rows.map(csvRow).join("\n"));
  
 function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
+{t:"Send today's schedule on its own", k:"daily day sheet send today hand out per day one day day-of text email print copy each morning tomorrow separate from weekly", go:"week",
+a:"Open the Day sheet for the day and press Hand out the day. You pick which days (just today, the next few, or any days of a posted week), whether each person gets only their own lines or everyone gets the whole day, and how it goes: text, email, a copy to paste, or a printout. It is completely separate from posting the week — sending a day never re-posts or touches the weekly schedule, and the weekly hand-out never sends days. Both are listed under Settings so you can see which is which."},
+{t:"Have the day sheet go out by itself every morning", k:"automatic daily send auto send schedule send every morning at time lead toggle off by default confirm", go:"settings",
+a:"Off unless you turn it on. In Hand out the day, switch on Send the day sheet automatically (also under Settings → The day sheet, on its own), choose the time and how far ahead, and confirm once. It only ever sends days inside a week you have already posted — an unposted week is never sent. If Weeksolved cannot send from a server on your setup, the day is marked ready instead and Home shows a one-press Send button that morning, so nothing goes out without you knowing."},
+{t:"Change one day of a week that is already posted", k:"edit posted week day change day sheet redo breaks relay redraft day only without reposting keep weekly", go:"week",
+a:"You can. On the Day sheet, Redo the day sheet re-lays breaks, posts and mentors for that one day and leaves the shifts and the posted week exactly as they were; shift changes on the day sheet are also kept to that day. Send the day afterwards if people need the new version. The weekly schedule everyone already has is not re-posted unless you choose to post again."},
+{t:"Why does it ask before posting or sending?", k:"confirm confirmation ask before post publish send message are you sure dialog turn off dont ask", go:"settings",
+a:"So a schedule or a message never goes out by accident from a phone in a pocket. Posting a week asks once, with the week and who will see it; sending from Weeksolved asks once, with how many people it is going to. Both are on by default and both can be set to Don’t ask under Settings → Posting a schedule and Sending from Weeksolved. Anything that sends by itself (the daily hand-out) asks for a confirmation when you switch it on, not every morning."},
+{t:"What is Worth a look?", k:"worth a look advice suggestions recommendations rules second opinion hide turn off advisor tips why", go:"rules",
+a:"A short list on Home and at the top of Scheduling rules where the rules, the roster and the coverage do not quite add up — a turnaround that no shift pair can meet, a role with nobody in it, a cap that makes a person unschedulable, a rule that is stricter than the law requires. Each line says why in a sentence and offers the change; nothing is ever applied on its own and a suggestion you disagree with can be dismissed. Turn the whole card off under Settings → Suggest improvements to the rules."},
+{t:"Suggest a feature or ask for a change", k:"feature request idea suggest wish improvement feedback want it to would be nice", go:null,
+a:"Press Report or suggest (the ⚑ button on the rail, or Help → Still stuck) and switch it to I have an idea. It goes straight to the people who build Weeksolved, with a copy of nothing but what you typed and the screen you were on. Problems and ideas both stay open for every account, testing or not, and good ideas find their way into the app and the release notes."},
+{t:"What does the free trial hold back?", k:"trial limit horizon weeks ahead messages per month sends allowance held draft far ahead free trial limits", go:"home", when:()=>trialLimited(),
+a:"Almost nothing. Every rule, every check, the drafter, breaks, hand-outs and exports are all on. Two things are sized for a trial: you can draft up to "+TRIAL_HORIZON_WEEKS+" weeks ahead (a full trial is plenty of weeks to judge it), and sending from Weeksolved’s own server is capped at "+TRIAL_SENDS_PER_MONTH+" messages a month — past that, your own mail or messaging app opens with the message ready instead, so nobody is left without a schedule. A paid plan lifts both."},
+{t:"Tips for rules that draft well", k:"tips advice best rules how to set rules good schedule fewer open shifts caps turnaround pool slack", go:"rules",
+a:"Give the drafter room. Keep at least one person more in each role’s pool than the busiest day needs; set weekly caps a few hours above the hours you actually expect so one long day does not block the rest of the week; use a turnaround your shift pairs can meet (a 10-hour rest rule with a close at 10 and an open at 7 can never be met); set posts only where someone must physically stand; and let the law be the floor for breaks rather than adding stricter house rules unless you mean them. Worth a look points out each of these when your board trips one."},
+{t:"Tips for a week with fewer open shifts", k:"open shifts fewer tips availability requests per diem overtime pool coverage minimums", go:"week",
+a:"Most open shifts trace back to one of four things: availability that leaves a weekday with nobody, a coverage minimum higher than the shifts you defined can supply, a cap already spent by midweek, or a license or post only one person holds. Home’s checks name which one for each gap. Cheapest fixes first: approve fewer overlapping days off, add a shift the floor actually needs, raise one cap by a few hours, or add a per diem to the pool. Cover the gaps lists them in that order."},
+{t:"Can meals be waived automatically?", k:"meal waiver waive automatic auto skip lunch short shift six hours 6 hours signed agreement opt in opt out per person never always trim 5:55 6:05 line", go:"rules", when:()=>waiverPossible(),
+a:"Yes, where your state allows it. Under Scheduling rules, Meal waivers has three settings: not used; manager decides, where you waive a meal shift by shift from the day sheet or a Fix list; and automatic, where every meal the law lets you waive is left off as the shift is drafted, so a six-hour shift stays six hours. Each person can stand apart from the board setting on their Team profile \u2014 always, when their signed waiver is on file, or never, when it is not \u2014 and the Team page shows the count. A waiver has to be voluntary and in writing; Weeksolved marks the shift, you keep the signature. When a shift you are typing runs a few minutes past a meal line \u2014 6:05 when 6:00 could be waived, 5:05 when 5:00 owes no meal at all \u2014 the shift editor says so and offers to end it on the line. It only offers; the times you typed stay unless you press it."},
 {t:"How do I fix a coverage dip or a flagged problem?", k:"fix coverage dip gap short floor empty meal lunch no cover free flagged problem checks conflicts warning press fix options solutions", go:"week",
 a:"Press Fix. Every problem on Home, in the checks panel under This week, and every dip on the Day sheet (including a no-cover-free or meal-late chip on the break sheet) opens one short list. The top half fixes it this week: stretch a shift already on the day with the overtime priced, move a meal to a time the floor holds, waive a meal where the law allows it, bring someone else in, hand a shift to someone who is clear. The bottom half stops it coming back: let a meal count as on duty for that rule (an on-duty meal agreement), close the doors for lunch on solo days, take a day out of a rule or lower it, schedule one more person on that weekday, change your hours, update a profile. One option is marked Recommended \u2014 the least disruptive. Nothing is invented: every option uses shifts, people and rules you already have, and the checks run again the moment you press one."},
 {t:"Why does Home say “This keeps happening”?", k:"keeps happening recurring repeat every week again pattern permanent fix for good stop it coming back same problem hide", go:"home",
@@ -19904,9 +20635,9 @@ return `
     <div class="card"><header><h3>Still stuck?</h3></header>
       <div class="body">
         <div class="spread"><div>
-          <div style="font-weight:600;font-size:13.5px">Report the problem</div>
-          <div class="mini">Say what you expected and what happened. Reports go to the people who fix things — never with your staff's names attached.</div></div>
-          <button class="btn primary" id="hbug" style="flex:none">Report a problem</button></div>
+          <div style="font-weight:600;font-size:13.5px">Report a problem, or ask for a feature</div>
+          <div class="mini">Say what you expected and what happened, or what you wish it did. Both go to the people who build it — never with your staff's names attached.</div></div>
+          <div class="row" style="gap:6px;flex:none;flex-wrap:wrap"><button class="btn primary" id="hbug">Report a problem</button><button class="btn" id="hidea">Suggest a feature</button></div></div>
       </div>
     </div>
 
@@ -20001,6 +20732,7 @@ ev.preventDefault();
 if(a.dataset.faqact==="a2hs") a2hsModal();
 });
 root.querySelector("#hbug").onclick=()=>bugModal();
+{ const hi=root.querySelector("#hidea"); if(hi) hi.onclick=()=>bugModal("idea"); }
 const ct=root.querySelector("#ctsend");
 if(ct) ct.onclick=()=>{
 const topic=root.querySelector("#cttopic").value;
