@@ -1138,6 +1138,9 @@ function addDays(s,n){ const d=parseYmd(s); d.setDate(d.getDate()+n); return ymd
 function weekStartOf(dateStr, startDow){
 const d=parseYmd(dateStr); const diff=(d.getDay()-startDow+7)%7; d.setDate(d.getDate()-diff); return ymd(d);
 }
+ 
+function thisWeekStart(){ return weekStartOf(ymd(new Date()), (S.org&&S.org.weekStart)||0); }
+function curWeek(){ const c=S && S.currentWeek; return (typeof c==="string" && /^\d{4}-\d{2}-\d{2}$/.test(c))? c : thisWeekStart(); }
 function prettyDate(s){ const d=parseYmd(s);
 return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
 function prettyFull(s){ const d=parseYmd(s);
@@ -1320,7 +1323,12 @@ function blankState(){
 return {
 v:3,
 org:{ name:"", site:"", jurisdiction:"CA", weekStart:1,
-otDailyH:8, otWeeklyH:40, dtDailyH:12, budget:0, trackCost:false, trackPto:false },
+otDailyH:8, otWeeklyH:40, dtDailyH:12, budget:0, trackCost:false, trackPto:false,
+ 
+pay:{type:"none", anchor:""} },
+fww:{on:false, city:"", staff:0, sites:1, asked:false},
+mail:{mode:"client", endpoint:"", replyTo:"", lastErr:""},
+daily:{on:false, at:"06:00", lead:"same", mode:"each", how:"email"},
 hours:[0,1,2,3,4,5,6].map(d=>({closed:d===0, open:"09:00", close:"18:00"})),
 roles:[], shifts:[], employees:[], demand:{}, patterns:[], coverage:[], timeoff:[], templates:[], groups:[], requests:[], stations:[], coverGroups:[],
 dayDesire:[-1,1,1,1,1,0,-1],
@@ -1774,11 +1782,11 @@ window.open("sms:"+encodeURIComponent(to)+sep+"body="+encodeURIComponent(body.sl
 
 function sendModal(ws){
  
-if(postPending(peekWeek(ws||S.currentWeek))){
+if(postPending(peekWeek(ws||curWeek()))){
 toast("That week is still in its take-it-back window \u2014 nothing sends until it is really up");
 return;
 }
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const wk=getWeek(ws);
 if(!wk.assignments.length){ toast("Nothing to send — this week is empty"); return; }
 const roster=S.employees.filter(e=>e.active);
@@ -2105,8 +2113,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "69a3d143";       
-const BUILD_AT = "2026-09-03 15:45 UTC";       
+const BUILD_ID = "c12cf99c";       
+const BUILD_AT = "2026-09-03 16:50 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -3590,6 +3598,10 @@ if(!Array.isArray(s.rules.askOrder)) s.rules.askOrder=[];
 if(!s.rules.sheetNotes) s.rules.sheetNotes="lines";            
 s.fww = Object.assign({on:false, city:"", staff:0, sites:1, asked:false}, s.fww||{});
 s.org.pay = Object.assign({type:"none", anchor:""}, s.org.pay||{});
+ 
+if(typeof s.currentWeek!=="string" || !/^\d{4}-\d{2}-\d{2}$/.test(s.currentWeek)){
+if(s.setupDone) s.currentWeek = weekStartOf(ymd(new Date()), (s.org&&s.org.weekStart)||0);
+}
 s.mail = Object.assign({mode:"client", endpoint:"", replyTo:"", lastErr:""}, s.mail||{});
  
 if(typeof MAILAPI==="string" && MAILAPI && !s.mail.endpoint){ s.mail.endpoint=MAILAPI; s.mail.mode="server"; }
@@ -4104,19 +4116,20 @@ staggerDay(all.filter(a=>!a.locked), all);
 
  
 function weekDates(ws){
-ws = ws || S.currentWeek;
+ 
+ws = ws || curWeek();
 const out=[];
 for(let i=0;i<7;i++){ const d=addDays(ws,i); out.push({date:d, dow:parseYmd(d).getDay(), idx:i}); }
 return out;
 }
 function getWeek(ws){
-ws = ws || S.currentWeek;
+ws = ws || curWeek();
 if(!S.weeks[ws]) S.weeks[ws] = {assignments:[], published:false, generatedAt:null};
 return S.weeks[ws];
 }
  
 const BLANK_WEEK = {assignments:[], published:false, generatedAt:null};
-function peekWeek(ws){ return S.weeks[ws||S.currentWeek] || BLANK_WEEK; }
+function peekWeek(ws){ return S.weeks[ws||curWeek()] || BLANK_WEEK; }
 const empById = id => S.employees.find(e=>e.id===id);
 const shiftById = id => S.shifts.find(s=>s.id===id);
  
@@ -4255,7 +4268,7 @@ return bMin <= 1440 + availEnd(av2);
 }
  
 function patternFor(ws){
-const wk = S.weeks[ws||S.currentWeek];
+const wk = S.weeks[ws||curWeek()];
 const id = wk && wk.patternId;
 if(!id) return null;
 return (S.patterns||[]).find(p=>p.id===id) || null;
@@ -4490,7 +4503,7 @@ return wk.vetoes.some(v=>v.empId===empId && v.date===date && (!v.shiftId || v.sh
 }
 function generateSchedule(ws, opts){
 opts = opts||{};
-ws = ws || S.currentWeek;
+ws = ws || curWeek();
 const wk = getWeek(ws);
 SHUFFLE = wk.seed||0;
 const kept = wk.assignments.filter(a=>a.locked);
@@ -4642,7 +4655,7 @@ return {filled:assignments.length-kept.length, unfilled:wk.unfilled, perDiem:wk.
 
  
 function flexPass(ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const wk=peekWeek(ws); if(!wk) return 0;
 let changed=0;
 const dates=weekDates(ws);
@@ -5087,7 +5100,7 @@ return "Where a collective agreement is in place, some city scheduling rules can
 function fwwRestH(){ return fwwOn()? (fwwPlace().rest||10) : 0; }
  
 function fwwClopens(ws){
-const wk=peekWeek(ws||S.currentWeek);
+const wk=peekWeek(ws||curWeek());
 const need=fwwRestH()*60;
 if(!need) return [];
 const out=[];
@@ -5205,7 +5218,7 @@ function reqMsgFor(r, ws){
 const e=empById(r.empId)||{name:"there"};
 const dates=(r.from===r.to || !r.to)? prettyFull(r.from) : prettyFull(r.from)+" to "+prettyFull(r.to);
 const kind = r.status==="declined"? "declined"
-: ((reqOutcome(r, ws||S.currentWeek, 1)||{}).ok===false)? "missed" : "approved";
+: ((reqOutcome(r, ws||curWeek(), 1)||{}).ok===false)? "missed" : "approved";
 return {kind, emp:e, text:msgFill(kind, {name:(e.name||"there").split(" ")[0], dates})};
 }
 function tellAboutRequest(r, ws){
@@ -5627,7 +5640,7 @@ maxConsecDays:S.rules.maxConsecDays, canBeAlone:true, groups:[] };
  
 if(e.maxShiftH)     L.maxShiftH     = Math.min(L.maxShiftH||99, e.maxShiftH);
 if(e.maxConsecDays) L.maxConsecDays = Math.min(L.maxConsecDays||99, e.maxConsecDays);
-const wcap = cyclesOn()? cycleWeekCap(e, weekStartOf(ref||S.currentWeek, S.org.weekStart)) : null;
+const wcap = cyclesOn()? cycleWeekCap(e, weekStartOf(ref|| curWeek(), S.org.weekStart)) : null;
 if(wcap!=null){ L.maxH = L.maxH? Math.min(L.maxH, wcap) : wcap; L.cycleCap=wcap; }
 groupsFor(e).forEach(g=>{
 const r=g.rules||{}; L.groups.push(g.name);
@@ -5727,7 +5740,7 @@ return null;
  
  
 function placeTrainees(ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const wk=getWeek(ws);
 const learners=S.employees.filter(e=>e.active && e.type==="TRAIN");
 if(!learners.length) return;
@@ -5772,7 +5785,7 @@ wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
 }
 
 function openSlots(ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const wk=peekWeek(ws), out=[];
 weekDates(ws).forEach(({date,dow})=>{
 matchDemand(expandDemand(dow,ws), wk.assignments.filter(a=>a.date===date))
@@ -5783,7 +5796,7 @@ return out;
 
  
 function optionsFor(slot, ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const sh=shiftById(slot.shiftId); if(!sh) return [];
 const [aMin,bMin]=shiftMinutes(sh);
 const wk=peekWeek(ws);
@@ -5946,7 +5959,7 @@ return v.shiftId
 }
 
 function redoModal(ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const wk=getWeek(ws);
 const dates=weekDates(ws);
 const roster=S.employees.filter(e=>e.active);
@@ -6079,13 +6092,13 @@ if(minorsOn() && !opts.minorOverride){
 const sh0=shiftById(slot.shiftId);
 if(sh0){
 const [a0,b0]=shiftMinutes(sh0);
-const mb=minorBlock(e, slot.date, slot.dow, a0, b0, empWeekMinutes(e.id, ws||S.currentWeek), ws);
+const mb=minorBlock(e, slot.date, slot.dow, a0, b0, empWeekMinutes(e.id, ws|| curWeek()), ws);
 if(mb){ toast(e.name+" is "+ageOnDate(e, slot.date)+" \u2014 that shift is "+mb); return; }
 }
 }
 const sh=shiftById(slot.shiftId); if(!sh) return;
 const [aMin,bMin]=shiftMinutes(sh);
-const wk=getWeek(ws||S.currentWeek);
+const wk=getWeek(ws|| curWeek());
 const rec={id:uid("a"), empId:e.id, date:slot.date, dow:slot.dow, shiftId:slot.shiftId,
 startMin:aMin, endMin:bMin, gap:shiftGap(sh), roleId:slot.roleId||e.roleIds[0]||null, locked:true,
 override: opts.overtime? "overtime" : opts.extra? "extra shift" : opts.shortRest? "short rest" : opts.allowOnCall? "called in" : null};
@@ -6108,7 +6121,7 @@ slots:g[k].sort((a,b)=> dateLoad(b.date,b.dow)-dateLoad(a.date,a.dow) || a.date.
 function slotKey(sl){ return sl.date+"|"+sl.shiftId+"|"+(sl.roleId||""); }
 function offerToken(){ return securePick("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6); }
 
-function openOffer(ws){ const wk=peekWeek(ws||S.currentWeek); return (wk&&wk.offer)||null; }
+function openOffer(ws){ const wk=peekWeek(ws||curWeek()); return (wk&&wk.offer)||null; }
 
 function offerEligible(sl, ws){
  
@@ -6118,7 +6131,7 @@ return optionsFor(sl, ws)
 }
 
 function makeOffer(ws, slots){
-const wk=getWeek(ws||S.currentWeek);
+const wk=getWeek(ws|| curWeek());
 const token=offerToken();
 wk.offer={token, at:Date.now(), slots:slots.map(sl=>({date:sl.date, dow:sl.dow, shiftId:sl.shiftId, roleId:sl.roleId||null})), claims:[]};
 logIt("post","Offered "+slots.length+" open shift"+(slots.length===1?"":"s")+" for the week of "+prettyDate(ws)+" to the team");
@@ -6230,7 +6243,7 @@ if(m<60) return m+" min left to reply";
 const h=Math.round(m/60);
 return h+" hour"+(h===1?"":"s")+" left to reply";
 }
-function weekAsks(ws){ const wk=getWeek(ws||S.currentWeek); wk.asks=wk.asks||[]; return wk.asks; }
+function weekAsks(ws){ const wk=getWeek(ws|| curWeek()); wk.asks=wk.asks||[]; return wk.asks; }
 function makeAsk(ws, empId, sl, wave){
 const asks=weekAsks(ws);
 const existing=asks.find(a=>a.empId===empId && a.key===slotKey(sl) && !a.answer);
@@ -6304,7 +6317,7 @@ const hit=(S.rules.askOrder||[]).find(x=>x.empId===empId);
 return hit? hit.w : null;
 }
 function askModal(ws, slot){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const slots=slot? [slot] : openSlots(ws);
 if(!slots.length){ toast("Nothing is open this week"); return; }
 const sl=slots[0];
@@ -6480,7 +6493,7 @@ if(placedAny) render();
 }
 
 function offerModal(ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const slots=openSlots(ws);
 if(!slots.length){ toast("Nothing is open this week"); return; }
 const rows=slots.map((sl,i)=>{
@@ -6566,7 +6579,7 @@ return {emp, items};
 }
 
 function claimModal(ws, prefill){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 modal("A reply came back", `
     <div class="stack">
       <div class="field"><label>Paste their reply code</label>
@@ -7541,7 +7554,7 @@ return "a rule you set blocks it \u2014 Cover the gaps spells out which";
 }
 
 function fixModal(ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const slots=openSlots(ws);
 if(!slots.length){ toast("Nothing is open this week"); return; }
 const groups=groupOpen(slots);
@@ -7619,7 +7632,7 @@ setTimeout(()=>{ if(openSlots(ws).length) fixModal(ws); }, 350);
 
  
 function requestConflictModal(ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const period=reqPeriod(ws, 1);
 const live=(S.requests||[]).filter(r=>{
 if(r.status==="declined") return false;
@@ -7726,9 +7739,9 @@ const when=S.rules.skillsWhen||"always";
 const mult=SKILL_MULT[S.rules.skillsStrength||"medium"]||1;
 const dow=parseYmd(date).getDay();
 const busy = dateLoad(date,dow)>0 || !!holAdj(date);
-const thin = (()=>{ const wk=peekWeek(ws||S.currentWeek);
+const thin = (()=>{ const wk=peekWeek(ws||curWeek());
 const on=wk? wk.assignments.filter(a=>a.date===date).length : 0;
-return on <= expandDemand(dow, ws||S.currentWeek).length; })();
+return on <= expandDemand(dow, ws|| curWeek()).length; })();
 if(when==="always") return {dir:1, mult};
 if(when==="busy")   return busy? {dir:1, mult} : {dir:0, mult:0};
 if(when==="thin")   return thin? {dir:1, mult} : {dir:0, mult:0};
@@ -7882,7 +7895,7 @@ if(merged.length) a.station=merged[0].st;
 return true;
 }
 function assignStations(date, ws, tally){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const wk=peekWeek(ws);
 const dow=parseYmd(date).getDay();
 const list=wk.assignments.filter(a=>a.date===date).sort((a,b)=>a.startMin-b.startMin);
@@ -8052,7 +8065,7 @@ return `<div class="body spread" style="border-top:1px solid var(--line);gap:10p
 function mealReliefFor(date, ws){
 const crit=(S.stations||[]).filter(x=>x.kind!=="admin" && !x.off && x.critical);
 if(!crit.length || S.rules.breakMode!=="assigned") return [];
-const wk=peekWeek(ws||S.currentWeek);
+const wk=peekWeek(ws||curWeek());
 const list=wk.assignments.filter(a=>a.date===date);
 const out=[];
  
@@ -8124,12 +8137,12 @@ const wk=S.weeks[ws];
 return T;
 }
 function clearAdmin(date, ws){
-getWeek(ws||S.currentWeek).assignments.filter(a=>a.date===date).forEach(a=>{ if(!a.stationLocked) delete a.admin; });
+getWeek(ws|| curWeek()).assignments.filter(a=>a.date===date).forEach(a=>{ if(!a.stationLocked) delete a.admin; });
 }
 let STATION_PASS=false;
  
 function assignMentors(date, ws){
-const wk=peekWeek(ws||S.currentWeek);
+const wk=peekWeek(ws||curWeek());
 const list=wk.assignments.filter(a=>a.date===date);
 const learners=list.filter(a=>a.trainee || isTrainee(empById(a.empId), date));
 learners.forEach(a=>{ delete a.mentor; });
@@ -8158,7 +8171,7 @@ a.mentor=overlap[0].e.id;
 }
 
 function assignStationsWeek(ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const T=seedTally(ws);
 weekDates(ws).forEach(({date})=>{ clearAdmin(date,ws); assignStations(date,ws,T); assignMentors(date,ws); });
 save();
@@ -8260,7 +8273,7 @@ return true;
 }
  
 function takeLoadProposal(p, ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 if(!applyLoadProposal(ws, {busy:p.busy, quiet:p.quiet}, {shiftId:p.shiftId, roleId:p.roleId})) return;
 const wk=S.weeks[ws];
 let note="";
@@ -8374,7 +8387,7 @@ detail: on.length===0? "Off the whole week"
 const STEP = 15;
 function dayWindow(dow){
 const h = S.hours[dow];
-if(h.closed) return null;
+if(!h || h.closed) return null;    
 return [t2m(h.open), t2m(h.close)<=t2m(h.open)? t2m(h.close)+1440 : t2m(h.close)];
 }
  
@@ -8400,7 +8413,7 @@ const wk=peekWeek(ws);
 const out = wk.assignments.filter(a=>a.date===date);
 if(!anyOvernight()) return out;
 const prevDate = addDays(date,-1);
-const pool = wk.assignments.concat(peekWeek(addDays(ws||S.currentWeek,-7)).assignments);
+const pool = wk.assignments.concat(peekWeek(addDays(ws|| curWeek(),-7)).assignments);
 pool.filter(a=>a.date===prevDate && a.endMin>1440).forEach(a=>{
 const b=a.breaks||{meals:[],rests:[]};
 const shift = x => Object.assign({}, x, {start:Math.max(0,x.start-1440)});
@@ -8555,7 +8568,7 @@ return d.toLocaleDateString([],{weekday:"long",month:"short",day:"numeric"})+" a
 d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 }
 function scheduleModal(kind, ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const wk=peekWeek(ws);
 if(kind==="post" && (!wk || !wk.assignments.length)){ toast("Nothing to post yet"); return; }
 if(kind==="post" && wk && wk.published){ toast(postPending(wk)? "That week is going up already" : "That week is already posted"); return; }
@@ -8639,10 +8652,10 @@ if(wk.toldStamp==null){ wk.toldStamp=weekStamp(ws); return false; }
 return wk.toldStamp !== weekStamp(ws);
 }
 function markTold(ws, how, n){
-const wk=peekWeek(ws||S.currentWeek); if(!wk) return;
+const wk=peekWeek(ws||curWeek()); if(!wk) return;
 wk.sentAt=Date.now(); wk.toldHow=how||""; if(n!=null) wk.sentTo=n;
-wk.toldStamp=weekStamp(ws||S.currentWeek);
-logIt("post","Week of "+prettyDate(ws||S.currentWeek)+" "+(TELL_WORD[how]||"handed out"));
+wk.toldStamp=weekStamp(ws|| curWeek());
+logIt("post","Week of "+prettyDate(ws|| curWeek())+" "+(TELL_WORD[how]||"handed out"));
 save();
 }
 function toldText(wk){
@@ -8827,12 +8840,17 @@ const dueFor=(date)=>{ const d=parseYmd(cfg.lead==="prev"? addDays(date,-1) : da
 [today, addDays(today,1)].forEach(date=>{ targets.push([date, dueFor(date)]); });
 let changed=false;
 targets.forEach(([date,due])=>{
-if(now.getTime()<due || now.getTime()-due > 6*3600*1000) return;
+if(now.getTime()<due) return;
 const ws=weekStartOf(date, S.org.weekStart); const wk=S.weeks[ws];
 if(!wk || !wk.published || postPending(wk) || !wk.assignments.some(a=>a.date===date)) return;
 if((wk.daySent||{})[date] || (wk.dayReady||{})[date]) return;
+ 
+const canSend = mailServerReady() && (cfg.how||"email")==="email";
+const fresh = now.getTime()-due <= 6*3600*1000;
+const stillToday = date >= today;
+if(canSend? !fresh : !(fresh || stillToday)) return;
 wk.dayReady=wk.dayReady||{};
-if(mailServerReady() && (cfg.how||"email")==="email"){
+if(canSend){
 wk.dayReady[date]="sending"; changed=true;
 dailyAutoSend(date).then(n=>{ markDaySent(date,"auto"); logIt("send","Day sheet for "+prettyDate(date)+" sent automatically to "+n); save(); if(VIEW==="home") render(); })
 .catch(()=>{ const w=S.weeks[ws]; if(w&&w.dayReady) w.dayReady[date]=true; save(); if(VIEW==="home") render(); });
@@ -8885,7 +8903,7 @@ save(); render();
 toast("Day sheet redone for "+prettyDate(date)+" — shifts unchanged"+(wk.published? ", the posted week stands":""));
 }
 function handOutModal(ws){
-ws = ws || S.currentWeek;
+ws = ws || curWeek();
 const wk=peekWeek(ws);
 if(!wk || !wk.assignments.length){ toast("Nothing to hand out \u2014 this week is empty"); return; }
 if(postPending(wk)){ toast("That week is still in its take-it-back window \u2014 hand it out once it is really up"); return; }
@@ -9003,7 +9021,7 @@ return `<div class="banner warn" id="gracebar"><div><b>Going up in <span data-gr
  
  
 function postConfirm(ws, then){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const wk=peekWeek(ws);
 const repostAsks = !!(wk && wk.postedOnce) && weekDiff(ws).length>0 && S.rules.confirmRepost!==false;
 if(S.rules.confirmPost===false || repostAsks){ then(); return; }
@@ -9024,8 +9042,8 @@ modal("Post this week?", `
 r=>{ r.querySelector("#pcgo").onclick=()=>{ closeModal(true); then(); }; });
 }
 function repostGuard(ws, doPost){
-const wk=peekWeek(ws||S.currentWeek);
-const changes = wk && wk.postedOnce ? weekDiff(ws||S.currentWeek) : [];
+const wk=peekWeek(ws||curWeek());
+const changes = wk && wk.postedOnce ? weekDiff(ws|| curWeek()) : [];
 if(!(wk && wk.postedOnce) || !changes.length || S.rules.confirmRepost===false){ doPost(null); return; }
 const who=[...new Set(changes.map(d=>d.empId))].map(id=>(empById(id)||{name:"?"}).name);
 modal("This schedule was already posted", `
@@ -9105,14 +9123,14 @@ function noteKey(date, empId, startMin){
 return date+"|"+empId+(startMin==null || isNaN(startMin)? "" : "|"+startMin);
 }
 function shiftNote(ws, date, empId, startMin){
-const wk=peekWeek(ws||S.currentWeek);
+const wk=peekWeek(ws||curWeek());
 const m=(wk&&wk.shiftNotes)||{};
 const exact=m[noteKey(date, empId, startMin)];
 if(exact!=null) return exact;
 return m[date+"|"+empId]||"";
 }
 function setShiftNote(ws, date, empId, txt, startMin){
-const wk=getWeek(ws||S.currentWeek);
+const wk=getWeek(ws|| curWeek());
 wk.shiftNotes=wk.shiftNotes||{};
 const k=noteKey(date, empId, startMin);
 delete wk.shiftNotes[date+"|"+empId];         
@@ -9184,7 +9202,7 @@ wk.snap = wk.assignments.map(a=>({empId:a.empId,date:a.date,dow:a.dow,startMin:a
 wk.snapAt = Date.now();
 }
 function weekDiff(ws){
-const wk=peekWeek(ws||S.currentWeek);
+const wk=peekWeek(ws||curWeek());
 if(!wk.snap) return [];
 const key=x=>x.empId+"|"+x.date;
 const line=list=>list.slice().sort((a,b)=>a.startMin-b.startMin)
@@ -9209,7 +9227,7 @@ return out.sort((x,y)=>x.date.localeCompare(y.date)||x.name.localeCompare(y.name
 
  
 function weekImpact(empId, ws, excludeAid, addStart, addEnd){
-const wk=peekWeek(ws||S.currentWeek);
+const wk=peekWeek(ws||curWeek());
 const base=wk.assignments.filter(a=>a.empId===empId && a.id!==excludeAid).reduce((t,a)=>t+paidMinutes(a),0);
 const add=addStart!=null? paidEstimate(addStart, addEnd<=addStart? addEnd+1440:addEnd) : 0;
 const tot=base+add;
@@ -9282,7 +9300,7 @@ return {idx, from, to, label:prettyDate(from)+" \u2013 "+prettyDate(to)};
  
 function paySplit(ws){
 if(!payOn()) return null;
-const ds=weekDates(ws||S.currentWeek);
+const ds=weekDates(ws|| curWeek());
 for(let i=1;i<ds.length;i++){
 const a=payPeriod(ds[i-1].date), b=payPeriod(ds[i].date);
 if(a && b && a.idx!==b.idx) return {at:i, before:a, after:b, date:ds[i].date};
@@ -9291,7 +9309,7 @@ return null;
 }
 function payHours(empId, ws, which){
  
-const wk=peekWeek(ws||S.currentWeek);
+const wk=peekWeek(ws||curWeek());
 const sp=paySplit(ws);
 return wk.assignments.filter(a=>a.empId===empId && (!sp || (which==="before"? a.date<sp.date : a.date>=sp.date)))
 .reduce((t,a)=>t+paidMinutes(a),0);
@@ -9377,7 +9395,7 @@ while(has.has(d) && out.length<21){ out.unshift(d); d=addDays(d,-1); }
 return out;
 }
 function validate(ws){
-ws = ws||S.currentWeek;
+ws = ws|| curWeek();
 const wk=peekWeek(ws), L=law(), V=[];
 const dates = weekDates(ws);
 const push=(sev,title,detail,extra)=>V.push(Object.assign({sev,title,detail},extra||{}));
@@ -10448,7 +10466,7 @@ el.addEventListener("change",()=>{ commit(); save(); if(el.dataset.rerender!=="n
 });
 root.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
 root.querySelectorAll("[data-undopost]").forEach(el=>el.addEventListener("click",()=>undoPost(el.dataset.undopost)));
-root.querySelectorAll("[data-tell]").forEach(el=>el.addEventListener("click",()=>handOutModal(el.dataset.tell||S.currentWeek)));
+root.querySelectorAll("[data-tell]").forEach(el=>el.addEventListener("click",()=>handOutModal(el.dataset.tell|| curWeek())));
 root.querySelectorAll("[data-dayout]").forEach(el=>el.addEventListener("click",()=>dayHandOutModal(el.dataset.dayout)));
 root.querySelectorAll("[data-dayskip]").forEach(el=>el.addEventListener("click",()=>{ const d=el.dataset.dayskip; const wk=S.weeks[weekStartOf(d,S.org.weekStart)]; if(wk&&wk.dayReady) delete wk.dayReady[d]; save(); render(); toast("Skipped \u2014 nothing sent for "+prettyDate(d)); }));
 root.querySelectorAll("[data-qdel]").forEach(el=>el.addEventListener("click",()=>{
@@ -10877,9 +10895,9 @@ WIRE.home = root=>{
 const on=(id,fn)=>{ const b=root.querySelector(id); if(b) b.onclick=fn; };
 wireFix(root, validate(S.currentWeek), S.currentWeek);
 root.querySelectorAll("[data-bugsend]").forEach(b=>b.onclick=()=>digestModal());
-on("#hprev",()=>{ S.currentWeek=addDays(S.currentWeek,-7); save(); render(); });
-on("#hnext",()=>{ S.currentWeek=addDays(S.currentWeek,7); save(); render(); });
-on("#hnextweek",()=>{ S.currentWeek=addDays(S.currentWeek,7); save(); render(); });
+on("#hprev",()=>{ S.currentWeek=addDays(curWeek(),-7); save(); render(); });
+on("#hnext",()=>{ S.currentWeek=addDays(curWeek(),7); save(); render(); });
+on("#hnextweek",()=>{ S.currentWeek=addDays(curWeek(),7); save(); render(); });
 on("#hsetup",()=>wizard());
 on("#hsetup2",()=>wizard());
 on("#homesetup",()=>wizard());
@@ -14060,8 +14078,8 @@ return `<div class="card"><header><h3>Labor cost</h3>
   </div>`;
 }
 WIRE.week = root=>{
-root.querySelector("#wprev").onclick=()=>{ S.currentWeek=addDays(S.currentWeek,-7); save(); render(); };
-root.querySelector("#wnext").onclick=()=>{ S.currentWeek=addDays(S.currentWeek,7); save(); render(); };
+root.querySelector("#wprev").onclick=()=>{ S.currentWeek=addDays(curWeek(),-7); save(); render(); };
+root.querySelector("#wnext").onclick=()=>{ S.currentWeek=addDays(curWeek(),7); save(); render(); };
 root.querySelector("#wtoday").onclick=()=>{ S.currentWeek=weekStartOf(ymd(new Date()),S.org.weekStart); save(); render(); };
 root.querySelector("#wgen").onclick=()=>draftModal();
 root.querySelector("#wmore").onclick=()=>weekMoreModal();
@@ -14607,7 +14625,7 @@ const ws=S.currentWeek, wk=getWeek(ws);
 const dates=weekDates(ws);
 const entry = dates.find(d=>d.dow===DAYVIEW) || dates[0];
 const date=entry.date, dow=entry.dow;
-const h=S.hours[dow];
+const h=S.hours[dow] || {closed:true, open:"09:00", close:"17:00"};    
 const list = wk.assignments.filter(a=>a.date===date).sort((a,b)=>a.startMin-b.startMin || (empById(a.empId)||{name:""}).name.localeCompare((empById(b.empId)||{name:""}).name));
 const L=law();
 const win = dayWindow(dow) || [t2m("08:00"),t2m("18:00")];
@@ -15005,7 +15023,7 @@ return {bad, inWin};
 }
  
 function fixOptions(v, ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const wk=peekWeek(ws);
 const O=[];
 const add=(g,t,d,run,rec)=>O.push({g,t,d,run,rec:!!rec});
@@ -15287,7 +15305,7 @@ const seen=new Set();
 return O.filter(o=>{ const k=o.g+"|"+o.t; if(seen.has(k)) return false; seen.add(k); return true; });
 }
 function fixSheet(v, ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const opts=fixOptions(v, ws);
 if(!opts.length){ toast("Nothing to press for this one — it is a note, not a fault"); return; }
 const grp=(g,head,sub)=>{
@@ -15319,8 +15337,8 @@ if(v.code==="closure") return "";
 return `<button class="btn sm ${cls||(v.sev==="crit"?"primary":"")}" data-fixv="${i}" style="flex:none">Fix</button>`;
 }
 function wireFix(root, V, ws){
-root.querySelectorAll("[data-fixv]").forEach(b=>b.onclick=()=>{ const v=V[+b.dataset.fixv]; if(v) fixSheet(v, ws||S.currentWeek); });
-root.querySelectorAll("[data-recur]").forEach(b=>b.onclick=()=>{ const r=recurringProblems(ws||S.currentWeek).find(x=>x.key===b.dataset.recur); if(r) recurSheet(r, ws||S.currentWeek); });
+root.querySelectorAll("[data-fixv]").forEach(b=>b.onclick=()=>{ const v=V[+b.dataset.fixv]; if(v) fixSheet(v, ws|| curWeek()); });
+root.querySelectorAll("[data-recur]").forEach(b=>b.onclick=()=>{ const r=recurringProblems(ws|| curWeek()).find(x=>x.key===b.dataset.recur); if(r) recurSheet(r, ws|| curWeek()); });
 const rh=root.querySelector("#recurhide"); if(rh) rh.onclick=()=>{ S.ui=S.ui||{}; S.ui.recurOff=true; save(); render(); toast("Hidden. Turn it back on under Settings → This board"); };
 }
 
@@ -15350,7 +15368,7 @@ return L;
 }
 let RECUR_CACHE=null;
 function recurringProblems(ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 if(RECUR_CACHE && RECUR_CACHE.ws===ws) return RECUR_CACHE.list;
 const weeks=recurWeeks(ws);
 const map=new Map();
@@ -15405,7 +15423,7 @@ default:       return v.title||"A problem";
 }
 }
 function recurSheet(r, ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const sampleWs=r.here? ws : r.sampleWs;
 const all=fixOptions(r.sample, sampleWs);
 const later=all.filter(o=>o.g==="later");
@@ -15545,7 +15563,7 @@ return `<div class="card recur"><header><h3>This keeps happening</h3>
  
 function recurNote(v, ws){
 if(!v || !v.code) return "";
-const r=recurringProblems(ws||S.currentWeek).find(x=>x.key===problemKey(v));
+const r=recurringProblems(ws|| curWeek()).find(x=>x.key===problemKey(v));
 if(!r) return "";
 return `<div class="banner warn" style="margin:0"><div><b>This one keeps coming back</b> — ${r.weeks.length} of the last ${r.of} weeks. The options under <b>Stop it coming back</b> are the ones that will save you next week too.</div></div>`;
 }
@@ -17720,7 +17738,7 @@ if(k==="period") return `
         <p class="whead">How much do you want drafted right now? Each week is drafted knowing what the one before it did, so nobody closes on Sunday and opens on Monday across the boundary.</p>
         <div class="wopts">${[1,2,4,6].map(n=>opt("weeks",n,W.weeks,
 n===1?"Just the coming week":n+" weeks",
-prettyDate(S.currentWeek)+(n>1? " through "+prettyDate(addDays(S.currentWeek,n*7-1)):""))).join("")}</div>
+prettyDate(S.currentWeek)+(n>1? " through "+prettyDate(addDays(curWeek(),n*7-1)):""))).join("")}</div>
         <div class="help">You can change this any time from the Draft button — and posted weeks are never overwritten.</div>
       </div>`;
  
@@ -18358,7 +18376,7 @@ modal("Edit "+((empById(r0.empId)||{name:"this"}).name)+"'s request", `
           ${REQ_KINDS.map(k=>`<option value="${k.k}" ${k.k===r0.kind?"selected":""}>${esc(k.t)} — ${esc(k.hint)}</option>`).join("")}</select></div>
       </div>
       <div id="eqdates" class="grid2">
-        <div class="field"><label>From</label><input type="date" id="eqf" value="${esc(r0.from||S.currentWeek)}"></div>
+        <div class="field"><label>From</label><input type="date" id="eqf" value="${esc(r0.from|| curWeek())}"></div>
         <div class="field"><label>To</label><input type="date" id="eqt" value="${esc(r0.to==="2099-01-01"? r0.from : (r0.to||r0.from))}"></div>
       </div>
       <div class="field"><label>Repeats</label><select id="eqrep">
@@ -21563,8 +21581,8 @@ priorityRefresh(); save(); go("priority"); toast("Priority set to "+m[1].toLower
 items.push({t:"Weekly schedule PDF", kind:"export", run:()=>exportWeekPDF()});
 items.push({t:"Excel workbook for this week", kind:"export", run:()=>exportWorkbook()});
 items.push({t:"Week grid for Excel", kind:"export", run:()=>saveFile("schedule-grid-"+S.currentWeek+".csv", weekGridCSV())});
-items.push({t:"Next week", kind:"action", run:()=>{ S.currentWeek=addDays(S.currentWeek,7); save(); render(); }});
-items.push({t:"Previous week", kind:"action", run:()=>{ S.currentWeek=addDays(S.currentWeek,-7); save(); render(); }});
+items.push({t:"Next week", kind:"action", run:()=>{ S.currentWeek=addDays(curWeek(),7); save(); render(); }});
+items.push({t:"Previous week", kind:"action", run:()=>{ S.currentWeek=addDays(curWeek(),-7); save(); render(); }});
 items.push({t:"Undo the last change", kind:"action", run:()=>undo()});
 S.employees.forEach(e=>items.push({t:e.name, kind:"person", run:()=>{ go("team"); setTimeout(()=>empModal(e.id),60); }}));
 DAYS.forEach((d,i)=>items.push({t:d+" day sheet", kind:"view", run:()=>{ DAYVIEW=i; go("day"); }}));
@@ -21609,8 +21627,8 @@ else if(e.key==="w"){ go("week"); } else if(e.key==="d"){ go("day"); }
 else if(e.key==="t"){ go("team"); } else if(e.key==="o"){ go("home"); }
 else if(e.key==="h"){ go("holidays"); } else if(e.key==="e"){ go("export"); }
 else if(e.key==="r"){ go("requests"); } else if(e.key===","){ go("settings"); }
-else if(e.key==="ArrowLeft" && (VIEW==="week"||VIEW==="overview")){ S.currentWeek=addDays(S.currentWeek,-7); save(); render(); }
-else if(e.key==="ArrowRight" && (VIEW==="week"||VIEW==="overview")){ S.currentWeek=addDays(S.currentWeek,7); save(); render(); }
+else if(e.key==="ArrowLeft" && (VIEW==="week"||VIEW==="overview")){ S.currentWeek=addDays(curWeek(),-7); save(); render(); }
+else if(e.key==="ArrowRight" && (VIEW==="week"||VIEW==="overview")){ S.currentWeek=addDays(curWeek(),7); save(); render(); }
 });
 
  
@@ -21654,7 +21672,7 @@ return await saveFile("individual-schedules-"+ws+".pdf", doc.output("arraybuffer
 
  
 function swapModal(ws){
-ws=ws||S.currentWeek;
+ws=ws||curWeek();
 const wk=getWeek(ws);
 if(wk.assignments.length<2){ toast("Two shifts on the board are needed for a trade"); return; }
 const opt=a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
@@ -21754,7 +21772,7 @@ const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swa
 r.querySelector("#mclear").onclick=()=>{ const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
 r.querySelector("#munlock").onclick=()=>{ getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
 r.querySelector("#mcopy").onclick=()=>{
-const prev=S.weeks[addDays(S.currentWeek,-7)];
+const prev=S.weeks[addDays(curWeek(),-7)];
 if(!prev||!prev.assignments.length){ toast("Nothing to copy from last week"); return; }
 const wk=getWeek();
 wk.assignments = prev.assignments.map(a=>{
