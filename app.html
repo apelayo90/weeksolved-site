@@ -2113,8 +2113,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "60b555b1";       
-const BUILD_AT = "2026-09-03 21:40 UTC";       
+const BUILD_ID = "ee6a3348";       
+const BUILD_AT = "2026-09-03 22:14 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -6357,6 +6357,77 @@ save();
 logIt("request", "Kept "+(empById(ask.empId)||{name:"Someone"}).name+" on "+ask.when);
 }
 
+ 
+const CODE_KINDS = {
+OS1:{what:"someone taking an open shift",     go:(c)=>claimModal(curWeek(), c)},
+SW1:{what:"someone handing a shift back",     go:(c)=>handBackFromCode(c)},
+RQ1:{what:"a request — time off, hours or a day",  go:(c)=>askReadModal(c)},
+TM1:{what:"a starter form",                    go:(c)=>intakeReadModal(c)},
+VC1:{what:"a vacation pick",                   go:(c)=>vacPasteModal(c)},
+CD1:{what:"a holiday poll answer",             go:(c)=>pasteCodeModal(c)}
+};
+function codeKind(code){
+const t=String(code||"").trim();
+if(!t) return null;
+let raw="";
+try{ raw=b64d(t); }catch(e){ return null; }
+const k=(raw.split("|")[0]||"").toUpperCase();
+return CODE_KINDS[k]? {kind:k, what:CODE_KINDS[k].what} : null;
+}
+ 
+function handBackFromCode(code){
+const ws=curWeek();
+const res=readSwap(ws, code);
+if(res.err){ toast(res.err); return; }
+const n=addSwapAsks(ws, res);
+inboxLog("SW1", res.emp.name, n+" shift"+(n===1?"":"s")+" they cannot work");
+handBackModal(ws);
+}
+function inboxLog(kind, who, what){
+S.inbox=S.inbox||[];
+S.inbox.unshift({at:Date.now(), kind, who:String(who||"").slice(0,60), what:String(what||"").slice(0,90)});
+S.inbox=S.inbox.slice(0,40);
+save();
+}
+function inboxModal(prefill){
+const paint=(r)=>{
+const log=(S.inbox||[]).slice(0,8);
+r.querySelector("#ibrecent").innerHTML = log.length
+? `<div class="lab">Recently</div>`+log.map(x=>`<div class="mini">${esc(x.who||"Someone")} · ${esc(x.what)}
+          <span style="opacity:.7">· ${esc(new Date(x.at).toLocaleDateString([],{month:"short",day:"numeric"}))}</span></div>`).join("")
+: `<div class="mini">Nothing has come back yet.</div>`;
+};
+modal("A reply came back", `
+    <div class="stack">
+      <div class="help">Paste anything somebody sends you — an open shift they will take, a shift they cannot work,
+      a request, a starter form, a vacation pick, a holiday answer. Weeksolved works out which it is and opens the
+      right screen with it filled in, where every rule is checked before anything moves.</div>
+      <div class="field"><label>Paste the code</label>
+        <textarea id="ibcode" rows="3" style="font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)">${esc(prefill||"")}</textarea>
+        <span class="mini" id="ibmsg"></span></div>
+      <div id="ibrecent" class="stack" style="gap:4px"></div>
+    </div>`,
+`<button class="btn" data-close>Close</button><button class="btn primary" id="ibgo">Read it</button>`,
+r=>{
+paint(r);
+r.querySelector("#ibgo").onclick=()=>{
+const code=r.querySelector("#ibcode").value.trim();
+const msg=r.querySelector("#ibmsg");
+const k=codeKind(code);
+if(!k){
+msg.style.color="var(--crit)";
+msg.textContent = code? "That doesn’t look like a Weeksolved reply code. Check the whole thing came through — they are one long line with no spaces."
+: "Paste the code they sent you.";
+return;
+}
+msg.style.color=""; msg.textContent="That’s "+k.what+".";
+closeModal(true);
+if(k.kind!=="SW1") inboxLog(k.kind, "", k.what);
+setTimeout(()=>CODE_KINDS[k.kind].go(code), 120);
+};
+});
+}
+
 function handBackModal(ws){
 ws=ws||curWeek();
 const wk=peekWeek(ws);
@@ -8932,6 +9003,7 @@ if(plan.length>1) L.push("   posts: "+plan.map(x=>m2disp(x.from)+" "+((stationBy
 else { const st=a.station? stationById(a.station):null; if(st) L.push("   post: "+st.name+(a.station2? ", then "+((stationById(a.station2)||{}).name||""):"")); }
 if(a.mentor) L.push("   training with "+((empById(a.mentor)||{}).name||""));
 const n=shiftNote(ws, a.date, a.empId, a.startMin); if(n) L.push("   note: "+n);
+routineLinesFor(a.empId, a.date).forEach(x=>L.push(x));
 return L;
 }
 function personalDayText(empId, date){
@@ -8955,6 +9027,7 @@ if((wk.dayNotes||{})[date]) L.push("NOTE: "+wk.dayNotes[date], "");
 { const c=lunchClosure(dow, date); if(c) L.push("Doors shut "+m2disp(c.from)+"–"+m2disp(c.to)+" for lunch.", ""); }
 if(!on.length) L.push("Nobody scheduled.");
 on.forEach(a=>{ const e=empById(a.empId)||{name:"—"}; const ls=personDayLines(a, ws); L.push(e.name+"  "+ls[0]); ls.slice(1).forEach(x=>L.push("   "+x.trim())); });
+routineText(date).forEach(x=>L.push(x));
 L.push("", "Times are the schedule, not a record of what was worked.");
 return L.join("\n");
 }
@@ -11115,6 +11188,12 @@ return `<button class="wkcard ${state}" data-week="${w}">
       </div></div>
     `:""}
 
+    <div class="card"><header><h3>A reply came back</h3></header>
+      <div class="body stack" style="gap:8px">
+        <div class="mini">Somebody sent you a code \u2014 an open shift they will take, a shift they cannot work, a request, a starter form, a vacation pick, a holiday answer. Paste it here and Weeksolved works out which it is.</div>
+        <div class="row"><button class="btn primary" data-inbox="1">Paste a reply</button>${(S.inbox||[]).length? `<span class="mini" style="align-self:center">${(S.inbox||[]).length} read in so far</span>`:""}</div>
+      </div></div>
+
     <div class="card"><div class="body spread">
       <div><strong style="font-family:Archivo,sans-serif;font-size:13px">${S.ui&&S.ui.advanced? "Advanced view is on":"Keeping it simple"}</strong>
         <div class="mini" style="max-width:62ch">${S.ui&&S.ui.advanced
@@ -11166,7 +11245,8 @@ root.querySelectorAll("[data-jump]").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.datas
 root.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{
 const [date,shiftId,roleId]=b.dataset.fill.split("|"); fillOpenModal(date,shiftId,roleId||null); });
 root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.currentWeek));
-root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(S.currentWeek));
+root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(curWeek()));
+root.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>inboxModal(""));
 root.querySelectorAll("[data-denyreq]").forEach(b=>b.onclick=()=>requestConflictModal(S.currentWeek));
 root.querySelectorAll("[data-emp]").forEach(b=>b.onclick=()=>empModal(b.dataset.emp));
 const adv=root.querySelector("#hadv");
@@ -14445,7 +14525,8 @@ const [date,shiftId,roleId]=b.dataset.fill.split("|");
 fillOpenModal(date, shiftId, roleId||null);
 });
 root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.currentWeek));
-root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(S.currentWeek));
+root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(curWeek()));
+root.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>inboxModal(""));
 root.querySelectorAll("[data-denyreq]").forEach(b=>b.onclick=()=>requestConflictModal(S.currentWeek));
 wireFix(root, validate(S.currentWeek), S.currentWeek);
 wireDragDrop(root);
@@ -14958,6 +15039,163 @@ toast("Copied to "+prettyDate(to));
 }
 
  
+ 
+const ROUTINE_WHEN=[
+{id:"open",  t:"Opening",         d:"Falls to whoever starts first that day."},
+{id:"close", t:"Closing",         d:"Falls to whoever finishes last that day."},
+{id:"any",   t:"During the day",  d:"Anybody on that day — nobody in particular."}
+];
+function routines(){ if(!Array.isArray(S.routines)) S.routines=[]; return S.routines; }
+function routinesFor(date){
+const dow=parseYmd(date).getDay();
+return routines().filter(r=>!r.days || !r.days.length || r.days.indexOf(dow)>=0);
+}
+function routineOwner(date, when){
+if(when==="any") return null;
+const ws=weekStartOf(date, S.org.weekStart), wk=peekWeek(ws);
+const on=(wk?wk.assignments:[]).filter(a=>a.date===date && a.empId);
+if(!on.length) return null;
+const a = when==="close" ? on.reduce((x,y)=> y.endMin>x.endMin? y:x)
+: on.reduce((x,y)=> y.startMin<x.startMin? y:x);
+return empById(a.empId)||null;
+}
+function routineTicks(date, id){
+const ws=weekStartOf(date, S.org.weekStart), wk=peekWeek(ws);
+return (((wk&&wk.routineDone)||{})[date]||{})[id]||[];
+}
+function routineTick(date, id, i, on){
+const ws=weekStartOf(date, S.org.weekStart), wk=getWeek(ws);
+wk.routineDone=wk.routineDone||{}; wk.routineDone[date]=wk.routineDone[date]||{};
+const set=new Set(wk.routineDone[date][id]||[]);
+if(on) set.add(i); else set.delete(i);
+wk.routineDone[date][id]=[...set].sort((a,b)=>a-b);
+save();
+}
+function routineDoneCount(date, r){
+return routineTicks(date, r.id).filter(i=>i<r.items.length).length;
+}
+ 
+function routineText(date){
+const rs=routinesFor(date).filter(r=>r.items.length);
+if(!rs.length) return [];
+const L=[];
+rs.forEach(r=>{
+const who=routineOwner(date, r.when);
+L.push("", r.name.toUpperCase()+(who? "  ("+who.name+")":""));
+r.items.forEach(it=>L.push("   [ ] "+it));
+});
+return L;
+}
+ 
+function routineLinesFor(empId, date){
+const L=[];
+routinesFor(date).forEach(r=>{
+if(!r.items.length || r.when==="any") return;
+const who=routineOwner(date, r.when);
+if(!who || who.id!==empId) return;
+L.push("   "+r.name+": "+r.items.join("; "));
+});
+return L;
+}
+function routineCard(date){
+const rs=routinesFor(date);
+if(!rs.length){
+return `<div class="card"><header><h3>Opening and closing</h3>
+      <span class="hint">The short list that rides on the day</span></header>
+      <div class="body stack" style="gap:8px">
+        <div class="mini">A schedule says who is there. It never says what has to happen first and what has to happen last.
+        Write those once and they show up on every day sheet, printed or sent, against whoever actually opens and closes that day.</div>
+        <div class="row"><button class="btn primary" id="rtedit">Write the lists</button></div>
+      </div></div>`;
+}
+return `<div class="card"><header><h3>Opening and closing</h3>
+      <span class="hint">Ticks are kept for this day only</span></header>
+    <div class="body stack" style="gap:12px">
+      ${rs.map(r=>{
+const who=routineOwner(date, r.when);
+const done=routineTicks(date, r.id);
+const n=routineDoneCount(date, r);
+return `<div class="stack" style="gap:6px">
+          <div class="row" style="gap:8px;align-items:baseline">
+            <strong style="font-family:Archivo,sans-serif;font-size:13.5px">${esc(r.name)}</strong>
+            <span class="chip ${r.items.length && n===r.items.length? "ok":""}">${n} of ${r.items.length} done</span>
+            <span class="mini">${who? esc(who.name) : (r.when==="any"? "anybody on today" : "nobody scheduled")}</span>
+          </div>
+          ${r.items.length? r.items.map((it,i)=>`<label class="rtitem" style="display:flex;gap:8px;align-items:flex-start;padding:3px 0">
+            <input type="checkbox" data-rtick="${esc(r.id)}" data-rti="${i}" ${done.indexOf(i)>=0?"checked":""}>
+            <span${done.indexOf(i)>=0? ' style="opacity:.55;text-decoration:line-through"':""}>${esc(it)}</span></label>`).join("")
+: `<div class="mini">Nothing on this list yet.</div>`}
+        </div>`;
+}).join(`<div class="sep"></div>`)}
+      <div class="row"><button class="btn" id="rtedit">Edit the lists</button>
+        <button class="btn ghost" id="rtclear">Untick everything for today</button></div>
+    </div></div>`;
+}
+function routinesModal(){
+let draft = routines().map(r=>({...r, items:r.items.slice(), days:(r.days||[]).slice()}));
+const starter = ()=>{
+const ex=bizEx();
+return [{id:uid("rt"), name:"Opening", when:"open", days:[], items:(ex.open||[]).slice()},
+{id:uid("rt"), name:"Closing", when:"close", days:[], items:(ex.close||[]).slice()}];
+};
+modal("Opening and closing lists", `<div class="stack" id="rtbody"></div>`,
+`<button class="btn" data-close>Cancel</button><button class="btn primary" id="rtsave">Save</button>`,
+r=>{
+const paint=()=>{
+r.querySelector("#rtbody").innerHTML=`
+          <div class="help">Write what has to happen, in the order it happens. Each list falls to whoever actually
+          starts or finishes that day — not to a named person — so it still works when somebody swaps.
+          The lists show on the day sheet and travel with it when you print or send the day.</div>
+          ${draft.length? draft.map((d,i)=>`
+            <div class="card" style="box-shadow:none"><div class="body stack" style="gap:8px">
+              <div class="row" style="gap:8px">
+                <input type="text" class="rtn" data-i="${i}" value="${esc(d.name)}" placeholder="Opening" style="flex:1">
+                <select class="rtw" data-i="${i}">${ROUTINE_WHEN.map(w=>`<option value="${w.id}" ${d.when===w.id?"selected":""}>${w.t}</option>`).join("")}</select>
+                <button class="btn sm danger" data-rtdel="${i}">Remove</button>
+              </div>
+              <span class="mini">${esc((ROUTINE_WHEN.find(w=>w.id===d.when)||ROUTINE_WHEN[0]).d)}</span>
+              <div class="field"><label>Which days</label>
+                <div class="row" style="gap:5px;flex-wrap:wrap">${[0,1,2,3,4,5,6].map(dw=>
+`<button type="button" class="chip chipbtn ${(!d.days.length||d.days.indexOf(dw)>=0)?"acc":""}" data-rtd="${i}" data-dw="${dw}"
+                    aria-pressed="${(!d.days.length||d.days.indexOf(dw)>=0)}">${DSHORT[dw]}</button>`).join("")}</div>
+                <span class="mini">${d.days.length? "Only those days.":"Every day you are open."}</span></div>
+              <div class="field"><label>What has to happen — one per line</label>
+                <textarea class="rti" data-i="${i}" rows="5">${esc(d.items.join("\n"))}</textarea></div>
+            </div></div>`).join("")
+: `<div class="mini">No lists yet.</div>`}
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn" id="rtadd">Add a list</button>
+            ${draft.length? "" : `<button class="btn" id="rtstart">Start from a typical ${esc((BIZ_TYPES.find(b=>b.id===(S.org&&S.org.bizType))||{t:"business"}).t.toLowerCase())} list</button>`}
+          </div>`;
+r.querySelectorAll(".rtn").forEach(el=>el.oninput=()=>{ draft[+el.dataset.i].name=el.value; });
+r.querySelectorAll(".rti").forEach(el=>el.oninput=()=>{
+draft[+el.dataset.i].items=el.value.split(/\n/).map(s=>s.trim()).filter(Boolean); });
+r.querySelectorAll(".rtw").forEach(el=>el.onchange=()=>{ draft[+el.dataset.i].when=el.value; paint(); });
+r.querySelectorAll("[data-rtdel]").forEach(b=>b.onclick=()=>{ draft.splice(+b.dataset.rtdel,1); paint(); });
+r.querySelectorAll("[data-rtd]").forEach(b=>b.onclick=()=>{
+const d=draft[+b.dataset.rtd], dw=+b.dataset.dw;
+if(!d.days.length) d.days=[0,1,2,3,4,5,6];
+const at=d.days.indexOf(dw);
+if(at>=0) d.days.splice(at,1); else d.days.push(dw);
+d.days.sort();
+if(d.days.length===7) d.days=[];
+paint();
+});
+const add=r.querySelector("#rtadd");
+if(add) add.onclick=()=>{ draft.push({id:uid("rt"), name:"", when:"open", days:[], items:[]}); paint(); };
+const st=r.querySelector("#rtstart");
+if(st) st.onclick=()=>{ draft=starter(); paint(); };
+};
+paint();
+r.querySelector("#rtsave").onclick=()=>{
+S.routines = draft.filter(d=>(d.name||"").trim() || d.items.length)
+.map(d=>({id:d.id||uid("rt"), name:(d.name||"").trim()||"Checklist", when:d.when||"open",
+days:(d.days||[]).slice(), items:d.items.slice(0,30)}));
+save(); closeModal(true); render();
+toast(S.routines.length? "Saved — it rides on every day sheet from now on" : "Lists cleared");
+};
+});
+}
 function vDay(){
 const ws=S.currentWeek, wk=getWeek(ws);
 const dates=weekDates(ws);
@@ -15000,6 +15238,8 @@ esc(spanTxt(gapPts.length*STEP))} ${gapPts.every(p=>!p.staff)? "with nobody on":
       <input type="text" id="dnote" data-rerender="no" value="${esc((wk.dayNotes||{})[date]||"")}"
         placeholder="Note for the day — ${esc(bizEx().dayNote)}, inspection, a visit… shows on the printed sheet and in what you send" style="border:0;background:transparent;width:100%;padding:4px 0">
     </div></div>
+
+    ${routineCard(date)}
 
     ${!list.length? `<div class="empty card" style="padding:40px"><strong>Nobody scheduled ${DSHORT[dow]}</strong>Draft the week from This week.</div>` : `
     <div class="card">
@@ -15915,6 +16155,23 @@ return `<div class="banner warn" style="margin:0"><div><b>This one keeps coming 
 }
 
 WIRE.day = root=>{
+{
+const wd=weekDates(S.currentWeek), en=wd.find(x=>x.dow===DAYVIEW)||wd[0];
+const date=en? en.date : null;
+const ed=root.querySelector("#rtedit"); if(ed) ed.onclick=()=>routinesModal();
+root.querySelectorAll("[data-rtick]").forEach(el=>el.onchange=()=>{
+if(!date) return;
+routineTick(date, el.dataset.rtick, +el.dataset.rti, el.checked);
+render();
+});
+const cl=root.querySelector("#rtclear");
+if(cl) cl.onclick=()=>{
+if(!date) return;
+const ws=weekStartOf(date, S.org.weekStart), wk=getWeek(ws);
+if(wk.routineDone) delete wk.routineDone[date];
+save(); render(); toast("Unticked");
+};
+}
 root.querySelectorAll("[data-snote]").forEach(el=>el.addEventListener("input",()=>{
 const ws=S.currentWeek;
 const en=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
@@ -17394,27 +17651,27 @@ saveFile("day-sheet-"+entry.date+".html", html);
  
 const BIZ_EX={
 retail:   {name:"e.g. Maple Street Books, or Downtown store", roles:["e.g. Sales associate","e.g. Shift lead","e.g. Cashier","e.g. Stockroom"], roleProse:"Sales associate, Shift lead, Cashier", lic:"e.g. Forklift certificate", roleNote:"Handles returns and the safe",
-posts:["Register 1","Register 2","Fitting rooms","Floor","Stockroom"], postProse:"the registers, the fitting rooms, the floor", shiftNote:"Opens the tills, sets the displays", rush:"Shops rush the days before a closure and the sale morning after.", station:"e.g. Register 1", group:"e.g. Weekend crew", dayNote:"Delivery due 10a", holiday:"Thanksgiving"},
+posts:["Register 1","Register 2","Fitting rooms","Floor","Stockroom"], postProse:"the registers, the fitting rooms, the floor", shiftNote:"Opens the tills, sets the displays", rush:"Shops rush the days before a closure and the sale morning after.", station:"e.g. Register 1", group:"e.g. Weekend crew", dayNote:"Delivery due 10a", holiday:"Thanksgiving", open:["Unlock and disarm","Count the till float","Switch on the lights and music","Walk the floor — tidy displays, front the shelves","Check overnight deliveries"], close:["Cash out the tills and drop the takings","Straighten the floor and fitting rooms","Take the bins out","Set the alarm and lock up"]},
 food:     {name:"e.g. The Corner Bistro, or Harbor Grill", roles:["e.g. Server","e.g. Cook","e.g. Host","e.g. Busser"], roleProse:"Server, Cook, Host, Busser, Bartender", lic:"e.g. Food handler card", roleNote:"ServSafe certified",
-posts:["Grill","Sauté","Pass","Host stand","Section 1","Section 2","Bar"], postProse:"the grill, the pass, the host stand, the bar", shiftNote:"Preps the line, checks the walk-in", rush:"Restaurants rush the evening before a holiday and brunch the day after.", station:"e.g. Section 1", group:"e.g. Back of house", dayNote:"Private party 7p, 20 covers", holiday:"Mother\u2019s Day"},
+posts:["Grill","Sauté","Pass","Host stand","Section 1","Section 2","Bar"], postProse:"the grill, the pass, the host stand, the bar", shiftNote:"Preps the line, checks the walk-in", rush:"Restaurants rush the evening before a holiday and brunch the day after.", station:"e.g. Section 1", group:"e.g. Back of house", dayNote:"Private party 7p, 20 covers", holiday:"Mother\u2019s Day", open:["Check the walk-in and log temperatures","Fire up the line and check gas","Prep boards and set up stations","Set the dining room and check reservations","Count the drawer"], close:["Break down and clean the line","Log fridge and hot-hold temperatures","Cash out and drop the takings","Set the dish machine and take out the bins","Lock up and set the alarm"]},
 clinic:   {name:"e.g. Riverside Family Clinic, or Outpatient Front Desk", roles:["e.g. Provider","e.g. Medical assistant","e.g. Front desk","e.g. Nurse"], roleProse:"Provider, Medical assistant, Front desk, Nurse", lic:"e.g. RN license", roleNote:"BLS current",
-posts:["Room 1","Room 2","Room 3","Triage","Front desk","Lab"], postProse:"the exam rooms, triage, the front desk, the lab", shiftNote:"Opens the rooms, runs the morning huddle", rush:"Clinics rush the day before a long weekend and the Monday after.", station:"e.g. Room 1", group:"e.g. Nursing staff", dayNote:"Vaccine clinic 1\u20134p", holiday:"Christmas Day"},
+posts:["Room 1","Room 2","Room 3","Triage","Front desk","Lab"], postProse:"the exam rooms, triage, the front desk, the lab", shiftNote:"Opens the rooms, runs the morning huddle", rush:"Clinics rush the day before a long weekend and the Monday after.", station:"e.g. Room 1", group:"e.g. Nursing staff", dayNote:"Vaccine clinic 1\u20134p", holiday:"Christmas Day", open:["Unlock and disarm","Log fridge temperatures","Turn on the systems and check the day's list","Stock the rooms","Check messages and overnight results"], close:["Clean and restock the rooms","Log fridge temperatures","Secure charts, samples and medications","Shut the systems down","Lock up and set the alarm"]},
 pharmacy: {name:"e.g. Riverside Pharmacy, or Outpatient Pharmacy", roles:["e.g. Pharmacist","e.g. Technician","e.g. Front counter","e.g. Clerk"], roleProse:"Pharmacist, Technician, Front counter", lic:"e.g. Pharmacy Technician", roleNote:"State-registered technician",
-posts:["Typist 1","Typist 2","Checker 1","Checker 2","Front counter","Drive-through"], postProse:"the typing window, the checking bench, the front counter", shiftNote:"Opens the safe, runs the morning queue", rush:"Pharmacies often rush the day before a closure and the morning after.", station:"e.g. Typist 1", group:"e.g. Part-timers", dayNote:"Order due 3p", holiday:"Christmas Day"},
+posts:["Typist 1","Typist 2","Checker 1","Checker 2","Front counter","Drive-through"], postProse:"the typing window, the checking bench, the front counter", shiftNote:"Opens the safe, runs the morning queue", rush:"Pharmacies often rush the day before a closure and the morning after.", station:"e.g. Typist 1", group:"e.g. Part-timers", dayNote:"Order due 3p", holiday:"Christmas Day", open:["Open the safe and count the controlled log","Log fridge temperatures","Start the queue and check overnight faxes","Stock the counter and bags","Check the will-call for expiries"], close:["Reconcile and close the controlled log","Log fridge temperatures","File and return the will-call","Cash out the register","Lock the safe, close the gates, set the alarm"]},
 warehouse:{name:"e.g. Northgate Fulfillment, or Dock B", roles:["e.g. Picker","e.g. Forklift operator","e.g. Supervisor","e.g. Packer"], roleProse:"Picker, Forklift operator, Supervisor, Packer", lic:"e.g. Forklift certification", roleNote:"OSHA forklift card",
-posts:["Dock 1","Dock 2","Pick line A","Pick line B","Packing","Returns"], postProse:"the docks, the pick lines, packing", shiftNote:"Runs the start-of-shift safety brief", rush:"Warehouses rush the week before a holiday and the returns wave after.", station:"e.g. Dock 1", group:"e.g. Night crew", dayNote:"Truck at 6a", holiday:"Thanksgiving"},
+posts:["Dock 1","Dock 2","Pick line A","Pick line B","Packing","Returns"], postProse:"the docks, the pick lines, packing", shiftNote:"Runs the start-of-shift safety brief", rush:"Warehouses rush the week before a holiday and the returns wave after.", station:"e.g. Dock 1", group:"e.g. Night crew", dayNote:"Truck at 6a", holiday:"Thanksgiving", open:["Run the start-of-shift safety brief","Walk the docks and check for hazards","Check equipment and forklift logs","Print the pick list and assign lines"], close:["Sweep and clear the pick lines","Put equipment on charge and log it","Close the docks and shutters","Hand over the outstanding list"]},
 support:  {name:"e.g. Helpdesk Tier 1, or Customer Care", roles:["e.g. Agent","e.g. Team lead","e.g. Escalations","e.g. Trainee"], roleProse:"Agent, Team lead, Escalations", lic:"e.g. Product certification", roleNote:"Cleared for billing calls",
-posts:["Phones","Chat","Email queue","Escalations","Floor walker"], postProse:"phones, chat, the email queue, floor walking", shiftNote:"Opens the queues, checks overnight tickets", rush:"Support queues spike the morning after a holiday and after any outage.", station:"e.g. Phones", group:"e.g. Weekend line", dayNote:"Release day \u2014 expect volume", holiday:"New Year\u2019s Day"},
+posts:["Phones","Chat","Email queue","Escalations","Floor walker"], postProse:"phones, chat, the email queue, floor walking", shiftNote:"Opens the queues, checks overnight tickets", rush:"Support queues spike the morning after a holiday and after any outage.", station:"e.g. Phones", group:"e.g. Weekend line", dayNote:"Release day \u2014 expect volume", holiday:"New Year\u2019s Day", open:["Open the queues","Read the overnight tickets and handover","Check status pages and known issues","Post staffing for the day"], close:["Clear or hand over open tickets","Write the handover note","Close the queues","Check nothing is left unanswered"]},
 salon:    {name:"e.g. Studio 9 Hair, or Willow Spa", roles:["e.g. Stylist","e.g. Assistant","e.g. Front desk","e.g. Esthetician"], roleProse:"Stylist, Assistant, Front desk, Esthetician", lic:"e.g. Cosmetology license", roleNote:"Color-certified",
-posts:["Chair 1","Chair 2","Chair 3","Shampoo","Front desk","Treatment room"], postProse:"the chairs, the shampoo bowls, the front desk", shiftNote:"Opens the books, sets up stations", rush:"Salons rush the days before a holiday weekend and prom season.", station:"e.g. Chair 1", group:"e.g. Stylists", dayNote:"Bridal party 9a", holiday:"Valentine\u2019s Day"},
+posts:["Chair 1","Chair 2","Chair 3","Shampoo","Front desk","Treatment room"], postProse:"the chairs, the shampoo bowls, the front desk", shiftNote:"Opens the books, sets up stations", rush:"Salons rush the days before a holiday weekend and prom season.", station:"e.g. Chair 1", group:"e.g. Stylists", dayNote:"Bridal party 9a", holiday:"Valentine\u2019s Day", open:["Unlock and set up the stations","Check the day's bookings","Fill the shampoo bowls and set out towels","Count the till float"], close:["Sweep and clean each station","Wash and set the towels","Cash out and drop the takings","Confirm tomorrow's bookings","Lock up"]},
 hotel:    {name:"e.g. The Harbor Inn, or Front Office", roles:["e.g. Front desk","e.g. Housekeeping","e.g. Maintenance","e.g. Night audit"], roleProse:"Front desk, Housekeeping, Maintenance, Night audit", lic:"e.g. Pool operator certificate", roleNote:"Trained on the property system",
-posts:["Front desk","Bell stand","Floor 2","Floor 3","Laundry","Pool"], postProse:"the front desk, the bell stand, the floors, laundry", shiftNote:"Runs the morning checkout rush", rush:"Hotels rush check-in the day before a holiday and checkout the morning after.", station:"e.g. Front desk", group:"e.g. Housekeeping", dayNote:"Wedding block checking in 3p", holiday:"Labor Day"},
+posts:["Front desk","Bell stand","Floor 2","Floor 3","Laundry","Pool"], postProse:"the front desk, the bell stand, the floors, laundry", shiftNote:"Runs the morning checkout rush", rush:"Hotels rush check-in the day before a holiday and checkout the morning after.", station:"e.g. Front desk", group:"e.g. Housekeeping", dayNote:"Wedding block checking in 3p", holiday:"Labor Day", open:["Take the night audit handover","Check arrivals and out-of-order rooms","Set up the front desk and count the float","Brief housekeeping"], close:["Reconcile the desk and drop the takings","Check late arrivals and no-shows","Hand over to the night shift","Secure the back office"]},
 security: {name:"e.g. Westside Patrol, or Building 4 Security", roles:["e.g. Officer","e.g. Supervisor","e.g. Dispatcher","e.g. Rover"], roleProse:"Officer, Supervisor, Dispatcher", lic:"e.g. Guard card", roleNote:"Armed-qualified",
-posts:["Lobby","Loading dock","Patrol 1","Patrol 2","Control room","Gate"], postProse:"the lobby, the dock, the patrols, the control room", shiftNote:"Takes the handover log, walks the perimeter", rush:"Security posts rarely change around holidays; pick No change unless yours do.", station:"e.g. Lobby", group:"e.g. Night watch", dayNote:"Contractor access 8\u201311a", holiday:"Independence Day"},
+posts:["Lobby","Loading dock","Patrol 1","Patrol 2","Control room","Gate"], postProse:"the lobby, the dock, the patrols, the control room", shiftNote:"Takes the handover log, walks the perimeter", rush:"Security posts rarely change around holidays; pick No change unless yours do.", station:"e.g. Lobby", group:"e.g. Night watch", dayNote:"Contractor access 8\u201311a", holiday:"Independence Day", open:["Take the handover log","Walk the perimeter","Check cameras, radios and torches","Check the access list for the day"], close:["Walk the perimeter","Write up the shift log","Check all doors and gates","Hand over radios and keys"]},
 office:   {name:"e.g. Hillcrest Accounting, or Front Office", roles:["e.g. Staff","e.g. Manager","e.g. Receptionist","e.g. Specialist"], roleProse:"Staff, Manager, Receptionist", lic:"e.g. Notary commission", roleNote:"Notary on staff",
-posts:["Reception","Phones","Mail room","Front office"], postProse:"reception, the phones, the mail room", shiftNote:"Opens reception, checks the voicemail", rush:"Offices are usually quiet around holidays; pick No change unless yours are not.", station:"e.g. Reception", group:"e.g. Front office", dayNote:"Auditors on site", holiday:"Presidents\u2019 Day"},
+posts:["Reception","Phones","Mail room","Front office"], postProse:"reception, the phones, the mail room", shiftNote:"Opens reception, checks the voicemail", rush:"Offices are usually quiet around holidays; pick No change unless yours are not.", station:"e.g. Reception", group:"e.g. Front office", dayNote:"Auditors on site", holiday:"Presidents\u2019 Day", open:["Unlock and disarm","Open reception and check voicemail","Sort and distribute the post","Check meeting rooms for the day"], close:["Check the meeting rooms are clear","Switch off equipment","Lock the post and cabinets","Lock up and set the alarm"]},
 other:    {name:"e.g. Riverside Services, or the Downtown location", roles:["e.g. Staff","e.g. Lead","e.g. Assistant","e.g. Specialist"], roleProse:"Staff, Lead, Assistant", lic:"e.g. Trade license", roleNote:"Certified for the equipment",
-posts:["Station 1","Station 2","Front","Back"], postProse:"the front, the back, a bench or a window people take turns at", shiftNote:"Opens up, checks the day\u2019s list", rush:"Many businesses rush the day before a closure and the morning after.", station:"e.g. Station 1", group:"e.g. Weekend crew", dayNote:"Delivery due 10a", holiday:"Thanksgiving"}
+posts:["Station 1","Station 2","Front","Back"], postProse:"the front, the back, a bench or a window people take turns at", shiftNote:"Opens up, checks the day\u2019s list", rush:"Many businesses rush the day before a closure and the morning after.", station:"e.g. Station 1", group:"e.g. Weekend crew", dayNote:"Delivery due 10a", holiday:"Thanksgiving", open:["Unlock and open up","Check what came in overnight","Set up for the day","Check today's list"], close:["Tidy and set up for tomorrow","Cash up or hand over","Check everything is off","Lock up"]}
 };
 function bizEx(id){ return BIZ_EX[id] || BIZ_EX[(S&&S.org&&S.org.bizType)] || BIZ_EX.other; }
 const BIZ_TYPES=[
@@ -19733,11 +19990,11 @@ const p=picks[+b.dataset.vdeny-1]; if(p) add({kind:"deny", from:p.from, to:p.to}
 { const da=r2.querySelector("#vdenyall"); if(da) da.onclick=()=>add({kind:"deny"}); }
 });
 }
-function vacPasteModal(){
+function vacPasteModal(prefill){
 modal("Paste vacation reply codes", `
     <div class="stack">
       <div class="help">One code per line. ${S.vacations.deadline? "Requests were due "+esc(prettyDate(S.vacations.deadline))+" — codes still read in after that, but call it what it is.":""}</div>
-      <textarea id="vcin" style="min-height:150px;font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)"></textarea>
+      <textarea id="vcin" style="min-height:150px;font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)">${esc(prefill||"")}</textarea>
       <div id="vcres"></div>
     </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="dovac">Read them in</button>`,
@@ -20235,11 +20492,11 @@ const [f,t]=seg.split("~"); return {from:f,to:t};
 return {empId:e? e.id:null, name:e? e.name:key, picks};
 }
 
-function pasteCodeModal(){
+function pasteCodeModal(prefill){
 modal("Paste reply codes", `
     <div class="stack">
       <div class="help">Paste one code per line — however many came back. Codes look like a jumble of letters; that's the whole ranking packed small enough to text.</div>
-      <textarea id="cin" style="min-height:150px;font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)" placeholder="Q0QxfGVfYWJjfDIuMC4z..."></textarea>
+      <textarea id="cin" style="min-height:150px;font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)" placeholder="Q0QxfGVfYWJjfDIuMC4z...">${esc(prefill||"")}</textarea>
       <div id="cres"></div>
     </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="docode">Read them in</button>`,
@@ -20782,6 +21039,18 @@ saveFile("requests-record.csv", rows.map(csvRow).join("\n"));
  
 function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
+{t:"Where do I put an opening and closing checklist?", k:"checklist opening closing routine tasks jobs list what has to happen first last duties open up lock up shift checklist", go:"day",
+a:"On the Day sheet, under Opening and closing. Write each list once — what has to happen, one line per thing, in the order it happens — and pick whether it is an opening list, a closing list, or one for during the day, and which weekdays it applies on. From then on it shows on every day sheet with tick boxes, and it travels with the day when you print it, copy it or send it. If you have not written any yet, Weeksolved offers a typical list for your kind of business as a starting point; change every line of it if you like."},
+{t:"Who does the opening list fall to?", k:"checklist who owner assign person opening closing responsible falls to swap changed shift", go:"day",
+a:"Whoever actually starts first that day, and whoever actually finishes last — not a person you name. That is deliberate: swap a shift, hand one back, cover for somebody off sick, and the list moves with the schedule instead of sitting on somebody who is not there. A list marked During the day belongs to nobody in particular and is not sent to one person. The name shown on the card is worked out fresh each time the day is drawn."},
+{t:"Do the checklist ticks mean anything official?", k:"checklist ticks record compliance audit proof time clock kept history reset each day", go:"day",
+a:"They are a working list, not a record you could stand behind. Ticks are kept against that one date, so last Tuesday still shows what was ticked, and Untick everything for today clears the day you are on. They are ticked on your screen, by you or by whoever has the manager account open — Weeksolved has no staff accounts, so nobody signs anything and there is no timestamp against a person. If you need attendance or task sign-off with a name and a time on it, that is a time-and-attendance product, not this."},
+{t:"Something came back and I don’t know where to paste it", k:"inbox reply code paste came back what is this where does it go message from staff read it in one place unsure", go:"home",
+a:"Paste it in one place and let Weeksolved work it out. On Home there is a card called A reply came back — press Paste a reply, drop the code in, and it reads the first few characters to tell what kind of form it came from: an open shift somebody will take, a shift somebody cannot work, a request, a starter form, a vacation pick, or a holiday poll answer. It then opens the screen that already knows how to check that kind, with the code filled in for you. It does not apply anything: every check that screen normally runs still runs, and nothing moves until you say so. The same button is in the week’s more menu under Replies."},
+{t:"What do the reply codes actually contain?", k:"reply code privacy jumble letters base64 what is in the code safe secret data personal information text back", go:"home",
+a:"The answer they gave, packed small enough to send as a text message — which shift, which dates or which ranking, plus a short token that says which form it came from and a reason if they typed one. Nothing else: no location, no phone contents, no account. It is packed rather than encrypted, so treat it like a note rather than a password, and it is checked against your board when you paste it — a code from an old form, from somebody who is not on your roster, or naming a shift that is not theirs is refused with the reason."},
+{t:"Can staff send things back by text instead of email?", k:"text message sms reply back email how do staff send code phone whatsapp any way", go:"home",
+a:"However they normally reach you. The forms never send anything themselves — they run offline on the phone and produce a code the person copies. They can text it, email it, send it in whatever app your team already uses, or read it out loud for you to type. That is the point of the code being short. On your end it all arrives in the same place: A reply came back on Home."},
 {t:"Someone can\u2019t work a shift \u2014 how do they tell me?", k:"swap trade give back hand back cover my shift cant work call out drop shift staff request change sick family emergency reply code form", go:"week",
 a:"Send them the hand-back form. On the week screen open the more menu and choose Someone can\u2019t work a shift, then Save the form and send it out with the schedule. They open it on a phone \u2014 no account, no app, works with no signal \u2014 pick the shift they cannot work, add a reason if they want, and it gives them a short code they send back to you however they normally would. Paste the code in and it appears on your list. Nothing changes on the schedule until you decide: keep them on it, or let it go. Letting it go takes the shift off their week and turns it into an open shift, which you can then offer to the rest of the team with the file you already use."},
 {t:"Can two people swap shifts between themselves?", k:"swap trade between staff two people exchange shifts each other cover swap approval", go:"week",
@@ -22122,13 +22391,19 @@ modal("Week tools", `
         <div class="lab">Gaps</div>
         <button class="btn" id="mfix">Cover the open shifts</button>
         <button class="btn" id="mdeny">Decide which request to decline</button>
-        <button class="btn" id="mhand">Someone can\u2019t work a shift${swapPending(S.currentWeek).length? ' <span class="chip acc" style="margin-left:auto">'+swapPending(S.currentWeek).length+'</span>':""}</button>
+        <button class="btn" id="mhand">Someone can\u2019t work a shift${swapPending(curWeek()).length? ' <span class="chip acc" style="margin-left:auto">'+swapPending(curWeek()).length+'</span>':""}</button>
+      </div>
+      <div class="sep"></div>
+      <div class="stack" style="gap:8px">
+        <div class="lab">Replies</div>
+        <button class="btn" data-inbox="1">Paste a reply that came back</button>
       </div>
     </div>`, `<button class="btn" data-close>Close</button>`,
 r=>{
 const sb=r.querySelector("#mtell"); if(sb) sb.onclick=()=>{ closeModal(); handOutModal(S.currentWeek); };
 const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swapModal(S.currentWeek); };
-const hb=r.querySelector("#mhand"); if(hb) hb.onclick=()=>{ closeModal(); handBackModal(S.currentWeek); };
+const hb=r.querySelector("#mhand"); if(hb) hb.onclick=()=>{ closeModal(); handBackModal(curWeek()); };
+r.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>{ closeModal(); setTimeout(()=>inboxModal(""),120); });
 r.querySelector("#mclear").onclick=()=>{ const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
 r.querySelector("#munlock").onclick=()=>{ getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
 r.querySelector("#mcopy").onclick=()=>{
