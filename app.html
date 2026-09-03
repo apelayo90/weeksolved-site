@@ -271,6 +271,26 @@ th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.07e
 td{padding:8px 10px;border-bottom:1px solid var(--line)}
 tr:last-child td{border-bottom:0}
 .scroll{overflow-x:auto;overscroll-behavior-x:contain}
+.demrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 13px;border-top:1px solid var(--line)}
+.demrow:first-child{border-top:0}
+.demrow>span{white-space:nowrap}
+/* On a phone a wide table becomes a stack of cards, one per row, each cell
+   labelled with its column heading — so nothing ever scrolls sideways. Only
+   tables that would actually overflow are stacked; small ones stay tables. */
+@media(max-width:700px){
+  table.stk, table.stk tbody, table.stk tr, table.stk td{display:block;width:100%;box-sizing:border-box}
+  table.stk thead{display:none}
+  table.stk tr{border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:6px 10px;background:var(--surface)}
+  table.stk tr:first-child{margin-top:2px}
+  table.stk td{border:0;padding:4px 0;display:flex;gap:10px;align-items:flex-start;text-align:left;white-space:normal}
+  table.stk td::before{content:attr(data-th);flex:0 0 34%;max-width:34%;color:var(--muted);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding-top:3px}
+  table.stk td.nolab::before{content:none}
+  table.stk td.nolab{justify-content:flex-end;gap:6px;flex-wrap:wrap;padding-top:8px}
+  table.stk td>*{min-width:0}
+  table.stk td .stkv{flex:1;min-width:0;white-space:normal;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+  table.stk td .stkv>div{flex-basis:100%}
+  table.stk td .row{flex-wrap:wrap}
+}
 .empty{padding:30px 18px;text-align:center;color:var(--muted);font-size:13px}
 .empty strong{display:block;color:var(--ink);font-weight:600;margin-bottom:4px;font-family:"Archivo","Public Sans",sans-serif}
 .help{font-size:12px;color:var(--muted);line-height:1.5}
@@ -530,6 +550,7 @@ ol.a2hs li{padding-left:2px}
 @media print{ html{zoom:1 !important} }
 .setrow{display:flex;gap:16px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .snote{border:0;border-bottom:1px dashed var(--line2);background:transparent;font-size:11.5px;color:var(--muted);width:100%;max-width:210px;padding:2px 0;margin-top:3px}
+@media(max-width:700px){.snote{min-width:0;max-width:100%}}
 .snote:focus{outline:0;border-bottom-color:var(--acc);color:var(--fg)}
 .paycut{box-shadow:inset 3px 0 0 0 var(--accent)}
 .paybar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid var(--line);
@@ -2068,8 +2089,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "86a33a28";       
-const BUILD_AT = "2026-09-03 05:30 UTC";       
+const BUILD_ID = "de3ee1bc";       
+const BUILD_AT = "2026-09-03 05:48 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -9600,10 +9621,33 @@ document.title = (t[0]? t[0]+" \u2014 " : "")+"Weeksolved";
 polishA11y(pane);
 markToggleState(pane);
 enhanceDates(pane);
+stackTables(pane);
 if(keepY!=null) requestAnimationFrame(()=>window.scrollTo(0, keepY));
 }
  
  
+ 
+function stackTables(root){
+if(!root) return;
+const phone=isPhone();
+root.querySelectorAll(".scroll > table").forEach(t=>{
+if(t.classList.contains("nostk")) return;
+if(!phone){ t.classList.remove("stk"); return; }
+if(t.classList.contains("stk")) return;
+if(t.querySelector("[colspan],[rowspan]")) return;
+const ths=[...t.querySelectorAll("thead th")]; if(ths.length<3) return;
+const box=t.parentElement; if(!box || t.scrollWidth<=box.clientWidth+4) return;
+const labels=ths.map(th=>th.textContent.trim());
+t.querySelectorAll("tbody tr").forEach(tr=>{
+[...tr.children].forEach((td,i)=>{
+const lab=labels[i]||"";
+if(lab) td.setAttribute("data-th", lab); else td.classList.add("nolab");
+if(lab){ const w=document.createElement("div"); w.className="stkv"; while(td.firstChild) w.appendChild(td.firstChild); td.appendChild(w); }
+});
+});
+t.classList.add("stk");
+});
+}
 function markToggleState(root){
 if(!root) return;
  
@@ -9791,6 +9835,8 @@ if(k==="lic") return "Put the new date in";
 if(k==="fix") return "See the fixes";
 if(k==="checks") return "See the checks";
 if(k==="fixall") return "Show me the fixes";
+if(k==="wkopen") return "Show me the ways out";
+if(k==="wkchecks") return "See that week's checks";
 return "Go there";
 }
 function runAct(act){
@@ -9800,6 +9846,8 @@ if(k==="go"){ go(v); return; }
 if(k==="emp"){ empModal(v); return; }
 if(k==="lic"){ licRenewModal(v); return; }
 if(k==="fixall"){ fixModal(S.currentWeek); return; }
+if(k==="wkopen"){ S.currentWeek=v; save(); fixModal(v); return; }
+if(k==="wkchecks"){ S.currentWeek=v; save(); runAct("checks"); return; }
 if(k==="checks"){ if(VIEW!=="week") go("week"); setTimeout(()=>{ const c=[...document.querySelectorAll(".card h3")].find(h=>/Conflicts and compliance/.test(h.textContent)); if(c) c.closest(".card").scrollIntoView({behavior:"smooth",block:"start"}); }, 80); return; }
 if(k==="fix"){ const code=v, empId=parts[2]||null, extra=parts[3]||null;
 const e=empId? empById(empId):null;
@@ -9829,7 +9877,7 @@ const path=el.dataset.bind;
 const typed = el.tagName==="TEXTAREA" ||
 (el.tagName==="INPUT" && ["text","number","time","date","email","tel"].includes(el.type));
 const commit=()=>{
-let v = el.type==="checkbox"? el.checked : (el.type==="number"? (el.value===""?0:parseFloat(el.value)) : el.value);
+let v = el.type==="checkbox"? (el.dataset.invert? !el.checked : el.checked) : (el.type==="number"? (el.value===""?0:parseFloat(el.value)) : el.value);
 if(path==="rules.stationFamilies" || path==="rules.skillsOn") v = v===true || v==="1" || v===1;
 if(path==="org.jurisdiction") otFollowState(v);
 setPath(S,path,v);
@@ -9926,7 +9974,7 @@ MODAL_DIRTY=false;
 }
 if(onMount) onMount(r);
 wirePwEyes(r);
-polishA11y(r); markToggleState(r); enhanceDates(r); wireWhy(r);
+polishA11y(r); markToggleState(r); enhanceDates(r); stackTables(r); wireWhy(r);
 return r;
 }
 let MODAL_OPENER=null;
@@ -10634,7 +10682,7 @@ sel("org.bizType", BIZ_TYPES.map(x=>[x.id,x.t]), S.org.bizType||"other"))}
           <td><strong>${DAYS[i]}</strong></td>
           <td><input type="time" data-bind="hours.${i}.open" value="${esc(h.open)}" ${h.closed?"disabled":""}></td>
           <td><input type="time" data-bind="hours.${i}.close" value="${esc(h.close)}" ${h.closed?"disabled":""}></td>
-          <td><label class="switch"><input type="checkbox" data-bind="hours.${i}.closed" ${h.closed?"checked":""}> ${h.closed?"Closed":"Open"}</label></td>
+          <td><label class="switch" title="On = open that day; off = closed, nothing is scheduled"><input type="checkbox" data-bind="hours.${i}.closed" data-invert="1" ${h.closed?"":"checked"}> ${h.closed?"Closed":"Open"}</label></td>
         </tr>`).join("")}</tbody></table></div>
     </div>
 
@@ -11254,7 +11302,7 @@ return `
           <td><strong>${DAYS[i]}</strong></td>
           <td><input type="time" data-bind="hours.${i}.open" value="${esc(h.open)}" ${h.closed?"disabled":""}></td>
           <td><input type="time" data-bind="hours.${i}.close" value="${esc(h.close)}" ${h.closed?"disabled":""}></td>
-          <td><label class="switch"><input type="checkbox" data-bind="hours.${i}.closed" ${h.closed?"checked":""}> ${h.closed?"Closed":"Open"}</label></td>
+          <td><label class="switch" title="On = open that day; off = closed, nothing is scheduled"><input type="checkbox" data-bind="hours.${i}.closed" data-invert="1" ${h.closed?"":"checked"}> ${h.closed?"Closed":"Open"}</label></td>
         </tr>`).join("")}</tbody></table></div></div>
     </div>
 
@@ -12653,17 +12701,17 @@ return `<div style="border:1px solid var(--line);border-radius:var(--r);overflow
               <button class="btn sm" data-adddem="${i}">Add shift</button>
               ${i>0?`<button class="btn sm ghost" data-copydem="${i}">Copy from ${DSHORT[i-1]}</button>`:""}</div>
           </div>
-          ${rows.length? `<div class="scroll"><table><tbody>${rows.map((r,ri)=>{
+          ${rows.length? `<div class="demlist">${rows.map((r,ri)=>{
 const sh=shiftById(r.shiftId); if(!sh) return "";
 const [a,b]=shiftMinutes(sh);
-return `<tr>
-              <td style="width:170px"><span class="tag" style="--sc:${sh.color}">${esc(sh.label)}</span></td>
-              <td class="mono" style="width:130px">${m2disp(a)}–${m2disp(b)}</td>
-              <td style="width:190px">${esc(roleName(r.roleId))}</td>
-              <td style="width:110px"><span class="chip acc">${r.count||1} needed</span></td>
-              <td class="mini">${fmtHrs(b-a)} each</td>
-              <td style="width:90px;text-align:right"><button class="btn sm danger" data-deldem="${i}:${ri}">Remove</button></td></tr>`;
-}).join("")}</tbody></table></div>`
+return `<div class="demrow">
+              <span class="tag" style="--sc:${sh.color}">${esc(sh.label)}</span>
+              <span class="mono">${m2disp(a)}–${m2disp(b)}</span>
+              <span>${esc(roleName(r.roleId))}</span>
+              <span class="chip acc">${r.count||1} needed</span>
+              <span class="mini">${fmtHrs(b-a)} each</span>
+              <button class="btn sm danger" data-deldem="${i}:${ri}" style="margin-left:auto">Remove</button></div>`;
+}).join("")}</div>`
 : `<div class="empty" style="padding:16px">${h.closed?"Closed — nothing to staff.":"No shifts requested for this day."}</div>`}
         </div>`;
 }).join("")}
@@ -13670,8 +13718,8 @@ const inner = `<div class="wkrow ${state} ${isNow?"here":""}" data-open="${ws}">
 : `<span class="mono">${st.wk.assignments.length}/${st.want} shifts</span>
              <span class="mono">${fmtHrs(st.mins)}</span>
              <span class="mono">${st.people} people</span>
-             ${st.open? `<span class="chip crit">${st.open} open</span>`:""}
-             ${!st.open && st.crit? `<span class="chip crit">${st.crit} to fix</span>`:""}
+             ${st.open? `<span class="chip crit"${whyAttrs(st.open+" shift"+(st.open===1?"":"s")+" in this week "+(st.open===1?"has":"have")+" nobody on "+(st.open===1?"it":"them")+" yet. Open the week and press Fix on any of them — per diem, a stretch, an offer to the team — or see every way out at once.", "wkopen:"+ws)}>${st.open} open</span>`:""}
+             ${!st.open && st.crit? `<span class="chip crit"${whyAttrs(st.crit+" thing"+(st.crit===1?"":"s")+" in this week break"+(st.crit===1?"s":"")+" a rule or leave"+(st.crit===1?"s":"")+" a gap. Each one is listed in the week's checks with a Fix button.", "wkchecks:"+ws)}>${st.crit} to fix</span>`:""}
              ${!st.open && !st.crit? `<span class="chip ok">clean</span>`:""}`}
       </div>
       <div class="wkacts">
@@ -13826,7 +13874,7 @@ modal(prettyDate(ws)+" – "+prettyDate(addDays(ws,6)), `
       <div class="row">
         ${state==="posted"? '<span class="chip ok">posted</span>' : state==="pending"? '<span class="chip warn">going up shortly</span>' : state==="draft"? '<span class="chip acc">draft</span>' : '<span class="chip">nothing yet</span>'}
         ${patternFor(ws)? `<span class="chip">${esc(patternName(ws))}</span>`:""}
-        ${st.open? `<span class="chip crit">${st.open} open</span>`:""}
+        ${st.open? `<span class="chip crit"${whyAttrs(st.open+" shift"+(st.open===1?"":"s")+" still "+(st.open===1?"has":"have")+" nobody on "+(st.open===1?"it":"them")+". Cover the open shifts below lists every way out, least disruptive first.", "wkopen:"+ws)}>${st.open} open</span>`:""}
       </div>
       <div class="field"><label>A note to yourself</label>
         <input type="text" id="wknoteinp" value="${esc(wk.note||"")}" placeholder="Waiting on Marcus before this goes up">
@@ -13984,6 +14032,7 @@ esc(spanTxt(gapPts.length*STEP))} ${gapPts.every(p=>!p.staff)? "with nobody on":
 : mealPlan()==="slots"? "Meals go on the times you set: "+esc((S.rules.mealSlots||[]).map(x=>m2disp(t2m(x))).join(", "))+"."
 : "Meal periods are placed inside the legal window and staggered."}</span></header>
       <div class="body">
+        ${isPhone()? `<div class="mini" style="margin:-4px 0 6px">Swipe the chart sideways for later hours \u2014 the break sheet below has every time as text.</div>`:""}
         <div class="scroll"><div class="tl">
           <div class="tlhead"><div></div><div class="tlticks">${ticks.map(t=>`<span style="left:${pct(t)}%">${m2disp(t)}</span>`).join("")}</div></div>
           ${list.map(a=>{
@@ -14050,7 +14099,7 @@ x.alsoHolding? ` <span class="mini">holding ${esc(x.alsoHolding)} at the same ti
               ${a.mentor? `<div class="mini"><span class="chip acc">Learning \u2014 with ${esc((empById(a.mentor)||{name:"?"}).name)}</span></div>`
 : (a.trainee||isTrainee(e,date))? `<div class="mini"><span class="chip warn"${whyAttrs(e.name.split(" ")[0]+" is still in training and nobody on this shift is free to be paired with them. Bring someone in for the day, or move their shift to a day with a mentor on.", "day:"+dow)}>Learning \u2014 nobody free to pair with</span></div>`:""}
               <input type="text" class="snote" data-snote="${esc(a.empId)}" data-snotestart="${a.startMin}" data-rerender="no" maxlength="160"
-                value="${esc(shiftNote(ws, date, a.empId, a.startMin))}" placeholder="Note for this shift\u2026"></td>
+                value="${esc(shiftNote(ws, date, a.empId, a.startMin))}" placeholder="${isPhone()? "+ note" : "Note for this shift\u2026"}" title="A note for this shift \u2014 shows on the printed sheet"></td>
             ${(S.stations||[]).length? `<td>${(a.stationPlan&&a.stationPlan.length)
 ? a.stationPlan.map(b2=>{ const p=stationById(b2.st)||{name:"—"};
 return `<div class="stblk"><span class="mono">${m2disp(b2.from)}–${m2disp(b2.to)}</span>
@@ -16670,7 +16719,7 @@ if(k==="posts") return `
 : "The day is split into blocks and people swap posts at each change — the day sheet prints the times, so everyone can see where they are and when."}</span></div>
         <div class="field"><label>Numbered posts — one rotation or separate?</label>
           <select id="wpfam">
-            <option value="1" ${W.postFam==="1"?"selected":""}>Share one rotation — a turn on Typist 1 counts as a turn on Typist</option>
+            <option value="1" ${W.postFam==="1"?"selected":""}>Share one rotation \u2014 Typist 1 and 2 count as one</option>
             <option value="0" ${W.postFam==="0"?"selected":""}>Rotate separately — every post counted on its own</option>
           </select>
           <span class="mini">${W.postFam==="1"
@@ -17930,7 +17979,7 @@ return `
       <div class="row">
         <span class="lab" style="margin:0">Numbered posts</span>
         <select data-bind="rules.stationFamilies" style="min-width:230px">
-          <option value="1" ${S.rules.stationFamilies!==false?"selected":""}>Share one rotation (Typist 1 + Typist 2 = Typist)</option>
+          <option value="1" ${S.rules.stationFamilies!==false?"selected":""}>Share one rotation \u2014 Typist 1 and 2 count as one</option>
           <option value="0" ${S.rules.stationFamilies===false?"selected":""}>Rotate separately — every post on its own</option>
         </select>
       </div>
@@ -18686,7 +18735,7 @@ return `<b>${paid} of ${tot} are paid for holidays</b>, ${fmtHrs(hrs*60)} in tot
         <tbody>${R.map(r=>`<tr>
           <td><strong>${esc((empById(r.empId)||{name:r.name||"Unknown"}).name)}</strong></td>
           <td>${(r.rank||[]).map((hid,i)=>{const h=H.find(x=>x.id===hid);return h?`<span class="chip">${i+1}. ${esc(h.name)}</span> `:"";}).join("")}</td>
-          <td>${(r.cant||[]).map(hid=>{const h=H.find(x=>x.id===hid);return h?`<span class="chip crit">${esc(h.name)}</span> `:"";}).join("")||'<span class="mini">—</span>'}</td>
+          <td>${(r.cant||[]).map(hid=>{const h=H.find(x=>x.id===hid);return h?`<span class="chip crit" title="They said they cannot work ${esc(h.name)} \u2014 the draw never places them on it">${esc(h.name)}</span> `:"";}).join("")||'<span class="mini">—</span>'}</td>
           <td><button class="btn sm danger" data-delresp="${r.empId}">Clear</button></td></tr>`).join("")}
         </tbody></table>`:`<div class="empty"><strong>No answers yet</strong>Send the poll, then paste the codes people send back.</div>`}
       </div>
@@ -18715,7 +18764,7 @@ const rk=r.rank; const cls = rk<=1?"ok":rk>=H.length-1?"crit":"";
 return `<button class="chip ${cls}" data-holtweak="${r.empId}|${h.id}" style="cursor:pointer;border:0"
                   title="Not this person, or hold them to it">${esc((empById(r.empId)||{name:"—"}).name)} · ${esc(roleAbbr(r.roleId))}</button> `;
 }).join("")}
-              ${un.map(s=>`<span class="chip crit">OPEN · ${esc(roleAbbr(s.roleId))}</span> `).join("")}</td></tr>`;
+              ${un.map(s=>`<span class="chip crit"${whyAttrs("Nobody could be given this "+roleName(s.roleId)+" slot on "+h.name+" from the poll answers \u2014 everyone eligible either marked it can\u2019t-do or is already placed. Ask the people who have not answered, or add the day to someone\u2019s poll by hand.", "go:holidays")}>OPEN · ${esc(roleAbbr(s.roleId))}</span> `).join("")}</td></tr>`;
 }).join("")}</tbody></table></div>
         <div class="scroll"><table>
           <thead><tr><th>Person</th><th style="width:120px">Holidays</th><th>Which ones</th><th style="width:180px">How they ranked them</th></tr></thead>
@@ -19457,7 +19506,7 @@ return `
           <td class="mono">${prettyDate(x.ws)}</td>
           <td class="mono">${x.shifts}</td>
           <td><div class="row" style="gap:8px"><span class="mono" style="width:52px">${fmtHrs(x.hours*60)}</span>${bar(x.hours,maxH)}</div></td>
-          <td>${x.open? `<span class="chip crit">${x.open}</span>` : `<span class="chip ok">none</span>`}</td>
+          <td>${x.open? `<span class="chip crit"${whyAttrs(x.open+" shift"+(x.open===1?"":"s")+" in the week of "+prettyDate(x.ws)+" "+(x.open===1?"was":"were")+" left with nobody on "+(x.open===1?"it":"them")+". Open that week to see who was short and why.", "wkopen:"+x.ws)}>${x.open}</span>` : `<span class="chip ok">none</span>`}</td>
           ${costOn()?`<td class="mono">${money(x.cost)}</td>`:""}
           <td>${x.posted? '<span class="chip ok">posted</span>':'<span class="chip">draft</span>'}</td></tr>`).join("")}
         </tbody></table></div>
