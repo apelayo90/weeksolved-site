@@ -2049,8 +2049,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "2d86e9c0";       
-const BUILD_AT = "2026-09-03 00:51 UTC";       
+const BUILD_ID = "b5d923e6";       
+const BUILD_AT = "2026-09-03 00:59 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -14117,7 +14117,7 @@ mealMoveOptions(ws, x, mi, ()=>judgeFor(x,mi)).forEach((opt,i)=>now(
 ()=>{ moveMeal(ws, x, mi, opt.t); toast(who+"’s meal moved to "+m2disp(opt.t)); }, i===0 && !O.some(o=>o.rec)));
 if(m.waivable && !(mi>0 && x.breaks.meals[0].waived))
 now("Waive "+who+"’s "+(mi? "second ":"")+"meal", "Allowed on a shift this length under "+law().name+" rules, by written agreement — they work through and stay on the floor.",
-()=>{ if(waiveMeal(ws, x, mi)) toast(who+"’s meal waived for "+DSHORT[d2]); });
+()=>{ if(waiveMeal(ws, x, mi)) toast(who+"’s meal waived for "+DSHORT[d2]); }, !O.some(o=>o.rec));
 });
 });
 };
@@ -14196,7 +14196,7 @@ const judge=()=>{ const R=mealReliefFor(v.date, ws); const job=R.find(j=>j.mealO
 mealMoveOptions(ws, x, v.mi, judge).forEach((opt,i)=>now("Move "+who+"’s meal to "+m2disp(opt.t), "Somebody is free to hold "+(st? st.name:"the post")+" then.",
 ()=>{ moveMeal(ws, x, v.mi, opt.t); toast(who+"’s meal moved to "+m2disp(opt.t)); }, i===0));
 if(m.waivable && !(v.mi>0 && x.breaks.meals[0].waived))
-now("Waive "+who+"’s "+(v.mi? "second ":"")+"meal", "Allowed on a shift this length under "+law().name+" rules, by written agreement.", ()=>{ if(waiveMeal(ws, x, v.mi)) toast("Meal waived"); });
+now("Waive "+who+"’s "+(v.mi? "second ":"")+"meal", "Allowed on a shift this length under "+law().name+" rules, by written agreement.", ()=>{ if(waiveMeal(ws, x, v.mi)) toast("Meal waived"); }, !O.some(o=>o.rec));
 stretchInto(v.date, m.start, m.end, !O.length);
 bringIn(v.date, !O.some(o=>o.rec));
 editShift(x);
@@ -14338,6 +14338,21 @@ break;
 default: {
 dayLink();
 if(e) profile();
+}
+}
+ 
+if(v.code==="relief"){
+const nowOpts=O.filter(o=>o.g==="now" && !/^(Open the day sheet|Edit )/.test(o.t));
+if(nowOpts.length===1 && /^Bring someone/.test(nowOpts[0].t)){
+const pref=((S.stations||[]).filter(x=>x.kind!=="admin" && !x.off).length>1? O.find(o=>/^Choose who may step in/.test(o.t)) : null) || O.find(o=>/sit empty during meals/.test(o.t));
+if(pref){ O.forEach(o=>o.rec=false); pref.rec=true; }
+}
+}
+if(v.code==="cover" && v.date && soloDay(v.date)){
+const nowOpts=O.filter(o=>o.g==="now" && !/^Open the day sheet/.test(o.t));
+if(nowOpts.length===1 && /^Bring someone/.test(nowOpts[0].t)){
+const pref=O.find(o=>/^Close the doors/.test(o.t)) || O.find(o=>/^Let a meal count/.test(o.t));
+if(pref){ O.forEach(o=>o.rec=false); pref.rec=true; }
 }
 }
  
