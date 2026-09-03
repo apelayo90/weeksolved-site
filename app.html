@@ -602,6 +602,7 @@ ol.a2hs li{padding-left:2px}
 .btn.fixo.bestfix{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 6%,var(--surface))}
 .btn.fixo .chip{vertical-align:middle}
 .chipbtn{cursor:pointer;font:inherit;font-size:inherit;border-color:transparent}
+.covbar i[data-fixat]{cursor:pointer} .covbar i[data-fixat]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .chipbtn:hover{filter:brightness(.95)} .chipbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .fixopt{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:9px 11px;flex-wrap:wrap}
 .fixopt .chip{white-space:normal;max-width:100%;text-align:left;line-height:1.35}
@@ -2048,8 +2049,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "f430f585";       
-const BUILD_AT = "2026-09-03 00:44 UTC";       
+const BUILD_ID = "2d86e9c0";       
+const BUILD_AT = "2026-09-03 00:51 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -13758,7 +13759,7 @@ return `<div class="tlrow">
           ${prof? `<div class="tlrow" style="border-top:2px solid var(--line);border-bottom:0">
             <div class="tlname">On the floor<small>against your minimums</small></div>
             <div class="tltrack" style="background:transparent">
-              <div class="covbar" style="height:34px">${prof.pts.map(p=>`<i class="${p.shut?"shut":p.gap>0?(p.gap>1?"r":"y"):"g"}" title="${m2disp(p.t)}${p.shut?": closed for lunch":": "+p.staff+" on duty"+(p.gap>0?" · short "+p.gap:"")}"></i>`).join("")}</div>
+              <div class="covbar" style="height:34px">${prof.pts.map(p=>`<i class="${p.shut?"shut":p.gap>0?(p.gap>1?"r":"y"):"g"}" ${p.gap>0? `data-fixat="${p.t}" role="button" tabindex="0"`:""} title="${m2disp(p.t)}${p.shut?": closed for lunch":": "+p.staff+" on duty"+(p.gap>0?" · short "+p.gap+" — press to fix":"")}"></i>`).join("")}</div>
             </div></div>`:""}
         </div></div>
         <div class="legend" style="margin-top:12px">
@@ -14129,7 +14130,20 @@ later(solo? "Close the doors for lunch on days when only one person is on" : "Cl
 ()=>{ S.rules.mealPlan="closed"; S.rules.mealClose={when: solo? "solo":"all", from:m2t(from), to:m2t(to)}; rebuildBreaks(); save(); render();
 toast("Doors shut "+m2disp(from)+"–"+m2disp(to)+(solo? " when one person is on":"")+" — change it under Scheduling rules"); });
 };
-const moreOnDay=(d2)=>{ if(d2==null) return; later("Schedule one more person on "+DAYS[d2]+"s", "Adds a shift from your pool to "+DAYS[d2]+"’s coverage needs, so every draft staffs it.", ()=>demModal(d2)); };
+const moreOnDay=(d2,from,to)=>{
+if(d2==null) return;
+ 
+if(from!=null && to!=null){
+const span=S.shifts.map(sh=>{ const [x,y]=shiftMinutes(sh); return {sh,x,y,len:y-x}; }).filter(o=>o.x<=from && o.y>=to).sort((p,q)=>p.len-q.len)[0];
+if(span){
+later("Need one more "+span.sh.label+" ("+m2disp(span.x)+"–"+m2disp(span.y)+") on "+DAYS[d2]+"s", "Adds one to "+DAYS[d2]+"’s coverage needs. Every draft from now on staffs it; press Draft again to fill it this week.",
+()=>{ const D=demandOf(ws); D[d2]=D[d2]||[]; const row=D[d2].find(r=>r.shiftId===span.sh.id && !r.roleId);
+if(row) row.count=(row.count||1)+1; else D[d2].push({shiftId:span.sh.id, roleId:null, count:1});
+save(); render(); toast("One more "+span.sh.label+" on "+DAYS[d2]+"s — Draft again to fill it this week"); });
+}
+}
+later("Schedule one more person on "+DAYS[d2]+"s — choose the shift", "Adds a shift from your pool to "+DAYS[d2]+"’s coverage needs, so every draft staffs it.", ()=>demModal(d2));
+};
 const hoursLink=()=>later("Change our opening hours", "If you are not really open then, the gap is the hours, not the people.", ()=>go("org"));
 
 switch(v.code){
@@ -14138,7 +14152,6 @@ now("Who could work it?", "Everyone who clears every limit, best fit first.", ()
 now("All open shifts and the best ways out", "Per diem, an hour of overtime, a request to decline — ranked, least disruptive first.", ()=>fixModal(ws));
 now("Offer it to the team", "One page they can reply to with a code. Nobody needs an account.", ()=>offerModal(ws));
 bringIn(v.date);
-moreOnDay(null);
 later("Need fewer people on "+dayName+"s?", "Change the coverage needs and the drafter stops asking for it.", ()=>go("demand"));
 if(v.roleId) later("Add someone who can work as "+roleName(v.roleId), "A new hire, or a role added to someone already on the team.", ()=>go("team"));
 break;
@@ -14171,7 +14184,7 @@ if(mealDriven) closeForLunch(date, from, Math.max(to, from+30));
 if(mealDriven && !S.rules.staggerMeals && mealPlan()==="auto" && S.rules.breakMode==="assigned")
 later("Stagger meals so two people are never off the floor at once", "Meals spread out across the day instead of stacking up.",
 ()=>{ S.rules.staggerMeals=true; rebuildBreaks(); save(); render(); toast("Meals staggered"); });
-moreOnDay(dow);
+moreOnDay(dow, from, to);
 { const h=S.hours[dow]||{}; const edge = !h.closed && (from<=t2m(h.open) || to>=t2m(h.close)); if(edge) hoursLink(); }
 break;
 }
@@ -14290,6 +14303,30 @@ dayLink();
 if(A) later("Change the keep-apart rule", "On "+A.name.split(" ")[0]+"’s profile — loosen it or remove it.", ()=>empModal(A.id));
 break;
 }
+case "request": {
+const r=(S.requests||[]).find(x=>x.id===v.reqId); if(!r||!e) break;
+const inRange=x=> r.kind==="maxh"? true
+: (r.every && r.every.length) ? (r.every.includes(x.dow) && x.date>=r.from && (!r.to||r.to==="2099-01-01"||x.date<=r.to))
+: (x.date>=r.from && x.date<=r.to);
+const hit=wk.assignments.filter(x=>x.empId===e.id && inRange(x)).sort((p,q)=>p.date.localeCompare(q.date));
+const wantsOn = r.kind==="want" || r.kind==="shift";
+if(wantsOn){
+const busy=new Set(hit.map(x=>x.date));
+weekDates(ws).filter(({date,dow:d2})=>inRange({date,dow:d2}) && !busy.has(date) && !(S.hours[d2]||{}).closed).slice(0,3)
+.forEach(({date,dow:d2},i)=>now("Add a shift for "+first+" on "+DSHORT[d2]+" "+prettyDate(date), r.kind==="shift"? "Pick "+((shiftById(r.shiftId)||{label:"the shift"}).label)+" on the next screen." : "One of your named shifts; limits are checked before you save.", ()=>newAssignModal(e.id, date, d2), i===0));
+if(r.kind==="shift") hit.slice(0,2).forEach(x=>editShift(x, "Change "+first+"’s "+DSHORT[x.dow]+" shift to "+((shiftById(r.shiftId)||{label:"the one asked for"}).label), "Swap the shift on a day they already work."));
+} else {
+hit.slice(0,3).forEach((x,i)=>{ if(i===0) handOff(x, true); else handOff(x); });
+if(r.kind==="late"||r.kind==="early"||r.kind==="maxh") hit.slice(0,2).forEach(x=>editShift(x, "Change "+first+"’s "+DSHORT[x.dow]+" times", "Start later, finish earlier, or trim the hours."));
+}
+dayLink();
+if(!r.hard) later("Make it a must", "The drafter will never break it. Press Draft again afterwards to redo this week around it.",
+()=>{ r.hard=true; save(); render(); toast("Marked as a must — Draft again to redo the week around it"); });
+later("Draft the week again", "Redo the whole week with every request weighed once more.", ()=>redoModal(ws));
+if(r.status!=="declined") later("Decline the request", "Turned down, on the record, and they can be told.",
+()=>{ r.status="declined"; r.deniedAt=Date.now(); save(); render(); toast("Declined"); if(msgOn()) setTimeout(()=>tellAboutRequest(r, ws), 120); });
+break;
+}
 case "union": {
 if(a) editShift(a);
 if(v.aIds) v.aIds.map(byId).filter(Boolean).slice(0,3).forEach(x=>editShift(x));
@@ -14357,6 +14394,17 @@ const d=en.date, dow=en.dow;
 const prof=coverageProfile(d,dow,ws); if(!prof) return;
 const gaps=collapseGaps(prof.pts.filter(p=>p.gap>0));
 const g=gaps[+btn.dataset.covergap]; if(g) stretchModal(d, ws, g);
+});
+root.querySelectorAll("[data-fixat]").forEach(el=>{
+const open=()=>{
+const ws=S.currentWeek, wd=weekDates(ws), en=wd.find(x=>x.dow===DAYVIEW)||wd[0];
+const prof=coverageProfile(en.date,en.dow,ws); if(!prof) return;
+const t=+el.dataset.fixat;
+const g=collapseGaps(prof.pts.filter(p=>p.gap>0)).find(x=>t>=x.from && t<x.to); if(!g) return;
+fixSheet({code:"cover", sev:"crit", title:"Coverage dips "+m2disp(g.from)+" \u2013 "+m2disp(g.to)+", "+DSHORT[en.dow],
+detail:g.labels.join(" \u00b7 "), date:en.date, dow:en.dow, from:g.from, to:g.to, ruleIds:g.ruleIds}, ws);
+};
+el.onclick=open; el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } };
 });
 root.querySelectorAll("[data-fixdip]").forEach(btn=>btn.onclick=()=>{
 const ws=S.currentWeek;
@@ -16941,7 +16989,7 @@ return `<tr${r.status==="declined"?' style="opacity:.5"':""}>
 : reqRepeatText(r)? `<span class="chip acc">${esc(reqRepeatText(r))}</span>`
 : (r.from===r.to? prettyDate(r.from) : prettyDate(r.from)+" – "+prettyDate(r.to))}</td>
       <td class="mini">${esc(reqDetail(r))}${r.note?`<div class="mini" style="opacity:.8">“${esc(r.note)}”</div>`:""}</td>
-      ${showOutcome? `<td>${o? `<span class="chip ${o.ok?"ok":o.ok===false?"warn":""}">${esc(o.say)}</span>` : `<span class="mini">draft the week to see</span>`}</td>`:""}
+      ${showOutcome? `<td>${o? `<span class="chip ${o.ok?"ok":o.ok===false?"warn":""}">${esc(o.say)}</span>${o.ok===false? ` <button class="btn sm primary" data-fixreq="${r.id}">Fix</button>`:""}` : `<span class="mini">draft the week to see</span>`}</td>`:""}
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" data-reqedit="${r.id}">Edit</button>
         ${msgOn()? `<button class="btn sm" data-reqtell="${r.id}">${r.told?"Tell again":"Tell them"}</button>`:""}
@@ -17180,6 +17228,11 @@ el.addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); a
 wireReqTables(root);
 };
 function wireReqTables(root){
+root.querySelectorAll("[data-fixreq]").forEach(b=>b.onclick=()=>{
+const r=(S.requests||[]).find(x=>x.id===b.dataset.fixreq); if(!r) return;
+const e=empById(r.empId)||{name:"They"}; const o=reqOutcome(r, S.currentWeek, 1);
+fixSheet({code:"request", sev:"warn", reqId:r.id, empId:r.empId, title:reqKind(r.kind).t+" — "+e.name.split(" ")[0], detail:(o&&o.say)||""}, S.currentWeek);
+});
 root.querySelectorAll("[data-reqno]").forEach(b=>b.onclick=()=>{
 const r=(S.requests||[]).find(x=>x.id===b.dataset.reqno);
 if(r){ r.status="declined"; logIt("req","Declined: "+((empById(r.empId)||{}).name||"someone")+", "+prettyDate(r.from)+(r.to&&r.to!==r.from?" to "+prettyDate(r.to):""));
