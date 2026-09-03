@@ -2113,8 +2113,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "c12cf99c";       
-const BUILD_AT = "2026-09-03 16:50 UTC";       
+const BUILD_ID = "ab3b4fd6";       
+const BUILD_AT = "2026-09-03 17:25 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5625,7 +5625,7 @@ function groupsFor(e){
 return (S.groups||[]).filter(g=>{
 const r=(g.match&&g.match.roleIds)||[], t=(g.match&&g.match.types)||[], m=(g.match&&g.match.empIds)||[];
 if(m.length) return m.includes(e.id);
-const roleOk = !r.length || e.roleIds.some(x=>r.includes(x));
+const roleOk = !r.length || (e.roleIds||[]).some(x=>r.includes(x));    
 const typeOk = !t.length || t.includes(e.type);
 return roleOk && typeOk;
 });
@@ -10155,6 +10155,8 @@ else WAS_PHONE=now;
 
 let LAST_VIEW=null;
 function render(){
+ 
+if(!document.querySelector("#ttl")) return;
 WAS_PHONE = isPhone(); RECUR_CACHE=null;
 settlePending(); runQueued(); dailyTick(); graceTick(); paintAccount();
 const keepY = (LAST_VIEW===VIEW)? window.scrollY : null;
