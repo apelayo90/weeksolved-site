@@ -295,6 +295,29 @@ tr:last-child td{border-bottom:0}
 .modal .body{padding:18px;overflow-y:auto;overscroll-behavior:contain}
 .modal>footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;background:var(--surface2);border-radius:0 0 10px 10px}
 .modal>footer>*{min-width:0}
+.modal.wide{max-width:min(920px,100%)}
+/* ---------- Who is testing: one card per person, never a sideways scroll ---------- */
+.tstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tstats>div{background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 4px;text-align:center;min-width:0}
+.tstats b{display:block;font-size:20px;line-height:1.1;font-weight:700}
+.tstats span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.tstats>div.ok b{color:var(--ok)} .tstats>div.warn b{color:var(--warn)}
+.tlist{display:grid;gap:10px}
+.tcard{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:12px 13px;display:grid;gap:7px;min-width:0}
+.tcard.silent{background:var(--surface2)}
+.tcard .tt{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.tcard .tt .who{flex:1;min-width:0;font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.tcard .tt .left{flex:none;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);white-space:nowrap}
+.tcard .tt .left.low{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.tcard .tt .left.out{background:var(--crit-soft);color:var(--crit);border-color:transparent}
+.tcard .tt .left.life{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.tcard .meta{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 12px;min-width:0}
+.tcard .meta span{overflow-wrap:anywhere}
+.tcard .bar{height:5px;border-radius:3px;background:var(--sunken);overflow:hidden}
+.tcard .bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.tcard .sent{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.tcard .sent .none{color:var(--muted)}
+@media (min-width:900px){ .tstats{grid-template-columns:repeat(6,minmax(0,1fr))} .tlist{grid-template-columns:1fr 1fr} }
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw;
   display:flex;align-items:center;gap:12px;bottom:calc(18px + env(safe-area-inset-bottom))}
 .toast .tact{flex:none;background:transparent;border:1px solid rgba(255,255,255,.45);color:var(--ground);
@@ -900,6 +923,11 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .modal{max-height:calc(100dvh - 96px)}
   .modal footer{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
   .scrim{padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+  /* list screens (Who is testing) use nearly the whole width of a phone */
+  .scrim.edge{padding:10px 6px calc(30px + env(safe-area-inset-bottom,0px))}
+  .scrim.edge .modal{max-height:calc(100dvh - 60px)}
+  .scrim.edge .modal .body{padding:12px 10px 22px}
+  .scrim.edge .modal>header{padding:12px 14px}
   .sheetbox{padding-bottom:calc(34px + env(safe-area-inset-bottom,0px))}
   .modal .body{padding-bottom:26px}
   input[type=text],input[type=number],input[type=time],input[type=date],input[type=email],input[type=tel],select,textarea{font-size:16px}
@@ -2015,8 +2043,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "49d21d6f";       
-const BUILD_AT = "2026-09-02 20:50 UTC";       
+const BUILD_ID = "9fa9eca8";       
+const BUILD_AT = "2026-09-03 00:15 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "3c73c50a0eb44fe5";
 const TERMS_DATE = "";
@@ -2706,7 +2734,7 @@ L.push("Can save to this browser: "+store);
 L.push("Sign-in library loaded: "+((typeof firebase!=="undefined" && firebase && firebase.auth)? "yes":"NO \u2014 it was blocked or did not download"));
 if(APPCHECK_KEY) L.push("App Check: "+(window.APPCHECK_ON? "active" : "did not start"));
 L.push("Connected to the account service: "+((typeof FB!=="undefined" && FB && FB.auth)? "yes":"NO"));
-L.push("Online: "+(navigator.onLine? "yes":"no"));
+L.push("Online: "+(navigator.onLine? "yes":"NO"));
 L.push("Access codes in this build: "+((typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes.length : "none"));
 L.push("Cookies enabled: "+(navigator.cookieEnabled? "yes":"NO"));
 L.push("Browser: "+String(navigator.userAgent||"").slice(0,160));
@@ -2745,14 +2773,28 @@ modal("Your details for support", `<div class="stack">
       <textarea rows="12" readonly style="font-family:'IBM Plex Mono',monospace;font-size:12px">${esc(txt)}</textarea>
     </div>`, `<button class="btn primary" data-close>Close</button>`);
 }
+ 
+function gateDiagHtml(txt){
+return String(txt||"").split("\n").map(line=>{
+const i=line.indexOf(": ");
+if(i<0) return '<div style="padding:5px 0">'+esc(line)+'</div>';
+const k=line.slice(0,i), v=line.slice(i+2).trim();
+const bad=/^(NO\b|no$|none$|0$|blocked|did not start$)/i.test(v);
+const long=v.length>34;
+const val='<span style="font-weight:600;word-break:break-word;'+(bad?
+'color:var(--crit);background:var(--crit-soft);padding:2px 9px;border-radius:999px;':'')+'">'+esc(v)+'</span>';
+return '<div style="display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line)">'+
+'<span style="color:var(--ink2)">'+esc(k)+'</span>'+(long? '<span style="flex-basis:100%"></span>':'')+val+'</div>';
+}).join("");
+}
 function gateDiagModal(){
 const txt=gateDiagnostics();
 const w=document.createElement("div");
 w.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto";
 w.innerHTML='<div style="background:var(--surface);color:var(--ink);border-radius:12px;padding:16px;max-width:460px;width:100%;margin:auto">'+
 '<h3 style="margin:0 0 8px;font-size:16px">What this device says</h3>'+
-'<p style="margin:0 0 10px;font-size:13px;color:var(--ink2)">Anything marked NO is the problem. Copy this and send it over.</p>'+
-'<pre id="gdtxt" style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:10px;margin:0 0 10px">'+esc(txt)+'</pre>'+
+'<p style="margin:0 0 10px;font-size:13px;color:var(--ink2)">Anything in <b style="color:var(--crit)">red</b> is the problem. Copy this and send it over.</p>'+
+'<div id="gdtxt" style="font-size:12.5px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:4px 10px;margin:0 0 10px">'+gateDiagHtml(txt)+'</div>'+
 '<button class="btn" id="gdcopy" style="width:100%;margin-bottom:6px">Copy it</button>'+
 '<button class="btn" id="gdclose" style="width:100%">Close</button></div>';
 document.body.appendChild(w);
@@ -3000,6 +3042,8 @@ async function codesModal(){
 try{ if(OP_ACT && OP_ACT.latest){ S.ui.opSeen=Math.max((S.ui.opSeen||0), OP_ACT.latest); OP_ACT=null; save(); } }catch(e){}
 modal("Who is testing", `<div class="stack"><div class="help">Reading…</div></div>`,
 `<button class="btn" data-close>Close</button>`);
+ 
+try{ document.querySelector("#modalroot .modal").classList.add("wide"); document.querySelector("#modalroot .scrim").classList.add("edge"); }catch(e){}
 let rows=[], reps=[], err=null, repErr=null;
 try{
 const snap=await FB.db.collection("codes").get();
@@ -3063,53 +3107,103 @@ const expiring = people.filter(x=>x.leftDays!=null && x.leftDays<=7 && x.leftDay
 const lapsed   = people.filter(x=>x.leftDays!=null && x.leftDays<0).length;
 
 const pill=(n,lab,cls)=>n? `<span class="chip ${cls||""}">${n} ${esc(lab)}</span>` : "";
-const line=(x)=>{
+ 
+const viaGoogle=id=>reps.some(r=>r.kind==="redeem" && String(r.tester||"")===String(id) && /google/i.test(String(r.note||"")));
+ 
+people.sort((a,b)=>{
+const fa=a.r.id==="FOUNDER"?1:0, fb=b.r.id==="FOUNDER"?1:0;
+return fa-fb || (b.started-a.started);
+});
+const card=(x)=>{
 const r=x.r, t=x.t;
-const when = r.at? new Date(r.at).toLocaleDateString([],{dateStyle:"medium"}) : "—";
-const life = x.life? "lifetime"
+const when = r.at? new Date(r.at).toLocaleDateString([],{month:"short",day:"numeric"}) : "";
+const ends = (!x.life && x.span && x.started)? new Date(x.started+x.span*DAY).toLocaleDateString([],{month:"short",day:"numeric"}) : "";
+const accCls = x.life? "life" : x.leftDays==null? "" : x.leftDays<0? "out" : x.leftDays<=7? "low" : "";
+const accTxt = x.life? "lifetime"
 : x.leftDays==null? (x.span? x.span+" days":"")
 : x.leftDays<0? "ran out "+Math.abs(x.leftDays)+"d ago"
 : x.leftDays+"d left";
-return `<tr>
-      <td><span class="chip ${(r.id==="FOUNDER"||r.id==="GIFT")?"acc":""}">${esc(r.id||"?")}</span></td>
-      <td><strong>${esc(r.email||"(no address recorded)")}</strong>
-        <div class="mini">${esc(r.tz||"time zone not recorded")}${r.loc? " · "+esc(r.loc):""}</div>
-        ${r.ua? `<div class="mini" style="opacity:.7">${esc(String(r.ua).slice(0,80))}</div>`:""}</td>
-      <td class="mini">${esc(when)}<div class="mini" style="opacity:.75">${x.testingFor!=null? esc(sinceWords(x.testingFor)):""}</div></td>
-      <td class="mini">${esc(life)}</td>
-      <td>${t.n
-? `<div class="row" style="gap:4px;flex-wrap:wrap">${pill(t.n,"report"+(t.n===1?"":"s"))}${pill(t.crash,"crash"+(t.crash===1?"":"es"),"warn")}${pill(t.contact,"message"+(t.contact===1?"":"s"),"acc")}${pill(t.kbmiss,"help gap")}</div>
-           <div class="mini" style="margin-top:3px">${x.lastGap===0? "last one today" : "last one "+x.lastGap+"d ago"}${t.repeat? " · "+t.repeat+" hit more than once":""}</div>`
-: `<span class="mini">nothing sent in yet</span>`}</td>
-    </tr>`;
+const pct = (!x.life && x.span && x.started)? Math.max(0, Math.min(100, Math.round((now-x.started)/(x.span*DAY)*100))) : null;
+const device = uaSummary(r.ua);
+const place = tzCity(r.tz);
+const lang = langName(r.loc);
+const meta = [device, place, lang, viaGoogle(r.id)? "Google sign-in":""].filter(Boolean);
+return `<div class="tcard ${x.quiet?"silent":""}">
+      <div class="tt"><span class="chip ${(r.id==="FOUNDER"||r.id==="GIFT")?"acc":""}">${esc(r.id||"?")}</span>
+        <span class="who">${esc(r.email||"(no address recorded)")}</span>
+        ${accTxt? `<span class="left ${accCls}">${esc(accTxt)}</span>`:""}</div>
+      ${meta.length? `<div class="meta">${meta.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}
+      <div class="meta"><span>${when? "Started "+esc(when):"Start date not recorded"}${x.testingFor!=null? " · "+esc(sinceWords(x.testingFor)):""}</span>${ends? `<span>Ends ${esc(ends)}</span>`:""}</div>
+      ${pct!=null? `<div class="bar" title="${pct}% of the test window used"><i style="width:${pct}%"></i></div>`:""}
+      <div class="sent">${t.n
+? `${pill(t.n,"report"+(t.n===1?"":"s"))}${pill(t.crash,"crash"+(t.crash===1?"":"es"),"warn")}${pill(t.contact,"message"+(t.contact===1?"":"s"),"acc")}${pill(t.kbmiss,"help gap"+(t.kbmiss===1?"":"s"))}<span class="mini">${x.lastGap===0? "last one today" : "last one "+x.lastGap+"d ago"}${t.repeat? " · "+t.repeat+" hit more than once":""}</span>`
+: `<span class="none">Nothing sent in yet</span>`}</div>
+    </div>`;
 };
+const stat=(n,lab,cls)=>`<div class="${cls||""}"><b>${n}</b><span>${esc(lab)}</span></div>`;
 
 const body = (err && repErr)
 ? `<div class="banner crit"><div><b>Could not read any of it.</b> ${esc(err)}</div>
         <div class="mini" style="margin-top:6px">${esc(codesFixHint())}</div></div>`
 : `<div class="stack">
-        <div class="banner info"><div><b>${rows.length} redeemed · ${spare.length} still unused${totalReports? " · "+totalReports+" report"+(totalReports===1?"":"s"):""}.</b>
-          ${spare.length? "Unused: "+esc(spare.join(", ")) : "Every code has been claimed."}</div></div>
         ${err? `<div class="banner warn"><div><b>The redemption list could not be read.</b> ${esc(err)}</div></div>`:""}
-        ${repErr? `<div class="banner warn"><div><b>The reports could not be read, so the columns on the right are empty.</b> ${esc(repErr)}
+        ${repErr? `<div class="banner warn"><div><b>The reports could not be read, so nothing below shows what people have sent.</b> ${esc(repErr)}
           <div class="mini" style="margin-top:4px">${esc(codesFixHint())}</div></div></div>`:""}
-        ${(!err && rows.length)? `<div class="row" style="gap:6px;flex-wrap:wrap">
-          ${pill(engaged,"have sent something in","ok")}
-          ${pill(quiet,"have sent nothing yet")}
-          ${pill(totalCrashes,"crash"+(totalCrashes===1?"":"es")+" in total","warn")}
-          ${pill(expiring,"end within a week","warn")}
-          ${pill(lapsed,"already ran out")}
-        </div>`:""}
-        ${rows.length? `<div class="scroll"><table>
-          <thead><tr><th style="width:74px">Code</th><th>Who</th><th style="width:110px">Started</th><th style="width:96px">Access</th><th style="width:200px">What they have sent</th></tr></thead>
-          <tbody>${people.map(line).join("")}</tbody></table></div>`
+        ${(!err)? `<div class="tstats">
+          ${stat(rows.length,"redeemed")}
+          ${stat(spare.length,"codes unused")}
+          ${stat(engaged,"sent something","ok")}
+          ${stat(quiet,"quiet so far")}
+          ${stat(expiring,"end within 7 days", expiring?"warn":"")}
+          ${stat(totalCrashes,"crash"+(totalCrashes===1?"":"es"), totalCrashes?"warn":"")}
+        </div>
+        <div class="mini">${spare.length? "Unused: "+esc(spare.join(", ")) : "Every code has been claimed."}${lapsed? " · "+lapsed+" already ran out":""}${totalReports? " · "+totalReports+" report"+(totalReports===1?"":"s")+" in all":""}</div>`:""}
+        ${rows.length? `<div class="tlist">${people.map(card).join("")}</div>`
 : `<div class="empty"><strong>Nothing redeemed yet</strong>Codes appear here the moment somebody signs up with one.</div>`}
-        ${quiet && rows.length? `<div class="help"><b>${quiet} ${quiet===1?"tester has":"testers have"} sent nothing at all.</b> That is not the same as not using it — people who are getting on fine have nothing to report. It is worth one friendly message asking how it is going, because a quiet tester and a stuck tester look identical from here.</div>`:""}
-        ${people.some(x=>!x.r.email)? `<div class="help">A row with no address on it was redeemed before Weeksolved started recording one \u2014 there was nothing to record at the time, and nothing is missing from it now.</div>`:""}
-        <div class="help">All of this is worked out from two things people already gave you: the moment a code was redeemed, and the problem reports they chose to send. Weeksolved does not record when anyone opens the app, what they look at, or what is on their board — so "last one 6d ago" means the last report, not the last visit. A time zone that does not match where you expect somebody to be is worth a question.</div>
+        ${quiet && rows.length? `<div class="help"><b>${quiet} ${quiet===1?"tester has":"testers have"} sent nothing at all.</b> That is not the same as not using it — people who are getting on fine have nothing to report. One friendly message asking how it is going is worth sending, because a quiet tester and a stuck tester look identical from here.</div>`:""}
+        ${people.some(x=>!x.r.email)? `<div class="help">A row with no address on it was redeemed before Weeksolved started recording one — nothing is missing from it now.</div>`:""}
+        <div class="help">Everything here comes from two things people already gave you: the moment a code was redeemed (with the device and time zone it was redeemed on) and the reports they chose to send. Weeksolved does not record when anyone opens the app, how long they stay, or what is on their board, so "last one 6d ago" means the last report, not the last visit.</div>
       </div>`;
 const b2=document.querySelector("#modalroot .modal .body");
 if(b2) b2.innerHTML=body;
+}
+ 
+function uaSummary(ua){
+ua=String(ua||""); if(!ua) return "";
+let dev="", os="", br="", m;
+if(/iPad/.test(ua)) dev="iPad";
+else if(/iPhone/.test(ua)) dev="iPhone";
+else if(/Android/.test(ua)) dev=/Mobile/.test(ua)? "Android phone":"Android tablet";
+else if(/CrOS/.test(ua)) dev="Chromebook";
+else if(/Macintosh/.test(ua)) dev="Mac";
+else if(/Windows/.test(ua)) dev="Windows PC";
+else if(/Linux/.test(ua)) dev="Linux";
+if((m=ua.match(/(?:iPhone|iPad|CPU) OS (\d+)[_.]/))) os="iOS "+m[1];
+else if((m=ua.match(/Android (\d+)/))) os="Android "+m[1];
+else if((m=ua.match(/Mac OS X (\d+)[_.](\d+)/))) os="macOS "+m[1]+(+m[1]<=10? "."+m[2]:"");
+else if((m=ua.match(/Windows NT (\d+\.\d+)/))) os=(m[1]==="10.0")? "Windows 10/11" : "Windows";
+if(/CriOS/.test(ua)) br="Chrome";
+else if(/FxiOS/.test(ua)) br="Firefox";
+else if(/EdgiOS|Edg\//.test(ua)) br="Edge";
+else if(/OPR\//.test(ua)) br="Opera";
+else if(/SamsungBrowser/.test(ua)) br="Samsung Internet";
+else if(/Firefox\//.test(ua)) br="Firefox";
+else if(/Chrome\//.test(ua)) br="Chrome";
+else if(/Safari\//.test(ua)) br="Safari";
+else if(/AppleWebKit/.test(ua) && (dev==="iPhone"||dev==="iPad")) br="home-screen app";
+return [dev, os, br].filter(Boolean).join(" · ");
+}
+ 
+function tzCity(tz){
+tz=String(tz||""); if(!tz) return "";
+const last=tz.split("/").pop().replace(/_/g," ");
+return last || tz;
+}
+ 
+function langName(loc){
+loc=String(loc||""); if(!loc) return "";
+try{ const n=new Intl.DisplayNames([], {type:"language"}).of(loc); if(n && n!==loc) return n; }catch(e){}
+return loc;
 }
  
 function readWhy(e, what){
