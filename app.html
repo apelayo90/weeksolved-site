@@ -277,7 +277,7 @@ tr:last-child td{border-bottom:0}
 /* On a phone a wide table becomes a stack of cards, one per row, each cell
    labelled with its column heading — so nothing ever scrolls sideways. Only
    tables that would actually overflow are stacked; small ones stay tables. */
-@media(max-width:700px){
+@media screen and (max-width:700px){   /* screen only — on paper a table is a table */
   table.stk, table.stk tbody, table.stk tr, table.stk td{display:block;width:100%;box-sizing:border-box}
   table.stk thead{display:none}
   table.stk tr{border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:6px 10px;background:var(--surface)}
@@ -742,6 +742,7 @@ ol.a2hs li{padding-left:2px}
 .wkcard .wsx{font-size:10px;color:var(--muted)}
 .wkcard.posted{background:var(--ok-soft);border-color:var(--ok)} .wkcard.posted .wn{color:var(--ok)}
 .wkcard.draft{background:var(--surface)} .wkcard.draft .wn{color:var(--accent)}
+.wkcard.pending{background:var(--warn-soft);border-color:var(--warn)} .wkcard.pending .wn{color:var(--warn)}
 .wkcard.empty .wn{color:var(--faint)}
 .wkcard .wnow{position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--on-accent);
   font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;white-space:nowrap;letter-spacing:.02em}
@@ -1448,6 +1449,8 @@ return migrate(s);
 let S = blankState();
 let VIEW = "home";
 let DAYVIEW = 1;
+ 
+const HOST = (typeof globalThis!=="undefined" && globalThis.__host) || null;
 let DB = null, DOWNLOADS = null;    
 let saveTimer = null, loaded = false;
 
@@ -2089,8 +2092,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "5c821103";       
-const BUILD_AT = "2026-09-03 06:03 UTC";       
+const BUILD_ID = "2e306b22";       
+const BUILD_AT = "2026-09-03 11:09 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -3497,6 +3500,20 @@ if(typeof s.rules.remindH!=="number") s.rules.remindH=12;
 if(typeof s.rules.auditKeep!=="number") s.rules.auditKeep=730;
 if(!Array.isArray(s.audit)) s.audit=[];
 Object.keys(s.weeks||{}).forEach(k=>{ if(!s.weeks[k].shiftNotes) s.weeks[k].shiftNotes={}; });
+ 
+(function repairBreaks(){
+const broken=[];
+Object.keys(s.weeks||{}).forEach(k=>{
+(s.weeks[k].assignments||[]).forEach(a=>{
+const b=a.breaks;
+if(!b || !b.owed || !Array.isArray(b.meals) || !Array.isArray(b.rests)) broken.push(a);
+});
+});
+if(!broken.length) return;
+const wasS = (typeof S!=="undefined")? S : null;
+try{ S = s; broken.forEach(a=>{ try{ applyBreaks(a); }catch(e){ a.breaks={owed:{meals:0,rests:0}, meals:[], rests:[]}; } }); }
+finally{ if(wasS) S = wasS; }
+})();
 if(typeof s.rules.deviceWatch!=="boolean") s.rules.deviceWatch=true;
 if(typeof s.rules.newDeviceConfirm!=="boolean") s.rules.newDeviceConfirm=false;
 if(!s.org.rosterId) s.org.rosterId="r"+securePick(B36,8);
@@ -8913,6 +8930,19 @@ toast((okMsg||"Saved")+" — heads up: "+worst.title.toLowerCase()+(fresh.length
 } else if(okMsg) toast(okMsg);
 }
 
+ 
+function prevWeekShifts(ws, empId){
+const p=peekWeek(addDays(ws,-7));
+return (p.assignments||[]).filter(a=>a.empId===empId)
+.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
+}
+ 
+function carriedDates(ws, empId){
+const has=new Set(prevWeekShifts(ws, empId).map(a=>a.date));
+const out=[]; let d=addDays(ws,-1);
+while(has.has(d) && out.length<21){ out.unshift(d); d=addDays(d,-1); }
+return out;
+}
 function validate(ws){
 ws = ws||S.currentWeek;
 const wk=peekWeek(ws), L=law(), V=[];
@@ -9039,11 +9069,11 @@ would+DSHORT[a.dow]+" is "+fmtHrs(paid)+", and "+unionLabel()+" guarantees "+U.r
 });
 }
 if(U.seventhDay){
-const days=[...new Set(mine.map(a=>a.date))].sort();
+const days=[...new Set(carriedDates(ws, e.id).concat(mine.map(a=>a.date)))].sort();
 let run=1;
 for(let i=1;i<days.length;i++){
 run = (addDays(days[i-1],1)===days[i])? run+1 : 1;
-if(run>=7){
+if(run>=7 && days[i]>=ws){           
 push("warn","Seventh day in a row — "+e.name,
 would+prettyDate(days[i])+" is their seventh consecutive day, which "+owes+" a premium under "+unionLabel()+".",
 {date:days[i], empId:e.id, premium:true, posted:live, code:"union"});
@@ -9112,6 +9142,22 @@ push("crit","Scheduled during time off — "+e.name, (t?t.type:"Time off")+" "+p
 });
 
  
+if(mine.length){
+const before=prevWeekShifts(ws, e.id);
+const last=before[before.length-1], first=mine[0];
+if(last && Math.round((parseYmd(first.date)-parseYmd(last.date))/86400000)===1){
+const gap=(first.startMin+1440)-last.endMin;
+if(gap < (S.rules.minRestH||0)*60)
+push("crit","Short turnaround — "+e.name,
+fmtHrs(gap)+" between "+DSHORT[last.dow]+" out (the week before) and "+DSHORT[first.dow]+" in ("+S.rules.minRestH+"h required).",
+{date:first.date, empId:e.id, code:"rest", aId:first.id});
+else if(S.rules.noClopen && last.endMin>=19*60 && first.startMin<=9*60)
+push("warn","Clopening — "+e.name, "Closes "+DSHORT[last.dow]+" at the end of the week before and opens "+DSHORT[first.dow]+".",
+{date:first.date, empId:e.id, code:"clopen", aId:first.id});
+}
+}
+
+ 
 for(let i=1;i<mine.length;i++){
 const prev=mine[i-1], cur=mine[i];
 const dayGap = Math.round((parseYmd(cur.date)-parseYmd(prev.date))/86400000);
@@ -9124,15 +9170,20 @@ else if(S.rules.noClopen && prev.endMin>=19*60 && cur.startMin<=9*60)
 push("warn","Clopening — "+e.name, "Closes "+DSHORT[prev.dow]+" and opens "+DSHORT[cur.dow]+".", {date:cur.date,empId:e.id, code:"clopen", aId:cur.id, prevId:prev.id});
 }
 }
-let run=0,best=0;
+const carried=carriedDates(ws, e.id);
+let run=carried.length, best=0;
 dates.forEach(({date})=>{ if(byDate[date]){run++;best=Math.max(best,run);} else run=0; });
+const usedCarry = carried.length && byDate[dates[0].date];
 if(lim.maxConsecDays && best>lim.maxConsecDays)
-push("warn","Too many days in a row — "+e.name, best+" consecutive days (limit "+lim.maxConsecDays+").", {empId:e.id, code:"consec"});
+push("warn","Too many days in a row — "+e.name,
+best+" consecutive days"+(usedCarry? ", counting the "+carried.length+" at the end of the week before":"")+
+" (limit "+lim.maxConsecDays+").", {empId:e.id, code:"consec"});
 
  
 if(S.rules.breakMode==="assigned"){
 mine.forEach(a=>{
-const b=a.breaks; if(!b) return;
+ 
+const b=a.breaks; if(!b || !b.owed || !Array.isArray(b.meals) || !Array.isArray(b.rests)) return;
 const owedM = b.owed.meals, gotM = b.meals.filter(m=>!m.waived || m.waivable).length;    
 if(owedM>gotM)
 push("crit","Missing meal period — "+e.name, DSHORT[a.dow]+" "+fmtHrs(a.endMin-a.startMin)+" shift needs "+owedM+" meal period"+(owedM>1?"s":"")+" under "+L.name+" rules. "+(L.premium||""), {date:a.date,empId:e.id, code:"meal", sub:"missing", aId:a.id});
@@ -9161,13 +9212,14 @@ who.join(", ")+" work"+(who.length===1?"s":"")+" a day broken in two. California
 
  
 if(mealPlan()==="closed" && S.rules.breakMode==="assigned"){
-const odd={};
+const odd={}, shut=new Set();
 wk.assignments.forEach(a=>{
-const c=lunchClosure(a.dow, a.date); if(!c) return;    
+const cl=lunchClosure(a.dow, a.date); if(!cl) return;    
 const m=(a.breaks&&a.breaks.meals||[])[0];
 if(!m || m.waived) return;
-if(m.start!==c.from){
+if(m.start!==cl.from){
 const e=empById(a.empId); if(!e) return;
+shut.add(cl.from);            
 (odd[e.id]=odd[e.id]||{name:e.name, at:[]}).at.push(DSHORT[a.dow]+" "+m2disp(m.start));
 }
 });
@@ -9175,7 +9227,8 @@ const who=Object.values(odd);
 if(who.length)
 push("info","Eating outside the lunch closure",
 who.map(x=>x.name.split(" ")[0]+" ("+x.at.slice(0,3).join(", ")+")").join("; ")+
-". Their shift starts too early or too late for a meal at "+m2disp(c.from)+
+". Their shift starts too early or too late for a meal at "+
+[...shut].sort((a,b)=>a-b).map(m2disp).join(" or ")+
 " to be legal, so each keeps a compliant time of its own.", {code:"closure"});
 }
 
@@ -9207,7 +9260,8 @@ const bugKind = k => BUG_KINDS.find(x=>x[0]===k) || BUG_KINDS[0];
 function bugContext(){
 const wk = peekWeek(S.currentWeek);
 return {
-build: APP_BUILD,
+ 
+build: (BUILD_ID? BUILD_ID+(BUILD_AT? " ("+BUILD_AT+")" : "") : APP_BUILD),
 tester: accessWho() || "",
 view: VIEW,
 screen: (window.innerWidth||0)+"x"+(window.innerHeight||0),
@@ -10272,7 +10326,8 @@ return `<button class="daycard ${h.closed?"shut":gaps?"bad":list.length?"good":"
         ${Array.from({length:6},(_,i)=>{
 const w=addDays(ws,i*7), wkx=S.weeks[w];
 const n=wkx? wkx.assignments.length:0;
-const state = !wkx||!n? "empty" : wkx.published? "posted" : "draft";
+ 
+const state = !wkx||!n? "empty" : weekState(w)==="pending"? "pending" : wkx.published? "posted" : "draft";
 return `<button class="wkcard ${state}" data-week="${w}">
             <span class="wl">${prettyDate(w)}</span>
             <span class="wn">${n||"—"}</span>
@@ -13706,6 +13761,8 @@ const runway=[]; for(let i=0;i<8;i++) runway.push(addDays(today,i*7));
 const all=[...new Set(known.concat(runway))].sort();
 const drafts=all.filter(k=>weekState(k)==="draft");
 const posted=all.filter(k=>weekState(k)==="posted");
+ 
+const pending=all.filter(k=>weekState(k)==="pending");
 
 const row=(ws)=>{
 const st=weekStats(ws), state=weekState(ws), wk=S.weeks[ws]||{};
@@ -13734,6 +13791,7 @@ const inner = `<div class="wkrow ${state} ${isNow?"here":""}" data-open="${ws}">
       </div>
       <div class="wkacts">
         <button class="btn sm" data-goweek="${ws}">Open</button>
+        ${state==="pending"? `<button class="btn sm primary" data-undopost="${ws}">Take it back</button>`:""}
         ${state==="draft"? `<button class="btn sm ghost" data-wkdiscard="${ws}" title="Throw this draft away \u2014 undo is one press">Discard</button>`:""}
         <button class="btn sm ghost" data-wkmenu="${ws}">⋯</button>
       </div>
@@ -13791,11 +13849,18 @@ return `
     <div class="hgrid">
       <div class="tile" style="cursor:default"><span class="tn">${drafts.length}</span><span class="tlab">drafts on the go</span>
         <span class="td">${drafts.filter(k=>weekStats(k).open).length} with a gap still open</span></div>
+      ${pending.length? `<div class="tile bad" style="cursor:default"><span class="tn">${pending.length}</span><span class="tlab">going up</span>
+        <span class="td">nobody can see ${pending.length===1?"it":"them"} yet</span></div>`:""}
       <div class="tile good" style="cursor:default"><span class="tn">${posted.length}</span><span class="tlab">posted</span>
         <span class="td">locked and visible to staff</span></div>
       <div class="tile" style="cursor:default"><span class="tn">${all.filter(k=>weekState(k)==="unstarted").length}</span><span class="tlab">not started</span>
         <span class="td">in the next eight weeks</span></div>
     </div>
+
+    ${pending.length? `<div class="card">
+      <header><h3>Going up</h3><span class="hint">Pressed, but nothing has been sent and nobody can see it yet \u2014 take it back and it is as if you never pressed the button</span></header>
+      <div class="wklist">${pending.map(row).join("")}</div>
+    </div>`:""}
 
     ${drafts.length? `<div class="card">
       <header><h3>Drafts</h3><span class="hint">Edit, redraft or throw away — none of this is visible to anyone yet</span>
@@ -20546,11 +20611,21 @@ return `<div class="swipe">
 }
 
  
+ 
+const UNDO_STEPS=40, UNDO_BYTES=6e6, UNDO_KEEP=5;
 let undoStack=[], lastJSON=null, undoing=false;
 function trackForUndo(){
 if(undoing) return;
-if(lastJSON){ undoStack.push(lastJSON); if(undoStack.length>40) undoStack.shift(); }
-lastJSON = JSON.stringify(S);
+const now = JSON.stringify(S);
+if(now === lastJSON) return;             
+if(lastJSON){
+undoStack.push(lastJSON);
+ 
+let bytes=0; for(let i=0;i<undoStack.length;i++) bytes+=undoStack[i].length;
+while(undoStack.length>UNDO_STEPS || (bytes>UNDO_BYTES && undoStack.length>UNDO_KEEP))
+bytes -= undoStack.shift().length;
+}
+lastJSON = now;
 }
 function undo(){
 if(!undoStack.length){ toast("Nothing to undo"); return; }
