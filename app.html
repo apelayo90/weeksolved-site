@@ -598,6 +598,11 @@ ol.a2hs li{padding-left:2px}
 .abar i.warn{background:var(--warn)} .abar i.crit{background:var(--crit)}
 
 .fixgrp{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;background:var(--surface2)}
+.btn.fixo{justify-content:flex-start;text-align:left;white-space:normal;height:auto;min-height:44px;padding:9px 12px;width:100%}
+.btn.fixo.bestfix{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 6%,var(--surface))}
+.btn.fixo .chip{vertical-align:middle}
+.chipbtn{cursor:pointer;font:inherit;font-size:inherit;border-color:transparent}
+.chipbtn:hover{filter:brightness(.95)} .chipbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .fixopt{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:9px 11px;flex-wrap:wrap}
 .fixopt .chip{white-space:normal;max-width:100%;text-align:left;line-height:1.35}
 .fixopt strong{font-size:13px}
@@ -2043,10 +2048,10 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "9fa9eca8";       
-const BUILD_AT = "2026-09-03 00:15 UTC";       
+const BUILD_ID = "f430f585";       
+const BUILD_AT = "2026-09-03 00:44 UTC";       
 const TERMS_VERSION = "2";                  
-const TERMS_HASH = "3c73c50a0eb44fe5";
+const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
 const TERMSKEY = "ws.terms";
 function termsAccepted(){
@@ -8859,7 +8864,7 @@ missing.forEach(s=>{
 const u = (wk.unfilled||[]).find(x=>x.date===date&&x.shiftId===s.shiftId&&(x.roleId||null)===(s.roleId||null));
 push("crit","Open shift — "+(shiftById(s.shiftId)||{label:"Shift"}).label+", "+DSHORT[dow],
 roleName(s.roleId)+" · "+(u?u.reason:"no one assigned yet"),
-{date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||"")});
+{date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||""), code:"open", shiftId:s.shiftId, roleId:s.roleId||null});
 });
 });
 
@@ -8881,7 +8886,7 @@ Object.values(open).forEach(r=>closed.push(r));
 closed.forEach(r=>{
 push("crit","Below required coverage — "+DSHORT[dow],
 (r.rule.label||ruleSentence(r.rule))+": short "+r.worst+" from "+m2disp(r.from)+" to "+m2disp(r.to)+
-(S.rules.staggerMeals?" (meal periods count as off duty)":""), {date,dow});
+(S.rules.staggerMeals?" (meal periods count as off duty)":""), {date,dow, code:"cover", ruleId:r.rule.id, from:r.from, to:r.to});
 });
 });
 
@@ -8894,19 +8899,19 @@ if(e.licExp && empLicensed(e)){
 const bad=mine.filter(a=>a.date>e.licExp);
 if(bad.length) push("crit","License lapsed — "+e.name.split(" ")[0],
 (e.licLabel||"Their license")+" expired "+prettyDate(e.licExp)+" but they're scheduled "+bad.map(a=>DSHORT[a.dow]).join(", ")+". Renew it or hand those shifts to someone current.",
-{empId:e.id, date:bad[0].date, dow:bad[0].dow});
+{empId:e.id, date:bad[0].date, dow:bad[0].dow, code:"lic", aId:bad[0].id});
 else if(e.active && e.licExp < ymd(new Date()))
 push("crit","License expired \u2014 "+e.name.split(" ")[0],
 (e.licLabel||"Their license")+" expired "+prettyDate(e.licExp)+". They are not on this week, and the drafter will not put them on one until the date is updated.",
-{empId:e.id});
+{empId:e.id, code:"lic"});
 else if(e.active && e.licExp<=addDays(dates[6].date,30))
 push("warn","License expiring — "+e.name.split(" ")[0],
 (e.licLabel||"Their license")+" runs out "+prettyDate(e.licExp)+". Get the renewal moving now — with a date past, the drafter will refuse to schedule them.",
-{empId:e.id});
+{empId:e.id, code:"lic"});
 }
 if(lim.maxH && mins > lim.maxH*60+1)
 push("warn","Over hour cap — "+e.name, fmtHrs(mins)+" scheduled against a "+lim.maxH+"h cap"+
-(lim.groups.length&&lim.maxH!==e.maxH? " (set by the "+lim.groups.join(" and ")+" group)":"")+".", {empId:e.id});
+(lim.groups.length&&lim.maxH!==e.maxH? " (set by the "+lim.groups.join(" and ")+" group)":"")+".", {empId:e.id, code:"cap"});
 if(cyclesOn()){
 const p=cyclePeriod(e, ws);
 if(p && ws===p.list[p.list.length-1]){
@@ -8915,7 +8920,7 @@ const diff=used - p.hours*60;
 if(Math.abs(diff) > 60)
 push(diff>0? "warn":"info", (diff>0?"Over the period":"Under the period")+" — "+e.name,
 fmtHrs(used)+" across the "+p.weeks+" weeks from "+prettyDate(p.start)+", against "+p.hours+"h averaged.",
-{empId:e.id});
+{empId:e.id, code:"period"});
 }
 }
 if(lim.exactH && Math.abs(mins - lim.exactH*60) > 1){
@@ -8924,7 +8929,7 @@ push("crit","Off contract — "+e.name,
 e.name.split(" ")[0]+" is contracted to exactly "+lim.exactH+"h and has "+fmtHrs(mins)+". "+
 (f.ok? "It can be done from the shifts you've defined — something else got in the way this week, so try locking one of their shifts and drafting again."
 : "Can't be done: "+f.why+". Add a shift of the right length under Roles & shifts, or change the contract."),
-{empId:e.id});
+{empId:e.id, code:"contract"});
 } else if(!lim.exactH && lim.minH && e.type!=="PRN"){
 const fac=minHFactor(e.id, ws);
 const owe=Math.round(lim.minH*60*fac);
@@ -8932,7 +8937,7 @@ if(mins < owe-1){
 const sh=(wk.short||[]).find(x=>x.empId===e.id);
 push(S.rules.fillMode==="full"? "crit":"warn","Under guaranteed hours — "+e.name,
 fmtHrs(mins)+" scheduled, "+fmtHrs(owe)+" owed"+(fac<1? " (guarantee scaled — they're away part of this week)":" ("+lim.minH+"h guaranteed)")+"."+
-(S.rules.fillMode==="full"? " "+(sh? "It couldn't be topped up: "+sh.why+"." : "Nothing else in the pool fits."):""), {empId:e.id});
+(S.rules.fillMode==="full"? " "+(sh? "It couldn't be topped up: "+sh.why+"." : "Nothing else in the pool fits."):""), {empId:e.id, code:"under"});
 }
 }
 if(lim.canBeAlone===false){
@@ -8942,14 +8947,14 @@ for(let t=a.startMin;t<a.endMin;t+=30){
  
 if(onDutyAt(day,t,null)===1 && onDutyAt(day.filter(x=>x.empId===e.id),t,null)===1){
 push("crit","Left on their own — "+e.name,
-DSHORT[a.dow]+" around "+m2disp(t)+", and "+(lim.aloneGroup||"their group")+" is set never to work alone.", {date:a.date,empId:e.id});
+DSHORT[a.dow]+" around "+m2disp(t)+", and "+(lim.aloneGroup||"their group")+" is set never to work alone.", {date:a.date,empId:e.id, code:"alone", aId:a.id, at:t});
 break;
 }
 }
 });
 }
 if(mins > (S.org.otWeeklyH||40)*60+1)
-push("warn","Weekly overtime — "+e.name, fmtHrs(mins)+" exceeds the "+S.org.otWeeklyH+"h overtime threshold.", {empId:e.id});
+push("warn","Weekly overtime — "+e.name, fmtHrs(mins)+" exceeds the "+S.org.otWeeklyH+"h overtime threshold.", {empId:e.id, code:"wot"});
 
  
 if(unionOn()){
@@ -8960,7 +8965,7 @@ const owes  = live? "carries" : "would carry";
 if(U.otWeeklyH && mins > U.otWeeklyH*60+1 && U.otWeeklyH < (S.org.otWeeklyH||40))
 push("warn","Overtime under "+unionLabel()+" — "+e.name,
 fmtHrs(mins)+" against the "+U.otWeeklyH+"h weekly threshold you entered, which starts sooner than the "+(S.org.otWeeklyH||40)+"h one.",
-{empId:e.id, premium:true, posted:live});
+{empId:e.id, premium:true, posted:live, code:"union"});
 if(U.reportPayH){
 mine.forEach(a=>{
 const paid=paidMinutes(a);
@@ -8968,7 +8973,7 @@ if(paid < U.reportPayH*60 - 1)
 push("warn","Short of the reporting guarantee — "+e.name,
 would+DSHORT[a.dow]+" is "+fmtHrs(paid)+", and "+unionLabel()+" guarantees "+U.reportPayH+"h once somebody reports for work. "+
 (live? "Expect to pay "+U.reportPayH+"h for it." : "Lengthen it before it goes up, or expect to pay "+U.reportPayH+"h for it."),
-{date:a.date, empId:e.id, premium:true, posted:live});
+{date:a.date, empId:e.id, premium:true, posted:live, code:"union", aId:a.id});
 });
 }
 if(U.seventhDay){
@@ -8979,7 +8984,7 @@ run = (addDays(days[i-1],1)===days[i])? run+1 : 1;
 if(run>=7){
 push("warn","Seventh day in a row — "+e.name,
 would+prettyDate(days[i])+" is their seventh consecutive day, which "+owes+" a premium under "+unionLabel()+".",
-{date:days[i], empId:e.id, premium:true, posted:live});
+{date:days[i], empId:e.id, premium:true, posted:live, code:"union"});
 break;
 }
 }
@@ -8989,10 +8994,10 @@ mine.forEach(a=>{
 const g=aGap(a); if(!g) return;
 if(U.noSplit) push("crit","Split shift not allowed — "+e.name,
 DSHORT[a.dow]+" is split around "+m2disp(g.from)+"\u2013"+m2disp(g.to)+", and "+unionLabel()+" does not permit split shifts.",
-{date:a.date, empId:e.id});
+{date:a.date, empId:e.id, code:"union", aId:a.id});
 else push("info","Split shift premium — "+e.name,
 would+DSHORT[a.dow]+" is split around "+m2disp(g.from)+"\u2013"+m2disp(g.to)+", which "+owes+" a premium under "+unionLabel()+".",
-{date:a.date, empId:e.id, premium:true, posted:live});
+{date:a.date, empId:e.id, premium:true, posted:live, code:"union", aId:a.id});
 });
 }
 if(U.maxConsecH){
@@ -9002,7 +9007,7 @@ const worked=longestStretch(a)/60;
 if(worked > U.maxConsecH+0.01)
 push("crit","Past the hours ceiling — "+e.name,
 DSHORT[a.dow]+" runs "+fmtHrs(worked*60)+" back to back, past the "+U.maxConsecH+"h ceiling in "+unionLabel()+".",
-{date:a.date, empId:e.id});
+{date:a.date, empId:e.id, code:"union", aId:a.id});
 });
 }
 if(U.restH){
@@ -9015,7 +9020,7 @@ if(gapH < U.restH-0.01)
 push(U.restPremium? "warn":"crit","Short rest under "+unionLabel()+" — "+e.name,
 Math.round(gapH*10)/10+"h between "+DSHORT[prev.dow]+" and "+DSHORT[cur.dow]+", against the "+U.restH+"h your agreement guarantees."+
 (U.restPremium? " Worked anyway, it "+owes+" a premium." : ""),
-{date:cur.date, empId:e.id, premium:!!U.restPremium, posted:live});
+{date:cur.date, empId:e.id, premium:!!U.restPremium, posted:live, code:"union", aId:cur.id, prevId:prev.id});
 }
 }
 }
@@ -9025,21 +9030,21 @@ const byDate={};
 mine.forEach(a=>{ (byDate[a.date]=byDate[a.date]||[]).push(a); });
 Object.keys(byDate).forEach(d=>{
 const list=byDate[d], dm=list.reduce((t,a)=>t+paidMinutes(a),0), dow=parseYmd(d).getDay();
-if(list.length>1) push("crit","Double-booked — "+e.name, DSHORT[dow]+" has "+list.length+" overlapping shifts.", {date:d,empId:e.id});
+if(list.length>1) push("crit","Double-booked — "+e.name, DSHORT[dow]+" has "+list.length+" overlapping shifts.", {date:d,empId:e.id, code:"double", aIds:list.map(a=>a.id)});
 if(otDailyMin() && dm > otDailyMin()+1)
-push("info","Daily overtime — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+S.org.otDailyH+"h).", {date:d,empId:e.id});
+push("info","Daily overtime — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+S.org.otDailyH+"h).", {date:d,empId:e.id, code:"dot", aIds:list.map(a=>a.id)});
 if(unionOn() && union().otDailyH && (!otDailyMin() || union().otDailyH*60 < otDailyMin()) && dm > union().otDailyH*60+1)
 push("warn","Daily overtime under "+unionLabel()+" — "+e.name,
 DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+", past the "+union().otDailyH+"h your agreement sets"+(otDailyMin()? " \u2014 sooner than the "+S.org.otDailyH+"h one":"")+".",
-{date:d,empId:e.id,premium:true,posted:!!wk.published && !postPending(wk)});
+{date:d,empId:e.id,premium:true,posted:!!wk.published && !postPending(wk), code:"union", aIds:list.map(a=>a.id)});
 if(dtDailyMin() && dm > dtDailyMin()+1)
-push("warn","Double time — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+S.org.dtDailyH+"h).", {date:d,empId:e.id});
+push("warn","Double time — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+S.org.dtDailyH+"h).", {date:d,empId:e.id, code:"dot", aIds:list.map(a=>a.id)});
 list.forEach(a=>{
 if(!availOk(e,dow,a.startMin,a.endMin))
-push("crit","Outside stated availability — "+e.name, DSHORT[dow]+" "+m2disp(a.startMin)+"–"+m2disp(a.endMin)+" falls outside the hours "+e.name.split(" ")[0]+" can work.", {date:d,empId:e.id});
+push("crit","Outside stated availability — "+e.name, DSHORT[dow]+" "+m2disp(a.startMin)+"–"+m2disp(a.endMin)+" falls outside the hours "+e.name.split(" ")[0]+" can work.", {date:d,empId:e.id, code:"avail", aId:a.id});
 if(onTimeOff(e.id,d)){
 const t=timeOffFor(e.id,d);
-push("crit","Scheduled during time off — "+e.name, (t?t.type:"Time off")+" "+prettyDate(t?t.start:d)+"–"+prettyDate(t?t.end:d)+".", {date:d,empId:e.id});
+push("crit","Scheduled during time off — "+e.name, (t?t.type:"Time off")+" "+prettyDate(t?t.start:d)+"–"+prettyDate(t?t.end:d)+".", {date:d,empId:e.id, code:"timeoff", aId:a.id});
 }
 });
 });
@@ -9052,31 +9057,31 @@ if(dayGap===1){
 const gap = (cur.startMin + 1440) - prev.endMin;
 if(gap < (S.rules.minRestH||0)*60)
 push("crit","Short turnaround — "+e.name,
-fmtHrs(gap)+" between "+DSHORT[prev.dow]+" out and "+DSHORT[cur.dow]+" in ("+S.rules.minRestH+"h required).", {date:cur.date,empId:e.id});
+fmtHrs(gap)+" between "+DSHORT[prev.dow]+" out and "+DSHORT[cur.dow]+" in ("+S.rules.minRestH+"h required).", {date:cur.date,empId:e.id, code:"rest", aId:cur.id, prevId:prev.id});
 else if(S.rules.noClopen && prev.endMin>=19*60 && cur.startMin<=9*60)
-push("warn","Clopening — "+e.name, "Closes "+DSHORT[prev.dow]+" and opens "+DSHORT[cur.dow]+".", {date:cur.date,empId:e.id});
+push("warn","Clopening — "+e.name, "Closes "+DSHORT[prev.dow]+" and opens "+DSHORT[cur.dow]+".", {date:cur.date,empId:e.id, code:"clopen", aId:cur.id, prevId:prev.id});
 }
 }
 let run=0,best=0;
 dates.forEach(({date})=>{ if(byDate[date]){run++;best=Math.max(best,run);} else run=0; });
 if(lim.maxConsecDays && best>lim.maxConsecDays)
-push("warn","Too many days in a row — "+e.name, best+" consecutive days (limit "+lim.maxConsecDays+").", {empId:e.id});
+push("warn","Too many days in a row — "+e.name, best+" consecutive days (limit "+lim.maxConsecDays+").", {empId:e.id, code:"consec"});
 
  
 if(S.rules.breakMode==="assigned"){
 mine.forEach(a=>{
 const b=a.breaks; if(!b) return;
-const owedM = b.owed.meals, gotM = b.meals.filter(m=>!m.waived).length;
+const owedM = b.owed.meals, gotM = b.meals.filter(m=>!m.waived || m.waivable).length;    
 if(owedM>gotM)
-push("crit","Missing meal period — "+e.name, DSHORT[a.dow]+" "+fmtHrs(a.endMin-a.startMin)+" shift needs "+owedM+" meal period"+(owedM>1?"s":"")+" under "+L.name+" rules. "+(L.premium||""), {date:a.date,empId:e.id});
-b.meals.forEach(m=>{
+push("crit","Missing meal period — "+e.name, DSHORT[a.dow]+" "+fmtHrs(a.endMin-a.startMin)+" shift needs "+owedM+" meal period"+(owedM>1?"s":"")+" under "+L.name+" rules. "+(L.premium||""), {date:a.date,empId:e.id, code:"meal", sub:"missing", aId:a.id});
+b.meals.forEach((m,mi)=>{
 if(!m.waived && m.start>m.deadline)
-push("crit","Late meal period — "+e.name, DSHORT[a.dow]+" meal starts "+m2disp(m.start)+", must begin by "+m2disp(m.deadline)+". "+(L.premium||""), {date:a.date,empId:e.id});
+push("crit","Late meal period — "+e.name, DSHORT[a.dow]+" meal starts "+m2disp(m.start)+", must begin by "+m2disp(m.deadline)+". "+(L.premium||""), {date:a.date,empId:e.id, code:"meal", sub:"late", aId:a.id, mi});
 if(m.waived && !m.waivable)
-push("crit","Invalid meal waiver — "+e.name, DSHORT[a.dow]+" shift is too long for the meal to be waived under "+L.name+" rules.", {date:a.date,empId:e.id});
+push("crit","Invalid meal waiver — "+e.name, DSHORT[a.dow]+" shift is too long for the meal to be waived under "+L.name+" rules.", {date:a.date,empId:e.id, code:"meal", sub:"waiver", aId:a.id, mi});
 });
 if(b.owed.rests > b.rests.length && S.rules.restMode==="assigned")
-push("warn","Rest breaks short — "+e.name, DSHORT[a.dow]+" owes "+b.owed.rests+" paid rest break"+(b.owed.rests>1?"s":"")+", "+b.rests.length+" placed.", {date:a.date,empId:e.id});
+push("warn","Rest breaks short — "+e.name, DSHORT[a.dow]+" owes "+b.owed.rests+" paid rest break"+(b.owed.rests>1?"s":"")+", "+b.rests.length+" placed.", {date:a.date,empId:e.id, code:"meal", sub:"rests", aId:a.id});
 });
 }
 });
@@ -9088,7 +9093,7 @@ if(split.length){
 const who=[...new Set(split.map(a=>(empById(a.empId)||{name:"?"}).name))];
 push("warn","Split-shift premium owed \u2014 "+split.length+" shift"+(split.length===1?"":"s"),
 who.join(", ")+" work"+(who.length===1?"s":"")+" a day broken in two. California owes one extra hour at the minimum wage for each of those days, on top of what they earn \u2014 unless the day's pay already clears the minimum-wage floor plus that hour. Weeksolved flags it; your payroll has to pay it.",
-{});
+{code:"split"});
 }
 }
 
@@ -9109,7 +9114,7 @@ if(who.length)
 push("info","Eating outside the lunch closure",
 who.map(x=>x.name.split(" ")[0]+" ("+x.at.slice(0,3).join(", ")+")").join("; ")+
 ". Their shift starts too early or too late for a meal at "+m2disp(c.from)+
-" to be legal, so each keeps a compliant time of its own.");
+" to be legal, so each keeps a compliant time of its own.", {code:"closure"});
 }
 
  
@@ -9117,7 +9122,7 @@ if(apartOn()) apartBreaches(ws).forEach(x=>{
 const dow=parseYmd(x.date).getDay();
 push("crit","Kept apart \u2014 "+x.A.name.split(" ")[0]+" and "+x.B.name.split(" ")[0],
 DSHORT[dow]+" "+prettyDate(x.date)+": "+x.how+", and you have asked that they be kept apart ("+apartLevelName(x.p.level).toLowerCase()+"). Move one of them.",
-{date:x.date, empId:x.A.id});
+{date:x.date, empId:x.A.id, code:"apart", empB:x.B.id});
 });
 
 const order={crit:0,warn:1,info:2};
@@ -9851,8 +9856,9 @@ return `<div class="spread" style="padding:7px 0;border-bottom:1px solid var(--l
         <div class="card">
           <header><h3>What needs you</h3><span class="hint">${V.length} item${V.length===1?"":"s"}</span></header>
           <div class="viollist ovf">
-            ${V.length? V.slice(0,9).map(v=>`<div class="viol-i"><span class="sv ${v.sev}"></span>
-              <div class="tx"><strong>${esc(v.title)}</strong><span>${esc(v.detail)}</span></div></div>`).join("")
+            ${V.length? V.slice(0,9).map((v,vi)=>`<div class="viol-i"><span class="sv ${v.sev}"></span>
+              <div class="tx"><strong>${esc(v.title)}</strong><span>${esc(v.detail)}</span></div>
+              <span class="dipacts">${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}">Who could work it?</button>`:fixBtn(v, vi)}</span></div>`).join("")
 : `<div class="empty"><strong>All clear</strong>No conflicts in this week.</div>`}
           </div>
           ${V.length>9? `<div class="body" style="padding:10px 14px"><button class="btn sm" data-go="week">See all ${V.length}</button></div>`:""}
@@ -9872,6 +9878,8 @@ return `<div class="spread" style="padding:7px 0;border-bottom:1px solid var(--l
   </div>`;
 }
 WIRE.overview = root=>{
+wireFix(root, validate(S.currentWeek), S.currentWeek);
+root.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{ const [date,shiftId,roleId]=b.dataset.fill.split("|"); fillOpenModal(date, shiftId, roleId||null); });
 const su=root.querySelector("#ovsetup");
 if(su) su.onclick=()=>{ wizClearDraft(); wizard(); };
 const rsm=root.querySelector("#ovresume"); if(rsm) rsm.onclick=()=>wizard(false, true);
@@ -10038,8 +10046,8 @@ return `<button class="wkcard ${state}" data-week="${w}">
         ${looks.map(v=>`<div class="look"><span class="sv ${v.sev}"></span>
           <div style="flex:1"><strong>${esc(v.title)}</strong><div class="mini">${esc(v.detail)}</div></div>
           ${v.openSlot? `<button class="btn sm primary" data-fixall="1">Show me the fixes</button>`
-: v.date? `<button class="btn sm" data-jump="${parseYmd(v.date).getDay()}">Open the day</button>`
-: v.empId? `<button class="btn sm" data-emp="${v.empId}">Open their profile</button>`:""}
+: fixBtn(v, V.indexOf(v)) || (v.date? `<button class="btn sm" data-jump="${parseYmd(v.date).getDay()}">Open the day</button>`
+: v.empId? `<button class="btn sm" data-emp="${v.empId}">Open their profile</button>`:"")}
         </div>`).join("")}
       </div></div>`
 : `<div class="banner info"><div><b>Nothing flagged.</b> Every shift is filled, every minimum holds, everyone is inside their hours, and every meal and rest break sits inside the window Weeksolved has for ${esc(law().name)}.
@@ -10068,6 +10076,7 @@ return `<button class="wkcard ${state}" data-week="${w}">
 }
 WIRE.home = root=>{
 const on=(id,fn)=>{ const b=root.querySelector(id); if(b) b.onclick=fn; };
+wireFix(root, validate(S.currentWeek), S.currentWeek);
 root.querySelectorAll("[data-bugsend]").forEach(b=>b.onclick=()=>digestModal());
 on("#hprev",()=>{ S.currentWeek=addDays(S.currentWeek,-7); save(); render(); });
 on("#hnext",()=>{ S.currentWeek=addDays(S.currentWeek,7); save(); render(); });
@@ -13133,10 +13142,9 @@ return `<div class="card"><header><h3>Labor cost</h3>
       <header><h3>Conflicts and compliance</h3>
         <span class="hint">${crit.length} must fix · ${warn.length} warnings · ${info.length} notes</span></header>
       <div class="viollist" style="max-height:420px;overflow-y:auto">
-        ${V.length? V.map(v=>`<div class="viol-i"><span class="sv ${v.sev}"></span>
+        ${V.length? V.map((v,vi)=>`<div class="viol-i"><span class="sv ${v.sev}"></span>
           <div class="tx"><strong>${esc(v.title)}</strong><span>${esc(v.detail)}</span></div>
-          ${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}" style="margin-left:auto;flex:none">Who could work it?</button>`
-: v.date?`<button class="btn sm ghost" data-jump="${parseYmd(v.date).getDay()}" style="margin-left:auto;flex:none">Day sheet</button>`:""}
+          <span class="dipacts">${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}">Who could work it?</button>`:""}${fixBtn(v, vi, v.openSlot? "ghost":"")}</span>
         </div>`).join("") : wk.assignments.length? `<div class="empty"><strong>Nothing flagged</strong>Every shift is filled, every minimum holds, and every meal and rest break sits inside the window Weeksolved has for ${esc(law().name)}. ${esc(LAWNOTE)}</div>`
 : `<div class="empty"><strong>Nothing drafted yet</strong>Draft the week and it gets checked shift by shift.</div>`}
       </div>
@@ -13175,6 +13183,7 @@ fillOpenModal(date, shiftId, roleId||null);
 });
 root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.currentWeek));
 root.querySelectorAll("[data-denyreq]").forEach(b=>b.onclick=()=>requestConflictModal(S.currentWeek));
+wireFix(root, validate(S.currentWeek), S.currentWeek);
 wireDragDrop(root);
 root.querySelectorAll("[data-openday]").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.dataset.openday; go("day"); });
 root.querySelectorAll("[data-jump]").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.dataset.jump; go("day"); });
@@ -13770,7 +13779,7 @@ const e=empById(a.empId)||{name:"—"}, b=a.breaks||{meals:[],rests:[],owed:{mea
 const myRelief=RELIEF.filter(x=>x.by===a.empId);
 const myMealsCov=RELIEF.filter(x=>x.mealOf===a.empId);
 const late = b.meals.some(m=>!m.waived && m.start>m.deadline);
-const missing = b.owed.meals > b.meals.filter(m=>!m.waived).length;
+const missing = b.owed.meals > b.meals.filter(m=>!m.waived || m.waivable).length;
 const mealTxt = !b.owed.meals? "not owed"
 : S.rules.breakMode==="self"? b.owed.meals+" × "+(L.meal?L.meal.lengthMin:30)+" min, staff-timed"
 : S.rules.breakMode==="lengths"? b.owed.meals+" × "+(L.meal?L.meal.lengthMin:30)+" min by "+m2disp(b.meals[0].deadline)
@@ -13803,10 +13812,12 @@ return `<div class="stblk"><span class="mono">${m2disp(b2.from)}–${m2disp(b2.t
             <td class="mono">${aTimes(a)}</td>
             <td class="mono">${esc(mealTxt)}${myMealsCov.map(x=>x.covered? `<div class="mini">post stays covered</div>`
 : x.by? `<div class="mini">${esc((empById(x.by)||{name:"?"}).name)} steps in</div>`
-: `<div class="mini"><span class="chip crit">no cover free</span></div>`).join("")}</td>
+: `<div class="mini"><button class="chip crit chipbtn" data-fixrelief="${a.id}:${Math.max(0,b.meals.findIndex(m=>m.start===x.start))}:${esc(x.station.id)}">no cover free \u2192 fix</button></div>`).join("")}</td>
             <td class="mono" style="font-size:12px">${esc(restTxt)}</td>
             <td class="mono">${fmtHrs(paidMinutes(a))}</td>
-            <td>${missing?'<span class="chip crit">meal missing</span>':late?'<span class="chip crit">meal late</span>':'<span class="chip ok">compliant</span>'}</td></tr>`;
+            <td>${missing?`<button class="chip crit chipbtn" data-fixmeal="${a.id}:missing:0">meal missing \u2192 fix</button>`
+:late?`<button class="chip crit chipbtn" data-fixmeal="${a.id}:late:${Math.max(0,b.meals.findIndex(m=>!m.waived && m.start>m.deadline))}">meal late \u2192 fix</button>`
+:'<span class="chip ok">compliant</span>'}</td></tr>`;
 }).join(""); })()}</tbody></table></div>
       ${reliefNote()}
       ${L.premium? `<div class="body" style="border-top:1px solid var(--line)"><div class="help"><b>${esc(L.name)}:</b> ${esc(L.premium)}</div></div>`:""}
@@ -13823,10 +13834,9 @@ return `<div class="viol-i"><span class="sv crit"></span>
             ${esc(m2disp(t2m(h.open)))}\u2013${esc(m2disp(t2m(h.close)))} on ${esc(DAYS[dow])}s \u2014
             if that's not right any more, fix the hours and this goes away.</span>`:""}</div>
         <div class="dipacts">
-          ${edge? `<button class="btn sm ghost" data-go="org">Change our hours</button>`:""}
-          ${stretchOptions(date, ws, g).length? `<button class="btn sm" data-covergap="${gi}">Cover this</button>`:""}
+          <button class="btn sm primary" data-fixdip="${gi}">Fix</button>
         </div></div>`; }).join("")}</div>
-      <div class="body" style="border-top:1px solid var(--line)"><div class="help">Cover this stretches a shift already on the day — someone stays later or comes in earlier, with any overtime priced before you decide. Midday dips often come from meals stacking up: meal staggering under Scheduling rules helps too.</div></div>
+      <div class="body" style="border-top:1px solid var(--line)"><div class="help">Press Fix on any dip for the ways out — stretch a shift already on the day, move or waive a meal, bring someone in — and for what would stop it coming back next week.</div></div>
     </div>`:""}
     `}
   </div>`;
@@ -13996,13 +14006,7 @@ modal("Cover "+m2disp(g.from)+" – "+m2disp(g.to), `
 (r)=>{
 r.querySelectorAll("[data-stretch]").forEach(b=>b.onclick=()=>{
 const o=opts[+b.dataset.stretch];
-const wk=S.weeks[ws]; const a=wk.assignments.find(x=>x.id===o.aId);
-if(!a){ toast("That shift changed — take another look"); closeModal(true); return; }
-if(o.side==="end") a.endMin=o.newT; else a.startMin=o.newT;
-a.locked=true; a.extended=true;
-staggerDay(wk.assignments.filter(x=>x.date===date && !x.locked), wk.assignments.filter(x=>x.date===date));
-save(); closeModal(true); render();
-toast(o.label+" — breaks re-checked"+(o.ot? ", overtime noted":""));
+closeModal(true); applyStretch(ws, date, o);
 });
 });
 }
@@ -14010,11 +14014,334 @@ function collapseGaps(pts){
 const out=[]; let cur=null;
 pts.forEach(p=>{
 const labels = p.detail.map(d=>(d.rule.label||roleName(d.rule.roleId))+": "+d.have+" of "+d.need);
-if(cur && p.t===cur.to){ cur.to=p.t+STEP; labels.forEach(l=>{ if(!cur.labels.includes(l)) cur.labels.push(l); }); }
-else { cur={from:p.t,to:p.t+STEP,labels}; out.push(cur); }
+const ids = p.detail.map(d=>d.rule.id);
+if(cur && p.t===cur.to){ cur.to=p.t+STEP; labels.forEach(l=>{ if(!cur.labels.includes(l)) cur.labels.push(l); }); ids.forEach(id=>{ if(!cur.ruleIds.includes(id)) cur.ruleIds.push(id); }); }
+else { cur={from:p.t,to:p.t+STEP,labels,ruleIds:ids.slice()}; out.push(cur); }
 });
 return out;
 }
+ 
+function applyStretch(ws, date, o){
+const wk=S.weeks[ws]; const a=wk? wk.assignments.find(x=>x.id===o.aId) : null;
+if(!a){ toast("That shift changed — take another look"); return false; }
+if(o.side==="end") a.endMin=o.newT; else a.startMin=o.newT;
+a.locked=true; a.extended=true;
+applyBreaks(a);
+staggerDay(wk.assignments.filter(x=>x.date===date && !x.locked), wk.assignments.filter(x=>x.date===date));
+save(); render();
+toast(o.label+" — breaks re-checked"+(o.ot? ", overtime noted":""));
+return true;
+}
+ 
+function mealMoveOptions(ws, a, mi, judge){
+const m=((a.breaks||{}).meals||[])[mi]; if(!m || m.waived) return [];
+const earliest=Math.max(60, +(S.rules.mealEarliestMin||0)||60);
+let lo=a.startMin+earliest;
+const prev=mi>0? a.breaks.meals[mi-1] : null;
+if(prev && !prev.waived) lo=Math.max(lo, prev.end+60);
+const next=a.breaks.meals[mi+1];
+let hi=Math.min(m.deadline, a.endMin-30-m.len);
+if(next && !next.waived) hi=Math.min(hi, next.start-60-m.len);
+const orig={start:m.start,end:m.end,late:m.late};
+const out=[];
+for(let t=Math.ceil(lo/15)*15; t<=hi; t+=15){
+if(t===orig.start) continue;
+m.start=t; m.end=t+m.len; m.late=t>m.deadline;
+let score=null;
+try{ score=judge(); }catch(e){ score=null; }
+if(score!=null) out.push({t, score});
+}
+m.start=orig.start; m.end=orig.end; m.late=orig.late;
+out.sort((x,y)=>(y.score-x.score) || (Math.abs(x.t-orig.start)-Math.abs(y.t-orig.start)));
+return out.slice(0,2);
+}
+function moveMeal(ws, a, mi, t){
+const m=((a.breaks||{}).meals||[])[mi]; if(!m) return;
+m.start=t; m.end=t+m.len; m.late=t>m.deadline;
+a.locked=true;
+save(); render();
+}
+function waiveMeal(ws, a, mi){
+const meals=(a.breaks||{}).meals||[]; const m=meals[mi]; if(!m) return false;
+if(mi>0 && meals[0].waived){ toast("The first meal is already waived, so the second one cannot be"); return false; }
+m.waived=true; a.locked=true;
+save(); render();
+return true;
+}
+ 
+function dipScore(date, dow, ws, from, to){
+const prof=coverageProfile(date, dow, ws); if(!prof) return {bad:0, inWin:0};
+let bad=0, inWin=0;
+prof.pts.forEach(p=>{ if(p.gap>0){ bad++; if(p.t>=from && p.t<to) inWin++; } });
+return {bad, inWin};
+}
+ 
+function fixOptions(v, ws){
+ws=ws||S.currentWeek;
+const wk=peekWeek(ws);
+const O=[];
+const add=(g,t,d,run,rec)=>O.push({g,t,d,run,rec:!!rec});
+const now=(t,d,run,rec)=>add("now",t,d,run,rec);
+const later=(t,d,run,rec)=>add("later",t,d,run,rec);
+const e=v.empId? empById(v.empId):null;
+const first=e? e.name.split(" ")[0] : "";
+const byId=id=>wk.assignments.find(x=>x.id===id);
+const a=v.aId? byId(v.aId) : null;
+const dow=v.dow!=null? v.dow : (v.date? parseYmd(v.date).getDay() : null);
+const dayName=dow!=null? DAYS[dow] : "";
+const ownerOf=x=>(empById(x.empId)||{name:"Someone"}).name.split(" ")[0];
+const openDay=()=>{ if(dow==null) return; DAYVIEW=dow; go("day"); };
+const editShift=(x,t,d)=>{ if(!x) return; now(t||("Edit "+ownerOf(x)+"’s "+DSHORT[x.dow]+" shift"), d||"Change the times or the meal, hand it over, or take it off the board.", ()=>assignModal(x.id)); };
+const handOff=(x,rec)=>{ if(!x) return; now("Hand "+ownerOf(x)+"’s "+DSHORT[x.dow]+" shift to someone else", "See who is clear to take it — every limit is checked — then one press.",
+()=>{ assignModal(x.id); setTimeout(()=>{ const b=document.querySelector("#acands"); if(b) b.click(); }, 60); }, rec); };
+const bringIn=(date,rec)=>{ if(!date) return; now("Bring someone else in on "+DSHORT[parseYmd(date).getDay()], "Pick a name, then one of your shifts. Anything it would break is flagged before you save.", ()=>addToDayModal(date, parseYmd(date).getDay()), rec); };
+const dayLink=()=>{ if(dow!=null && VIEW!=="day") now("Open the day sheet for "+dayName, "The floor hour by hour, meals and rest breaks placed.", openDay); };
+const profile=(t,d)=>{ if(e) later(t||("Change "+first+"’s profile"), d||"Limits, availability, license and contract live there.", ()=>empModal(e.id)); };
+const dayShifts=()=>e? wk.assignments.filter(x=>x.empId===e.id).sort((p,q)=>p.date.localeCompare(q.date)||p.startMin-q.startMin) : [];
+const stretchInto=(date,from,to,rec)=>{
+const g={from,to,labels:[]};
+stretchOptions(date, ws, g).forEach((o,i)=>now(o.label,
+"+"+fmtHrs(o.add)+(o.ot? " at overtime":" at regular time")+(o.cost? " · about "+money(o.cost):"")+(o.breaksNote? " · "+o.breaksNote:""),
+()=>applyStretch(ws, date, o), rec && i===0));
+};
+ 
+const mealFixes=(date,from,to,judgeFor)=>{
+const d2=parseYmd(date).getDay();
+wk.assignments.filter(x=>x.date===date).forEach(x=>{
+((x.breaks||{}).meals||[]).forEach((m,mi)=>{
+if(m.waived || !(m.start<to && m.end>from)) return;
+const who=ownerOf(x);
+mealMoveOptions(ws, x, mi, ()=>judgeFor(x,mi)).forEach((opt,i)=>now(
+"Move "+who+"’s meal to "+m2disp(opt.t), "Inside the legal window, and the floor holds while they eat."+(opt.score<0? " Another dip stays elsewhere.":""),
+()=>{ moveMeal(ws, x, mi, opt.t); toast(who+"’s meal moved to "+m2disp(opt.t)); }, i===0 && !O.some(o=>o.rec)));
+if(m.waivable && !(mi>0 && x.breaks.meals[0].waived))
+now("Waive "+who+"’s "+(mi? "second ":"")+"meal", "Allowed on a shift this length under "+law().name+" rules, by written agreement — they work through and stay on the floor.",
+()=>{ if(waiveMeal(ws, x, mi)) toast(who+"’s meal waived for "+DSHORT[d2]); });
+});
+});
+};
+const soloDay=date=> new Set(wk.assignments.filter(x=>x.date===date).map(x=>x.empId)).size<=1;
+const closeForLunch=(date,from,to)=>{
+if(mealPlan()==="closed" || S.rules.breakMode!=="assigned") return;
+const solo=soloDay(date);
+later(solo? "Close the doors for lunch on days when only one person is on" : "Close the doors for lunch every day",
+"Shuts "+m2disp(from)+"–"+m2disp(to)+(solo? " on solo days":"")+". Nothing is owed while the doors are shut, so it stops counting as a gap, and everyone eats then.",
+()=>{ S.rules.mealPlan="closed"; S.rules.mealClose={when: solo? "solo":"all", from:m2t(from), to:m2t(to)}; rebuildBreaks(); save(); render();
+toast("Doors shut "+m2disp(from)+"–"+m2disp(to)+(solo? " when one person is on":"")+" — change it under Scheduling rules"); });
+};
+const moreOnDay=(d2)=>{ if(d2==null) return; later("Schedule one more person on "+DAYS[d2]+"s", "Adds a shift from your pool to "+DAYS[d2]+"’s coverage needs, so every draft staffs it.", ()=>demModal(d2)); };
+const hoursLink=()=>later("Change our opening hours", "If you are not really open then, the gap is the hours, not the people.", ()=>go("org"));
+
+switch(v.code){
+case "open": {
+now("Who could work it?", "Everyone who clears every limit, best fit first.", ()=>fillOpenModal(v.date, v.shiftId, v.roleId||null), true);
+now("All open shifts and the best ways out", "Per diem, an hour of overtime, a request to decline — ranked, least disruptive first.", ()=>fixModal(ws));
+now("Offer it to the team", "One page they can reply to with a code. Nobody needs an account.", ()=>offerModal(ws));
+bringIn(v.date);
+moreOnDay(null);
+later("Need fewer people on "+dayName+"s?", "Change the coverage needs and the drafter stops asking for it.", ()=>go("demand"));
+if(v.roleId) later("Add someone who can work as "+roleName(v.roleId), "A new hire, or a role added to someone already on the team.", ()=>go("team"));
+break;
+}
+case "cover": {
+const rules=(v.ruleIds||[v.ruleId]).map(id=>S.coverage.find(r=>r.id===id)).filter(Boolean);
+const from=v.from, to=v.to, date=v.date;
+const mealDriven = wk.assignments.some(x=>x.date===date && ((x.breaks||{}).meals||[]).some(m=>!m.waived && m.start<to && m.end>from));
+stretchInto(date, from, to, true);
+if(mealDriven){
+const before=dipScore(date, dow, ws, from, to);
+mealFixes(date, from, to, ()=>{ const s=dipScore(date, dow, ws, from, to); if(s.inWin>0 || s.bad>=before.bad) return null; return -s.bad; });
+}
+bringIn(date, !O.some(o=>o.rec));
+dayLink();
+rules.forEach(r=>{
+if(mealDriven && r.mealsCount!==false)
+later("Let a meal count as on duty for “"+(r.label||ruleSentence(r))+"”", "For an on-duty meal agreement, or when the person stays on the premises. Meals stop counting against this rule.",
+()=>{ r.mealsCount=false; save(); render(); toast("Meals no longer count against that rule"); });
+if((r.kind||"min")==="min" && (r.min||1)>1)
+later("Lower “"+(r.label||ruleSentence(r))+"” to "+((r.min||1)-1), "The floor drops by one everywhere the rule applies.",
+()=>{ r.min=(r.min||1)-1; save(); render(); toast("Rule lowered to "+r.min); });
+if(dow!=null && (r.days||[]).length>1)
+later("Take "+dayName+"s out of “"+(r.label||ruleSentence(r))+"”", "The rule keeps holding on the other days.",
+()=>{ r.days=(r.days||[]).filter(d=>d!==dow); save(); render(); toast(dayName+"s taken out of the rule"); });
+later("Remove “"+(r.label||ruleSentence(r))+"” altogether", "It stops being checked. Your coverage counts still decide how many get scheduled.",
+()=>{ S.coverage=S.coverage.filter(x=>x.id!==r.id); save(); render(); toast("Rule removed"); });
+});
+if(mealDriven) closeForLunch(date, from, Math.max(to, from+30));
+if(mealDriven && !S.rules.staggerMeals && mealPlan()==="auto" && S.rules.breakMode==="assigned")
+later("Stagger meals so two people are never off the floor at once", "Meals spread out across the day instead of stacking up.",
+()=>{ S.rules.staggerMeals=true; rebuildBreaks(); save(); render(); toast("Meals staggered"); });
+moreOnDay(dow);
+{ const h=S.hours[dow]||{}; const edge = !h.closed && (from<=t2m(h.open) || to>=t2m(h.close)); if(edge) hoursLink(); }
+break;
+}
+case "relief": {
+const st=stationById(v.stationId); const x=a; const m=x? ((x.breaks||{}).meals||[])[v.mi] : null;
+if(x && m){
+const who=ownerOf(x);
+const judge=()=>{ const R=mealReliefFor(v.date, ws); const job=R.find(j=>j.mealOf===x.empId && j.start===m.start); return (job && (job.by||job.covered))? 0 : null; };
+mealMoveOptions(ws, x, v.mi, judge).forEach((opt,i)=>now("Move "+who+"’s meal to "+m2disp(opt.t), "Somebody is free to hold "+(st? st.name:"the post")+" then.",
+()=>{ moveMeal(ws, x, v.mi, opt.t); toast(who+"’s meal moved to "+m2disp(opt.t)); }, i===0));
+if(m.waivable && !(v.mi>0 && x.breaks.meals[0].waived))
+now("Waive "+who+"’s "+(v.mi? "second ":"")+"meal", "Allowed on a shift this length under "+law().name+" rules, by written agreement.", ()=>{ if(waiveMeal(ws, x, v.mi)) toast("Meal waived"); });
+stretchInto(v.date, m.start, m.end, !O.length);
+bringIn(v.date, !O.some(o=>o.rec));
+editShift(x);
+}
+if(st){
+later("Let "+st.name+" sit empty during meals", "Unmarks it as can’t-sit-empty. Nobody has to step in while its person eats.",
+()=>{ st.critical=false; save(); render(); toast(st.name+" may sit empty during meals"); });
+later("Choose who may step in for "+st.name, "Name the posts whose people can hold it for half an hour.", ()=>stationModal(st.id));
+}
+if(m) closeForLunch(v.date, m.start, m.end);
+break;
+}
+case "lic": {
+profile("Update "+first+"’s license date", "Renewed? Put the new expiry in and every block lifts at once.");
+O[O.length-1].g="now"; O[O.length-1].rec=true;
+if(a) handOff(a);
+if(v.date) dayLink();
+break;
+}
+case "cap": case "wot": case "dot": case "consec": case "period": {
+const mine=dayShifts();
+const pick = v.aIds? mine.filter(x=>v.aIds.includes(x.id)) : mine;
+pick.slice(0,4).forEach((x,i)=>editShift(x, "Shorten or move "+first+"’s "+DSHORT[x.dow]+" "+m2disp(x.startMin)+"–"+m2disp(x.endMin), i===0? "Trim the hours, or hand it to somebody with room." : null));
+if(mine[0]) handOff(mine[0]);
+if(v.code==="cap") profile("Raise "+first+"’s hour cap", "If the cap is out of date, change it once and the warning goes.");
+else if(v.code==="consec") profile("Change "+first+"’s days-in-a-row limit");
+else if(v.code==="period") profile("Change "+first+"’s averaged hours");
+else later("Change the overtime thresholds", "Daily and weekly lines are under Settings; 0 switches a line off.", ()=>go("settings"));
+break;
+}
+case "contract": case "under": {
+const mine=dayShifts(); const busy=new Set(mine.map(x=>x.date));
+const cands=weekDates(ws).filter(({date,dow:d2})=>!busy.has(date) && e && (e.avail[d2]||{}).ok && !onTimeOff(e.id,date) && !(S.hours[d2]||{}).closed).slice(0,3);
+cands.forEach(({date,dow:d2},i)=>now("Add a shift for "+first+" on "+DSHORT[d2]+" "+prettyDate(date), "One of your named shifts; the hours impact is shown before you save.", ()=>newAssignModal(e.id, date, d2), i===0));
+if(mine[0] && v.code==="contract") editShift(mine[0], "Lengthen one of "+first+"’s shifts", "Change the finish time on a shift already on the board.");
+profile(v.code==="contract"? "Change "+first+"’s contract" : "Change "+first+"’s guaranteed hours");
+later("Add a shift of the right length", "Under Roles & shifts — the drafter can only use shifts you have named.", ()=>go("shifts"));
+break;
+}
+case "alone": {
+if(a && v.at!=null) stretchInto(v.date, v.at, Math.min(a.endMin, v.at+60), true);
+bringIn(v.date, !O.some(o=>o.rec));
+editShift(a);
+dayLink();
+profile("Allow "+first+" to work alone", "The never-alone rule comes from their group; change it there or move them out of it.");
+hoursLink();
+break;
+}
+case "double": {
+(v.aIds||[]).map(byId).filter(Boolean).forEach((x,i)=>editShift(x, "Remove or move the "+m2disp(x.startMin)+"–"+m2disp(x.endMin)+" shift", i===0? "One of the two has to go somewhere else.":null));
+dayLink();
+break;
+}
+case "avail": {
+handOff(a, true); editShift(a); dayLink();
+profile("Update "+first+"’s availability", "If they can work then now, say so on their profile and the flag goes.");
+break;
+}
+case "timeoff": {
+handOff(a, true); editShift(a); dayLink();
+later("Look at the time-off request", "Approved by mistake? Decline it under Requests and the shift stands.", ()=>go("requests"));
+break;
+}
+case "rest": case "clopen": {
+const cur=a, prev=v.prevId? byId(v.prevId) : null;
+if(cur) editShift(cur, "Start "+first+"’s "+DSHORT[cur.dow]+" shift later", "Or hand it to someone who slept.");
+if(prev) editShift(prev, "Finish "+first+"’s "+DSHORT[prev.dow]+" shift earlier");
+if(cur) handOff(cur);
+if(v.code==="clopen") later("Allow clopening", "Stops flagging a close followed by an open. The rest-between-shifts rule still holds.",
+()=>{ S.rules.noClopen=false; save(); render(); toast("Clopening no longer flagged"); });
+else later("Change the rest-between-shifts rule", "Under Scheduling rules.", ()=>go("rules"));
+break;
+}
+case "meal": {
+const x=a; const m=x? ((x.breaks||{}).meals||[])[v.mi] : null;
+if(x && v.sub==="late" && m)
+now("Move the meal to "+m2disp(m.deadline), "The latest legal start. Locks the shift so a redraft keeps it.", ()=>{ moveMeal(ws, x, v.mi, m.deadline); toast("Meal moved to "+m2disp(m.deadline)); }, true);
+if(x && (v.sub==="missing"||v.sub==="rests"))
+now("Place the breaks again", "Works them out from the shift as it is now.", ()=>{ applyBreaks(x); save(); render(); toast("Breaks placed again"); }, true);
+if(x && v.sub==="waiver" && m)
+now("Take the waiver off", "The meal goes back on the schedule at a legal time.", ()=>{ m.waived=false; applyBreaks(x); save(); render(); toast("Meal restored"); }, true);
+if(x) editShift(x, "Set "+ownerOf(x)+"’s meal times by hand", "Every meal shows its latest legal start.");
+dayLink();
+later("Change how meals are handled", "Timed on the schedule, lengths only, or staff-timed — under Scheduling rules.", ()=>go("rules"));
+break;
+}
+case "split": {
+now("See this week day by day", "Split shifts show as two blocks with the gap between.", ()=>{ DAYVIEW=weekDates(ws)[0].dow; go("day"); });
+later("Change the shifts that are split", "A split is built into a shift’s definition under Roles & shifts.", ()=>go("shifts"));
+break;
+}
+case "closure": {
+later("Change the lunch closure", "The times, and which days the doors shut.", ()=>go("rules"));
+break;
+}
+case "apart": {
+const A=e, B=v.empB? empById(v.empB):null;
+const xa=wk.assignments.find(x=>x.date===v.date && x.empId===(A||{}).id);
+const xb=wk.assignments.find(x=>x.date===v.date && x.empId===(B||{}).id);
+if(xa) handOff(xa, true);
+if(xb) handOff(xb);
+editShift(xa); editShift(xb);
+dayLink();
+if(A) later("Change the keep-apart rule", "On "+A.name.split(" ")[0]+"’s profile — loosen it or remove it.", ()=>empModal(A.id));
+break;
+}
+case "union": {
+if(a) editShift(a);
+if(v.aIds) v.aIds.map(byId).filter(Boolean).slice(0,3).forEach(x=>editShift(x));
+if(a) handOff(a);
+dayLink();
+later("See the agreement terms you entered", "Under Settings.", ()=>go("settings"));
+break;
+}
+default: {
+dayLink();
+if(e) profile();
+}
+}
+ 
+const seen=new Set();
+return O.filter(o=>{ const k=o.g+"|"+o.t; if(seen.has(k)) return false; seen.add(k); return true; });
+}
+function fixSheet(v, ws){
+ws=ws||S.currentWeek;
+const opts=fixOptions(v, ws);
+if(!opts.length){ toast("Nothing to press for this one — it is a note, not a fault"); return; }
+const grp=(g,head,sub)=>{
+const L=opts.filter(o=>o.g===g); if(!L.length) return "";
+return `<div class="fixgrp"><div class="lab">${esc(head)}</div>${sub? `<div class="mini" style="margin:-2px 0 6px">${esc(sub)}</div>`:""}
+      <div class="stack" style="gap:6px">${L.map(o=>`<button class="btn fixo ${o.rec?"bestfix":""}" data-fix="${opts.indexOf(o)}">
+        <span><b>${esc(o.t)}</b>${o.rec? ' <span class="chip acc">Recommended</span>':""}<span class="mini" style="display:block">${esc(o.d||"")}</span></span></button>`).join("")}</div></div>`;
+};
+modal(v.title||"Fix this", `
+    <div class="stack">
+      ${v.detail? `<div class="help">${esc(v.detail)}</div>`:""}
+      ${grp("now","Fix it this week","Changes this week only. Anything a fix breaks shows up in the checks straight away.")}
+      ${grp("later","Stop it coming back","Changes a rule or a setting, so every week from here is drafted without it.")}
+    </div>`,
+`<button class="btn" data-close>Leave it</button>`,
+r=>{
+r.querySelectorAll("[data-fix]").forEach(b=>b.onclick=()=>{
+const o=opts[+b.dataset.fix]; if(!o) return;
+closeModal(true);
+try{ o.run(); }catch(err){ toast("That fix did not go through"); try{ logBug({kind:"stuck", auto:true, note:"fix: "+(o.t||"")+" — "+String(err&&err.message||err)}); }catch(e2){} }
+});
+});
+}
+ 
+function fixBtn(v, i, cls){
+if(!v || !v.code) return "";
+if(v.code==="closure") return "";
+return `<button class="btn sm ${cls||(v.sev==="crit"?"primary":"")}" data-fixv="${i}" style="flex:none">Fix</button>`;
+}
+function wireFix(root, V, ws){
+root.querySelectorAll("[data-fixv]").forEach(b=>b.onclick=()=>{ const v=V[+b.dataset.fixv]; if(v) fixSheet(v, ws||S.currentWeek); });
+}
+
 WIRE.day = root=>{
 root.querySelectorAll("[data-snote]").forEach(el=>el.addEventListener("input",()=>{
 const ws=S.currentWeek;
@@ -14030,6 +14357,34 @@ const d=en.date, dow=en.dow;
 const prof=coverageProfile(d,dow,ws); if(!prof) return;
 const gaps=collapseGaps(prof.pts.filter(p=>p.gap>0));
 const g=gaps[+btn.dataset.covergap]; if(g) stretchModal(d, ws, g);
+});
+root.querySelectorAll("[data-fixdip]").forEach(btn=>btn.onclick=()=>{
+const ws=S.currentWeek;
+const wd=weekDates(ws), en=wd.find(x=>x.dow===DAYVIEW)||wd[0];
+const d=en.date, dow=en.dow;
+const prof=coverageProfile(d,dow,ws); if(!prof) return;
+const gaps=collapseGaps(prof.pts.filter(p=>p.gap>0));
+const g=gaps[+btn.dataset.fixdip]; if(!g) return;
+fixSheet({code:"cover", sev:"crit", title:"Coverage dips "+m2disp(g.from)+" \u2013 "+m2disp(g.to)+", "+DSHORT[dow],
+detail:g.labels.join(" \u00b7 "), date:d, dow, from:g.from, to:g.to, ruleIds:g.ruleIds}, ws);
+});
+root.querySelectorAll("[data-fixrelief]").forEach(btn=>btn.onclick=()=>{
+const ws=S.currentWeek, wk=peekWeek(ws);
+const [aId, mi, stId]=btn.dataset.fixrelief.split(":");
+const a=wk.assignments.find(x=>x.id===aId); if(!a) return;
+const st=stationById(stId); const m=((a.breaks||{}).meals||[])[+mi];
+fixSheet({code:"relief", sev:"crit", title:"No cover for "+(st? st.name:"the post")+" while "+((empById(a.empId)||{name:"they"}).name.split(" ")[0])+" eats",
+detail:(m? m2disp(m.start)+" \u2013 "+m2disp(m.end)+". ":"")+"The post is marked can\u2019t-sit-empty and nobody on the floor is free to hold it.",
+date:a.date, dow:a.dow, aId:a.id, mi:+mi, stationId:stId, empId:a.empId}, ws);
+});
+root.querySelectorAll("[data-fixmeal]").forEach(btn=>btn.onclick=()=>{
+const ws=S.currentWeek, wk=peekWeek(ws);
+const [aId, sub, mi]=btn.dataset.fixmeal.split(":");
+const a=wk.assignments.find(x=>x.id===aId); if(!a) return;
+const who=(empById(a.empId)||{name:"they"}).name.split(" ")[0];
+fixSheet({code:"meal", sev:"crit", sub, mi:+(mi||0), aId:a.id, empId:a.empId, date:a.date, dow:a.dow,
+title:(sub==="missing"? "Missing meal period" : "Late meal period")+" \u2014 "+who,
+detail: sub==="missing"? "The shift is long enough to owe a meal that is not on it." : "The meal starts after its latest legal start."}, ws);
 });
 const dn=root.querySelector("#dnote");
 if(dn) dn.addEventListener("input",()=>{
@@ -18719,6 +19074,8 @@ saveFile("requests-record.csv", rows.map(csvRow).join("\n"));
  
 function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
+{t:"How do I fix a coverage dip or a flagged problem?", k:"fix coverage dip gap short floor empty meal lunch no cover free flagged problem checks conflicts warning press fix options solutions", go:"week",
+a:"Press Fix. Every problem on Home, in the checks panel under This week, and every dip on the Day sheet (including a no-cover-free or meal-late chip on the break sheet) opens one short list. The top half fixes it this week: stretch a shift already on the day with the overtime priced, move a meal to a time the floor holds, waive a meal where the law allows it, bring someone else in, hand a shift to someone who is clear. The bottom half stops it coming back: let a meal count as on duty for that rule (an on-duty meal agreement), close the doors for lunch on solo days, take a day out of a rule or lower it, schedule one more person on that weekday, change your hours, update a profile. One option is marked Recommended \u2014 the least disruptive. Nothing is invented: every option uses shifts, people and rules you already have, and the checks run again the moment you press one."},
 {t:"Keep two people from working together", k:"keep apart separate conflict grievance siblings family divorce lawsuit restraining order not together same shift same day same station post never schedule together", go:"team",
 a:"Open either person under Team and use Keep apart from someone. Pick the other person and how far apart: never on the same day, never on overlapping shifts, or the same shift is fine but never the same post or one alongside it (its linked twin, a post in the same family, or one that covers it at meals). The drafter treats it as a rule it may not break, Cover the gaps never offers a blocked person, and if you move somebody by hand into a breach the checks panel says so. It is private to you: nothing about it appears on a printout, a message, a calendar file or an export, and the optional note stays on that screen only."},
 {t:"Can I sign in with Google?", k:"google sign in login gmail account password continue with google link", go:null, when:()=>GOOGLE_SIGNIN,
