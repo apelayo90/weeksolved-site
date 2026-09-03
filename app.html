@@ -76,6 +76,7 @@
   --ok:#297347; --ok-soft:#dcefe2;
   --warn:#8d5c0f; --warn-soft:#f6ead4; --on-warn:#ffffff;
   --crit:#ab382c; --crit-soft:#f7e0dc;
+  --info:#33507f; --info-soft:#e3e9f5;
   --shadow:0 1px 2px rgba(24,33,31,.06),0 6px 18px rgba(24,33,31,.05);
   --r:7px;
 }
@@ -88,6 +89,7 @@
     --ok:#5cb87e; --ok-soft:#16301f;
     --warn:#d9a441; --warn-soft:#33260f; --on-warn:#241905; --on-warn:#241905;
     --crit:#e2796a; --crit-soft:#3a1c17;
+    --info:#9db4e0; --info-soft:#1c2740;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.32);
   }
 }
@@ -99,6 +101,7 @@
   --ok:#5cb87e; --ok-soft:#16301f;
   --warn:#d9a441; --warn-soft:#33260f; --on-warn:#241905;
   --crit:#e2796a; --crit-soft:#3a1c17;
+  --info:#9db4e0; --info-soft:#1c2740;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.32);
 }
 
@@ -243,6 +246,7 @@ input[type=time],input[type=date],input[type=number]{font-family:"IBM Plex Mono"
 .chip.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
 .chip.crit{background:var(--crit-soft);color:var(--crit);border-color:transparent}
 .chip.acc{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.chip.info{background:var(--info-soft,#e3e9f5);color:var(--info,#33507f);border-color:transparent}
 /* Whether a setting is on should be readable from across the room, not inferred
    from the wording of a dropdown. */
 .statepill{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:99px;font-size:10.5px;
@@ -601,6 +605,18 @@ ol.a2hs li{padding-left:2px}
 .btn.fixo{justify-content:flex-start;text-align:left;white-space:normal;height:auto;min-height:44px;padding:9px 12px;width:100%}
 .btn.fixo.bestfix{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 6%,var(--surface))}
 .btn.fixo .chip{vertical-align:middle}
+.datein{display:inline-flex;align-items:stretch;position:relative;max-width:100%;vertical-align:middle}
+.field>.datein,.field .datein{display:flex;width:100%}
+.datein .dtxt{flex:1;min-width:0;width:11.5ch;border-top-right-radius:0;border-bottom-right-radius:0;font-variant-numeric:tabular-nums}
+.datein .dtxt.bad{border-color:var(--crit);box-shadow:0 0 0 2px var(--crit-soft)}
+.datein .dcal{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:36px;padding:0 10px;border:1px solid var(--line2);border-left:0;
+  border-radius:0 var(--r) var(--r) 0;background:var(--surface2);color:var(--ink2);cursor:pointer;font:inherit}
+.datein .dcal:hover{background:var(--sunken)} .datein .dcal:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.datein .dnat{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;margin:0;padding:0;border:0}
+.dpills{display:inline-flex;gap:3px;flex-wrap:nowrap}
+.dpill{width:27px;height:24px;border-radius:6px;font-size:11px;font-weight:700;display:inline-grid;place-items:center;letter-spacing:.02em;cursor:default}
+.dpill.on{background:var(--ok-soft);color:var(--ok)}
+.dpill.off{background:var(--crit-soft);color:var(--crit);opacity:.75;text-decoration:line-through}
 .chipbtn{cursor:pointer;font:inherit;font-size:inherit;border-color:transparent}
 .covbar i[data-fixat]{cursor:pointer} .covbar i[data-fixat]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .chipbtn:hover{filter:brightness(.95)} .chipbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -719,6 +735,7 @@ ol.a2hs li{padding-left:2px}
 .card.review>header{background:var(--accent-soft)}
 .card.review>header h3{color:var(--accent-ink)}
 .look{display:flex;gap:11px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface2)}
+.card.recur>header{border-left:4px solid var(--warn)}
 .look .sv{width:3px;align-self:stretch;border-radius:2px;flex:none;min-height:26px}
 .look .sv.crit{background:var(--crit)} .look .sv.warn{background:var(--warn)}
 .look strong{font-size:13.5px}
@@ -837,15 +854,16 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
    is a switch, not a peephole: press it once and the password stays readable
    until you press it again. */
 .pwwrap{position:relative;margin-bottom:10px}
-.pwwrap input{margin-bottom:0;padding-right:52px}
-.pweye{position:absolute;right:4px;top:50%;transform:translateY(-50%);
-  width:44px;height:44px;display:grid;place-items:center;
-  background:transparent;border:0;border-radius:7px;cursor:pointer;color:var(--muted);padding:0}
-.pweye:hover{color:var(--ink)}
-.pweye:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.pweye svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;
-  stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-.pweye[aria-pressed="true"]{color:var(--accent)}
+.pwwrap input{margin-bottom:0;padding-right:72px}
+/* A word, not an icon: "Show" reads the same to everyone, and the pressed
+   state is spelled out as "Hide". */
+.pweye{position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  min-width:56px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--surface2);border:1px solid var(--line2);border-radius:6px;cursor:pointer;color:var(--accent-ink);padding:0 12px;
+  font:inherit;font-size:13px;font-weight:600;letter-spacing:.01em}
+.pweye:hover{background:var(--sunken)}
+.pweye:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.pweye[aria-pressed="true"]{background:var(--accent-soft);border-color:transparent}
 .field .pwwrap{margin-bottom:0}
 .field .pwwrap input{text-align:left}
 /* Online terms only bind where the notice is conspicuous and the agreement is a
@@ -1491,6 +1509,7 @@ let THEIRS = null;
 let myName = (function(){ try{ return localStorage.getItem("dowel.myname")||""; }catch(e){ return ""; } })();
 
 function save(){
+RECUR_CACHE=null;
 priorityRefresh();
 trackForUndo();
 lsSave();
@@ -2049,8 +2068,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "b5d923e6";       
-const BUILD_AT = "2026-09-03 00:59 UTC";       
+const BUILD_ID = "86a33a28";       
+const BUILD_AT = "2026-09-03 05:30 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -2809,12 +2828,10 @@ w.querySelector("#gdclose").onclick=()=>w.remove();
 w.addEventListener("mousedown",e=>{ if(e.target===w) w.remove(); });
 }
  
-const EYE_OPEN='<svg viewBox="0 0 24 24"><path d="M1.8 12S5.5 5.4 12 5.4 22.2 12 22.2 12 18.5 18.6 12 18.6 1.8 12 1.8 12Z"/><circle cx="12" cy="12" r="3.1"/></svg>';
-const EYE_SHUT='<svg viewBox="0 0 24 24"><path d="M9.9 5.7A9.8 9.8 0 0 1 12 5.4c6.5 0 10.2 6.6 10.2 6.6a19 19 0 0 1-3.3 4.2M6.4 6.8A18.6 18.6 0 0 0 1.8 12S5.5 18.6 12 18.6a9.6 9.6 0 0 0 3.9-.8"/><path d="m9.9 9.9a3.1 3.1 0 0 0 4.3 4.3"/><path d="M3 3l18 18"/></svg>';
 function pwField(id, ph, ac, aria){
 return '<div class="pwwrap"><input type="password" id="'+id+'" autocomplete="'+ac+'" placeholder="'+ph+
 '" aria-label="'+(aria||ph)+'">'+
-'<button type="button" class="pweye" data-pweye="'+id+'" aria-pressed="false" aria-label="Show password" title="Show password">'+EYE_SHUT+'</button></div>';
+'<button type="button" class="pweye" data-pweye="'+id+'" aria-pressed="false" aria-label="Show password" title="Show the password until you press Hide">Show</button></div>';
 }
  
 function wirePwEyes(root){
@@ -2828,8 +2845,8 @@ const show = inp.type==="password";
 inp.type = show? "text" : "password";
 btn.setAttribute("aria-pressed", show? "true":"false");
 btn.setAttribute("aria-label", show? "Hide password":"Show password");
-btn.title = show? "Hide password":"Show password";
-btn.innerHTML = show? EYE_OPEN : EYE_SHUT;
+btn.title = show? "Hide the password again":"Show the password until you press Hide";
+btn.textContent = show? "Hide" : "Show";
  
 try{ const n=inp.value.length; inp.focus(); inp.setSelectionRange(n,n); }catch(e){}
 };
@@ -3259,7 +3276,7 @@ modal("Delete your account", `
         <span class="mini">A backup restores everything into a fresh account later. This is your last chance to take one.</span></div>
       <div class="field"><label>Your password, to prove it is you</label>
         <div class="pwwrap"><input type="password" id="dapass" autocomplete="current-password" placeholder="Password" aria-label="Password">
-          <button type="button" class="pweye" data-pweye="dapass" aria-pressed="false" aria-label="Show password" title="Show password">${EYE_SHUT}</button></div>
+          <button type="button" class="pweye" data-pweye="dapass" aria-pressed="false" aria-label="Show password" title="Show the password until you press Hide">Show</button></div>
         <span class="mini">Asked because deleting an account should not be something a borrowed phone can do.</span></div>
       <div class="field"><label>Type DELETE to confirm</label>
         <input type="text" id="datype" autocomplete="off" autocapitalize="characters" placeholder="DELETE"></div>
@@ -3338,6 +3355,27 @@ const FRAMED = framedByStranger();
 if(FRAMED){
 try{ document.addEventListener("DOMContentLoaded", paintFrameRefusal); }catch(e){}
 try{ if(document.body) paintFrameRefusal(); }catch(e){}
+}
+ 
+ 
+function fmtPhone(v){
+const raw=String(v||"").trim(); let d=raw.replace(/\D/g,"");
+if(d.length===11 && d[0]==="1") d=d.slice(1);
+if(d.length!==10) return raw;
+return "("+d.slice(0,3)+") "+d.slice(3,6)+"-"+d.slice(6);
+}
+function watchPhones(){
+document.addEventListener("blur", e=>{
+const el=e.target; if(!el || el.tagName!=="INPUT" || el.type!=="tel") return;
+const f=fmtPhone(el.value); if(f!==el.value){ el.value=f; el.dispatchEvent(new Event("input",{bubbles:true})); el.dispatchEvent(new Event("change",{bubbles:true})); }
+}, true);
+}
+function watchDates(){
+try{
+new MutationObserver(muts=>{
+muts.forEach(m=>m.addedNodes.forEach(n=>{ if(n && n.nodeType===1) enhanceDates(n); }));
+}).observe(document.body, {childList:true, subtree:true});
+}catch(e){}
 }
 async function boot(){
 if(FRAMED){ paintFrameRefusal(); return; }     
@@ -6730,7 +6768,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '.card.hide{display:none}',
 'label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--m);font-weight:700;margin:12px 0 6px}',
 'label.f:first-child{margin-top:0}',
-'select,input[type=text],input[type=email],input[type=tel],input[type=date]{width:100%;font:inherit;color:inherit;background:var(--s);border:1px solid var(--l);border-radius:6px;padding:9px 10px}',
+'select,input[type=text],input[type=email],input[type=tel],input[type=date]{width:100%;font:inherit;color:inherit;background:var(--s);border:1px solid var(--l);border-radius:6px;padding:9px 10px}'+FORM_DATES_CSS,
 '.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
 '.gh{background:var(--s);color:var(--a);border:1px solid var(--a)}',
 '.row{display:flex;gap:8px;align-items:center}.row select{flex:1}.to{color:var(--m);font-size:13px;flex:none}',
@@ -6779,7 +6817,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<div id="out" class="hide"><div class="hint" style="margin-top:12px">Send this code back to your manager. It is long — copy the whole thing.</div>',
 '<div class="code" id="cd"></div><button class="go gh" id="cp">Copy the code</button></div></div>',
 '<div class="hint">Nothing is sent anywhere by this page — the code is the only thing that leaves, and you send it yourself. It holds only what you filled in above.</div>',
-'</div><script>'].join("\n")+"\n"+TM_PAGE_JS.replace("__DATA__", data)+"\n<\/script></body></html>";
+'</div><script>'].join("\n")+"\n"+TM_PAGE_JS.replace("__DATA__", data)+"\n"+FORM_DATES_JS+"\n<\/script></body></html>";
 }
 function intakeMessageText(){
 return "Subject: A few details for the schedule\n\n"+
@@ -7146,6 +7184,7 @@ function withPhone(){ return S.employees.filter(e=>e.active && (e.phone||"").tri
 function handOutRow(id, opts){
 const em=withEmail().length, ph=withPhone().length;
 return `<div class="row" style="gap:6px;flex-wrap:wrap">
+      <button class="btn sm" id="${id}open">See the form</button>
       <button class="btn sm" id="${id}print">Print it to hand out</button>
       <button class="btn sm" id="${id}copy">Copy the message</button>
       ${em? `<button class="btn sm" id="${id}mail">Email the ${em} with an address</button>`:""}
@@ -7156,6 +7195,7 @@ return `<div class="row" style="gap:6px;flex-wrap:wrap">
 }
 function wireHandOut(root, id, get){
 const q=x=>root.querySelector("#"+id+x);
+const O=q("open"); if(O) O.onclick=()=>{ const g=get(); if(!g.file){ toast("Make the form first"); return; } openDoc(g.file, g.title); };
 const P=q("print"); if(P) P.onclick=()=>{ const g=get(); if(!g.file){ toast("Make the form first"); return; }
  
 if(printDoc(g.file, g.title)){ logIt("post","Printed "+(g.what||"a form")+" to hand out"); save(); } };
@@ -9533,7 +9573,7 @@ else WAS_PHONE=now;
 
 let LAST_VIEW=null;
 function render(){
-WAS_PHONE = isPhone();
+WAS_PHONE = isPhone(); RECUR_CACHE=null;
 settlePending(); runQueued(); graceTick(); paintAccount();
 const keepY = (LAST_VIEW===VIEW)? window.scrollY : null;
 LAST_VIEW=VIEW;
@@ -9559,6 +9599,7 @@ wireCommon(pane);
 document.title = (t[0]? t[0]+" \u2014 " : "")+"Weeksolved";
 polishA11y(pane);
 markToggleState(pane);
+enhanceDates(pane);
 if(keepY!=null) requestAnimationFrame(()=>window.scrollTo(0, keepY));
 }
  
@@ -9583,6 +9624,107 @@ pill.className="statepill "+(isOn?"on":"off");
 pill.textContent=isOn?"On":"Off";
 });
 }
+ 
+const CAL_ICON='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 7h12M5 1.5v3M11 1.5v3"/></svg>';
+function isoToUs(iso){
+const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||"")); if(!m) return "";
+return m[2]+"/"+m[3]+"/"+m[1];
+}
+ 
+function usToIso(s){
+s=String(s||"").trim(); if(!s) return "";
+let mo, d, y;
+const parts=s.split(/[\/\-. ]+/).filter(Boolean);
+if(parts.length===3){ [mo,d,y]=parts; }
+else if(parts.length===2){ [mo,d]=parts; y=String(new Date().getFullYear()); }
+else if(parts.length===1 && /^\d+$/.test(s)){
+if(s.length===8){ mo=s.slice(0,2); d=s.slice(2,4); y=s.slice(4); }
+else if(s.length===6){ mo=s.slice(0,2); d=s.slice(2,4); y=s.slice(4); }
+else if(s.length===7){ mo=s.slice(0,1); d=s.slice(1,3); y=s.slice(3); }
+else if(s.length===4){ mo=s.slice(0,2); d=s.slice(2); y=String(new Date().getFullYear()); }
+else return null;
+} else return null;
+if(!/^\d{1,2}$/.test(mo) || !/^\d{1,2}$/.test(d) || !/^\d{2}$|^\d{4}$/.test(y)) return null;
+mo=+mo; d=+d; y=+y;
+if(y<100) y += (y<=79? 2000 : 1900);          
+if(mo<1||mo>12||d<1||d>31) return null;
+const dt=new Date(y, mo-1, d);
+if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==d) return null;
+return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+}
+ 
+function fmtTyping(v, prev){
+if(prev && v.length<prev.length) return v;          
+if(/[^\d]/.test(v.replace(/\//g,""))) return v;     
+const digits=v.replace(/\D/g,"").slice(0,8);
+if(v.includes("/") && digits.length<8) return v;    
+if(digits.length<=2) return digits;
+if(digits.length<=4) return digits.slice(0,2)+"/"+digits.slice(2);
+return digits.slice(0,2)+"/"+digits.slice(2,4)+"/"+digits.slice(4);
+}
+function dateLabelFor(nat){
+if(nat.id){ const l=document.querySelector('label[for="'+nat.id+'"]'); if(l) return l.textContent.trim(); }
+const f=nat.closest(".field"); if(f){ const l=f.querySelector("label"); if(l) return l.textContent.trim(); }
+return "";
+}
+function enhanceDates(root){
+if(!root || !root.querySelectorAll) return;
+const list=[...root.querySelectorAll('input[type="date"]:not([data-enh])')];
+if(root.matches && root.matches('input[type="date"]:not([data-enh])')) list.push(root);
+list.forEach(nat=>{
+if(nat.closest(".noenh") || !nat.parentNode) return;
+nat.dataset.enh="1";
+const wrap=document.createElement("span"); wrap.className="datein";
+ 
+if(nat.style.minWidth){ wrap.style.minWidth=nat.style.minWidth; nat.style.minWidth=""; }
+if(nat.style.width){ wrap.style.width=nat.style.width; nat.style.width=""; }
+if(nat.style.flex){ wrap.style.flex=nat.style.flex; nat.style.flex=""; }
+if(nat.style.maxWidth){ wrap.style.maxWidth=nat.style.maxWidth; nat.style.maxWidth=""; }
+nat.parentNode.insertBefore(wrap, nat);
+const txt=document.createElement("input");
+txt.type="text"; txt.inputMode="numeric"; txt.autocomplete="off"; txt.className="dtxt";
+txt.placeholder="mm/dd/yyyy"; txt.maxLength=10; txt.spellcheck=false;
+const lab=nat.getAttribute("aria-label")||dateLabelFor(nat)||"Date";
+txt.setAttribute("aria-label", lab+" — type it, or press the calendar");
+txt.value=isoToUs(nat.value);
+if(nat.disabled) txt.disabled=true;
+const cal=document.createElement("button");
+cal.type="button"; cal.className="dcal"; cal.title="Pick from a calendar";
+cal.setAttribute("aria-label", "Pick "+lab.toLowerCase()+" from a calendar"); cal.innerHTML=CAL_ICON;
+if(nat.disabled) cal.disabled=true;
+wrap.appendChild(txt); wrap.appendChild(nat); wrap.appendChild(cal);
+nat.classList.add("dnat"); nat.tabIndex=-1; nat.setAttribute("aria-hidden","true");
+const fire=(names)=>names.forEach(n=>nat.dispatchEvent(new Event(n,{bubbles:true})));
+const push=()=>{
+const iso=usToIso(txt.value);
+if(iso===null){ txt.classList.add("bad"); return false; }
+txt.classList.remove("bad");
+if(nat.value!==iso){ nat.value=iso; fire(["input","change"]); }
+return true;
+};
+txt.addEventListener("input", ()=>{
+const before=txt.dataset.prev||"";
+txt.value=fmtTyping(txt.value, before); txt.dataset.prev=txt.value;
+if(!txt.value.trim()){ txt.classList.remove("bad"); if(nat.value){ nat.value=""; fire(["input","change"]); } return; }
+if(txt.value.length===10) push();
+});
+txt.addEventListener("blur", ()=>{
+const iso=usToIso(txt.value);
+if(iso===null){ txt.classList.add("bad"); return; }
+if(iso){ txt.value=isoToUs(iso); txt.dataset.prev=txt.value; }
+push(); fire(["blur"]);
+});
+txt.addEventListener("keydown", e=>{ if(e.key==="Enter"){ txt.blur(); } });
+nat.addEventListener("change", ()=>{ txt.value=isoToUs(nat.value); txt.dataset.prev=txt.value; txt.classList.remove("bad"); });
+nat.addEventListener("input", ()=>{ txt.value=isoToUs(nat.value); txt.dataset.prev=txt.value; });
+cal.addEventListener("click", ()=>{
+try{ if(typeof nat.showPicker==="function"){ nat.showPicker(); return; } }catch(e){}
+ 
+nat.tabIndex=0; nat.focus(); try{ nat.click(); }catch(e){} nat.tabIndex=-1;
+});
+});
+}
+
 function polishA11y(root){
 if(!root) return;
 root.querySelectorAll("table").forEach(t=>{
@@ -9636,7 +9778,52 @@ const WIRE={};
 
  
 let bindSaveTimer=null;
+ 
+function whyAttrs(why, act){
+return ' data-why="'+esc(why)+'"'+(act? ' data-act="'+esc(act)+'"':'')+' role="button" tabindex="0" style="cursor:pointer"';
+}
+function actLabel(act){
+const [k,v]=String(act||"").split(":");
+if(k==="day") return "Open the day sheet";
+if(k==="go") return ({requests:"Open Requests", team:"Open Team", week:"Open this week", demand:"Open Coverage needs", rules:"Open Scheduling rules", org:"Open Business & law", holidays:"Open the holiday poll", stations:"Open Stations", settings:"Open Settings"})[v] || "Go there";
+if(k==="emp") return "Open their profile";
+if(k==="lic") return "Put the new date in";
+if(k==="fix") return "See the fixes";
+if(k==="checks") return "See the checks";
+if(k==="fixall") return "Show me the fixes";
+return "Go there";
+}
+function runAct(act){
+const parts=String(act||"").split(":"); const k=parts[0], v=parts[1];
+if(k==="day"){ DAYVIEW=+v; go("day"); return; }
+if(k==="go"){ go(v); return; }
+if(k==="emp"){ empModal(v); return; }
+if(k==="lic"){ licRenewModal(v); return; }
+if(k==="fixall"){ fixModal(S.currentWeek); return; }
+if(k==="checks"){ if(VIEW!=="week") go("week"); setTimeout(()=>{ const c=[...document.querySelectorAll(".card h3")].find(h=>/Conflicts and compliance/.test(h.textContent)); if(c) c.closest(".card").scrollIntoView({behavior:"smooth",block:"start"}); }, 80); return; }
+if(k==="fix"){ const code=v, empId=parts[2]||null, extra=parts[3]||null;
+const e=empId? empById(empId):null;
+const v2={code, sev:"warn", empId, title:(e? e.name+" — ":"")+({cap:"Over hour cap", under:"Under guaranteed hours", wot:"Weekly overtime", lic:"License"}[code]||"Fix"), detail:""};
+if(extra) v2.date=extra;
+fixSheet(v2, S.currentWeek); return; }
+}
+function explainModal(el){
+const why=el.dataset.why||""; const act=el.dataset.act||"";
+const title=(el.textContent||"").trim().replace(/\s+/g," ").slice(0,60) || "About this";
+modal(title, `<div class="stack"><div class="help" style="font-size:14px">${esc(why)}</div></div>`,
+`<button class="btn" data-close>Close</button>${act? `<button class="btn primary" id="whyact">${esc(actLabel(act))}</button>`:""}`,
+r=>{ const b=r.querySelector("#whyact"); if(b) b.onclick=()=>{ closeModal(true); runAct(act); }; });
+}
+function wireWhy(root){
+(root||document).querySelectorAll("[data-why]").forEach(el=>{
+if(el.dataset.whywired) return; el.dataset.whywired="1";
+const open=ev=>{ ev.preventDefault(); ev.stopPropagation(); explainModal(el); };
+el.addEventListener("click", open);
+el.addEventListener("keydown", ev=>{ if(ev.key==="Enter"||ev.key===" ") open(ev); });
+});
+}
 function wireCommon(root){
+wireWhy(root);
 root.querySelectorAll("[data-bind]").forEach(el=>{
 const path=el.dataset.bind;
 const typed = el.tagName==="TEXTAREA" ||
@@ -9739,7 +9926,7 @@ MODAL_DIRTY=false;
 }
 if(onMount) onMount(r);
 wirePwEyes(r);
-polishA11y(r); markToggleState(r);
+polishA11y(r); markToggleState(r); enhanceDates(r); wireWhy(r);
 return r;
 }
 let MODAL_OPENER=null;
@@ -9822,7 +10009,7 @@ return `<div class="spread" style="padding:7px 0;border-bottom:1px solid var(--l
                 <span class="mini"> · ${h.closed?"Closed":m2disp(t2m(h.open))+"–"+m2disp(t2m(h.close))}</span></div>
               <div class="row" style="gap:6px">
                 <span class="chip">${list.length} on</span>
-                ${gaps? `<span class="chip crit">${gaps*STEP} min short</span>`:`<span class="chip ok">covered</span>`}
+                ${gaps? `<span class="chip crit"${whyAttrs("For "+(gaps*STEP)+" minutes on "+DAYS[dow]+" the floor is below the minimum you set — usually a meal, or a shift that ends before the next begins. The day sheet shows the exact stretch with a Fix button.", "day:"+dow)}>${gaps*STEP} min short</span>`:`<span class="chip ok">covered</span>`}
               </div></div>`;
 }).join("")}
         </div>
@@ -10053,6 +10240,8 @@ return `<button class="wkcard ${state}" data-week="${w}">
       </div></div>`
 : `<div class="banner info"><div><b>Nothing flagged.</b> Every shift is filled, every minimum holds, everyone is inside their hours, and every meal and rest break sits inside the window Weeksolved has for ${esc(law().name)}.
           <div class="mini" style="margin-top:4px">${esc(LAWNOTE)}</div></div></div>`}
+
+    ${recurCard(ws)}
 
     <div class="card"><header><h3>Hand it out</h3></header>
       <div class="body row">
@@ -10760,6 +10949,12 @@ return f.length? esc(f.map(e=>e.name.split(" ")[0]+" "+effLimits(e).exactH+"h").
     <div class="card"><header><h3>This board</h3></header><div class="setbody">
       ${setRow("Show the advanced pages in the sidebar", advanced()? "Every page is listed" : "Only the five you need day to day",
 sel("ui.advanced", [[0,"Keep it simple"],[1,"Show everything"]], advanced()?1:0))}
+      ${setRow("Point out problems that keep coming back", (S.ui&&S.ui.recurOff)
+? "Off \u2014 Home no longer lists flags that repeat week after week"
+: "On \u2014 when the same flag shows up in two or more weeks, Home lists it with the one change that stops it. Nothing is ever changed on its own."+
+(((S.ui||{}).recurHidden && Object.keys(S.ui.recurHidden).length)? " "+Object.keys(S.ui.recurHidden).length+" hidden by you." : ""),
+sel("ui.recurOff", [[0,"On \u2014 point them out"],[1,"Off"]], (S.ui&&S.ui.recurOff)?1:0)+
+(((S.ui||{}).recurHidden && Object.keys(S.ui.recurHidden).length)? ` <button class="btn sm" id="recurunhide">Show the hidden ones again</button>`:""))}
       ${setRow("Working with colleagues",
 "This copy saves to this browser alone. Hand a backup to a colleague and they can carry on with it, but two people can't edit the same board at once without a server behind it.", "")}
       ${setRow("Keep the record of changes for", ((S.audit||[]).length
@@ -10804,6 +10999,7 @@ return `<div class="card ${folded("setlinks")?"folded":""}">${foldHead("setlinks
   </div>`;
 }
 WIRE.settings = root=>{
+{ const ru=root.querySelector("#recurunhide"); if(ru) ru.onclick=()=>{ S.ui=S.ui||{}; S.ui.recurHidden={}; RECUR_CACHE=null; save(); render(); toast("Every repeat problem is listed again"); }; }
 { const pane=root.querySelector(".stack")||root;
 applySetGroup(pane);
 applyCardFolds(pane);
@@ -10818,7 +11014,7 @@ const t=root.querySelector("#aptheme"); if(t) t.onchange=()=>applyTheme(t.value)
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
+const boolPaths=["rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","ui.recurOff","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
 const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.maxSpanH","org.weekStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","ui.anWeeks","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
@@ -11326,6 +11522,72 @@ save(); closeModal(); render();
 
  
 const TYPES={FT:"Full time",PT:"Part time",PRN:"Per diem / PRN",TEMP:"Temp / seasonal",TRAIN:"In training \u2014 learning the job"};
+ 
+function typeChip(e){
+const t=e.type||"FT";
+const cls = t==="FT"? "acc" : t==="PRN"||t==="TEMP"? "info" : t==="TRAIN"? "warn" : "";
+const word = t==="PRN"? "Per diem" : t==="TEMP"? "Temp" : t==="TRAIN"? "In training" : (TYPES[t]||t);
+const tip = t==="PRN"? "Called in only when a shift would otherwise sit open" : t==="TEMP"? "Seasonal or temporary — treated like part time" : t==="TRAIN"? "Still learning — the never-alone rule applies if their group has one" : "";
+return `<span class="chip ${cls}"${tip? ' title="'+esc(tip)+'"':""}>${esc(word)}</span>`;
+}
+ 
+function dayPills(e){
+return `<span class="dpills" aria-label="Days they can work">${(e.avail||[]).map((a,i)=>{
+const ok=!!(a&&a.ok);
+const t=ok? (DAYS[i]+": "+(a.from&&a.to? m2disp(t2m(a.from))+"–"+m2disp(t2m(a.to)) : "any time you are open")) : DAYS[i]+": not available";
+return `<span class="dpill ${ok?"on":"off"}" title="${esc(t)}" aria-label="${esc(t)}">${DSHORT[i].slice(0,2)}</span>`; }).join("")}</span>`;
+}
+function teamFacts(e, ws){
+const mins=empWeekMinutes(e.id,ws);
+const pct = e.maxH? clamp(mins/(e.maxH*60),0,1.3):0;
+const over = e.maxH && mins>e.maxH*60+1;
+const under = e.minH && mins<e.minH*60-1 && e.type!=="PRN";
+const L=effLimits(e);
+const target = L.exactH? "exactly "+L.exactH+"h" : (L.minH||0)+"–"+(L.maxH||0)+"h"+((L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH)?" *":"");
+const bar=`<div class="mono" style="font-size:12px">${fmtHrs(mins)}${over? ' <span class="chip crit" style="margin-left:4px"'+whyAttrs(e.name.split(" ")[0]+" has "+fmtHrs(mins)+" this week against a "+e.maxH+"h cap. Shorten or hand over a shift, or raise the cap on their profile.", "fix:cap:"+e.id)+'>over cap</span>' : under? ' <span class="chip warn" style="margin-left:4px"'+whyAttrs(e.name.split(" ")[0]+" has "+fmtHrs(mins)+" this week and is guaranteed "+e.minH+"h. Add a shift for them, or change the guarantee on their profile.", "fix:under:"+e.id)+'>under</span>':""}</div>
+    <div style="height:4px;border-radius:2px;background:var(--sunken);overflow:hidden;margin-top:3px"><i style="display:block;height:100%;width:${Math.min(100,pct*100)}%;background:${over?"var(--crit)":under?"var(--warn)":"var(--accent)"}"></i></div>`;
+const notes=[];
+if(prefsBlank(e)) notes.push(`<span class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine — send the starter form if you would like their preferences.">nothing on file · open availability</span>`);
+if(e.onCall) notes.push(`<span class="mini">on call only</span>`);
+{ const bl=ptoBalance(e); if(bl!==null) notes.push(`<span class="chip ${bl<0?"crit":""}"${bl<0? whyAttrs(e.name.split(" ")[0]+" has taken "+Math.abs(bl)+"h more time off than they have accrued. Adjust the balance or the accrual on their profile.", "emp:"+e.id):""}>${bl}h PTO</span>`); }
+{ const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
+if(n) notes.push(`<span class="chip warn"${whyAttrs(n+" callout"+(n===1?"":"s")+" or no-show"+(n===1?"":"s")+" logged in the last 90 days"+(hn? " ("+hn+")":"")+". Logged from the shift itself, under Called out. It is a record for you, not a penalty — nothing in the drafter changes because of it.", "emp:"+e.id)}>${n} callout${n===1?"":"s"} / 90d</span>`); }
+let lic="";
+if(empLicensed(e)){
+if(e.licExp){
+if(e.licExp<ymd(new Date())) lic=`<span class="chip crit"${whyAttrs("The "+(e.licLabel||"license")+" date on file is past, so the drafter will not schedule "+e.name.split(" ")[0]+" until a new date goes in. If it has been renewed, put the new expiry in.", "lic:"+e.id)}>${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span>${licChaseRow(e)}`;
+else if(e.licExp<=addDays(ymd(new Date()),30)) lic=`<span class="chip warn"${whyAttrs("The "+(e.licLabel||"license")+" runs out within 30 days. Once the date is past, the drafter stops scheduling "+e.name.split(" ")[0]+" — ask for the renewal now and put the new date in when it comes.", "lic:"+e.id)}>${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span>${licChaseRow(e)}`;
+} else lic=`<span class="mini" style="color:var(--muted)" title="Weeksolved has no date for this, so it cannot warn you before it lapses. It is not a claim that anything is wrong.">expiry not entered — optional</span>`;
+}
+if(cyclesOn()&&cycleLabel(e)) notes.push(`<span class="mini">${esc(cycleLabel(e))}</span>`);
+groupsFor(e).forEach(g=>notes.push(`<span class="chip">${esc(g.name)}</span>`));
+const roles=e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span>`:"";}).join(" ");
+return {mins, target, bar, notes, lic, roles};
+}
+function teamRow(e, ws){
+const F=teamFacts(e, ws);
+return `<tr${e.active?"":' style="opacity:.5"'}>
+    <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}${e.active?"":'<div class="mini">inactive</div>'}</td>
+    <td>${F.roles}</td>
+    <td>${typeChip(e)}${F.notes.map(n=>`<div class="mini">${n}</div>`).join("")}${F.lic? `<div class="mini">${F.lic}</div>`:""}</td>
+    <td class="mono">${esc(F.target)}</td>
+    <td>${F.bar}</td>
+    <td>${dayPills(e)}</td>
+    <td><button class="btn sm" data-editemp="${e.id}">Edit</button></td></tr>`;
+}
+function teamCard(e, ws){
+const F=teamFacts(e, ws);
+return `<div class="tcard ${e.active?"":"silent"}">
+    <div class="tt"><span class="who">${esc(e.name)}${e.active?"":' <span class="mini">(inactive)</span>'}</span>
+      <button class="btn sm" data-editemp="${e.id}">Edit</button></div>
+    <div class="meta"><span>${F.roles||'<span class="mini">no role</span>'}</span><span>${typeChip(e)}</span>${F.notes.map(n=>`<span>${n}</span>`).join("")}</div>
+    ${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}
+    <div class="meta"><span>Hours ${esc(F.target)}</span></div>
+    <div>${F.bar}</div>
+    <div>${dayPills(e)}</div>
+    ${F.lic? `<div>${F.lic}</div>`:""}
+  </div>`;
+}
 function vTeam(){
 const ws=S.currentWeek;
 return `
@@ -11340,30 +11602,17 @@ staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places u
         ${S.employees.length>1? `<button class="btn sm" id="bulkpat">Put several on a layout</button>`:""}
         <button class="btn sm" id="addtoff">Take someone off for a stretch</button>
         <button class="btn primary sm" id="addemp">Add person</button></header>
-      <div class="scroll">${S.employees.length? `<table>
-        <thead><tr><th>Name</th><th style="width:150px">Roles</th><th style="width:110px">Type &amp; group</th><th style="width:120px">Hours target</th>
-          <th style="width:130px">This week</th><th style="width:110px">Days free</th><th style="width:80px"></th></tr></thead>
-        <tbody>${S.employees.map(e=>{
-const mins=empWeekMinutes(e.id,ws);
-const pct = e.maxH? clamp(mins/(e.maxH*60),0,1.3):0;
-const over = e.maxH && mins>e.maxH*60+1;
-const under = e.minH && mins<e.minH*60-1 && e.type!=="PRN";
-return `<tr${e.active?"":' style="opacity:.5"'}>
-            <td><strong>${esc(e.name)}</strong>${e.notes?`<div class="mini">${esc(e.notes)}</div>`:""}</td>
-            <td>${e.roleIds.map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span> `:"";}).join("")}</td>
-            <td><span class="chip">${esc(e.type)}</span>${prefsBlank(e)?'<div class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine \u2014 send the starter form if you would like their preferences.">nothing on file \u00b7 open availability</div>':""}${e.onCall?'<div class="mini">on call only</div>':""}${(function(){const b=ptoBalance(e); return b===null? "" : `<div class="mini"><span class="chip ${b<0?"crit":""}">${b}h PTO</span></div>`;})()}${(function(){const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
-return n? `<div class="mini"><span class="chip warn" title="${esc(hn||"All recorded by Weeksolved")}">${n} callout${n===1?"":"s"} / 90d</span>${hn?` <span class="mini">(${esc(hn)})</span>`:""}</div>`:"";})()}${empLicensed(e)? (e.licExp? (e.licExp<ymd(new Date())? `<div class="mini"><span class="chip crit">${esc(e.licLabel||"license")} expired ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}` : e.licExp<=addDays(ymd(new Date()),30)? `<div class="mini"><span class="chip warn">${esc(e.licLabel||"license")} until ${prettyDate(e.licExp)}</span></div>${licChaseRow(e)}`:"")
-: `<div class="mini" style="color:var(--muted)" title="Weeksolved has no date for this, so it cannot warn you before it lapses. It is not a claim that anything is wrong.">expiry not entered \u2014 optional</div>`):""}${cyclesOn()&&cycleLabel(e)?`<div class="mini">${esc(cycleLabel(e))}</div>`:""}${groupsFor(e).map(g=>`<div class="mini">${esc(g.name)}</div>`).join("")}</td>
-            <td class="mono">${(()=>{const L=effLimits(e);
-if(L.exactH) return "exactly "+L.exactH+"h";
-return (L.minH||0)+"–"+(L.maxH||0)+"h"+((L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH)?" *":"");})()}</td>
-            <td><div class="mono" style="font-size:12px">${fmtHrs(mins)}</div>
-              <div style="height:3px;border-radius:2px;background:var(--sunken);overflow:hidden;margin-top:3px">
-                <i style="display:block;height:100%;width:${Math.min(100,pct*100)}%;background:${over?"var(--crit)":under?"var(--warn)":"var(--accent)"}"></i></div></td>
-            <td class="mono" style="font-size:11px">${e.avail.map((a,i)=>a.ok?DSHORT[i][0]:"·").join("")}</td>
-            <td><button class="btn sm" data-editemp="${e.id}">Edit</button></td></tr>`;
-}).join("")}</tbody></table>`: `<div class="empty"><strong>No one on the roster</strong>Add your first person to start scheduling.</div>`}
-      </div>
+      ${S.employees.length? `<div class="body" style="padding:8px 16px 0"><div class="legend" style="gap:14px;font-size:12px">
+          <span><span class="dpill on" style="width:22px;height:19px;font-size:10px">Mo</span> can work that day</span>
+          <span><span class="dpill off" style="width:22px;height:19px;font-size:10px">Sa</span> never scheduled that day</span>
+          <span>Hover or press a day for the hours</span></div></div>`:""}
+      ${S.employees.length? (isPhone()
+? `<div class="tlist" style="padding:12px">${S.employees.map(e=>teamCard(e, ws)).join("")}</div>`
+: `<div class="scroll"><table>
+        <thead><tr><th>Name</th><th style="width:140px">Roles</th><th style="width:150px">Type &amp; notes</th><th style="width:110px">Hours target</th>
+          <th style="width:120px">This week</th><th style="width:214px">Days they can work</th><th style="width:70px"></th></tr></thead>
+        <tbody>${S.employees.map(e=>teamRow(e, ws)).join("")}</tbody></table></div>`)
+: `<div class="empty"><strong>No one on the roster</strong>Add your first person to start scheduling.</div>`}
       ${(S.groups||[]).length && S.employees.some(e=>{const L=effLimits(e); return (L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH);})? `<div class="body" style="border-top:1px solid var(--line)"><div class="mini">* tightened by a staff group.</div></div>`:""}
     </div>
 
@@ -11413,7 +11662,7 @@ return `<tr>
           <td><strong>${esc((empById(t.empId)||{name:"—"}).name)}</strong></td>
           <td class="mono">${prettyDate(t.start)} – ${prettyDate(t.end)}</td>
           <td>${esc(t.type)}</td>
-          <td><span class="chip ${t.status==="approved"?"ok":t.status==="denied"?"crit":"warn"}">${esc(t.status)}</span></td>
+          <td><span class="chip ${t.status==="approved"?"ok":t.status==="denied"?"crit":"warn"}"${t.status==="approved"? "" : whyAttrs(t.status==="denied"? "This time off was turned down, so the drafter can still schedule them on those dates. Remove the entry or change it if that is wrong." : "This time off is still pending. The drafter treats it as approved and keeps those dates clear — decide it under Requests, or remove it here.", "go:requests")}>${esc(t.status)}</span></td>
           <td><button class="btn sm danger" data-deltoff="${t.id}">Remove</button></td></tr>`).join("")}
         </tbody></table>`:`<div class="empty">Nothing on the books.</div>`}
       </div>
@@ -12945,6 +13194,7 @@ if(!wk.assignments.length && !wk.touched && !wk.published && S.setupDone
 generateSchedule(ws); wk.suggested=true; wk.touched=true; wk.auto=true; save();
 }
 const V=validate(ws);
+const RK=new Map(recurringProblems(ws).map(r=>[r.key,r]));
 const DIFF=weekDiff(ws), CHG=new Set(DIFF.map(d=>d.empId+"|"+d.date));
 const crit=V.filter(v=>v.sev==="crit"), warn=V.filter(v=>v.sev==="warn"), info=V.filter(v=>v.sev==="info");
 const roster = S.employees.filter(e=>e.active);
@@ -12974,8 +13224,8 @@ ${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return '
               <div class="mini">${h.closed?"Closed":
 (on.length? esc(on.slice(0,3).map(a=>(empById(a.empId)||{name:"?"}).name.split(" ")[0]).join(", "))+(on.length>3?" +"+(on.length-3):"") : "nobody on")}</div></div>
             <div class="dr">${h.closed? '<span class="mini">Closed</span>'
-: `<span class="chip ${on.length>=want?"ok":"crit"}">${on.length}/${want}</span>`+
-(gaps? ' <span class="chip crit" title="Coverage or compliance problem">!</span>':"")}
+: `<span class="chip ${on.length>=want?"ok":"crit"}"${on.length>=want? "" : whyAttrs(on.length+" of the "+want+" shifts you asked for on "+DAYS[d.dow]+" are filled. Open the day, or press Show me the fixes for the ways to fill the rest.", "fixall")}>${on.length}/${want}</span>`+
+(gaps? ' <span class="chip crit"'+whyAttrs("Something on "+DAYS[d.dow]+" breaks a rule or leaves the floor short — a coverage dip, a meal out of its window, or a limit crossed. The day sheet shows exactly where, with a Fix button on each.", "day:"+d.dow)+'>!</span>':"")}
               <span class="carat">${open?"▾":"▸"}</span></div>
           </button>
           ${!open||h.closed? "" : on.length? `<div class="dbody">
@@ -13010,8 +13260,8 @@ return `
         <button class="btn sm ${wk.patternId?"primary":""}" id="wpat" title="What shape this week runs">${esc(patternName(ws))}</button>
         <span class="chip">${wk.assignments.length}/${wantSlots} shifts</span>
         <span class="chip">${fmtHrs(totalMin)}</span>
-        ${crit.length? `<span class="chip crit">${crit.length} must fix</span>`:wk.assignments.length?`<span class="chip ok">compliant</span>`:""}
-        ${warn.length? `<span class="chip warn">${warn.length} warnings</span>`:""}
+        ${crit.length? `<span class="chip crit"${whyAttrs(crit.length+" thing"+(crit.length===1?"":"s")+" on this week break"+(crit.length===1?"s":"")+" a rule or leave"+(crit.length===1?"s":"")+" a gap — each one is listed under Conflicts and compliance with a Fix button.", "checks")}>${crit.length} must fix</span>`:wk.assignments.length?`<span class="chip ok">compliant</span>`:""}
+        ${warn.length? `<span class="chip warn"${whyAttrs(warn.length+" warning"+(warn.length===1?"":"s")+" — things worth a look before the week goes up, none of them a rule broken. Listed under Conflicts and compliance, each with a Fix button.", "checks")}>${warn.length} warnings</span>`:""}
         ${haveRates()? `<span class="chip ${S.org.budget && weekCost(ws)>S.org.budget?"warn":""}">${money(weekCost(ws))}${S.org.budget?" of "+money(S.org.budget):""}</span>`:""}
         <button class="btn" id="wmore">More ▾</button>
         <button class="btn primary" id="wgen">Draft${(S.horizon||1)>1? " "+S.horizon+" weeks":""}…</button>
@@ -13143,10 +13393,10 @@ return `<div class="card"><header><h3>Labor cost</h3>
       <header><h3>Conflicts and compliance</h3>
         <span class="hint">${crit.length} must fix · ${warn.length} warnings · ${info.length} notes</span></header>
       <div class="viollist" style="max-height:420px;overflow-y:auto">
-        ${V.length? V.map((v,vi)=>`<div class="viol-i"><span class="sv ${v.sev}"></span>
+        ${V.length? V.map((v,vi)=>{ const rr=v.code? RK.get(problemKey(v)) : null; return `<div class="viol-i"><span class="sv ${v.sev}"></span>
           <div class="tx"><strong>${esc(v.title)}</strong><span>${esc(v.detail)}</span></div>
-          <span class="dipacts">${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}">Who could work it?</button>`:""}${fixBtn(v, vi, v.openSlot? "ghost":"")}</span>
-        </div>`).join("") : wk.assignments.length? `<div class="empty"><strong>Nothing flagged</strong>Every shift is filled, every minimum holds, and every meal and rest break sits inside the window Weeksolved has for ${esc(law().name)}. ${esc(LAWNOTE)}</div>`
+          <span class="dipacts">${rr? `<button class="chip warn chipbtn" data-recur="${esc(rr.key)}" title="Flagged in ${rr.weeks.length} of the last ${rr.of} weeks — press for the change that stops it">keeps happening</button>`:""}${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}">Who could work it?</button>`:""}${fixBtn(v, vi, v.openSlot? "ghost":"")}</span>
+        </div>`; }).join("") : wk.assignments.length? `<div class="empty"><strong>Nothing flagged</strong>Every shift is filled, every minimum holds, and every meal and rest break sits inside the window Weeksolved has for ${esc(law().name)}. ${esc(LAWNOTE)}</div>`
 : `<div class="empty"><strong>Nothing drafted yet</strong>Draft the week and it gets checked shift by shift.</div>`}
       </div>
     </div>
@@ -13794,11 +14044,11 @@ const duties=(a.admin||[]).map(x=>stationById(x)).filter(Boolean);
 return `<tr>
             <td><strong>${esc(e.name)}</strong> <span class="mini">${esc(roleAbbr(a.roleId))}</span>
               ${a.topUp? `<div class="mini"><span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span></div>`:""}
-              ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn">${esc(d.name)}</span></div>`).join(""):""}
+              ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn"${whyAttrs("An extra duty on top of their post today: "+d.name+". Duties rotate fairly across the team; press Rotate stations to hand them out again, or change them under Stations.", "go:stations")}>${esc(d.name)}</span></div>`).join(""):""}
               ${myRelief.map(x=>`<div class="mini"><span class="chip acc">Covers ${esc(x.station.name)} ${m2disp(x.start)}–${m2disp(x.end)}</span>${
 x.alsoHolding? ` <span class="mini">holding ${esc(x.alsoHolding)} at the same time</span>`:""}</div>`).join("")}
               ${a.mentor? `<div class="mini"><span class="chip acc">Learning \u2014 with ${esc((empById(a.mentor)||{name:"?"}).name)}</span></div>`
-: (a.trainee||isTrainee(e,date))? `<div class="mini"><span class="chip warn">Learning \u2014 nobody free to pair with</span></div>`:""}
+: (a.trainee||isTrainee(e,date))? `<div class="mini"><span class="chip warn"${whyAttrs(e.name.split(" ")[0]+" is still in training and nobody on this shift is free to be paired with them. Bring someone in for the day, or move their shift to a day with a mentor on.", "day:"+dow)}>Learning \u2014 nobody free to pair with</span></div>`:""}
               <input type="text" class="snote" data-snote="${esc(a.empId)}" data-snotestart="${a.startMin}" data-rerender="no" maxlength="160"
                 value="${esc(shiftNote(ws, date, a.empId, a.startMin))}" placeholder="Note for this shift\u2026"></td>
             ${(S.stations||[]).length? `<td>${(a.stationPlan&&a.stationPlan.length)
@@ -14211,7 +14461,7 @@ break;
 }
 case "lic": {
 profile("Update "+first+"’s license date", "Renewed? Put the new expiry in and every block lifts at once.");
-O[O.length-1].g="now"; O[O.length-1].rec=true;
+if(O.length){ O[O.length-1].g="now"; O[O.length-1].rec=true; }
 if(a) handOff(a);
 if(v.date) dayLink();
 break;
@@ -14372,6 +14622,7 @@ return `<div class="fixgrp"><div class="lab">${esc(head)}</div>${sub? `<div clas
 modal(v.title||"Fix this", `
     <div class="stack">
       ${v.detail? `<div class="help">${esc(v.detail)}</div>`:""}
+      ${recurNote(v, ws)}
       ${grp("now","Fix it this week","Changes this week only. Anything a fix breaks shows up in the checks straight away.")}
       ${grp("later","Stop it coming back","Changes a rule or a setting, so every week from here is drafted without it.")}
     </div>`,
@@ -14392,6 +14643,142 @@ return `<button class="btn sm ${cls||(v.sev==="crit"?"primary":"")}" data-fixv="
 }
 function wireFix(root, V, ws){
 root.querySelectorAll("[data-fixv]").forEach(b=>b.onclick=()=>{ const v=V[+b.dataset.fixv]; if(v) fixSheet(v, ws||S.currentWeek); });
+root.querySelectorAll("[data-recur]").forEach(b=>b.onclick=()=>{ const r=recurringProblems(ws||S.currentWeek).find(x=>x.key===b.dataset.recur); if(r) recurSheet(r, ws||S.currentWeek); });
+const rh=root.querySelector("#recurhide"); if(rh) rh.onclick=()=>{ S.ui=S.ui||{}; S.ui.recurOff=true; save(); render(); toast("Hidden. Turn it back on under Settings → This board"); };
+}
+
+ 
+function problemKey(v){
+const dow = v.dow!=null? v.dow : (v.date? parseYmd(v.date).getDay() : "");
+const p=[v.code];
+switch(v.code){
+case "open":    p.push(dow, v.shiftId, v.roleId||""); break;
+case "cover":   p.push(dow, (v.ruleIds||[v.ruleId]).join("+")); break;
+case "relief":  p.push(dow, v.stationId); break;
+case "alone":   p.push(dow); break;
+case "avail": case "timeoff": p.push(v.empId, dow); break;
+case "meal":    p.push(v.empId, v.sub||""); break;
+case "apart":   p.push([v.empId, v.empB].sort().join("+")); break;
+case "request": p.push(v.reqId); break;
+case "double":  p.push(v.empId, dow); break;
+default:        p.push(v.empId||"");
+}
+return p.join("|");
+}
+ 
+function recurWeeks(ws){
+const L=[];
+for(let i=-4;i<=3;i++){ const w=addDays(ws,i*7); const wk=S.weeks[w]; if(wk && (wk.assignments||[]).length) L.push(w); }
+return L;
+}
+let RECUR_CACHE=null;
+function recurringProblems(ws){
+ws=ws||S.currentWeek;
+if(RECUR_CACHE && RECUR_CACHE.ws===ws) return RECUR_CACHE.list;
+const weeks=recurWeeks(ws);
+const map=new Map();
+if(weeks.length>=2){
+weeks.forEach(w=>{
+const seen=new Set();
+let V=[]; try{ V=validate(w); }catch(e){ V=[]; }
+V.forEach(v=>{
+if(!v.code || v.code==="closure" || v.code==="split" || v.sev==="info") return;
+const k=problemKey(v); if(seen.has(k)) return; seen.add(k);
+const r=map.get(k)||{key:k, code:v.code, weeks:[], sample:null, sampleWs:null, sev:"warn", dow:(v.dow!=null? v.dow : v.date? parseYmd(v.date).getDay() : null), empId:v.empId||null};
+r.weeks.push(w);
+if(w===ws || !r.sample || (r.sampleWs!==ws && w>r.sampleWs)){ r.sample=v; r.sampleWs=w; }
+if(v.sev==="crit") r.sev="crit";
+map.set(k,r);
+});
+});
+}
+const hidden=(S.ui&&S.ui.recurHidden)||{};
+const list=[...map.values()].filter(r=>r.weeks.length>=2 && !hidden[r.key])
+.map(r=>{ r.of=weeks.length; r.here=r.weeks.includes(ws); r.label=recurLabel(r); return r; })
+.sort((a,b)=>(b.sev==="crit")-(a.sev==="crit") || b.weeks.length-a.weeks.length || (b.here?1:0)-(a.here?1:0));
+RECUR_CACHE={ws, list};
+return list;
+}
+function recurLabel(r){
+const v=r.sample, e=r.empId? empById(r.empId):null, who=e? e.name.split(" ")[0] : "Someone";
+const day=r.dow!=null? DAYS[r.dow]+"s" : "";
+switch(r.code){
+case "open":   return "An open "+((shiftById(v.shiftId)||{label:"shift"}).label)+(v.roleId? " for "+roleName(v.roleId):"")+" on "+day;
+case "cover":  { const rule=S.coverage.find(x=>x.id===(v.ruleId||(v.ruleIds||[])[0])); return "Coverage dips on "+day+(rule? " — "+(rule.label||ruleSentence(rule)) : ""); }
+case "relief": { const st=stationById(v.stationId); return (st? st.name : "A post")+" has nobody to hold it at lunch on "+day; }
+case "lic":    return who+"’s license keeps blocking shifts";
+case "cap":    return who+" goes over their hour cap";
+case "wot":    return who+" lands in weekly overtime";
+case "dot":    return who+" lands in daily overtime";
+case "consec": return who+" works too many days in a row";
+case "period": return who+" goes over their averaged hours";
+case "contract": return who+" falls short of their contract";
+case "under":  return who+" falls short of their guaranteed hours";
+case "alone":  return "Somebody is left working alone on "+day;
+case "avail":  return who+" is put on "+day+", outside their availability";
+case "timeoff": return who+" is scheduled during time off";
+case "rest":   return who+" gets too little rest between shifts";
+case "clopen": return who+" closes then opens";
+case "meal":   return v.sub==="late"? who+"’s meal starts too late" : v.sub==="rests"? who+" is short on rest breaks" : v.sub==="waiver"? who+"’s meal waiver is not allowed" : who+" is missing a meal period";
+case "double": return who+" is double-booked on "+day;
+case "apart":  { const B=v.empB? empById(v.empB):null; return who+" and "+(B? B.name.split(" ")[0] : "someone")+" end up on the same day"; }
+case "union":  return "An agreement term bends for "+who;
+case "request": return "A request from "+who+" is not honored";
+default:       return v.title||"A problem";
+}
+}
+function recurSheet(r, ws){
+ws=ws||S.currentWeek;
+const sampleWs=r.here? ws : r.sampleWs;
+const all=fixOptions(r.sample, sampleWs);
+const later=all.filter(o=>o.g==="later");
+const nowO=r.here? all.filter(o=>o.g==="now") : [];
+const list=(L,off)=>L.map((o,i)=>`<button class="btn fixo" data-fix="${off+i}">
+      <span><b>${esc(o.t)}</b><span class="mini" style="display:block">${esc(o.d||"")}</span></span></button>`).join("");
+const weeksTxt=r.weeks.map(w=>`<span class="chip ${w===ws?"acc":""}">${esc(prettyDate(w))}</span>`).join(" ");
+modal("This keeps happening", `
+    <div class="stack">
+      <div class="help"><b>${esc(r.label)}</b> — flagged in ${r.weeks.length} of the ${r.of} weeks on the board. Same roster, same rules: the next draft will most likely flag it again.</div>
+      <div class="row" style="gap:5px;flex-wrap:wrap">${weeksTxt}</div>
+      ${later.length? `<div class="fixgrp"><div class="lab">Stop it coming back</div><div class="mini" style="margin:-2px 0 6px">Changes a rule, a need or a profile once, so every week from here is drafted without it. Nothing is applied until you press.</div>
+        <div class="stack" style="gap:6px">${list(later,0)}</div></div>`
+: `<div class="help">There is no one-press setting for this one — it comes down to who is on the roster and what they can work. Their profile and Roles &amp; shifts are the places to look.</div>`}
+      ${nowO.length? `<div class="fixgrp"><div class="lab">Just this week</div><div class="mini" style="margin:-2px 0 6px">A temporary patch is often the right call — this changes nothing beyond the week you are on.</div>
+        <div class="stack" style="gap:6px">${list(nowO,later.length)}</div></div>`:""}
+      <div class="mini">Not a problem for you? Hide this one and it stays hidden.</div>
+    </div>`,
+`<button class="btn ghost sm" id="recurmute">Hide this one</button><button class="btn" data-close>Leave it</button>`,
+root=>{
+const opts=later.concat(nowO);
+root.querySelectorAll("[data-fix]").forEach(b=>b.onclick=()=>{
+const o=opts[+b.dataset.fix]; if(!o) return;
+closeModal(true);
+try{ o.run(); }catch(err){ toast("That fix did not go through"); try{ logBug({kind:"stuck", auto:true, note:"recur fix: "+(o.t||"")+" — "+String(err&&err.message||err)}); }catch(e2){} }
+});
+const m=root.querySelector("#recurmute"); if(m) m.onclick=()=>{ S.ui=S.ui||{}; S.ui.recurHidden=S.ui.recurHidden||{}; S.ui.recurHidden[r.key]=Date.now(); RECUR_CACHE=null; save(); closeModal(true); render(); toast("Hidden — it will not be listed again"); };
+});
+}
+ 
+function recurCard(ws){
+if(S.ui && S.ui.recurOff) return "";
+const R=recurringProblems(ws); if(!R.length) return "";
+const show=R.slice(0,4);
+return `<div class="card recur"><header><h3>This keeps happening</h3>
+      <span class="hint">Same flag, week after week — one change stops it</span></header>
+    <div class="stack" style="gap:7px;padding:12px 16px">
+      <div class="mini">A temporary fix each week is fine. These are the ones where the roster or a rule is the real cause, so a change made once means the drafter stops tripping over it. Nothing is changed until you press.</div>
+      ${show.map(r=>`<div class="look"><span class="sv ${r.sev}"></span>
+        <div style="flex:1"><strong>${esc(r.label)}</strong><div class="mini">${r.weeks.length} of the last ${r.of} weeks${r.here? "" : " · not this week, but it will be back"}</div></div>
+        <button class="btn sm ${r.sev==="crit"?"primary":""}" data-recur="${esc(r.key)}" style="flex:none">Fix for good</button></div>`).join("")}
+      ${R.length>4? `<div class="mini">${R.length-4} more of these are listed on the week’s checks.</div>`:""}
+    </div></div>`;
+}
+ 
+function recurNote(v, ws){
+if(!v || !v.code) return "";
+const r=recurringProblems(ws||S.currentWeek).find(x=>x.key===problemKey(v));
+if(!r) return "";
+return `<div class="banner warn" style="margin:0"><div><b>This one keeps coming back</b> — ${r.weeks.length} of the last ${r.of} weeks. The options under <b>Stop it coming back</b> are the ones that will save you next week too.</div></div>`;
 }
 
 WIRE.day = root=>{
@@ -14471,9 +14858,26 @@ const pd=root.querySelector("#daypdf"); if(pd) pd.onclick=()=>exportDayPDF().cat
 };
 
  
+function mimeFor(filename){
+const ext=String(filename||"").toLowerCase().split(".").pop();
+return ({html:"text/html;charset=utf-8", htm:"text/html;charset=utf-8", csv:"text/csv;charset=utf-8", ics:"text/calendar;charset=utf-8",
+json:"application/json", txt:"text/plain;charset=utf-8", xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+pdf:"application/pdf", md:"text/markdown;charset=utf-8"})[ext] || "application/octet-stream";
+}
+ 
+function openDoc(html, title){
+let url="";
+try{ url=URL.createObjectURL(new Blob([html], {type:"text/html;charset=utf-8"})); }catch(e){ url=""; }
+const w = url? window.open(url, "_blank") : null;
+if(!w){ if(url) URL.revokeObjectURL(url); toast("Your browser blocked the new tab — allow pop-ups, or save it instead"); return false; }
+try{ w.opener=null; }catch(e){}
+if(url) setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
+return true;
+}
 async function saveFile(filename, data){
 try{
-const blob = data instanceof Blob? data : new Blob([data],{type:"text/plain"});
+ 
+const blob = data instanceof Blob? data : new Blob([data],{type:mimeFor(filename)});
 const url=URL.createObjectURL(blob); const a=document.createElement("a");
 a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
 setTimeout(()=>URL.revokeObjectURL(url),1500);
@@ -15923,7 +16327,7 @@ const ALL_STEPS=[
 {k:"biz",     t:"What kind of place is this?",     core:true},
 {k:"where",   t:"Where do you operate?",           core:true},
 {k:"hours",   t:"When do you need people in?",     core:true},
-{k:"buckets", t:"How do you group your people?",   core:true},
+{k:"buckets", t:"What roles do people hold?",   core:true},
 {k:"team",    t:"Who's on the team?",              core:true},
 {k:"shifts",  t:"Your shifts",                     core:true},
 {k:"need",    t:"How many on each shift",          core:true},
@@ -16088,11 +16492,12 @@ if(k==="busy") return `
 if(k==="buckets") return `
       <div class="stack">
         <p class="whead">What does someone have to be qualified as? A shift can require a role, and only people who hold that role will ever be scheduled into it.</p>
+        <div class="help"><b>A role is just a label for the job someone can do</b> — Pharmacist, Technician, Front counter; Cook, Server; Nurse, Aide. Every person on your team gets one. If everybody does the same job, pick <b>Everyone’s the same</b> and move on.</div>
         <div class="wopts wcols">${[1,2,3,4].map(n=>opt("bucketCount",n,W.bucketCount,
 n===1?"Everyone's the same":n+" roles", n===1?"No qualifications to track":"")).join("")}</div>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,i)=>`
-          <div class="field"><label>Bucket ${i+1}</label><input type="text" class="wrole" data-i="${i}"
-            value="${esc(W.buckets[i]||"")}" placeholder="Role name">
+          <div class="field"><label>Role ${i+1}</label><input type="text" class="wrole" data-i="${i}"
+            value="${esc(W.buckets[i]||"")}" placeholder="${["e.g. Pharmacist","e.g. Technician","e.g. Front counter","e.g. Clerk"][i]||"Role name"}">
             <label class="switch" style="margin-top:6px;font-size:12.5px"><input type="checkbox" class="wlic" data-i="${i}" ${W.bucketLic&&W.bucketLic[i]?"checked":""}> Needs an active license or certification</label></div>`).join("")}</div>
         <div class="help">Later on you can hang rules off a role — "part-timers cap at 28 hours", "trainees never work alone", "one supervisor for every four assistants". Mark a role as licensed and you can track each person's expiry date — the drafter will never schedule someone past a lapsed license. Skip it if licenses aren't your world.</div>
       </div>`;
@@ -16110,7 +16515,7 @@ if(k==="team") return `
           The order you put them in becomes the starting order for seniority, if you use it.
           You can add, remove and rearrange people any time from the Team page.</p>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,b)=>`
-          <div class="field"><label>${esc(W.buckets[b]||("Bucket "+(b+1)))} <span style="color:var(--faint)">· <span class="wcnt" data-b="${b}">${namesIn(b).length}</span></span></label>
+          <div class="field"><label>${esc(W.buckets[b]||("Role "+(b+1)))} <span style="color:var(--faint)">· <span class="wcnt" data-b="${b}">${namesIn(b).length}</span></span></label>
             <textarea class="wbn" data-b="${b}" style="min-height:130px" spellcheck="false"
               placeholder="One name per line&#10;…and the next&#10;…and so on">${esc(W.bucketNames[b]||"")}</textarea></div>`).join("")}</div>
         <div id="wteamsum"></div>
@@ -16494,7 +16899,7 @@ return `
             <div class="ln"><span>Kind of place</span><b>${esc((BIZ_TYPES.find(x=>x.id===W.biz)||{}).t||"—")}</b></div>
             <div class="ln"><span>Break rules</span><b>${esc((LAW[W.juris]||LAW.NONE).name)}</b></div>
             <div class="ln"><span>Staffing hours</span><b>${esc((HOURS_PRESETS.find(x=>x.id===W.hoursPreset)||{}).t.toLowerCase())}</b></div>
-            <div class="ln"><span>Buckets</span><b>${esc(W.buckets.slice(0,W.bucketCount).filter(Boolean).join(", ")||"one")}</b></div>
+            <div class="ln"><span>Roles</span><b>${esc(W.buckets.slice(0,W.bucketCount).filter(Boolean).join(", ")||"everyone the same")}</b></div>
             <div class="ln"><span>Shifts</span><b>${esc((cur.shifts.map((x,i)=>(W.shifts[i]&&W.shifts[i].label)||x.label).concat(
 W.hoursPreset==="wkend"&&cur.shifts.length? [
 (!W.satClosed && (W.satOpen!==W.open||W.satClose!==W.close))?"Saturday":null,
@@ -16550,7 +16955,7 @@ box.innerHTML = `
         ${listed? `<b>${listed} listed.</b>${W.headcount? (listed<W.headcount? " You said about "+W.headcount+" — "+(W.headcount-listed)+" to go." : listed>W.headcount? " That's more than the "+W.headcount+" you said, which is fine." : " That matches what you said.") : ""}`
 : "<b>Nothing listed yet.</b> Add at least one name to continue."}</div></div>
       ${listed? `<div class="scroll" style="max-height:210px;margin-top:12px"><table>
-        <thead><tr><th>Name</th><th style="width:130px">Bucket</th><th style="width:130px">Type</th><th style="width:92px">Min hrs</th><th style="width:92px">Max hrs</th></tr></thead>
+        <thead><tr><th>Name</th><th style="width:130px">Role</th><th style="width:130px">Type</th><th style="width:92px">Min hrs</th><th style="width:92px">Max hrs</th></tr></thead>
         <tbody>${allNames().map(pn=>{ const key=pn.b+":"+pn.i, pp=W.people[key]||{};
 return `<tr><td><strong>${esc(pn.name)}</strong></td><td class="mini">${esc(W.buckets[pn.b]||"")}</td>
             <td><select class="wpt" data-k="${key}">${Object.keys(TYPES).map(t=>`<option value="${t}" ${(pp.type||"FT")===t?"selected":""}>${TYPES[t]}</option>`).join("")}</select></td>
@@ -16817,7 +17222,7 @@ else if(W.hoursPreset==="wkend") N.hours[d]= d===6? {closed:!!W.satClosed,open:W
 : {closed:false,open:W.open,close:W.close};
 else N.hours[d]={closed:false,open:W.open,close:W.close};
 }
-const bucketNames=W.buckets.slice(0,W.bucketCount).map((x,i)=>x||("Bucket "+(i+1)));
+const bucketNames=W.buckets.slice(0,W.bucketCount).map((x,i)=>x||(W.bucketCount===1? "Staff" : "Role "+(i+1)));
 N.roles=bucketNames.map((n,i)=>({id:uid("r"),name:n,abbr:n.slice(0,5),color:PALETTE[i%PALETTE.length],note:"",licensed:!!(W.bucketLic&&W.bucketLic[i])}));
 const cur=curShifts();
 N.shifts=cur.shifts.map((sh,i)=>({id:uid("s"),
@@ -16997,8 +17402,8 @@ const built=getWeek(ws).assignments.length>0;
 const row=(r,showOutcome)=>{
 const e=empById(r.empId)||{name:"—"}, k=reqKind(r.kind);
 const o = showOutcome&&built&&r.status!=="declined"? reqOutcome(r,ws,weeks) : null;
-return `<tr${r.status==="declined"?' style="opacity:.5"':""}>
-      <td><strong>${esc(e.name)}</strong></td>
+return `<tr${r.status==="declined"?' style="opacity:.6"':""}>
+      <td><strong>${esc(e.name)}</strong>${r.status==="declined"? '<div><span class="chip crit" title="Turned down — the drafter ignores it. Reinstate puts it back.">declined</span></div>':""}</td>
       <td><span class="chip ${r.hard?"acc":""}">${esc(k.t)}</span>${r.hard?'<div class="mini">must</div>':'<div class="mini">if possible</div>'}</td>
       <td class="mono" style="font-size:12px">${r.kind==="maxh"? "any time"
 : reqRepeatText(r)? `<span class="chip acc">${esc(reqRepeatText(r))}</span>`
@@ -18246,7 +18651,7 @@ return `<div class="desrow"><strong style="font-size:13px">${(r.count||1)} × ${
           <th style="width:190px">Across these ${H.length} holiday${H.length===1?"":"s"}</th>${costOn()?'<th style="width:120px">Cost</th>':""}</tr></thead>
         <tbody>${S.employees.filter(e=>e.active).map(e=>`<tr>
           <td><strong>${esc(e.name)}</strong></td>
-          <td><span class="chip">${esc(e.type)}</span></td>
+          <td>${typeChip(e)}</td>
           <td>${e.holidayPay? `<span class="chip ok">${e.holidayPayH||8} hours paid</span>` : `<span class="chip">not paid</span>`}</td>
           <td class="mono">${e.holidayPay? fmtHrs(H.length*(e.holidayPayH||8)*60) : "—"}</td>
           ${costOn()?`<td class="mono">${e.holidayPay&&e.rate? money(H.length*(e.holidayPayH||8)*e.rate) : "—"}</td>`:""}
@@ -18317,7 +18722,7 @@ return `<button class="chip ${cls}" data-holtweak="${r.empId}|${h.id}" style="cu
           <tbody>${S.employees.filter(e=>e.active).map(e=>{
 const mine=alloc.result.filter(r=>r.empId===e.id);
 const r=respFor(e.id);
-return `<tr><td><strong>${esc(e.name)}</strong>${r?"":' <span class="chip warn">no answer</span>'}</td>
+return `<tr><td><strong>${esc(e.name)}</strong>${r?"":' <span class="chip warn"'+whyAttrs(e.name.split(" ")[0]+" has not sent a reply code back for the holiday poll yet, so they are placed as if every holiday were equal to them. Send the poll again, or enter their ranking by hand.", "go:holidays")+'>no answer</span>'}</td>
               <td><span class="chip ${mine.length>alloc.cap?"warn":""}">${mine.length}</span></td>
               <td class="mini">${mine.map(m=>esc((H.find(h=>h.id===m.holidayId)||{name:""}).name)).join(", ")||"—"}</td>
               <td class="mini">${mine.map(m=>"#"+(m.rank+1)).join(", ")||"—"}</td></tr>`;
@@ -18693,6 +19098,36 @@ S.holidays.result=null; save(); closeModal(); render();
 
 
  
+ 
+const FORM_DATES_CSS = '.datein{display:flex;align-items:stretch;position:relative;width:100%}.datein .dtxt{flex:1;min-width:0;border-top-right-radius:0;border-bottom-right-radius:0}'+
+'.datein .dtxt.bad{border-color:var(--c,#ab382c)}.datein .dcal{flex:none;min-width:42px;border:1px solid var(--l);border-left:0;border-radius:0 6px 6px 0;background:var(--g);color:inherit;cursor:pointer;font:inherit}'+
+'.datein .dnat{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;margin:0;padding:0;border:0}';
+const FORM_DATES_JS = [
+'function isoToUs(v){var m=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(v||""));return m?m[2]+"/"+m[3]+"/"+m[1]:"";}',
+'function usToIso(s){s=String(s||"").trim();if(!s)return "";var mo,d,y,p=s.split(/[\\/\\-. ]+/).filter(Boolean);',
+'if(p.length===3){mo=p[0];d=p[1];y=p[2];}else if(p.length===2){mo=p[0];d=p[1];y=String(new Date().getFullYear());}',
+'else if(p.length===1&&/^\\d+$/.test(s)){if(s.length===8||s.length===6){mo=s.slice(0,2);d=s.slice(2,4);y=s.slice(4);}else if(s.length===7){mo=s.slice(0,1);d=s.slice(1,3);y=s.slice(3);}else if(s.length===4){mo=s.slice(0,2);d=s.slice(2);y=String(new Date().getFullYear());}else return null;}else return null;',
+'if(!/^\\d{1,2}$/.test(mo)||!/^\\d{1,2}$/.test(d)||!/^(\\d{2}|\\d{4})$/.test(y))return null;mo=+mo;d=+d;y=+y;if(y<100)y+=(y<=79?2000:1900);',
+'if(mo<1||mo>12||d<1||d>31)return null;var dt=new Date(y,mo-1,d);if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;',
+'return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");}',
+'function fmtTyping(v,prev){if(prev&&v.length<prev.length)return v;if(/[^\\d]/.test(v.replace(/\\//g,"")))return v;var g=v.replace(/\\D/g,"").slice(0,8);if(v.indexOf("/")>=0&&g.length<8)return v;',
+'if(g.length<=2)return g;if(g.length<=4)return g.slice(0,2)+"/"+g.slice(2);return g.slice(0,2)+"/"+g.slice(2,4)+"/"+g.slice(4);}',
+'function enhanceDates(root){Array.prototype.slice.call((root||document).querySelectorAll("input[type=date]:not([data-enh])")).forEach(function(nat){nat.setAttribute("data-enh","1");',
+'var wrap=document.createElement("span");wrap.className="datein";nat.parentNode.insertBefore(wrap,nat);',
+'var txt=document.createElement("input");txt.type="text";txt.inputMode="numeric";txt.autocomplete="off";txt.className="dtxt";txt.placeholder="mm/dd/yyyy";txt.maxLength=10;txt.value=isoToUs(nat.value);',
+'txt.setAttribute("aria-label",(nat.getAttribute("aria-label")||"Date")+" - type it, or press the calendar");',
+'var cal=document.createElement("button");cal.type="button";cal.className="dcal";cal.title="Pick from a calendar";cal.setAttribute("aria-label","Pick from a calendar");cal.textContent="\\uD83D\\uDCC5";',
+'wrap.appendChild(txt);wrap.appendChild(nat);wrap.appendChild(cal);nat.className+=" dnat";nat.tabIndex=-1;nat.setAttribute("aria-hidden","true");',
+'function fire(n){var e=document.createEvent("Event");e.initEvent(n,true,true);nat.dispatchEvent(e);}',
+'function push(){var iso=usToIso(txt.value);if(iso===null){txt.className="dtxt bad";return;}txt.className="dtxt";if(nat.value!==iso){nat.value=iso;fire("input");fire("change");}}',
+'txt.addEventListener("input",function(){var b=txt.getAttribute("data-prev")||"";txt.value=fmtTyping(txt.value,b);txt.setAttribute("data-prev",txt.value);if(!txt.value.trim()){txt.className="dtxt";if(nat.value){nat.value="";fire("change");}return;}if(txt.value.length===10)push();});',
+'txt.addEventListener("blur",function(){var iso=usToIso(txt.value);if(iso===null){txt.className="dtxt bad";return;}if(iso){txt.value=isoToUs(iso);txt.setAttribute("data-prev",txt.value);}push();});',
+'nat.addEventListener("change",function(){txt.value=isoToUs(nat.value);txt.setAttribute("data-prev",txt.value);txt.className="dtxt";});',
+'cal.addEventListener("click",function(){try{if(typeof nat.showPicker==="function"){nat.showPicker();return;}}catch(e){}nat.tabIndex=0;nat.focus();try{nat.click();}catch(e){}nat.tabIndex=-1;});});}',
+'enhanceDates(document);',
+'document.addEventListener("blur",function(e){var el=e.target;if(!el||el.tagName!=="INPUT"||el.type!=="tel")return;var raw=String(el.value||"").trim(),d=raw.replace(/\\D/g,"");if(d.length===11&&d.charAt(0)==="1")d=d.slice(1);if(d.length===10)el.value="("+d.slice(0,3)+") "+d.slice(3,6)+"-"+d.slice(6);},true);'
+].join("\n");
+
 function vacPollFile(){
 const V=S.vacations;
 const heat=vacHeat();
@@ -18728,7 +19163,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
 '.hide{display:none}.hm{display:flex;gap:2px;flex-wrap:wrap;margin-top:8px}',
 '.hm i{width:11px;height:11px;border-radius:2px;background:var(--l);display:inline-block}',
-'.hm i.h1{background:#d9c48a}.hm i.h2{background:#c98a4b}.hm i.h3{background:#ab382c}</style></head><body><div class="w">',
+'.hm i.h1{background:#d9c48a}.hm i.h2{background:#c98a4b}.hm i.h3{background:#ab382c}'+FORM_DATES_CSS+'</style></head><body><div class="w">',
 '<h1>Vacation requests</h1><div class="sub" id="sub"></div>',
 '<div class="pnote"><b>Before you start.</b> These are preferences, not promises. Your manager builds the schedule around what the business needs first, so nothing you pick here is agreed, guaranteed or owed to you — and how time off, shifts and rotations are shared out is set by your workplace, not by this form. Putting your choices in tells them what you would like when there is room to allow it.</div>',
 '<div class="card"><div class="step">How this works</div><div class="hint">List up to <b id="mx"></b> stretches of time off, best first. Your manager runs everyone’s requests together and grants the most it can — first choices first. '+
@@ -18778,6 +19213,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'document.getElementById("out").scrollIntoView({behavior:"smooth"});};',
 'document.getElementById("cp").onclick=function(){var t=document.getElementById("cd").textContent;',
 'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){document.getElementById("cp").textContent="Copied ✓";});}else{var r=document.createRange();r.selectNode(document.getElementById("cd"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");document.getElementById("cp").textContent="Copied ✓";}};',
+FORM_DATES_JS,
 '<\/script></body></html>'].join("\n");
 }
 function vacEmailText(){
@@ -19037,7 +19473,7 @@ return `
           <td><strong>${esc(x.e.name)}</strong></td>
           <td>${esc(reqKind(x.r.kind).t)}</td>
           <td class="mono" style="font-size:12px">${reqRepeatText(x.r)? esc(reqRepeatText(x.r)) : x.r.from===x.r.to? prettyDate(x.r.from) : prettyDate(x.r.from)+"–"+prettyDate(x.r.to)}</td>
-          <td><span class="chip ${x.state==="declined"?"crit":"warn"}">${x.state==="declined"?"you declined it":"couldn't be met"}</span></td>
+          <td><span class="chip ${x.state==="declined"?"crit":"warn"}"${whyAttrs(x.state==="declined"? "You turned this request down under Requests. Reinstate it there if that has changed." : "The drafter could not honor this one and keep every rule — usually nobody else could take the shift. Under Requests, its Fix button shows the ways to hand the shift over or make the request a must.", "go:requests")}>${x.state==="declined"?"you declined it":"couldn't be met"}</span></td>
           <td class="mini">${esc(x.landed? x.landed.say : "not scheduled")}${x.r.note?` · they said: “${esc(x.r.note)}”`:""}</td></tr>`).join("")}
         </tbody></table>`: `<div class="empty" style="padding:26px"><strong>Nothing turned down</strong>Every request on file has been met.</div>`}
       </div>
@@ -19144,6 +19580,8 @@ function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
 {t:"How do I fix a coverage dip or a flagged problem?", k:"fix coverage dip gap short floor empty meal lunch no cover free flagged problem checks conflicts warning press fix options solutions", go:"week",
 a:"Press Fix. Every problem on Home, in the checks panel under This week, and every dip on the Day sheet (including a no-cover-free or meal-late chip on the break sheet) opens one short list. The top half fixes it this week: stretch a shift already on the day with the overtime priced, move a meal to a time the floor holds, waive a meal where the law allows it, bring someone else in, hand a shift to someone who is clear. The bottom half stops it coming back: let a meal count as on duty for that rule (an on-duty meal agreement), close the doors for lunch on solo days, take a day out of a rule or lower it, schedule one more person on that weekday, change your hours, update a profile. One option is marked Recommended \u2014 the least disruptive. Nothing is invented: every option uses shifts, people and rules you already have, and the checks run again the moment you press one."},
+{t:"Why does Home say “This keeps happening”?", k:"keeps happening recurring repeat every week again pattern permanent fix for good stop it coming back same problem hide", go:"home",
+a:"When the same flag shows up in two or more of the weeks on your board \u2014 the four before this one and the three after \u2014 Home lists it under This keeps happening. With the same roster and the same rules, next week will bring the same flag, so Fix for good opens only the changes that stop it: a rule lowered or narrowed, one more person on that weekday, the doors shut for lunch, a cap or a contract updated on a profile. A temporary fix each week is still a perfectly good choice \u2014 the point is that the pattern is pointed out, not that anything is changed for you. Nothing is applied until you press. Hide this one keeps a flag you have decided to live with off the list; Settings \u2192 This board turns the whole thing off or brings the hidden ones back."},
 {t:"Keep two people from working together", k:"keep apart separate conflict grievance siblings family divorce lawsuit restraining order not together same shift same day same station post never schedule together", go:"team",
 a:"Open either person under Team and use Keep apart from someone. Pick the other person and how far apart: never on the same day, never on overlapping shifts, or the same shift is fine but never the same post or one alongside it (its linked twin, a post in the same family, or one that covers it at meals). The drafter treats it as a rule it may not break, Cover the gaps never offers a blocked person, and if you move somebody by hand into a breach the checks panel says so. It is private to you: nothing about it appears on a printout, a message, a calendar file or an export, and the optional note stays on that screen only."},
 {t:"Can I sign in with Google?", k:"google sign in login gmail account password continue with google link", go:null, when:()=>GOOGLE_SIGNIN,
@@ -19169,7 +19607,7 @@ a:"Pick your state under Business & law and every drafted shift gets its meal pl
 {t:"Close for lunch / set meal times", k:"close lunch fixed slots meal times stagger closed", go:"rules",
 a:"Scheduling rules → meal handling. Three modes: staggered automatically so the floor never empties; your own fixed lunch slots; or close the business for a stretch — while closed, coverage isn't counted against you."},
 {t:"Coverage rules and minimums", k:"coverage minimum ratio never alone floor pharmacist supervisor", go:"demand",
-a:"Coverage needs sets how many of each shift you want. Coverage rules add hard floors: at least N people, a role ratio (one pharmacist per three techs), or never-below rules. Floors hold even during meals. A bucket with no real minimum simply doesn't get a rule — the shift counts do the work."},
+a:"Coverage needs sets how many of each shift you want. Coverage rules add hard floors: at least N people, a role ratio (one pharmacist per three techs), or never-below rules. Floors hold even during meals. A role with no real minimum simply doesn't get a rule — the shift counts do the work."},
 {t:"Stations and rotation", k:"station post position rotate assign fair drive through window", go:"stations",
 a:"Add stations and each drafted day hands them out with fair rotation — nobody draws the worst post every day. Stations can require a role, link as swap-at-midday pairs, take a second person when someone's spare, and be marked as needing cover during meal breaks — the break sheet then names who steps in."},
 {t:"Requests and time off", k:"request day off vacation sick ask cant work timeoff pto approve deny", go:"requests",
