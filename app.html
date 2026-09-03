@@ -2113,8 +2113,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "53dd6df9";       
-const BUILD_AT = "2026-09-03 21:21 UTC";       
+const BUILD_ID = "60b555b1";       
+const BUILD_AT = "2026-09-03 21:40 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -6207,6 +6207,237 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){document.getElementById("cp").textContent="Copied \u2713";});}',
 'else{var r=document.createRange();r.selectNode(document.getElementById("cd"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");document.getElementById("cp").textContent="Copied \u2713";}};',
 '<\/script></body></html>'].join("\n");
+}
+
+ 
+function swapAsk(ws){ const wk=peekWeek(ws||curWeek()); return (wk&&wk.swapAsk)||null; }
+function makeSwapAsk(ws){
+const wk=getWeek(ws||curWeek());
+if(!wk.swapAsk) wk.swapAsk={token:offerToken(), at:Date.now(), asks:[]};
+save();
+return wk.swapAsk;
+}
+function swapPending(ws){ const a=swapAsk(ws); return a? a.asks.filter(x=>x.state==="new") : []; }
+function swapPendingAll(){
+let n=0; Object.keys(S.weeks||{}).forEach(ws=>{ n+=swapPending(ws).length; });
+return n;
+}
+ 
+function buildSwapFile(ws){
+const sw=swapAsk(ws); if(!sw) return "";
+const wk=peekWeek(ws);
+const payload={
+org:S.org.name||"Our team", site:S.org.site||"", token:sw.token, week:prettyDate(ws),
+staff: S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name})),
+shifts: wk.assignments.filter(a=>a.empId).map((a,i)=>{
+const sh=aShift(a)||{label:"Shift"};
+return {i, emp:a.empId, day:DAYS[parseYmd(a.date).getDay()], date:prettyFull(a.date), ymd:a.date,
+label:sh.label||"Shift", time:m2disp(a.startMin)+" to "+m2disp(a.endMin),
+hours:Math.round((a.endMin-a.startMin)/6)/10};
+})
+};
+const data=b64e(JSON.stringify(payload));
+return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
+'<meta name="viewport" content="width=device-width,initial-scale=1">',
+'<title>Hand a shift back — '+esc(payload.org)+'</title>',
+'<style>:root{--g:#eaedeb;--s:#fff;--i:#18211f;--m:#697773;--l:#d2d8d6;--a:#1c6a66;--as:#dcebe9}',
+'@media(prefers-color-scheme:dark){:root{--g:#101514;--s:#191f1e;--i:#e7ecea;--m:#8d9b97;--l:#2c3634;--a:#4cb3a9;--as:#173432}}',
+'*{box-sizing:border-box}body{margin:0;background:var(--g);color:var(--i);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px 14px 60px}',
+'.w{max-width:620px;margin:0 auto}h1{font-size:21px;margin:0 0 4px}.sub{color:var(--m);font-size:13.5px;margin-bottom:18px}',
+'.card{background:var(--s);border:1px solid var(--l);border-radius:9px;padding:16px;margin-bottom:14px}',
+'label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--m);font-weight:700;margin-bottom:6px}',
+'select,textarea{width:100%;font:inherit;color:inherit;background:var(--s);border:1px solid var(--l);border-radius:6px;padding:9px 10px}',
+'.sh{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--l);border-radius:8px;padding:11px;margin-bottom:8px;cursor:pointer}',
+'.sh input{margin-top:3px;flex:none;width:18px;height:18px}',
+'.sh b{display:block;font-size:14.5px}.sh .d{color:var(--m);font-size:13px}',
+'.go{width:100%;padding:13px;border:0;border-radius:8px;background:var(--a);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}',
+'.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}',
+'.pnote{background:var(--as);border:1px solid var(--a);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.55;margin-bottom:14px}',
+'.hint{color:var(--m);font-size:13px;line-height:1.5}.step{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);font-weight:700;margin-bottom:8px}',
+'.hide{display:none}</style></head><body><div class="w">',
+'<h1>Hand a shift back</h1><div class="sub" id="sub"></div>',
+'<div class="pnote"><b>Before you start.</b> Asking to hand a shift back is not the same as being let off it. You are still on that shift until your manager tells you otherwise — turn up unless you hear back.</div>',
+'<div class="card"><div class="step">How this works</div><div class="hint">Pick your name, tick the shift you cannot work, say why if you want to, and you’ll get a short code. Send the code to your manager. They decide, and if they let it go it is offered to the rest of the team.</div></div>',
+'<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
+'<div class="card"><div class="step">Step 2 — which shift?</div><div id="list"><div class="hint">Pick your name first.</div></div></div>',
+'<div class="card"><div class="step">Step 3 — why? (optional)</div><textarea id="why" rows="2" maxlength="140" placeholder="Family thing that morning · exam · car in the garage"></textarea></div>',
+'<div class="card"><div class="step">Step 4</div><button class="go" id="mk">Get my reply code</button>',
+'<div id="out" class="hide"><div class="hint" style="margin-top:12px">Send this code back to your manager.</div>',
+'<div class="code" id="cd"></div><button class="go" id="cp" style="background:var(--s);color:var(--a);border:1px solid var(--a)">Copy the code</button></div></div>',
+'<div class="hint">Nothing is sent anywhere by this page — the code is the only thing that leaves, and you send it yourself.</div>',
+'</div><script>',
+'var D=JSON.parse(decodeURIComponent(escape(atob("'+data+'"))));',
+'function esc(t){return String(t==null?"":t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
+'document.getElementById("sub").textContent=D.org+(D.site?" · "+D.site:"")+" · week of "+D.week;',
+'var who=document.getElementById("who"), L=document.getElementById("list");',
+'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("");',
+'function paint(){var k=who.value;L.innerHTML="";',
+'var mine=D.shifts.filter(function(s){return s.emp===k;});',
+'if(!k){L.innerHTML="<div class=hint>Pick your name first.</div>";return;}',
+'if(!mine.length){L.innerHTML="<div class=hint>You are not on this week’s schedule.</div>";return;}',
+'mine.forEach(function(sh){var el=document.createElement("label");el.className="sh";',
+'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" · "+esc(sh.time)+" · "+esc(String(sh.hours))+"h</span></span>";',
+'L.appendChild(el);});}',
+'who.onchange=paint;',
+'document.getElementById("mk").onclick=function(){',
+'var k=who.value;if(!k){alert("Pick your name first.");return;}',
+'var picked=[];L.querySelectorAll("input:checked").forEach(function(c){picked.push(c.value);});',
+'if(!picked.length){alert("Tick the shift you cannot work.");return;}',
+'var why=String(document.getElementById("why").value||"").replace(/[|;~]/g," ").trim().slice(0,140);',
+'var raw="SW1|"+D.token+"|"+k+"|"+picked.join(",")+"|"+why;',
+'var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
+'document.getElementById("cd").textContent=code;document.getElementById("out").className="";',
+'document.getElementById("out").scrollIntoView({behavior:"smooth"});};',
+'document.getElementById("cp").onclick=function(){var t=document.getElementById("cd").textContent;',
+'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){document.getElementById("cp").textContent="Copied ✓";});}',
+'else{var r=document.createRange();r.selectNode(document.getElementById("cd"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");document.getElementById("cp").textContent="Copied ✓";}};',
+'<\/script></body></html>'].join("\n");
+}
+ 
+function readSwap(ws, code){
+const sw=swapAsk(ws);
+if(!sw) return {err:"You have not sent a hand-back form for this week yet."};
+let raw="";
+try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn’t look like a reply code — check it was copied whole."}; }
+const bits=raw.split("|");
+if(bits[0]!=="SW1") return {err:"That’s a code for something else, not a shift being handed back."};
+if(bits[1]!==sw.token) return {err:"That code is from an earlier form. Ask them to open the newest one you sent."};
+const emp=empById(bits[2]||"");
+if(!emp) return {err:"That code names somebody who is no longer on your roster."};
+const wk=peekWeek(ws);
+const all=wk.assignments.filter(a=>a.empId);
+const idx=(bits[3]||"").split(",").filter(x=>/^\d+$/.test(x.trim())).map(Number);
+const why=(bits[4]||"").slice(0,140);
+const items=idx.map(i=>{
+const a=all[i];
+if(!a) return {gone:true};
+if(a.empId!==emp.id) return {gone:true};
+const sh=aShift(a)||{label:"Shift"};
+return {id:a.id, date:a.date, label:sh.label||"Shift",
+when:prettyFull(a.date)+" · "+m2disp(a.startMin)+"–"+m2disp(a.endMin)};
+});
+const live=items.filter(x=>!x.gone);
+if(!live.length) return {err:"Those shifts are not on "+emp.name+"’s week any more — the schedule has changed since the form went out."};
+return {emp, why, items:live, dropped:items.length-live.length};
+}
+function addSwapAsks(ws, parsed){
+const sw=makeSwapAsk(ws);
+let added=0;
+parsed.items.forEach(it=>{
+if(sw.asks.some(x=>x.assignId===it.id && x.state==="new")) return;
+sw.asks.push({assignId:it.id, empId:parsed.emp.id, date:it.date, when:it.when,
+label:it.label, why:parsed.why||"", at:Date.now(), state:"new"});
+added++;
+});
+save();
+logIt("request", parsed.emp.name+" asked to hand back "+added+" shift"+(added===1?"":"s")+" for the week of "+prettyDate(ws));
+return added;
+}
+ 
+function releaseSwap(ws, ask){
+const wk=getWeek(ws);
+const a=wk.assignments.find(x=>x.id===ask.assignId);
+if(!a){ ask.state="gone"; save(); return {err:"That shift is not on the week any more."}; }
+const slot={date:a.date, dow:parseYmd(a.date).getDay(), shiftId:a.shiftId, roleId:a.roleId||null};
+wk.assignments=wk.assignments.filter(x=>x.id!==ask.assignId);
+wk.unfilled=wk.unfilled||[];
+wk.unfilled.push({date:slot.date, shiftId:slot.shiftId, roleId:slot.roleId, reason:"handed back"});
+ask.state="released"; ask.releasedAt=Date.now();
+ 
+const off=wk.offer;
+if(off && !off.slots.some(s=>s.date===slot.date && s.shiftId===slot.shiftId && (s.roleId||null)===(slot.roleId||null))) off.slots.push(slot);
+else if(!off) makeOffer(ws, [slot]);
+save();
+logIt("post", (empById(ask.empId)||{name:"Someone"}).name+" let go of "+ask.when+" — it is now an open shift");
+return {ok:true, slot};
+}
+function declineSwap(ws, ask, note){
+ask.state="declined"; ask.declinedAt=Date.now(); ask.note=(note||"").slice(0,140);
+save();
+logIt("request", "Kept "+(empById(ask.empId)||{name:"Someone"}).name+" on "+ask.when);
+}
+
+function handBackModal(ws){
+ws=ws||curWeek();
+const wk=peekWeek(ws);
+const paint=(r)=>{
+const sw=swapAsk(ws);
+const pend=(sw?sw.asks:[]).filter(a=>a.state==="new");
+const done=(sw?sw.asks:[]).filter(a=>a.state!=="new").slice(-6).reverse();
+r.querySelector("#swbody").innerHTML=`
+      <div class="stack">
+        <div class="help">Send this to the team with the schedule. Anyone who cannot work a shift picks it,
+        gets a short code, and sends the code back to you however they normally would. Nothing moves until you say so
+        — and if you let a shift go, it becomes an open shift the rest of the team can ask for.</div>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="swsave">Save the form</button>
+          <button class="btn" id="swmail">Copy a message to send with it</button>
+        </div>
+        ${pend.length? `<div class="sep"></div>
+          <div class="lab">Waiting on you (${pend.length})</div>
+          ${pend.map((a,i)=>`<div class="setrow">
+            <div class="sq"><strong>${esc((empById(a.empId)||{name:"Someone"}).name)}</strong> cannot work
+              <b>${esc(a.when)}</b> <span class="mini">${esc(a.label)}</span>
+              ${a.why? `<div class="mini">“${esc(a.why)}”</div>`:`<div class="mini">No reason given.</div>`}</div>
+            <div class="sc" style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn sm" data-swno="${i}">Keep them on it</button>
+              <button class="btn primary sm" data-swgo="${i}">Let it go</button>
+            </div></div>`).join("")}` : `<div class="banner info"><div>No one has asked to hand a shift back this week.</div></div>`}
+        <div class="sep"></div>
+        <div class="field"><label>Paste a reply code</label>
+          <textarea id="swcode" rows="2" placeholder="Paste the code they sent you"></textarea>
+          <span class="mini" id="swmsg"></span></div>
+        <div class="row"><button class="btn" id="swread">Read the code</button></div>
+        ${done.length? `<div class="sep"></div><div class="lab">Recently</div>
+          ${done.map(a=>`<div class="mini">${esc((empById(a.empId)||{name:"Someone"}).name)} · ${esc(a.when)} —
+            ${a.state==="released"? "let go, now an open shift" : a.state==="declined"? "kept on it" : "no longer on the week"}</div>`).join("")}`:""}
+      </div>`;
+wire(r);
+};
+const wire=(r)=>{
+const sv=r.querySelector("#swsave");
+if(sv) sv.onclick=async()=>{ makeSwapAsk(ws); await saveFile("hand-a-shift-back-"+ws+".html", buildSwapFile(ws)); toast("Saved — send it to the team however you normally would"); paint(r); };
+const ml=r.querySelector("#swmail");
+if(ml) ml.onclick=()=>{ makeSwapAsk(ws); copyText(handBackEmailText(ws)); toast("Message copied"); };
+const rd=r.querySelector("#swread");
+if(rd) rd.onclick=()=>{
+const msg=r.querySelector("#swmsg");
+const res=readSwap(ws, r.querySelector("#swcode").value);
+if(res.err){ msg.textContent=res.err; msg.style.color="var(--crit)"; return; }
+const n=addSwapAsks(ws, res);
+msg.style.color=""; msg.textContent = n? (res.emp.name+" — "+n+" shift"+(n===1?"":"s")+" added below.") : "Already had that one.";
+r.querySelector("#swcode").value="";
+paint(r);
+};
+r.querySelectorAll("[data-swgo]").forEach(b=>b.onclick=()=>{
+const sw=swapAsk(ws); const a=sw.asks.filter(x=>x.state==="new")[+b.dataset.swgo];
+if(!a) return;
+const who=(empById(a.empId)||{name:"They"}).name.split(" ")[0];
+modal("Let "+esc(who)+" off "+esc(a.when)+"?", `<div class="stack">
+        <div class="help">The shift comes off their week and becomes an <b>open shift</b>. Nobody is put on it —
+        it joins whatever else is going spare, and you offer it to the team from <b>Cover the gaps</b>.</div>
+        ${peekWeek(ws).published? `<div class="banner warn"><div>This week is already posted. The people affected will not know until you send it again.</div></div>`:""}
+      </div>`, `<button class="btn" data-close>Not yet</button><button class="btn primary" id="swok">Let it go</button>`,
+rr=>{ rr.querySelector("#swok").onclick=()=>{ closeModal(true); const out=releaseSwap(ws,a);
+toast(out.err? out.err : "Done — it is an open shift now"); render(); setTimeout(()=>handBackModal(ws), 120); }; });
+});
+r.querySelectorAll("[data-swno]").forEach(b=>b.onclick=()=>{
+const sw=swapAsk(ws); const a=sw.asks.filter(x=>x.state==="new")[+b.dataset.swno];
+if(!a) return;
+declineSwap(ws, a, "");
+toast("Kept on the schedule — tell them yourself so they know");
+paint(r);
+});
+};
+modal("Someone cannot work a shift", `<div id="swbody"></div>`,
+`<button class="btn" data-close>Close</button>`, r=>paint(r));
+}
+function handBackEmailText(ws){
+return "Subject: If you can’t work a shift next week — week of "+prettyDate(ws)+"\n\n"+
+"Hi all,\n\nIf something has come up and you can’t work one of your shifts next week, open the attached page on your phone, "+
+"pick the shift and it gives you a short code. Send me the code and I’ll sort it.\n\n"+
+"Please don’t assume you’re off it until I’ve replied — you’re still on the shift until I say otherwise.\n\n"+
+"Thanks,\n"+(S.org.name||"");
 }
 
 function offerEmailText(ws){
@@ -10935,6 +11166,7 @@ root.querySelectorAll("[data-jump]").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.datas
 root.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{
 const [date,shiftId,roleId]=b.dataset.fill.split("|"); fillOpenModal(date,shiftId,roleId||null); });
 root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.currentWeek));
+root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(S.currentWeek));
 root.querySelectorAll("[data-denyreq]").forEach(b=>b.onclick=()=>requestConflictModal(S.currentWeek));
 root.querySelectorAll("[data-emp]").forEach(b=>b.onclick=()=>empModal(b.dataset.emp));
 const adv=root.querySelector("#hadv");
@@ -14213,6 +14445,7 @@ const [date,shiftId,roleId]=b.dataset.fill.split("|");
 fillOpenModal(date, shiftId, roleId||null);
 });
 root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.currentWeek));
+root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(S.currentWeek));
 root.querySelectorAll("[data-denyreq]").forEach(b=>b.onclick=()=>requestConflictModal(S.currentWeek));
 wireFix(root, validate(S.currentWeek), S.currentWeek);
 wireDragDrop(root);
@@ -14976,6 +15209,9 @@ const res=live.map(r=>reqOutcome(r,ws,1)); const ok=res.filter(x=>x.ok===true).l
 return `<div class="banner ${no?"warn":"info"}"><div><b>${ok} of ${ok+no} requests honored.</b>
             ${no? "The rest are listed under Requests with the reason each one couldn't be met." : "Everything people asked for this week landed."}</div>
             <button class="btn sm" ${no?'data-denyreq="1"':'data-go="requests"'} style="flex:none;margin-left:auto">${no?"Decide what to drop":"See them"}</button></div>`; })()}
+      ${swapPending(ws).length? `<div class="banner warn"><div><b>${swapPending(ws).length} ${swapPending(ws).length===1?"person cannot":"people cannot"} work a shift this week.</b>
+        They asked through the hand-back form. Nothing has changed on the schedule \u2014 you decide.</div>
+        <button class="btn sm primary" data-handback="1" style="flex:none;margin-left:auto">Look at ${swapPending(ws).length===1?"it":"them"}</button></div>`:""}
       ${openShifts.length? `<div class="banner crit"><div><b>${openShifts.length} shift${openShifts.length===1?"":"s"} nobody could take.</b> There's usually a way — someone on call, an hour of overtime, a request you could decline. It's worked out the options for you.</div>
         <button class="btn sm primary" data-fixall="1" style="flex:none;margin-left:auto">Show me the fixes</button></div>`:""}
       ${looks.length? `<div class="stack" style="gap:7px">
@@ -20546,6 +20782,12 @@ saveFile("requests-record.csv", rows.map(csvRow).join("\n"));
  
 function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
+{t:"Someone can\u2019t work a shift \u2014 how do they tell me?", k:"swap trade give back hand back cover my shift cant work call out drop shift staff request change sick family emergency reply code form", go:"week",
+a:"Send them the hand-back form. On the week screen open the more menu and choose Someone can\u2019t work a shift, then Save the form and send it out with the schedule. They open it on a phone \u2014 no account, no app, works with no signal \u2014 pick the shift they cannot work, add a reason if they want, and it gives them a short code they send back to you however they normally would. Paste the code in and it appears on your list. Nothing changes on the schedule until you decide: keep them on it, or let it go. Letting it go takes the shift off their week and turns it into an open shift, which you can then offer to the rest of the team with the file you already use."},
+{t:"Can two people swap shifts between themselves?", k:"swap trade between staff two people exchange shifts each other cover swap approval", go:"week",
+a:"They can agree it, and you check it. If two people have arranged a trade, open the week\u2019s more menu and choose Check a trade: pick both shifts and Weeksolved tests the swap against every rule \u2014 hours, turnaround, availability, coverage, licenses \u2014 before you approve it. If somebody just needs to get rid of a shift and does not have anyone lined up, use the hand-back form instead: it comes off their week, becomes an open shift, and anyone can ask for it. Staff cannot move shifts around by themselves, on purpose \u2014 nobody has an account, and a swap that skips the manager is how coverage quietly breaks."},
+{t:"Does handing a shift back mean they are off it?", k:"hand back approved automatic off shift still working assume let off decline keep on it", go:"week",
+a:"No, and the form says so in bold: they are still on the shift until you tell them otherwise. Asking is not being let off. Nothing on the schedule moves when their code arrives \u2014 it lands on your list and waits. If you keep them on it, tell them yourself; Weeksolved does not message anyone on your behalf without you pressing send."},
 {t:"Somebody is on leave \u2014 how do I take them off without losing them?", k:"inactive set aside leave furlough maternity parental medical sabbatical seasonal quit left fired terminate delete remove keep history pause suspend hold off roster", go:"team",
 a:"Open them under Team and switch On the roster to Set aside. Say why \u2014 extended leave, furlough, out of season, or they have left \u2014 and add the date you expect them back if you know it. From that moment they are in no draft, counted for no coverage rule, and sent nothing, but nothing of theirs is deleted: roles, hours, availability, licenses, time-off balances, notes and every week they already worked stay exactly as they are. They sit in their own Set aside list under Team, and one press puts them back on the roster as they were. Posted weeks are never rewritten by any of this."},
 {t:"Delete someone, or set them aside?", k:"delete remove person employee leave company quit fired history keep records past weeks gone permanently", go:"team",
@@ -21880,11 +22122,13 @@ modal("Week tools", `
         <div class="lab">Gaps</div>
         <button class="btn" id="mfix">Cover the open shifts</button>
         <button class="btn" id="mdeny">Decide which request to decline</button>
+        <button class="btn" id="mhand">Someone can\u2019t work a shift${swapPending(S.currentWeek).length? ' <span class="chip acc" style="margin-left:auto">'+swapPending(S.currentWeek).length+'</span>':""}</button>
       </div>
     </div>`, `<button class="btn" data-close>Close</button>`,
 r=>{
 const sb=r.querySelector("#mtell"); if(sb) sb.onclick=()=>{ closeModal(); handOutModal(S.currentWeek); };
 const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swapModal(S.currentWeek); };
+const hb=r.querySelector("#mhand"); if(hb) hb.onclick=()=>{ closeModal(); handBackModal(S.currentWeek); };
 r.querySelector("#mclear").onclick=()=>{ const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
 r.querySelector("#munlock").onclick=()=>{ getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
 r.querySelector("#mcopy").onclick=()=>{
