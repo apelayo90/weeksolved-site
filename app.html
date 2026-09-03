@@ -2089,8 +2089,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "de3ee1bc";       
-const BUILD_AT = "2026-09-03 05:48 UTC";       
+const BUILD_ID = "5c821103";       
+const BUILD_AT = "2026-09-03 06:03 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -9636,7 +9636,10 @@ if(!phone){ t.classList.remove("stk"); return; }
 if(t.classList.contains("stk")) return;
 if(t.querySelector("[colspan],[rowspan]")) return;
 const ths=[...t.querySelectorAll("thead th")]; if(ths.length<3) return;
-const box=t.parentElement; if(!box || t.scrollWidth<=box.clientWidth+4) return;
+const box=t.parentElement; if(!box) return;
+ 
+if(box.clientWidth===0){ if(ths.length<4) return; }
+else if(t.scrollWidth<=box.clientWidth+4) return;
 const labels=ths.map(th=>th.textContent.trim());
 t.querySelectorAll("tbody tr").forEach(tr=>{
 [...tr.children].forEach((td,i)=>{
@@ -9678,8 +9681,15 @@ return m[2]+"/"+m[3]+"/"+m[1];
 function usToIso(s){
 s=String(s||"").trim(); if(!s) return "";
 let mo, d, y;
+ 
+{ const MN=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+const m=/^([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{2,4})?$/i.exec(s) || /^(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)\.?,?\s*(\d{2,4})?$/i.exec(s);
+if(m){ const word=(/^[a-z]/i.test(m[1])? m[1] : m[2]).slice(0,3).toLowerCase(); const day=/^[a-z]/i.test(m[1])? m[2] : m[1];
+const idx=MN.indexOf(word); if(idx<0) return null;
+s=(idx+1)+"/"+day+"/"+(m[3]||String(new Date().getFullYear())); } }
 const parts=s.split(/[\/\-. ]+/).filter(Boolean);
-if(parts.length===3){ [mo,d,y]=parts; }
+if(parts.length===3 && parts[0].length===4){ [y,mo,d]=parts; }         
+else if(parts.length===3){ [mo,d,y]=parts; }
 else if(parts.length===2){ [mo,d]=parts; y=String(new Date().getFullYear()); }
 else if(parts.length===1 && /^\d+$/.test(s)){
 if(s.length===8){ mo=s.slice(0,2); d=s.slice(2,4); y=s.slice(4); }
@@ -9727,7 +9737,7 @@ if(nat.style.maxWidth){ wrap.style.maxWidth=nat.style.maxWidth; nat.style.maxWid
 nat.parentNode.insertBefore(wrap, nat);
 const txt=document.createElement("input");
 txt.type="text"; txt.inputMode="numeric"; txt.autocomplete="off"; txt.className="dtxt";
-txt.placeholder="mm/dd/yyyy"; txt.maxLength=10; txt.spellcheck=false;
+txt.placeholder="mm/dd/yyyy"; txt.maxLength=20; txt.spellcheck=false;
 const lab=nat.getAttribute("aria-label")||dateLabelFor(nat)||"Date";
 txt.setAttribute("aria-label", lab+" — type it, or press the calendar");
 txt.value=isoToUs(nat.value);
@@ -14180,13 +14190,15 @@ d:openShifts[0].detail, act:"fill", ref:openShifts[0].openSlot});
 if(gaps.length) looks.push({sev:"crit",
 t:gaps.length+" coverage or compliance problem"+(gaps.length===1?"":"s"),
 d:gaps[0].title.replace(/ — .*/,"")+": "+gaps[0].detail,
-act:gaps[0].date?"day":null, ref:gaps[0].date? parseYmd(gaps[0].date).getDay():null});
+act:gaps[0].date?"day":null, ref:gaps[0].date? parseYmd(gaps[0].date).getDay():null, fixv:V.indexOf(gaps[0])});
 if(under.length) looks.push({sev:"warn",
 t:under.length===1? under[0].name+" is short of guaranteed hours" : under.length+" people are short of guaranteed hours",
-d:under.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekMinutes(e.id,ws))+" of "+effLimits(e).minH+"h").join(", "), act:"team"});
+d:under.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekMinutes(e.id,ws))+" of "+effLimits(e).minH+"h").join(", "), act:"team",
+fixv:V.indexOf(V.find(v=>(v.code==="under"||v.code==="contract") && v.empId===under[0].id))});
 if(overtime.length) looks.push({sev:"warn",
 t:overtime.length+" heading into overtime",
-d:overtime.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekMinutes(e.id,ws))).join(", "), act:null});
+d:overtime.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekMinutes(e.id,ws))).join(", "), act:null,
+fixv:V.indexOf(V.find(v=>v.code==="wot" && v.empId===overtime[0].id))});
 if(shortNotice) looks.push({sev:"warn", t:"Going up on short notice",
 d:"You aim for "+need+" days and "+(daysOut<0?"this week is already underway":daysOut===0?"it starts today":"it starts in "+daysOut+" day"+(daysOut===1?"":"s"))+"."+
 (fwwOn() && fwwCovered().state==="yes"? " Where you are, that can carry a payment." : " Some cities make that a payable penalty."), act:null});
@@ -14234,6 +14246,7 @@ return `<div class="banner ${no?"warn":"info"}"><div><b>${ok} of ${ok+no} reques
           <span class="sv ${l.sev}"></span>
           <div style="flex:1"><strong>${esc(l.t)}</strong><div class="mini">${esc(l.d)}</div></div>
           ${l.act==="fill"? `<button class="btn sm primary" data-fixall="1">Show me the fixes</button>`:""}
+          ${l.fixv!=null && l.fixv>=0 && V[l.fixv]? `<button class="btn sm ${l.sev==="crit"?"primary":""}" data-fixv="${l.fixv}" title="${esc(V[l.fixv].title)}">Fix${(l.act==="day"? gaps.length : l.act==="team"? under.length : overtime.length)>1? " the first":""}</button>`:""}
           ${l.act==="day"? `<button class="btn sm" data-jump="${l.ref}">Open the day</button>`:""}
           ${l.act==="team"? `<button class="btn sm" data-go="team">Open the team</button>`:""}
         </div>`).join("")}
@@ -16276,8 +16289,8 @@ saveFile("day-sheet-"+entry.date+".html", html);
 const BIZ_TYPES=[
 {id:"retail",   t:"Shop or retail",        d:"Store hours, opening and closing shifts", roles:["Sales associate","Shift lead","Cashier"], open:"09:00", close:"20:00", hours:"wkend", shifts:"openclose", rules:{holidayRush:"before", weekendDesire:"unwanted", breakMode:"lengths", restMode:"self", preferLong:false, noClopen:true}},
 {id:"food",     t:"Restaurant, café or bar",d:"Rushes, split cover, long days",         roles:["Server","Cook","Host"],                   open:"07:00", close:"22:00", hours:"same",  shifts:"three", rules:{holidayRush:"both", weekendDesire:"neutral", breakMode:"self", restMode:"self", noClopen:true, preferLong:false}},
-{id:"clinic",   t:"Clinic or medical office",d:"Appointment hours, licensed roles",     roles:["Provider","Medical assistant","Front desk"], open:"08:00", close:"17:00", hours:"wkday", shifts:"openclose", rules:{holidayRush:"both", holidayMode:"closed", breakMode:"assigned", restMode:"assigned", preferLong:true, maxConsec:5, noClopen:true}},
-{id:"pharmacy", t:"Pharmacy",              d:"Licensed cover, supervision ratios",     roles:["Pharmacist","Technician","Front counter"],open:"08:00", close:"20:00", hours:"wkend", shifts:"three", rules:{holidayRush:"both", weekendDesire:"unwanted", breakMode:"assigned", restMode:"assigned", preferLong:true, noClopen:true}},
+{id:"clinic",   t:"Clinic or medical office",d:"Appointment hours, licensed roles",     roles:["Provider","Medical assistant","Front desk"], lic:[true,false,false], open:"08:00", close:"17:00", hours:"wkday", shifts:"openclose", rules:{holidayRush:"both", holidayMode:"closed", breakMode:"assigned", restMode:"assigned", preferLong:true, maxConsec:5, noClopen:true}},
+{id:"pharmacy", t:"Pharmacy",              d:"Licensed cover, supervision ratios",     roles:["Pharmacist","Technician","Front counter"], lic:[true,true,false], open:"08:00", close:"20:00", hours:"wkend", shifts:"three", rules:{holidayRush:"both", weekendDesire:"unwanted", breakMode:"assigned", restMode:"assigned", preferLong:true, noClopen:true}},
 {id:"warehouse",t:"Warehouse or logistics", d:"Shift blocks, equipment tickets",        roles:["Picker","Forklift operator","Supervisor"],open:"06:00", close:"22:00", hours:"wkday", shifts:"halves", rules:{holidayRush:"before", breakMode:"assigned", restMode:"assigned", preferLong:true}},
 {id:"support",  t:"Support or call center", d:"Queue cover across long hours",          roles:["Agent","Team lead","Escalations"],        open:"07:00", close:"21:00", hours:"same",  shifts:"three", rules:{holidayRush:"after", weekendDesire:"unwanted", breakMode:"assigned", restMode:"assigned", preferLong:false}},
 {id:"salon",    t:"Salon, spa or studio",   d:"Bookings, chair cover",                  roles:["Stylist","Assistant","Front desk"],       open:"09:00", close:"19:00", hours:"wkend", shifts:"openclose", rules:{holidayRush:"before", weekendDesire:"neutral", breakMode:"self", restMode:"self", preferLong:false}},
@@ -17075,7 +17088,7 @@ if(v==="true") v=true; else if(v==="false") v=false; else if(/^-?\d+$/.test(v)) 
 collect(); W[g]=v;
 if(g==="biz"){ rebuildSteps(); const bt=BIZ_TYPES.find(x=>x.id===v);
 if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=bt.shifts;
-W.bucketCount=bt.roles.length; W.buckets=bt.roles.concat(["","","",""]).slice(0,4); W.shifts=[]; W.perShift={};
+W.bucketCount=bt.roles.length; W.buckets=bt.roles.concat(["","","",""]).slice(0,4); W.bucketLic=(bt.lic||[]).concat([false,false,false,false]).slice(0,4); W.shifts=[]; W.perShift={};
 if(bt.rules) Object.assign(W, bt.rules); } }
 if(g==="shiftPreset"){ W.shifts=[]; W.perShift={}; }
 if(g==="biz"){ W.custom=null; }
