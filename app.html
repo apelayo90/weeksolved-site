@@ -2092,8 +2092,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "2e306b22";       
-const BUILD_AT = "2026-09-03 11:09 UTC";       
+const BUILD_ID = "f4d26d2e";       
+const BUILD_AT = "2026-09-03 11:24 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -11386,7 +11386,7 @@ return `
 : "Everything to do with money is hidden: no cost figures, no budget, no rate field on anyone's profile. Turn it on any time and the rates you enter come straight back."}</div>
         ${S.org.trackCost? `<div class="field" style="max-width:260px"><label>Weekly labor budget</label>
           <input type="number" inputmode="decimal" step="50" min="0" data-bind="org.budget" value="${S.org.budget||0}"><span class="mini">optional — leave at 0 for no target</span></div>
-          <div class="mini">${S.employees.filter(e=>e.rate>0).length} of ${S.employees.length} people have a rate on file.</div>`:""}
+          <div class="mini">${S.employees.filter(e=>e.rate>0).length} of ${S.employees.length} ${S.employees.length===1?"person has":"people have"} a rate on file.</div>`:""}
       </div></div>
 
     <div class="card"><header><h3>Data</h3></header><div class="body row">
@@ -13784,7 +13784,7 @@ const inner = `<div class="wkrow ${state} ${isNow?"here":""}" data-open="${ws}">
         ${state==="unstarted"? `<span class="mini">${st.want} shift${st.want===1?"":"s"} would be needed</span>`
 : `<span class="mono">${st.wk.assignments.length}/${st.want} shifts</span>
              <span class="mono">${fmtHrs(st.mins)}</span>
-             <span class="mono">${st.people} people</span>
+             <span class="mono">${st.people} ${st.people===1?"person":"people"}</span>
              ${st.open? `<span class="chip crit"${whyAttrs(st.open+" shift"+(st.open===1?"":"s")+" in this week "+(st.open===1?"has":"have")+" nobody on "+(st.open===1?"it":"them")+" yet. Open the week and press Fix on any of them — per diem, a stretch, an offer to the team — or see every way out at once.", "wkopen:"+ws)}>${st.open} open</span>`:""}
              ${!st.open && st.crit? `<span class="chip crit"${whyAttrs(st.crit+" thing"+(st.crit===1?"":"s")+" in this week break"+(st.crit===1?"s":"")+" a rule or leave"+(st.crit===1?"s":"")+" a gap. Each one is listed in the week's checks with a Fix button.", "wkchecks:"+ws)}>${st.crit} to fix</span>`:""}
              ${!st.open && !st.crit? `<span class="chip ok">clean</span>`:""}`}
@@ -19522,7 +19522,9 @@ return rows;
 function vAnalytics(){
 const keys=analyticsRange();
 const roster=S.employees.filter(e=>e.active);
-const hist=reqHistory();
+ 
+const inRange=new Set(keys);
+const hist=reqHistory().filter(x=>x.ws && inRange.has(x.ws));
 const counts={granted:0,missed:0,declined:0,pending:0,noted:0};
 hist.forEach(x=>counts[x.state]++);
 const totalDecided=counts.granted+counts.missed+counts.declined;
@@ -19573,7 +19575,7 @@ return `
       <div class="tile ${counts.missed+counts.declined? "bad":"good"}" style="cursor:default"><span class="tn">${counts.declined+counts.missed}</span>
         <span class="tlab">requests turned down</span><span class="td">${totalDecided? Math.round(counts.granted/totalDecided*100):100}% of asks were met</span></div>
       <div class="tile ${series.reduce((t,x)=>t+x.open,0)? "bad":"good"}" style="cursor:default"><span class="tn">${series.reduce((t,x)=>t+x.open,0)}</span>
-        <span class="tlab">shifts left open</span><span class="td">${series.filter(x=>x.open).length} of ${keys.length} weeks had a gap</span></div>
+        <span class="tlab">shifts left open</span><span class="td">${series.filter(x=>x.open).length} of ${keys.length} week${keys.length===1?"":"s"} had a gap</span></div>
     </div>
 
     <div class="card"><header><h3>Week by week</h3><span class="hint">Paid hours, and where the gaps fell</span></header>
