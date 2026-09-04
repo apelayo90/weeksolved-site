@@ -1640,7 +1640,14 @@ const ways=[pw? "email and password":"", g? "Google":""].filter(Boolean).join(" 
 return '<div class="lab">Ways to sign in</div><div class="mini">'+esc(ways||"\u2014")+'</div>'+
 (!g && googleAvailable()? '<div class="row" style="margin-top:8px"><button class="btn sm" id="aclinkg">'+GOOGLE_MARK+'<span>Add Google sign-in</span></button></div>' : '')+
 (g && !pw? '<div class="row" style="margin-top:8px"><button class="btn sm" id="acaddpw">Add a password</button></div>'+
-'<div class="mini" style="margin-top:4px">Handy on an iPhone or iPad, where Google sign-in is not offered yet.</div>' : '')+
+'<div class="mini" style="margin-top:4px">Handy on an iPhone or iPad, where Google sign-in is not offered yet. '+
+'If you once signed in here with a password and it stopped working, this is why: signing in with Google on an '+
+'address that had not been confirmed takes the password off the account. Setting one here puts it back.</div>' : '')+
+(pw && g===false && GOOGLE_SIGNIN && !(u.emailVerified)
+? '<div class="banner warn" style="margin-top:8px"><div><b>Confirm your email address before you use the Google button.</b> '+
+'Signing in with Google on an address that has not been confirmed replaces the password on this account \u2014 your schedule '+
+'is untouched, but the password stops working. Confirming the address first means both ways in keep working.</div></div>'
+: '')+
 '<div class="mini" id="acwaysnote" style="margin-top:6px"></div>';
 }
 function wireSignInWays(root){
@@ -2116,12 +2123,14 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "27b1b330";       
-const BUILD_AT = "2026-09-04 00:08 UTC";       
+const BUILD_ID = "88a858fd";       
+const BUILD_AT = "2026-09-04 02:05 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
 const TERMSKEY = "ws.terms";
+ 
+const PWKEY = "ws.pwset";
 function termsAccepted(){
 try{ return JSON.parse(localStorage.getItem(TERMSKEY)||"null"); }catch(e){ return null; }
 }
@@ -2324,6 +2333,7 @@ setSync(true,"Signed in — your board follows you between devices");
  
 if(WELCOME_WITH){ const W=WELCOME_WITH; WELCOME_WITH=null;
 setTimeout(()=>accessWelcome(W.id, W.life, W.days, W.at, W.mailed), 350); }
+else pwGoneNotice();    
 watchKick(uid);
 deviceCheck();
 if(cloudUnsub) cloudUnsub();
@@ -2802,6 +2812,7 @@ try{
 const cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass);
 FB.user=cred.user;
 await claimCode(hit, h, email, cred.user);
+try{ localStorage.setItem(PWKEY, JSON.stringify({email:String(email||"").trim().toLowerCase(), at:Date.now()})); }catch(e){}
 } finally { SIGNING_UP=false; }
 await cloudEnter();
 }
@@ -3055,6 +3066,50 @@ F.body.push("Your code was single use. It is tied to this account now and cannot
 return F;
 }
  
+ 
+function pwWasSet(email){
+try{
+const raw=localStorage.getItem(PWKEY); if(!raw) return false;
+const d=JSON.parse(raw)||{};
+return !!d.email && d.email===String(email||"").trim().toLowerCase();
+}catch(e){ return false; }
+}
+function pwNoteClear(){ try{ localStorage.removeItem(PWKEY); }catch(e){} }
+ 
+function pwGoneNotice(){
+if(!GOOGLE_SIGNIN) return;
+if(!(typeof FB!=="undefined" && FB && FB.user)) return;
+const u=FB.user;
+if(!hasProvider(u,"google.com") || hasProvider(u,"password")) return;
+if(!pwWasSet(u.email)) return;
+pwNoteClear();
+setTimeout(()=>{
+modal("Your password was replaced by Google sign-in", `
+      <div class="stack">
+        <div class="banner warn"><div><b>Nothing of yours has been lost.</b> Your schedule, your roster and your
+          settings are exactly as you left them, and you are signed in right now.</div></div>
+        <p>You signed up here with an email address and a password, and then signed in with Google using the
+          same address. Because the address had never been confirmed, Google\u2019s sign-in took over the account
+          and the password came off it. That is how account services are built to behave \u2014 it stops somebody
+          claiming an address they do not own \u2014 but it happens silently, which is why this box exists.</p>
+        <p><b>From now on, the Google button is the way in.</b> If you would rather have a password as well \u2014
+          handy on an iPhone or iPad, where Google sign-in is not offered yet \u2014 set one below.</p>
+        <div class="mini" id="pwgnote"></div>
+      </div>`,
+`<button class="btn" id="pwgset">Set a password too</button><button class="btn primary" data-close>I will use Google</button>`,
+(r)=>{
+const b=r.querySelector("#pwgset"), n=r.querySelector("#pwgnote");
+if(!b) return;
+b.onclick=async ()=>{
+b.disabled=true;
+try{ await FB.auth.sendPasswordResetEmail(FB.user.email);
+if(n) n.textContent="A link to set a password is on its way to "+FB.user.email+
+". It comes from a noreply address at Google, so check Spam and Promotions too."; }
+catch(e){ b.disabled=false; if(n) n.textContent=authErrSay(e); }
+};
+});
+}, 900);
+}
 function accessWelcome(codeId, life, days, activatedMs, mailed){
 const F=accessFacts(codeId, life, days, activatedMs);
 modal(F.title, `
