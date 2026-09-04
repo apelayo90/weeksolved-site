@@ -2127,8 +2127,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "73ea44af";       
-const BUILD_AT = "2026-09-04 06:15 UTC";       
+const BUILD_ID = "128ec1d2";       
+const BUILD_AT = "2026-09-04 07:59 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -3604,6 +3604,11 @@ if(!Array.isArray(s.coverGroups)) s.coverGroups=[];
 (s.timeoff||[]).forEach(x=>{ if(!x.src) x.src="app"; });
 (s.callouts||[]).forEach(x=>{ if(!x.src) x.src="app"; });
 (s.requests||[]).forEach(x=>{ if(!x.src) x.src="app"; });
+ 
+(s.requests||[]).forEach(x=>{
+if(x.time==null && x.min!=null){ x.time=m2t(x.min); delete x.min; }
+if(x.num==null && x.hours!=null){ x.num=x.hours; delete x.hours; }
+});
 s.holidays.priorTurns = s.holidays.priorTurns || {};
 s.union = Object.assign({}, UNION_DEFAULT, o.union||{});
 if(!Array.isArray(s.union.offers)) s.union.offers=[];
@@ -4589,7 +4594,8 @@ opts = opts||{};
 ws = ws || curWeek();
 const wk = getWeek(ws);
 SHUFFLE = wk.seed||0;
-const kept = wk.assignments.filter(a=>a.locked);
+ 
+const kept = wk.assignments.filter(a=>a.locked && !onTimeOff(a.empId, a.date));
 const assignments = kept.slice();
 const dates = weekDates(ws);
 const unfilled = [];
@@ -5909,6 +5915,16 @@ weekDates(ws).forEach(({date,dow})=>{
 matchDemand(expandDemand(dow,ws), wk.assignments.filter(a=>a.date===date))
 .missing.forEach(w=>out.push({date, dow, shiftId:w.shiftId, roleId:w.roleId}));
 });
+ 
+(wk.unfilled||[]).forEach(u=>{
+if(u.reason!=="handed back" || u.heldAt==null) return;
+const sl={date:u.date, dow:parseYmd(u.date).getDay(), shiftId:u.shiftId, roleId:u.roleId||null};
+if(out.some(o=>slotKey(o)===slotKey(sl))) return;           
+const now=wk.assignments.filter(a=>a.date===sl.date && a.shiftId===sl.shiftId
+&& (a.roleId||null)===sl.roleId).length;
+if(now > u.heldAt) return;                                   
+out.push(sl);
+});
 return out;
 }
 
@@ -6240,6 +6256,26 @@ function slotKey(sl){ return sl.date+"|"+sl.shiftId+"|"+(sl.roleId||""); }
 function offerToken(){ return securePick("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6); }
 
 function openOffer(ws){ const wk=peekWeek(ws||curWeek()); return (wk&&wk.offer)||null; }
+ 
+function offerByToken(token){
+if(!token) return null;
+const keys=Object.keys(S.weeks||{});
+for(let i=0;i<keys.length;i++){
+const w=S.weeks[keys[i]];
+if(w && w.offer && w.offer.token===token) return {ws:keys[i], off:w.offer};
+}
+return null;
+}
+ 
+function weekForCode(kind, code, fallback){
+try{
+const bits=b64d(String(code||"").trim()).split("|");
+if(bits[0]!==kind) return fallback;
+const hit = kind==="OS1" ? offerByToken(bits[1]) : swapAskByToken(bits[1]);
+if(hit) return hit.ws;
+}catch(e){}
+return fallback;
+}
 
 function offerEligible(sl, ws){
  
@@ -6469,10 +6505,19 @@ function releaseSwap(ws, ask){
 const wk=getWeek(ws);
 const a=wk.assignments.find(x=>x.id===ask.assignId);
 if(!a){ ask.state="gone"; save(); return {err:"That shift is not on the week any more."}; }
+ 
+if(a.empId!==ask.empId){
+ask.state="gone"; save();
+const now=empById(a.empId), was=empById(ask.empId);
+return {err:(was?was.name:"They")+" is not on "+ask.when+" any more"+(now? " \u2014 "+now.name+" has it now" : "")+", so there is nothing to let go."};
+}
 const slot={date:a.date, dow:parseYmd(a.date).getDay(), shiftId:a.shiftId, roleId:a.roleId||null};
 wk.assignments=wk.assignments.filter(x=>x.id!==ask.assignId);
 wk.unfilled=wk.unfilled||[];
-wk.unfilled.push({date:slot.date, shiftId:slot.shiftId, roleId:slot.roleId, reason:"handed back"});
+ 
+wk.unfilled.push({date:slot.date, shiftId:slot.shiftId, roleId:slot.roleId, reason:"handed back",
+heldAt: wk.assignments.filter(x=>x.date===slot.date && x.shiftId===slot.shiftId
+&& (x.roleId||null)===(slot.roleId||null)).length});
 ask.state="released"; ask.releasedAt=Date.now();
  
 const off=wk.offer;
@@ -6492,8 +6537,8 @@ logIt("request", "Kept "+(empById(ask.empId)||{name:"Someone"}).name+" on "+ask.
  
 const CODE_KINDS = {
 OS1:{what:"someone taking an open shift",
-read:(c)=>{ const r=readClaim(curWeek(), c); return r.err? {err:r.err} : {who:(r.emp&&r.emp.name)||""}; },
-go:(c)=>claimModal(curWeek(), c)},
+read:(c)=>{ const r=readClaim(weekForCode("OS1", c, curWeek()), c); return r.err? {err:r.err} : {who:(r.emp&&r.emp.name)||""}; },
+go:(c)=>claimModal(weekForCode("OS1", c, curWeek()), c)},
 SW1:{what:"someone handing a shift back",
 read:(c)=>{ let ws=curWeek();
 try{ const o=swapAskByToken(b64d(String(c||"").trim()).split("|")[1]); if(o) ws=o.ws; }catch(e){}
@@ -7034,12 +7079,21 @@ r.querySelector("#ofclaim").onclick=()=>{ closeModal(true); claimModal(ws); };
  
 function readClaim(ws, code){
 const off=openOffer(ws);
-if(!off) return {err:"There\u2019s no open offer for this week."};
+if(!off){
+const other=(function(){ try{ const b=b64d(String(code||"").trim()).split("|");
+return b[0]==="OS1"? offerByToken(b[1]) : null; }catch(e){ return null; } })();
+if(other) return {err:"That code is for the week of "+prettyDate(other.ws)+", not the one you are looking at. Switch to that week and paste it again.", week:other.ws};
+return {err:"There\u2019s no open offer for this week."};
+}
 let raw="";
 try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn\u2019t look like a reply code \u2014 check it was copied whole."}; }
 const bits=raw.split("|");
 if(bits[0]!=="OS1") return {err:"That\u2019s a code for something else, not an open shift."};
-if(bits[1]!==off.token) return {err:"That code is from an earlier offer. Ask them to open the newest file you sent."};
+if(bits[1]!==off.token){
+const other=offerByToken(bits[1]);
+if(other && other.ws!==ws) return {err:"That code is for the week of "+prettyDate(other.ws)+", not the one you are looking at. Switch to that week and paste it again.", week:other.ws};
+return {err:"That code is from an earlier offer. Ask them to open the newest file you sent."};
+}
 const who=bits[2]||"";
 const idx=(bits[3]||"").split(",")
 .filter(x=>/^\d+$/.test(x.trim()))           
@@ -7296,7 +7350,7 @@ return {emp, items};
  
 function askDupe(empId, it){
 return (S.requests||[]).some(r=>r.empId===empId && r.kind===it.kind && r.from===it.from && r.to===it.to &&
-(it.shiftId? r.shiftId===it.shiftId : true) && (it.min!=null? r.min===it.min : true) && (it.num!=null? r.hours===it.num : true));
+(it.shiftId? r.shiftId===it.shiftId : true) && (it.min!=null? r.time===m2t(it.min) : true) && (it.num!=null? r.num===it.num : true));
 }
 function askDetail(it){
 if(it.kind==="shift"||it.kind==="noshift"){ const sh=shiftById(it.shiftId)||{label:"a shift"};
@@ -7390,8 +7444,9 @@ const sel=out.querySelector('.akfirm[data-i="'+i+'"]');
 const rec={ id:uid("q"), empId:res.emp.id, kind:it.kind, hard:(sel? sel.value==="1" : it.hard),
 from:it.from, to:it.to, note:it.note||"", src:"form", status:"" };
 if(it.shiftId) rec.shiftId=it.shiftId;
-if(it.min!=null) rec.min=it.min;
-if(it.num!=null) rec.hours=it.num;
+ 
+if(it.min!=null) rec.time=m2t(it.min);
+if(it.num!=null) rec.num=it.num;
 S.requests=S.requests||[];
 S.requests.push(rec);
 if(A){ A.seen=A.seen||[]; if(!A.seen.includes(res.emp.id)) A.seen.push(res.emp.id); }
@@ -11537,7 +11592,9 @@ return `
       <button class="tile" data-go="team">
         <span class="tn">${S.employees.filter(e=>e.active).length}</span>
         <span class="tlab">on the roster</span>
-        <span class="td">${S.timeoff.filter(t=>t.status!=="denied"&&t.end>=ws).length} on time off</span>
+        <span class="td">${(function(){ const we=addDays(ws,6), ids={};
+S.timeoff.forEach(t=>{ if(t.status==="denied") return; if(t.end<ws||t.start>we) return; ids[t.empId]=1; });
+return Object.keys(ids).length; })()} on time off</span>
       </button>
     </div>
 
@@ -13232,7 +13289,14 @@ modal("Put "+esc(e.name.split(" ")[0])+" back on the roster?",
 r=>{ r.querySelector("#backgo").onclick=()=>{ closeModal(true); bringBack(e.id); }; });
 });
 root.querySelector("#addtoff").onclick=()=>toffModal();
-root.querySelectorAll("[data-deltoff]").forEach(b=>b.onclick=()=>{ S.timeoff=S.timeoff.filter(t=>t.id!==b.dataset.deltoff); save(); render(); });
+root.querySelectorAll("[data-deltoff]").forEach(b=>b.onclick=()=>{
+ 
+const row=(S.timeoff||[]).find(t=>t.id===b.dataset.deltoff);
+S.timeoff=S.timeoff.filter(t=>t.id!==b.dataset.deltoff);
+const back=vacRestoreAnswers(row);
+save(); render();
+if(back) toast(back+" survey answer"+(back===1?" is":"s are")+" back in the draw");
+});
 };
 function groupMatchText(g){
 const m=g.match||{};
@@ -15523,7 +15587,7 @@ const w=S.weeks[k]; if(!w) return;
 w.assignments=(w.assignments||[]).filter(a=>a.empId!==id || a.date<today);
 });
 S.employees=S.employees.filter(x=>x.id!==id);
-S.timeoff=(S.timeoff||[]).filter(t=>t.empId!==id || t.to<today);
+S.timeoff=(S.timeoff||[]).filter(t=>t.empId!==id || t.end<today);
 S.requests=(S.requests||[]).filter(r=>r.empId!==id);
 S.apart=(S.apart||[]).filter(p=>p.a!==id && p.b!==id);
 save();
@@ -20766,25 +20830,32 @@ const se=root.querySelector("#vacseed"); if(se) se.onclick=()=>{ S.vacations.see
 const em=root.querySelector("#vacemail2"); if(em) em.onclick=()=>copyText(vacApprovedEmailText(),"Announcement copied — paste into any email");
 root.querySelectorAll("[data-vacdel]").forEach(b=>b.onclick=()=>{ S.vacations.responses=S.vacations.responses.filter(r=>r.empId!==b.dataset.vacdel); save(); render(); });
 root.querySelectorAll("[data-vacoff]").forEach(b=>b.onclick=()=>{
+const row=(S.timeoff||[]).find(t=>String(t.id)===b.dataset.vacoff);
 S.timeoff=S.timeoff.filter(t=>String(t.id)!==b.dataset.vacoff);
- 
-const U=S.vacations.undo;
-let back=0;
-if(U && Array.isArray(U.responses)){
-(U.responses||[]).forEach(r=>{
-if(!(S.vacations.responses||[]).some(x=>x.empId===r.empId)){
-S.vacations.responses.push(JSON.parse(JSON.stringify(r))); back++;
-}
-});
-if(!(S.vacations.tweaks||[]).length && Array.isArray(U.tweaks) && U.tweaks.length)
-S.vacations.tweaks=JSON.parse(JSON.stringify(U.tweaks));
-}
+const back=vacRestoreAnswers(row);
 save(); render();
 toast("Undone \u2014 those days are open again"+(back? " and "+back+" survey answer"+(back===1?" is":"s are")+" back in the draw":""));
 });
 const run=root.querySelector("#vacrun");
 if(run) run.onclick=()=>vacDrawRender(root.querySelector("#vacout"));
 };
+ 
+function vacRestoreAnswers(row){
+if(!row || !row.vac) return 0;
+const V=S.vacations||{}; const U=V.undo;
+if(!U || !Array.isArray(U.responses)) return 0;
+V.responses=V.responses||[];
+let back=0;
+U.responses.forEach(r=>{
+if(!V.responses.some(x=>x.empId===r.empId)){
+V.responses.push(JSON.parse(JSON.stringify(r))); back++;
+}
+});
+if(!(V.tweaks||[]).length && Array.isArray(U.tweaks) && U.tweaks.length)
+V.tweaks=JSON.parse(JSON.stringify(U.tweaks));
+return back;
+}
+
  
 function vacDrawRender(out){
 if(!out) return;
