@@ -893,6 +893,10 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
    rest of the form rather than fine print, and links that look like links. */
 .gor{display:flex;align-items:center;gap:10px;margin:14px 0 10px;color:var(--muted);font-size:12px}
 .gor:before,.gor:after{content:"";flex:1;border-top:1px solid var(--line)}
+.qmark{margin-left:5px;border:1px solid var(--line);background:transparent;color:var(--muted);
+  width:15px;height:15px;line-height:13px;border-radius:50%;font-size:10px;font-weight:700;padding:0;
+  vertical-align:1px;cursor:help}
+.qmark:hover{border-color:var(--accent);color:var(--accent)}
 .termw{border-bottom:1px dotted var(--line-strong,var(--muted));cursor:help}
 .termw:hover,.termw:focus{border-bottom-style:solid;color:var(--accent)}
 .ggoogle{width:100%;justify-content:center;gap:10px;background:var(--surface);border:1px solid var(--line2);color:var(--ink)}
@@ -2123,8 +2127,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "622c4d57";       
-const BUILD_AT = "2026-09-04 04:07 UTC";       
+const BUILD_ID = "cecb7049";       
+const BUILD_AT = "2026-09-04 04:42 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -3610,6 +3614,10 @@ s.coverGroups=s.coverGroups.filter(g=>(g.sts||[]).length>1);
 if(!Array.isArray(s.bugs)) s.bugs=[];
 if(!Array.isArray(s.apart)) s.apart=[];
 if(!Array.isArray(s.gone)) s.gone=[];
+ 
+if(Array.isArray(s.routines)) s.routines.forEach(r=>{
+if(Array.isArray(r.days) && (r.days.length===0 || r.days.length>=7)) r.days=null;
+});
 s.apart=s.apart.filter(p=>p && p.a && p.b && p.a!==p.b && s.employees.some(e=>e.id===p.a) && s.employees.some(e=>e.id===p.b));
 s.apart.forEach(p=>{ if(!["day","shift","post"].includes(p.level)) p.level="day"; if(typeof p.note!=="string") p.note=""; if(!p.id) p.id=uid("ap"); });
 s.support = Object.assign({email:"", lastSent:0, remind:true}, o.support||{});
@@ -9204,7 +9212,8 @@ function dailyCfg(){
 if(!S.daily) S.daily={on:false, at:"06:00", lead:"same", mode:"each", how:"email", days:"open"};
 return S.daily;
 }
-function personDayLines(a, ws){
+ 
+function personDayLines(a, ws, withRoutine){
 const L=[]; const sh=aShift(a);
 let line=m2disp(a.startMin)+"–"+m2disp(a.endMin)+"  "+sh.label; if(a.topUp) line+=" ("+(S.rules.topUpLabel||"project time")+")";
 L.push(line);
@@ -9216,7 +9225,7 @@ if(plan.length>1) L.push("   posts: "+plan.map(x=>m2disp(x.from)+" "+((stationBy
 else { const st=a.station? stationById(a.station):null; if(st) L.push("   post: "+st.name+(a.station2? ", then "+((stationById(a.station2)||{}).name||""):"")); }
 if(a.mentor) L.push("   training with "+((empById(a.mentor)||{}).name||""));
 const n=shiftNote(ws, a.date, a.empId, a.startMin); if(n) L.push("   note: "+n);
-routineLinesFor(a.empId, a.date).forEach(x=>L.push(x));
+if(withRoutine) routineLinesFor(a.empId, a.date).forEach(x=>L.push(x));
 return L;
 }
 function personalDayText(empId, date){
@@ -9226,7 +9235,7 @@ const mine=wk.assignments.filter(a=>a.empId===empId && a.date===date).sort((x,y)
 const L=[(S.org.name||"Work")+" — your day, "+prettyFull(date), ""];
 if((wk.dayNotes||{})[date]) L.push("NOTE: "+wk.dayNotes[date], "");
 if(!mine.length) L.push("You are not scheduled on "+prettyDate(date)+".");
-else mine.forEach(a=>L.push(...personDayLines(a, ws)));
+else mine.forEach((a,i)=>L.push(...personDayLines(a, ws, i===0)));    
 L.push("", "Times are the schedule, not a record of what was worked. Questions — ask your manager.");
 return L.join("\n");
 }
@@ -9239,7 +9248,8 @@ if(S.hours[dow] && S.hours[dow].closed) L.push("Closed today.");
 if((wk.dayNotes||{})[date]) L.push("NOTE: "+wk.dayNotes[date], "");
 { const c=lunchClosure(dow, date); if(c) L.push("Doors shut "+m2disp(c.from)+"–"+m2disp(c.to)+" for lunch.", ""); }
 if(!on.length) L.push("Nobody scheduled.");
-on.forEach(a=>{ const e=empById(a.empId)||{name:"—"}; const ls=personDayLines(a, ws); L.push(e.name+"  "+ls[0]); ls.slice(1).forEach(x=>L.push("   "+x.trim())); });
+ 
+on.forEach(a=>{ const e=empById(a.empId)||{name:"—"}; const ls=personDayLines(a, ws, false); L.push(e.name+"  "+ls[0]); ls.slice(1).forEach(x=>L.push("   "+x.trim())); });
 routineText(date).forEach(x=>L.push(x));
 L.push("", "Times are the schedule, not a record of what was worked.");
 return L.join("\n");
@@ -11015,8 +11025,12 @@ d:"A federal classification. Non-exempt staff must be paid overtime and given th
 function termFind(word){
 const w=String(word||"").trim().toLowerCase().replace(/[.,;:!?]+$/,"");
 if(!w) return null;
-return TERMS.find(x=>x.t===w || (x.aka||[]).indexOf(w)>=0) ||
-TERMS.find(x=>w.indexOf(x.t)>=0) || null;
+const exact=TERMS.find(x=>x.t===w || (x.aka||[]).indexOf(w)>=0);
+if(exact) return exact;
+ 
+let best=null;
+TERMS.forEach(x=>{ if(w.indexOf(x.t)>=0 && (!best || x.t.length>best.t.length)) best=x; });
+return best || null;
 }
  
 function term(word, show){
@@ -11024,6 +11038,19 @@ const hit=termFind(word);
 const label=esc(show||word);
 if(!hit) return label;
 return '<span class="termw"'+whyAttrs(hit.d)+' title="What this means">'+label+'</span>';
+}
+ 
+const TERM_FOR_CODE = {
+clopen:"clopening", rest:"turnaround", split:"split shift", meal:"meal waiver",
+cover:"coverage minimum", open:"open shift", fill:"coverage minimum",
+wot:"fair workweek", period:"the drafter", relief:"staggering", contract:"per diem"
+};
+function termHint(code){
+const t=TERM_FOR_CODE[String(code||"")];
+const hit=t? termFind(t) : null;
+if(!hit) return "";
+return '<button type="button" class="qmark" aria-label="What does '+esc(hit.t)+' mean?"'+
+whyAttrs(hit.d)+' title="What \u201c'+esc(hit.t)+'\u201d means">?</button>';
 }
 function termsCard(){
 return `<div class="card ${folded("terms")?"folded":""}" id="termscard">
@@ -11342,7 +11369,7 @@ return `<div class="spread" style="padding:7px 0;border-bottom:1px solid var(--l
           <header><h3>What needs you</h3><span class="hint">${V.length} item${V.length===1?"":"s"}</span></header>
           <div class="viollist ovf">
             ${V.length? V.slice(0,9).map((v,vi)=>`<div class="viol-i"><span class="sv ${v.sev}"></span>
-              <div class="tx"><strong>${esc(v.title)}</strong><span>${esc(v.detail)}</span></div>
+              <div class="tx"><strong>${esc(v.title)}</strong>${termHint(v.code)}<span>${esc(v.detail)}</span></div>
               <span class="dipacts">${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}">Who could work it?</button>`:fixBtn(v, vi)}</span></div>`).join("")
 : `<div class="empty"><strong>All clear</strong>No conflicts in this week.</div>`}
           </div>
@@ -11532,7 +11559,7 @@ return `<button class="wkcard ${state}" data-week="${w}">
       ${V.length>3? `<button class="btn sm" data-go="week">See all ${V.length}</button>`:""}</header>
       <div class="stack" style="gap:7px;padding:14px 16px">
         ${looks.map(v=>`<div class="look"><span class="sv ${v.sev}"></span>
-          <div style="flex:1"><strong>${esc(v.title)}</strong><div class="mini">${esc(v.detail)}</div></div>
+          <div style="flex:1"><strong>${esc(v.title)}</strong>${termHint(v.code)}<div class="mini">${esc(v.detail)}</div></div>
           ${v.openSlot? `<button class="btn sm primary" data-fixall="1">Show me the fixes</button>`
 : fixBtn(v, V.indexOf(v)) || (v.date? `<button class="btn sm" data-jump="${parseYmd(v.date).getDay()}">Open the day</button>`
 : v.empId? `<button class="btn sm" data-emp="${v.empId}">Open their profile</button>`:"")}
@@ -13008,7 +13035,9 @@ act:{label:"Open the first", emp:owing[0].id}});
 
 const V=S.vacations;
 if(V && V.on && (V.deadline||V.windowFrom)){
-const asked=on.length, back=(V.responses||[]).length;
+ 
+const asking=new Set(on.map(x=>x.id));
+const asked=on.length, back=(V.responses||[]).filter(v=>asking.has(v.empId)).length;
 if(back<asked) rows.push({k:"vac", sev: (V.deadline && V.deadline<today)? "warn":"info",
 t: (asked-back)+" of "+asked+" have not sent their vacation picks back",
 d: (V.deadline && V.deadline<today)
@@ -14968,7 +14997,7 @@ return `<div class="card"><header><h3>Labor cost</h3>
         <span class="hint">${crit.length} must fix · ${warn.length} warnings · ${info.length} notes</span></header>
       <div class="viollist" style="max-height:420px;overflow-y:auto">
         ${V.length? V.map((v,vi)=>{ const rr=v.code? RK.get(problemKey(v)) : null; return `<div class="viol-i"><span class="sv ${v.sev}"></span>
-          <div class="tx"><strong>${esc(v.title)}</strong><span>${esc(v.detail)}</span></div>
+          <div class="tx"><strong>${esc(v.title)}</strong>${termHint(v.code)}<span>${esc(v.detail)}</span></div>
           <span class="dipacts">${rr? `<button class="chip warn chipbtn" data-recur="${esc(rr.key)}" title="Flagged in ${rr.weeks.length} of the last ${rr.of} weeks — press for the change that stops it">keeps happening</button>`:""}${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}">Who could work it?</button>`:""}${fixBtn(v, vi, v.openSlot? "ghost":"")}</span>
         </div>`; }).join("") : wk.assignments.length? `<div class="empty"><strong>Nothing flagged</strong>Every shift is filled, every minimum holds, and every meal and rest break sits inside the window Weeksolved has for ${esc(law().name)}. ${esc(LAWNOTE)}</div>`
 : `<div class="empty"><strong>Nothing drafted yet</strong>Draft the week and it gets checked shift by shift.</div>`}
@@ -15681,7 +15710,8 @@ const ROUTINE_WHEN=[
 function routines(){ if(!Array.isArray(S.routines)) S.routines=[]; return S.routines; }
 function routinesFor(date){
 const dow=parseYmd(date).getDay();
-return routines().filter(r=>!r.days || !r.days.length || r.days.indexOf(dow)>=0);
+ 
+return routines().filter(r=>!Array.isArray(r.days) || r.days.indexOf(dow)>=0);
 }
 function routineOwner(date, when){
  
@@ -15693,20 +15723,49 @@ const a = when==="close" ? on.reduce((x,y)=> y.endMin>x.endMin? y:x)
 : on.reduce((x,y)=> y.startMin<x.startMin? y:x);
 return empById(a.empId)||null;
 }
-function routineTicks(date, id){
+ 
+function routineKeyList(date, id){
 const ws=weekStartOf(date, S.org.weekStart), wk=peekWeek(ws);
 return (((wk&&wk.routineDone)||{})[date]||{})[id]||[];
 }
-function routineTick(date, id, i, on){
+function routineTicks(date, r){
+const id=(r&&r.id!==undefined)? r.id : r;                  
+const items=(r&&r.items)? r.items : null;
+return routineKeyList(date, id).map(v=>{
+if(typeof v==="number") return items? items[v] : null;   
+return String(v);
+}).filter(x=>x!=null);
+}
+function routineTick(date, r, item, on){
+const id=(r&&r.id!==undefined)? r.id : r;
 const ws=weekStartOf(date, S.org.weekStart), wk=getWeek(ws);
 wk.routineDone=wk.routineDone||{}; wk.routineDone[date]=wk.routineDone[date]||{};
-const set=new Set(wk.routineDone[date][id]||[]);
-if(on) set.add(i); else set.delete(i);
-wk.routineDone[date][id]=[...set].sort((a,b)=>a-b);
+const set=new Set(routineTicks(date, r));
+if(on) set.add(String(item)); else set.delete(String(item));
+const left=[...set];
+if(left.length) wk.routineDone[date][id]=left;
+else{
+delete wk.routineDone[date][id];
+if(!Object.keys(wk.routineDone[date]).length) delete wk.routineDone[date];
+if(!Object.keys(wk.routineDone).length) delete wk.routineDone;
+}
+pruneWeekShell(ws);
 save();
 }
+ 
+function pruneWeekShell(ws){
+const w=S.weeks&&S.weeks[ws];
+if(!w) return;
+if((w.assignments||[]).length) return;
+if(w.published || w.generatedAt || w.offer || w.swapAsk || w.extraOK || w.routineDone) return;
+ 
+const BARE={assignments:1, published:1, generatedAt:1};
+if(Object.keys(w).some(k=>!BARE[k])) return;
+delete S.weeks[ws];
+}
 function routineDoneCount(date, r){
-return routineTicks(date, r.id).filter(i=>i<r.items.length).length;
+const have=new Set(routineTicks(date, r));
+return (r.items||[]).filter(it=>have.has(String(it))).length;
 }
  
 function routineText(date){
@@ -15747,7 +15806,7 @@ return `<div class="card"><header><h3>Opening and closing</h3>
     <div class="body stack" style="gap:12px">
       ${rs.map(r=>{
 const who=routineOwner(date, r.when);
-const done=routineTicks(date, r.id);
+const done=routineTicks(date, r);
 const n=routineDoneCount(date, r);
 return `<div class="stack" style="gap:6px">
           <div class="row" style="gap:8px;align-items:baseline">
@@ -15756,8 +15815,8 @@ return `<div class="stack" style="gap:6px">
             <span class="mini">${who? esc(who.name) : (r.when==="any"? "anybody on today" : "nobody scheduled")}</span>
           </div>
           ${r.items.length? r.items.map((it,i)=>`<label class="rtitem" style="display:flex;gap:8px;align-items:flex-start;padding:3px 0">
-            <input type="checkbox" data-rtick="${esc(r.id)}" data-rti="${i}" ${done.indexOf(i)>=0?"checked":""}>
-            <span${done.indexOf(i)>=0? ' style="opacity:.55;text-decoration:line-through"':""}>${esc(it)}</span></label>`).join("")
+            <input type="checkbox" data-rtick="${esc(r.id)}" data-rti="${i}" ${done.indexOf(it)>=0?"checked":""}>
+            <span${done.indexOf(it)>=0? ' style="opacity:.55;text-decoration:line-through"':""}>${esc(it)}</span></label>`).join("")
 : `<div class="mini">Nothing on this list yet.</div>`}
         </div>`;
 }).join(`<div class="sep"></div>`)}
@@ -15766,11 +15825,12 @@ return `<div class="stack" style="gap:6px">
     </div></div>`;
 }
 function routinesModal(){
-let draft = routines().map(r=>({...r, items:r.items.slice(), days:(r.days||[]).slice()}));
+let draft = routines().map(r=>({...r, items:r.items.slice(),
+days: Array.isArray(r.days)? (r.days.length===7? null : r.days.slice()) : null}));
 const starter = ()=>{
 const ex=bizEx();
-return [{id:uid("rt"), name:"Opening", when:"open", days:[], items:(ex.open||[]).slice()},
-{id:uid("rt"), name:"Closing", when:"close", days:[], items:(ex.close||[]).slice()}];
+return [{id:uid("rt"), name:"Opening", when:"open", days:null, items:(ex.open||[]).slice()},
+{id:uid("rt"), name:"Closing", when:"close", days:null, items:(ex.close||[]).slice()}];
 };
 modal("Opening and closing lists", `<div class="stack" id="rtbody"></div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="rtsave">Save</button>`,
@@ -15790,9 +15850,11 @@ r.querySelector("#rtbody").innerHTML=`
               <span class="mini">${esc((ROUTINE_WHEN.find(w=>w.id===d.when)||ROUTINE_WHEN[0]).d)}</span>
               <div class="field"><label>Which days</label>
                 <div class="row" style="gap:5px;flex-wrap:wrap">${[0,1,2,3,4,5,6].map(dw=>
-`<button type="button" class="chip chipbtn ${(!d.days.length||d.days.indexOf(dw)>=0)?"acc":""}" data-rtd="${i}" data-dw="${dw}"
-                    aria-pressed="${(!d.days.length||d.days.indexOf(dw)>=0)}">${DSHORT[dw]}</button>`).join("")}</div>
-                <span class="mini">${d.days.length? "Only those days.":"Every day you are open."}</span></div>
+`<button type="button" class="chip chipbtn ${(!Array.isArray(d.days)||d.days.indexOf(dw)>=0)?"acc":""}" data-rtd="${i}" data-dw="${dw}"
+                    aria-pressed="${(!Array.isArray(d.days)||d.days.indexOf(dw)>=0)}">${DSHORT[dw]}</button>`).join("")}</div>
+                <span class="mini">${!Array.isArray(d.days)? "Every day you are open."
+: d.days.length? "Only those days."
+: "No days \u2014 this list will not appear on any day sheet. Pick a day, or delete the list."}</span></div>
               <div class="field"><label>What has to happen — one per line</label>
                 <textarea class="rti" id="rti${i}" data-i="${i}" rows="5">${esc(d.items.join("\n"))}</textarea>
                 ${sugChips("rti"+i, (d.when==="close"? (bizEx().close||[]) : (bizEx().open||[])),
@@ -15810,15 +15872,15 @@ r.querySelectorAll(".rtw").forEach(el=>el.onchange=()=>{ draft[+el.dataset.i].wh
 r.querySelectorAll("[data-rtdel]").forEach(b=>b.onclick=()=>{ draft.splice(+b.dataset.rtdel,1); paint(); });
 r.querySelectorAll("[data-rtd]").forEach(b=>b.onclick=()=>{
 const d=draft[+b.dataset.rtd], dw=+b.dataset.dw;
-if(!d.days.length) d.days=[0,1,2,3,4,5,6];
+if(!Array.isArray(d.days)) d.days=[0,1,2,3,4,5,6];    
 const at=d.days.indexOf(dw);
 if(at>=0) d.days.splice(at,1); else d.days.push(dw);
 d.days.sort();
-if(d.days.length===7) d.days=[];
+if(d.days.length===7) d.days=null;                    
 paint();
 });
 const add=r.querySelector("#rtadd");
-if(add) add.onclick=()=>{ draft.push({id:uid("rt"), name:"", when:"open", days:[], items:[]}); paint(); };
+if(add) add.onclick=()=>{ draft.push({id:uid("rt"), name:"", when:"open", days:null, items:[]}); paint(); };
 const st=r.querySelector("#rtstart");
 if(st) st.onclick=()=>{ draft=starter(); paint(); };
 wireSug(r);
@@ -15827,7 +15889,7 @@ paint();
 r.querySelector("#rtsave").onclick=()=>{
 S.routines = draft.filter(d=>(d.name||"").trim() || d.items.length)
 .map(d=>({id:d.id||uid("rt"), name:(d.name||"").trim()||"Checklist", when:d.when||"open",
-days:(d.days||[]).slice(), items:d.items.slice(0,30)}));
+days: Array.isArray(d.days)? d.days.slice() : null, items:d.items.slice(0,30)}));
 save(); closeModal(true); render();
 toast(S.routines.length? "Saved — it rides on every day sheet from now on" : "Lists cleared");
 };
@@ -16925,14 +16987,18 @@ const date=en? en.date : null;
 const ed=root.querySelector("#rtedit"); if(ed) ed.onclick=()=>routinesModal();
 root.querySelectorAll("[data-rtick]").forEach(el=>el.onchange=()=>{
 if(!date) return;
-routineTick(date, el.dataset.rtick, +el.dataset.rti, el.checked);
+{ const list=routines().find(x=>x.id===el.dataset.rtick);
+const item=list? list.items[+el.dataset.rti] : null;
+if(item!=null) routineTick(date, list, item, el.checked); }
 render();
 });
 const cl=root.querySelector("#rtclear");
 if(cl) cl.onclick=()=>{
 if(!date) return;
 const ws=weekStartOf(date, S.org.weekStart), wk=getWeek(ws);
-if(wk.routineDone) delete wk.routineDone[date];
+if(wk.routineDone){ delete wk.routineDone[date];
+if(!Object.keys(wk.routineDone).length) delete wk.routineDone; }
+pruneWeekShell(ws);
 save(); render(); toast("Unticked");
 };
 }
