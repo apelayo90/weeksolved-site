@@ -2123,8 +2123,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "88a858fd";       
-const BUILD_AT = "2026-09-04 02:05 UTC";       
+const BUILD_ID = "c4a6f446";       
+const BUILD_AT = "2026-09-04 03:07 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -10201,21 +10201,46 @@ ctx:String(typeof b.ctx==="string"? b.ctx : JSON.stringify(b.ctx||"")).slice(0,3
 }catch(e){}
 }
  
+ 
+function stackBrief(err, limit){
+try{
+const raw=String((err && err.stack) || "");
+if(!raw) return "";
+const seen=[], lines=raw.split("\n");
+for(let i=0;i<lines.length && seen.length<(limit||3);i++){
+const L=lines[i].trim();
+if(!L || /^[A-Za-z]*Error\b/.test(L)) continue;       
+const m=L.match(/at\s+([^\s(]+)?\s*\(?[^()]*?:(\d+):(\d+)\)?$/);
+if(m){ const fn=(m[1]||"anonymous").split("/").pop().slice(0,40);
+seen.push(fn+" "+m[2]+":"+m[3]); }
+else{
+ 
+const fn=(L.match(/at\s+([A-Za-z_$][\w$.]*)/)||[])[1];
+const ln=(L.match(/:(\d+):\d+/)||[])[1];
+if(fn) seen.push(fn+(ln? " "+ln : ""));
+}
+}
+return seen.join(" < ");
+}catch(e){ return ""; }
+}
 let GATE_ERR=null;
 window.addEventListener("error", ev=>{
 try{ if(GATE_ERR && document.getElementById("gerr"))
 GATE_ERR("Something went wrong on this screen: "+((ev&&ev.message)||"unknown")+". Press \u201cHaving trouble?\u201d below and send me what it says."); }catch(e){}
 try{
 if(!loaded) return;
-logBug({auto:true, kind:"crash",
-note:String((ev&&ev.message)||"script error")+" @ "+String((ev&&ev.filename)||"").split("/").pop()+":"+(ev&&ev.lineno||0)});
+const at=String((ev&&ev.message)||"script error")+" @ "+String((ev&&ev.filename)||"").split("/").pop()+":"+(ev&&ev.lineno||0);
+const st=stackBrief(ev&&ev.error);
+logBug({auto:true, kind:"crash", note:(st? at+"\n"+st : at).slice(0,480)});
 }catch(e){}
 });
 window.addEventListener("unhandledrejection", ev=>{
 try{
 if(!loaded) return;
 const r=ev&&ev.reason;
-logBug({auto:true, kind:"crash", note:"unhandled: "+String((r&&r.message)||r||"").slice(0,140)});
+const at="unhandled: "+String((r&&r.message)||r||"").slice(0,140);
+const st=stackBrief(r);
+logBug({auto:true, kind:"crash", note:(st? at+"\n"+st : at).slice(0,480)});
 }catch(e){}
 });
 
