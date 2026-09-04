@@ -2127,8 +2127,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "cecb7049";       
-const BUILD_AT = "2026-09-04 04:42 UTC";       
+const BUILD_ID = "73ea44af";       
+const BUILD_AT = "2026-09-04 06:15 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -8258,6 +8258,13 @@ const P=a.stationPlan;
 if(P && P.length){ const b=P.find(x=>t>=x.from && t<x.to); return b? b.st : null; }
 return a.station || null;
 }
+ 
+function stationsBetween(a, from, to){
+if(!a) return [];
+const P=a.stationPlan;
+if(P && P.length) return [...new Set(P.filter(x=>x.from<to && x.to>from).map(x=>x.st).filter(Boolean))];
+return a.station? [a.station] : [];
+}
 function coverGroupOf(stId){
 return (S.coverGroups||[]).find(g=>(g.sts||[]).includes(stId)) || null;
 }
@@ -8468,10 +8475,18 @@ return pick;
 
  
 if((S.rules.stationSpan||"day")!=="day"){
-const rotated=assignStationBlocks(date, ws, T, posts.filter(st=>!st.holdAllDay), list, {score, bump});
-if(rotated){
  
-posts.filter(st=>st.holdAllDay).forEach(st=>{ const p=take(st); if(p) p.a.station=st.id; });
+ 
+const willRotate = !!stationBlocks(date, parseYmd(date).getDay(), list);
+const held=[];
+if(willRotate) posts.filter(st=>st.holdAllDay).forEach(st=>{
+const p=take(st);
+if(p){ p.a.station=st.id; p.a.stationPlan=[]; held.push(p.a); }
+});
+const rotating=list.filter(a=>held.indexOf(a)<0);
+const rotated=willRotate && assignStationBlocks(date, ws, T, posts.filter(st=>!st.holdAllDay), rotating, {score, bump});
+if(rotated){
+held.forEach(a=>{ a.stationPlan=[]; });    
 if(admin.length && list.length){
 const opener=list[0], closer=list[list.length-1];
 admin.forEach(t=>{
@@ -8564,9 +8579,12 @@ const book=(empId,from,to)=>{ (busy[empId]=busy[empId]||[]).push([from,to]); };
 const jobs=[];
 list.forEach(a=>{
 ((a.breaks||{}).meals||[]).filter(m=>!m.waived).forEach(m=>{
-const st0=stationById(stationAt(a, m.start));
+ 
+stationsBetween(a, m.start, m.end).forEach(id=>{
+const st0=stationById(id);
 if(!st0 || !st0.critical) return;
 jobs.push({a,m,st:st0});
+});
 });
 });
 jobs.sort((x,y)=>x.m.start-y.m.start);
@@ -8576,26 +8594,27 @@ jobs.forEach(({a,m,st})=>{
 if(c && m.start>=c.from && m.end<=c.to) return; }
 const partners=new Set(reliefPartners(st));
  
-const colleague=list.some(b=>b!==a && stationAt(b, m.start)===st.id &&
+const colleague=list.some(b=>b!==a && stationsBetween(b, m.start, m.end).indexOf(st.id)>=0 &&
 b.startMin<=m.start && b.endMin>=m.end &&
 !((b.breaks||{}).meals||[]).some(x=>!x.waived && x.start<m.end && x.end>m.start));
 if(colleague){ out.push({station:st, mealOf:a.empId, start:m.start, end:m.end, by:null, covered:true}); return; }
 const cand=list.filter(b=>{
 if(b===a) return false;
 if(b.startMin>m.start || b.endMin<m.end) return false;       
-const bst=stationById(stationAt(b, m.start));
  
-if(bst && bst.neverLeave) return false;
-if(bst && bst.critical && !partners.has(bst.id)) return false;
+const theirs=stationsBetween(b, m.start, m.end).map(id=>stationById(id)).filter(Boolean);
+if(theirs.some(x=>x.neverLeave)) return false;
+if(theirs.some(x=>x.critical && !partners.has(x.id))) return false;
+if(theirs.some(x=>x.id===st.id)) return false;    
 if(st.roleId && !((empById(b.empId)||{}).roleIds||[]).includes(st.roleId)) return false;
 if(((b.breaks||{}).meals||[]).some(x=>!x.waived && x.start<m.end && x.end>m.start)) return false;
 if(!freeAt(b.empId, m.start, m.end)) return false;           
 return true;
 });
 const rank=(b)=>{
-const bst=stationById(stationAt(b, m.start));
-if(bst && partners.has(bst.id)) return 0;                    
-if(!bst) return 1;                                           
+const theirs=stationsBetween(b, m.start, m.end).map(id=>stationById(id)).filter(Boolean);
+if(theirs.some(x=>partners.has(x.id))) return 0;             
+if(!theirs.length) return 1;                                 
 return 2;                                                    
 };
 cand.sort((x,y)=>{
@@ -8609,10 +8628,11 @@ return 0;
 });
 const pick=cand.length? cand[0] : null;
 if(pick) book(pick.empId, m.start, m.end);
-const pst=pick? stationById(stationAt(pick, m.start)) : null;
+const pheld=pick? stationsBetween(pick, m.start, m.end).map(id=>stationById(id)).filter(Boolean) : [];
+const pst=pheld.find(x=>x.critical) || null;
 out.push({station:st, mealOf:a.empId, start:m.start, end:m.end,
 by: pick? pick.empId : null,
-alsoHolding: (pst && pst.critical)? pst.name : null});
+alsoHolding: pst? pst.name : null});
 });
 return out;
 }
@@ -9983,7 +10003,11 @@ push("warn","License expiring — "+e.name.split(" ")[0],
 {empId:e.id, code:"lic"});
 }
 if(hasCap(lim) && mins > (lim.maxH||0)*60+1)
-push("warn","Over hour cap — "+e.name, fmtHrs(mins)+" scheduled against a "+(lim.maxH||0)+"h cap"+(lim.capSpent? " (their averaging period is already spent)":"")+
+push("warn", (lim.capSpent? "No hours left in the period — " : "Over hour cap — ")+e.name,
+(lim.capSpent
+? fmtHrs(mins)+" scheduled here, but "+cycleLabel(e)+" is already fully spent in the other week"+
+((cyclePeriod(e, ws)||{list:[]}).list.length>2? "s":"")+" of the period, so there is nothing left for this one"
+: fmtHrs(mins)+" scheduled against a "+(lim.maxH||0)+"h cap")+
 (lim.groups.length&&lim.maxH!==e.maxH? " (set by the "+lim.groups.join(" and ")+" group)":"")+".", {empId:e.id, code:"cap"});
 if(cyclesOn()){
 const p=cyclePeriod(e, ws);
@@ -20515,9 +20539,19 @@ const d=r.querySelector("#stdel");
 if(d) d.onclick=()=>{
 S.stations=(S.stations||[]).filter(x=>x.id!==st.id);
 S.stations.forEach(x=>{ if(x.linkedTo===st.id) x.linkedTo=null; });
+ 
+S.coverGroups=(S.coverGroups||[])
+.map(g=>Object.assign({}, g, {sts:(g.sts||[]).filter(y=>y!==st.id)}))
+.filter(g=>(g.sts||[]).length>1);         
+S.stations.forEach(x=>{
+if(x.reliefFrom===st.id) x.reliefFrom="";
+if(String(x.reliefFrom||"").indexOf("grp:")===0 &&
+!(S.coverGroups||[]).some(g=>("grp:"+g.id)===x.reliefFrom)) x.reliefFrom="";
+});
 Object.values(S.weeks).forEach(w=>w.assignments.forEach(a=>{
 if(a.station===st.id) delete a.station;
 if(a.station2===st.id) delete a.station2;
+if(a.stationPlan) a.stationPlan=a.stationPlan.filter(b=>b.st!==st.id);
 if(a.admin) a.admin=a.admin.filter(y=>y!==st.id);
 }));
 save(); closeModal(); render();
@@ -20731,7 +20765,23 @@ root.querySelector("#vachand").onclick=()=>vacManualModal();
 const se=root.querySelector("#vacseed"); if(se) se.onclick=()=>{ S.vacations.seed=1000+Math.floor(Math.random()*9000); save(); render(); };
 const em=root.querySelector("#vacemail2"); if(em) em.onclick=()=>copyText(vacApprovedEmailText(),"Announcement copied — paste into any email");
 root.querySelectorAll("[data-vacdel]").forEach(b=>b.onclick=()=>{ S.vacations.responses=S.vacations.responses.filter(r=>r.empId!==b.dataset.vacdel); save(); render(); });
-root.querySelectorAll("[data-vacoff]").forEach(b=>b.onclick=()=>{ S.timeoff=S.timeoff.filter(t=>String(t.id)!==b.dataset.vacoff); save(); render(); toast("Undone — those days are open again"); });
+root.querySelectorAll("[data-vacoff]").forEach(b=>b.onclick=()=>{
+S.timeoff=S.timeoff.filter(t=>String(t.id)!==b.dataset.vacoff);
+ 
+const U=S.vacations.undo;
+let back=0;
+if(U && Array.isArray(U.responses)){
+(U.responses||[]).forEach(r=>{
+if(!(S.vacations.responses||[]).some(x=>x.empId===r.empId)){
+S.vacations.responses.push(JSON.parse(JSON.stringify(r))); back++;
+}
+});
+if(!(S.vacations.tweaks||[]).length && Array.isArray(U.tweaks) && U.tweaks.length)
+S.vacations.tweaks=JSON.parse(JSON.stringify(U.tweaks));
+}
+save(); render();
+toast("Undone \u2014 those days are open again"+(back? " and "+back+" survey answer"+(back===1?" is":"s are")+" back in the draw":""));
+});
 const run=root.querySelector("#vacrun");
 if(run) run.onclick=()=>vacDrawRender(root.querySelector("#vacout"));
 };
@@ -20776,6 +20826,7 @@ toast("Instruction removed \u2014 worked out again without it"); });
 { const rd=out.querySelector("#vacredo"); if(rd) rd.onclick=()=>{ vacDrawRender(out); toast("Worked out again"); }; }
 const ap=out.querySelector("#vacapply");
 if(ap) ap.onclick=()=>{
+const before=JSON.parse(JSON.stringify(S.vacations.responses||[]));
 R.grants.forEach(g=>{
 const emp=empById(g.empId)||{};
 S.timeoff.push({id:uid("v"), empId:g.empId, type:"Vacation", start:g.from, end:g.to,
@@ -20785,6 +20836,11 @@ usePto: ptoOn()? true : undefined,
 hoursPerDay: ptoOn()? (effLimits(emp).maxH? Math.min(8, Math.round((effLimits(emp).maxH/5)*10)/10) : 8) : undefined});
 S.vacations.responses=S.vacations.responses.filter(r=>r.empId!==g.empId);
 });
+ 
+S.vacations.undo={at:Date.now(),
+responses:JSON.parse(JSON.stringify(before)),
+tweaks:JSON.parse(JSON.stringify(S.vacations.tweaks||[])),
+ids:R.grants.map(g=>g.empId)};
  
 S.vacations.tweaks=[];
 save(); render();
@@ -21239,7 +21295,8 @@ const dow=parseYmd(date).getDay();
 if(S.hours[dow].closed) return true;
 const need=(S.demand[dow]||[]).reduce((t,r)=>t+(r.count||1),0);
 const heads=S.employees.filter(e=>e.active && e.avail[dow]&&e.avail[dow].ok && !onTimeOff(e.id,date)).length;
-return heads - vacCountOn(date, extra) >= need;
+const pending=(extra||[]).filter(g=>date>=g.from && date<=g.to).length;
+return heads - pending >= need;
 }
 function vacFairScore(empId, grants){
  
@@ -21291,7 +21348,9 @@ why:"you asked for choice #"+(t.pick||1)+", and they only sent "+r.picks.length+
  
 const before=grants.slice();
 let why=null;
-for(const d of vacDays(p.from,p.to)){
+{ const clash=vacDays(p.from,p.to).filter(d=>onTimeOff(t.empId, d));
+if(clash.length) why="they are already off on "+prettyDate(clash[0])+", inside this stretch"; }
+if(!why) for(const d of vacDays(p.from,p.to)){
 if(V.opCheck){ if(!vacOpsOk(d, before.concat([{empId:t.empId,from:p.from,to:p.to}]))){ why="on "+prettyDate(d)+" this leaves the floor short"; break; } }
 else if(vacCountOn(d, before)>=(V.maxOff||1)){ why=prettyDate(d)+" already has "+(V.maxOff||1)+" away, your limit"; break; }
 }
@@ -21312,6 +21371,12 @@ const hol=vacOverlapsHoliday(p.from,p.to);
 if(hol){ skipped.push({empId,pick:round+1,from:p.from,to:p.to,why:"overlaps "+hol.name+" — holidays are staffed separately"}); return; }
 if(vacDays(p.from,p.to).length<(V.minDays||1)){ skipped.push({empId,pick:round+1,from:p.from,to:p.to,why:"shorter than the "+V.minDays+"-day minimum — use a normal request instead"}); return; }
 const days=vacDays(p.from,p.to);
+ 
+{ const clash=days.filter(d=>onTimeOff(empId, d));
+if(clash.length){ skipped.push({empId, pick:round+1, from:p.from, to:p.to,
+why: clash.length===days.length
+? "they are already off for the whole of this stretch"
+: "they are already off on "+prettyDate(clash[0])+", inside this stretch"}); return; } }
 let bad=null;
 const withMe=grants.concat([{empId,from:p.from,to:p.to}]);
 for(const d of days){
