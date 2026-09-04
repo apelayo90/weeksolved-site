@@ -1494,6 +1494,9 @@ try{ clearTimeout(bindSaveTimer); }catch(e){}
 try{ clearTimeout(saveTimer); }catch(e){}
 try{ clearInterval(GRACE_TIMER); GRACE_TIMER=null; }catch(e){}
 try{ clearInterval(DEVTIMER); DEVTIMER=null; }catch(e){}
+ 
+try{ clearTimeout(cloudPushTimer); cloudPushTimer=null; }catch(e){}
+try{ cloudRetryStop(); }catch(e){}
 try{ window.TESTER_ID=""; window.TESTER_LIFE=false; window.TESTER_DAYS=0; window.TESTER_FROM=0; }catch(e){}
 }
  
@@ -1510,10 +1513,34 @@ function signOutQuiet(){
 forgetSession();
 try{ return FB.auth.signOut().catch(()=>{}); }catch(e){ return Promise.resolve(); }
 }
+ 
+let LS_TAB_TOLD=false;
+try{ window.addEventListener("storage", ev=>{
+if(!ev || ev.key!==lsKey() || !ev.newValue) return;
+if(typeof S==="undefined" || !S || !S.org) return;
+let d=null; try{ d=JSON.parse(ev.newValue); }catch(e){ return; }
+if(!d || d.v!==3) return;
+if(LS_UID && d._uid && d._uid!==LS_UID) return;
+const dirty = (typeof saveTimer!=="undefined" && saveTimer) ||
+(typeof cloudPushTimer!=="undefined" && cloudPushTimer);
+if(!dirty){
+ 
+try{ S=migrate(d); render(); }catch(e){ return; }
+toast("Updated \u2014 this board is open in another tab");
+return;
+}
+if(LS_TAB_TOLD) return;
+LS_TAB_TOLD=true;
+toast("This board is open in another tab and both of you have unsaved changes. "+
+"Close one of them \u2014 whichever saves last is the one that is kept.",
+{label:"OK", run:()=>{ LS_TAB_TOLD=false; }});
+}); }catch(e){}
+
 let LS_FULL_TOLD=false;
 function lsSave(){
 if(SIGNED_OUT) return;    
-try{ S._at=Date.now(); S._uid=LS_UID||""; localStorage.setItem(lsKey(), JSON.stringify(S)); }
+ 
+try{ S._at=Date.now(); S._uid=LS_UID||""; S._rev=CLOUD_REV||0; localStorage.setItem(lsKey(), JSON.stringify(S)); }
 catch(e){
  
 let saved=false;
@@ -1533,6 +1560,47 @@ const d=JSON.parse(r);
 if(LS_UID && d && d._uid && d._uid!==LS_UID) return null;
 return d; }catch(e){ return null; } }
  
+function restoreBoard(text){
+let o=null;
+try{ o=JSON.parse(text); }catch(e){ toast("That doesn\u2019t look like a backup file"); return; }
+if(!o || typeof o!=="object" || Array.isArray(o) || !Array.isArray(o.employees) || !Array.isArray(o.shifts)){
+toast("That file is not a Weeksolved backup \u2014 it has no team or shifts in it"); return; }
+let next=null;
+try{ next=migrate(o); }catch(e){ toast("That backup could not be read \u2014 nothing has changed"); return; }
+const n=(next.employees||[]).filter(e=>e.active).length, wk=Object.keys(next.weeks||{}).length;
+const name=(next.org&&next.org.name)? String(next.org.name) : "an unnamed business";
+modal("Restore this backup?", `
+    <div class="stack">
+      <div class="banner warn"><div><b>This replaces everything on this device</b> with what is in the file. Whatever is here now goes.</div></div>
+      <div class="card"><div class="body">
+        <div class="lab">What is in the file</div>
+        <div class="mini">${esc(name)} \u00b7 ${n} on the roster \u00b7 ${wk} week${wk===1?"":"s"} saved</div>
+      </div></div>
+      <div class="card"><div class="body">
+        <div class="lab">What is here now</div>
+        <div class="mini">${esc((S.org&&S.org.name)||"an unnamed business")} \u00b7 ${(S.employees||[]).filter(e=>e.active).length} on the roster \u00b7 ${Object.keys(S.weeks||{}).length} week${Object.keys(S.weeks||{}).length===1?"":"s"} saved</div>
+      </div></div>
+    </div>`,
+`<button class="btn" data-close>Cancel</button>
+     <button class="btn" id="rsbak">Back up what is here first</button>
+     <button class="btn primary" id="rsyes">Replace it</button>`,
+r=>{
+r.querySelector("#rsbak").onclick=()=>saveFile("weeksolved-backup.json", JSON.stringify(S,null,2));
+r.querySelector("#rsyes").onclick=()=>{
+const keep=S;
+try{
+S=next; priorityRefresh(); render();      
+save(); closeModal(true); closeModal(true); toast("Restored");
+}catch(e){
+S=keep;
+try{ render(); }catch(_){}
+toast("That backup would not open \u2014 your board has been left as it was");
+}
+};
+});
+}
+
+ 
 function legacyBoard(){
 try{
 const r=localStorage.getItem(LSKEY); if(!r) return null;
@@ -1541,6 +1609,14 @@ return (d && !d._uid) ? d : null;
 }catch(e){ return null; }
 }
 function dropLegacy(){ try{ localStorage.removeItem(LSKEY); localStorage.removeItem(LSKEY_OLD); }catch(e){} }
+ 
+function dropAccountLocal(uid){
+try{
+if(uid){ localStorage.removeItem(lsKeyFor(uid)); }
+else { localStorage.removeItem(LSKEY); localStorage.removeItem(LSKEY_OLD); }
+localStorage.removeItem(PWKEY);
+}catch(e){}
+}
 
  
 const ME = (function(){
@@ -1648,9 +1724,11 @@ return '<div class="lab">Ways to sign in</div><div class="mini">'+esc(ways||"\u2
 'If you once signed in here with a password and it stopped working, this is why: signing in with Google on an '+
 'address that had not been confirmed takes the password off the account. Setting one here puts it back.</div>' : '')+
 (pw && g===false && GOOGLE_SIGNIN && !(u.emailVerified)
-? '<div class="banner warn" style="margin-top:8px"><div><b>Confirm your email address before you use the Google button.</b> '+
-'Signing in with Google on an address that has not been confirmed replaces the password on this account \u2014 your schedule '+
-'is untouched, but the password stops working. Confirming the address first means both ways in keep working.</div></div>'
+? '<div class="banner crit" style="margin-top:8px"><div><b>Confirm this email address.</b> '+
+'Until it is confirmed, anyone who can sign in to Google as <b>'+esc(u.email||"that address")+'</b> can open this account '+
+'and everything in it \u2014 your team, your rules and every week you have built \u2014 and the password here stops working. '+
+'That is how Google sign-in decides who owns an address: whoever proves it. If the address is right, confirm it and '+
+'both ways in keep working. If it has a typo in it, write to support@weeksolved.com before you put anything real in here.</div></div>'
 : '')+
 '<div class="mini" id="acwaysnote" style="margin-top:6px"></div>';
 }
@@ -2127,8 +2205,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "128ec1d2";       
-const BUILD_AT = "2026-09-04 07:59 UTC";       
+const BUILD_ID = "93f8f82e";       
+const BUILD_AT = "2026-09-04 08:50 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -2242,15 +2320,18 @@ catch(e){ authScreen("Couldn't reach your board. Check the connection and sign i
 });
 }
 
+let CLOUD_ENTERING=false;
 async function cloudEnter(){
 const uid=FB.user.uid;
+CLOUD_ENTERING=true;
+try{ clearTimeout(cloudPushTimer); cloudPushTimer=null; }catch(e){}
 const prof=await FB.db.doc("users/"+uid+"/meta/profile").get();
 if(!prof.exists){
  
-if(googleOnlyUser(FB.user)){ codeScreen(); return; }
+if(googleOnlyUser(FB.user)){ codeScreen(); CLOUD_ENTERING=false; return; }
 await signOutQuiet();
 authScreen("That account isn't part of this test. Create one with the access code you were given.");
-return;
+CLOUD_ENTERING=false; return;
 }
 const p=prof.data()||{};
  
@@ -2263,7 +2344,7 @@ window.TESTER_DAYS=(p.days||30)+extra;
 window.TESTER_FROM=p.activated||0;
 const expMs=(p.activated||0)+((p.days||30)+extra)*86400000;
 const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
-if(!p.life && (Date.now()>expMs || Date.now()>hardEnd)){ expiredScreen(); return; }
+if(!p.life && (Date.now()>expMs || Date.now()>hardEnd)){ expiredScreen(); CLOUD_ENTERING=false; return; }
  
 if(ndaNeeded() && !ndaCurrent()){
 let sawNda=null;
@@ -2271,7 +2352,7 @@ try{ const t=await FB.db.collection("users/"+uid+"/terms").get();
 (t.docs||[]).forEach(d=>{ const x=d.data()||{};
 if(x.hash==="nda" && String(x.v)===String(NDA_VERSION)) sawNda=x; }); }catch(e){}
 if(sawNda){ try{ localStorage.setItem(NDAKEY, JSON.stringify(sawNda)); }catch(e){} }
-else { ndaScreen(); return; }
+else { ndaScreen(); CLOUD_ENTERING=false; return; }
 }
 if(!termsCurrent()){
 let seen=null;
@@ -2279,7 +2360,7 @@ try{ const t=await FB.db.collection("users/"+uid+"/terms").get();
 (t.docs||[]).forEach(d=>{ const x=d.data()||{};
 if(String(x.v)===String(TERMS_VERSION)) seen=x; }); }catch(e){}
 if(seen){ try{ localStorage.setItem(TERMSKEY, JSON.stringify(seen)); }catch(e){} }
-else { termsUpdateScreen(); return; }
+else { termsUpdateScreen(); CLOUD_ENTERING=false; return; }
 }
 
 WKHASH={};
@@ -2288,10 +2369,17 @@ SIGNED_OUT = false;
 LS_UID = uid;                        
 const remote=await cloudFetchAll(uid);
 const local=lsLoad();                
+ 
+CLOUD_ENTERING=false;
 if(remote){
 CLOUD_REV=remote.rev;
-const localAt=local? (local._at||0):0;
-if(!local || remote.at>=localAt){ S=migrate(remote.state); lsSave(); if(remote.legacy) cloudPushNow(); }
+ 
+const localRev = local && local._rev!=null ? local._rev : null;
+const localAt  = local? (local._at||0):0;
+const localAhead = !local ? false
+: localRev!=null ? (localRev >= (remote.rev||0))
+: (localAt > remote.at);
+if(!localAhead){ S=migrate(remote.state); lsSave(); if(remote.legacy) cloudPushNow(); }
 else { S=migrate(local); cloudPushNow(); }    
 } else if(local && local.v===3){
 S=migrate(local); cloudPushNow();
@@ -2345,11 +2433,44 @@ cloudUnsub=FB.db.doc("users/"+uid+"/board/current").onSnapshot(async sn=>{
 if(!sn.exists || (sn.metadata&&sn.metadata.hasPendingWrites)) return;
 const d=sn.data()||{};
 if((d.rev||0)<=CLOUD_REV) return;
-CLOUD_REV=d.rev||0;
+const rev=d.rev||0;
 try{
 const before={n:S.org.name, ids:S.employees.map(e=>e.id)};
 const r=await cloudFetchAll(uid);
-if(r){ S=migrate(r.state); rosterSwapCheck(before); lsSave(); render(); toast("Updated from your other device"); }
+if(!r) return;
+ 
+if(cloudPushTimer || CLOUD_RETRY){
+const mine=S, theirs=migrate(r.state);
+modal("Your other device changed the schedule", `
+          <div class="stack">
+            <div class="banner warn"><div><b>Both of you have been editing.</b> This device has changes that have not gone up yet, and your other device has just saved a different version. Only one of them can be kept.</div></div>
+            <div class="card"><div class="body">
+              <div class="lab">On this device</div>
+              <div class="mini">${esc((mine.org&&mine.org.name)||"your business")} · ${(mine.employees||[]).filter(e=>e.active).length} on the roster · ${Object.keys(mine.weeks||{}).length} week${Object.keys(mine.weeks||{}).length===1?"":"s"} saved</div>
+            </div></div>
+            <div class="card"><div class="body">
+              <div class="lab">From your other device</div>
+              <div class="mini">${esc((theirs.org&&theirs.org.name)||"your business")} · ${(theirs.employees||[]).filter(e=>e.active).length} on the roster · ${Object.keys(theirs.weeks||{}).length} week${Object.keys(theirs.weeks||{}).length===1?"":"s"} saved · saved ${esc(new Date(d.at||Date.now()).toLocaleString([],{dateStyle:"medium",timeStyle:"short"}))}</div>
+            </div></div>
+            <div class="help">Take a backup first if you are not sure — Settings → Back up. Whichever you keep is what both devices will show.</div>
+          </div>`,
+`<button class="btn" id="cfmine">Keep what is on this device</button>
+           <button class="btn primary" id="cftheirs">Use the other device\u2019s version</button>`,
+rr=>{
+const keepMine=()=>{ closeModal(true); CLOUD_REV=rev; cloudPushNow();
+toast("Kept this device\u2019s version \u2014 sending it up"); };
+MODAL_GUARD=keepMine;                        
+rr.querySelectorAll("[data-close]").forEach(b=>b.onclick=keepMine);
+rr.querySelector("#cfmine").onclick=keepMine;
+rr.querySelector("#cftheirs").onclick=()=>{ closeModal(true);
+try{ clearTimeout(cloudPushTimer); }catch(e){} cloudPushTimer=null; cloudRetryStop();
+CLOUD_REV=rev; S=theirs; rosterSwapCheck(before); lsSave(); render();
+toast("Using your other device\u2019s version"); };
+});
+return;
+}
+CLOUD_REV=rev;
+S=migrate(r.state); rosterSwapCheck(before); lsSave(); render(); toast("Updated from your other device");
 }catch(e){}
 });
 }
@@ -2535,12 +2656,19 @@ function staffCount(){ return (S.employees||[]).length; }
 function staffRoom(){ return Math.max(0, MAX_STAFF - staffCount()); }
  
 const DOC_LIMIT = 1048576, DOC_SAFE = 950000;
+ 
+function utf8Len(str){
+try{ if(typeof TextEncoder!=="undefined") return new TextEncoder().encode(str).length; }catch(e){}
+let n=0; for(let i=0;i<str.length;i++){ const c=str.charCodeAt(i);
+n += c<0x80 ? 1 : c<0x800 ? 2 : (c>=0xD800 && c<0xDC00) ? 2 : 3; }
+return n;
+}
 function oversizeDoc(){
-const board=coreJson().length;
+const board=utf8Len(coreJson());
 if(board>DOC_SAFE) return {what:"your team and settings", bytes:board};
 let worst=null;
 Object.keys(S.weeks||{}).forEach(ws=>{
-const n=JSON.stringify(S.weeks[ws]).length;
+const n=utf8Len(JSON.stringify(S.weeks[ws]));
 if(n>DOC_SAFE && (!worst||n>worst.bytes)) worst={what:"the week of "+prettyDate(ws), bytes:n};
 });
 return worst;
@@ -2549,11 +2677,14 @@ return worst;
 function coreJson(){
 const c=Object.assign({}, S);
 c.weeks={};
-delete c._uid; delete c._at;
+delete c._uid; delete c._at; delete c._rev;
 return JSON.stringify(c);
 }
 function cloudPushNow(){
-if(!FB || !FB.user) return;
+if(!FB || !FB.user || SIGNED_OUT) return;
+ 
+if(CLOUD_ENTERING) return;
+if(LS_UID && LS_UID!==FB.user.uid) return;
  
 { const big=oversizeDoc();
 if(big){
@@ -2564,7 +2695,8 @@ return;
 }
 cloudPushNow._told=false;
 }
-CLOUD_REV++;
+ 
+const rev=CLOUD_REV+1;
 const uid=FB.user.uid;
 const jobs=[];
  
@@ -2582,21 +2714,37 @@ if(ref.delete) jobs.push(ref.delete().then(()=>{ delete WKHASH[ws]; }).catch(()=
 else delete WKHASH[ws];
 });
 Promise.all(jobs)
-.then(()=>FB.db.doc("users/"+uid+"/board/current").set({json:coreJson(), split:true, rev:CLOUD_REV, at:Date.now()}))
-.then(()=>setSync(true,"Saved to your account"))
+.then(()=>FB.db.doc("users/"+uid+"/board/current").set({json:coreJson(), split:true, rev:rev, at:Date.now()}))
+.then(()=>{ CLOUD_REV=rev; cloudPushNow._toldErr=false; cloudRetryStop(); setSync(true,"Saved to your account"); })
 .catch(err=>{
  
 const code=(err&&(err.code||err.message)||"").toString();
 const offline = /unavailable|network|failed to get|deadline/i.test(code) || (typeof navigator!=="undefined" && navigator.onLine===false);
-if(offline) setSync(false,"Offline \u2014 kept on this device, sends when you\u2019re back");
+if(offline){ setSync(false,"Offline \u2014 kept on this device, sends when you\u2019re back"); cloudRetryStart(); }
 else {
 setSync(false,"Couldn\u2019t save to your account \u2014 it\u2019s safe on this device");
 S.mail=S.mail||{}; S.lastSyncErr=code.slice(0,160);
 if(!cloudPushNow._toldErr){ cloudPushNow._toldErr=true;
 toast("Saved here, but your account refused it \u2014 Settings has the reason"); }
+cloudRetryStart();
 }
 });
 }
+ 
+let CLOUD_RETRY=null, CLOUD_RETRY_MS=30000;
+function cloudRetryStop(){ if(CLOUD_RETRY){ clearTimeout(CLOUD_RETRY); CLOUD_RETRY=null; } CLOUD_RETRY_MS=30000; }
+function cloudRetryStart(){
+if(CLOUD_RETRY) return;
+CLOUD_RETRY=setTimeout(()=>{
+CLOUD_RETRY=null;
+CLOUD_RETRY_MS=Math.min(CLOUD_RETRY_MS*2, 300000);
+if(FB && FB.user && !SIGNED_OUT) cloudPushNow();
+}, CLOUD_RETRY_MS);
+}
+try{ window.addEventListener("online", ()=>{
+cloudRetryStop();
+if(FB && FB.user && !SIGNED_OUT) cloudPushNow();
+}); }catch(e){}
 async function cloudFetchAll(uid){
 const board=await FB.db.doc("users/"+uid+"/board/current").get();
 if(!board.exists || !(board.data()||{}).json) return null;
@@ -3428,7 +3576,7 @@ modal("Clear this device", `
        <button class="btn" id="dabak0">Back it up first</button>
        <button class="btn danger" id="dawipe">Clear this device</button>`,
 r=>{ r.querySelector("#dabak0").onclick=()=>saveFile("weeksolved-backup.json", JSON.stringify(S,null,2));
-r.querySelector("#dawipe").onclick=()=>{ try{ localStorage.clear(); }catch(e){} location.reload(); }; });
+r.querySelector("#dawipe").onclick=()=>{ dropAccountLocal(null); location.reload(); }; });
 return;
 }
 modal("Delete your account", `
@@ -3476,7 +3624,7 @@ return;
 }
 if(cloudUnsub){ try{ cloudUnsub(); }catch(e){} cloudUnsub=null; }
 await u.delete();
-try{ localStorage.clear(); }catch(e){}
+dropAccountLocal(u.uid);
 document.body.innerHTML='<div class="gate"><div class="gatebox"><div class="gatemark">WS</div>'+
 '<h1>Weeksolved</h1><p class="gsub">Your account is gone. Thank you for trying it.</p>'+
 '<p class="gfoot">Nothing of yours is left in the app. If you kept a backup you can restore it into a new account any time.</p></div></div>';
@@ -4332,6 +4480,11 @@ return new Set(peekWeek(ws).assignments.filter(a=>a.empId===empId).map(a=>a.date
 }
 function onTimeOff(empId, date){
 return S.timeoff.some(t=>t.empId===empId && t.status!=="denied" && date>=t.start && date<=t.end);
+}
+ 
+function onTimeOffShift(empId, date, endMin){
+if(onTimeOff(empId, date)) return true;
+return (endMin>1440) && onTimeOff(empId, addDays(date,1));
 }
 function timeOffFor(empId,date){
 return S.timeoff.find(t=>t.empId===empId && t.status!=="denied" && date>=t.start && date<=t.end);
@@ -5579,7 +5732,7 @@ if(!slot.roleId && !e.roleIds.length) return false;
 const [aMin,bMin] = shiftMinutes(slot.sh);
 const gapM=(()=>{const g=shiftGap(slot.sh); return g? g.to-g.from : 0;})();
 if(!availOk(e,dow,aMin,bMin)) return false;
-if(onTimeOff(e.id,date)) return false;
+if(onTimeOffShift(e.id,date,bMin)) return false;
 if(e.licExp && date>e.licExp && empLicensed(e)) return false;    
 if(!cycleWorksOn(e,date)) return false;              
 if(minorsOn() && minorBlock(e, date, dow, aMin, bMin, (state[e.id]||{min:0}).min, null)) return false;
@@ -5951,7 +6104,7 @@ if(!availOk(e,slot.dow,aMin,bMin)) return;
 if(minorBlock(e, slot.date, slot.dow, aMin, bMin, empWeekMinutes(e.id,ws), ws)) return;    
 if(traineeExtra() && isTrainee(e, slot.date)) return;    
 if(!cycleWorksOn(e,slot.date)) return;                      
-if(onTimeOff(e.id,slot.date)) return;                       
+if(onTimeOffShift(e.id,slot.date,bMin)) return;             
  
 if(empLicensed(e) && e.licExp && slot.date > e.licExp) return;
 if(lim.maxShiftH && paidSpan(aMin,bMin,0) > lim.maxShiftH*60) return; 
@@ -8082,7 +8235,9 @@ function whyNot(e, sl, ws){
 const sh=shiftById(sl.shiftId); if(!sh) return "that shift no longer exists";
 const [a,b]=shiftMinutes(sh);
 if(sl.roleId && !e.roleIds.includes(sl.roleId)) return "they\u2019re not in the "+roleName(sl.roleId)+" group";
-if(onTimeOff(e.id, sl.date)) return "they have time off that day";
+if(onTimeOffShift(e.id, sl.date, b)) return (b>1440 && !onTimeOff(e.id, sl.date))
+? "they have time off the next morning, and this one runs past midnight"
+: "they have time off that day";
 if(!availOk(e, sl.dow, a, b)) return DAYS[sl.dow]+" is a day they don\u2019t work";
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return "they\u2019re already on the schedule that day";
 { const ab=apartOn()? apartBlock(e.id, sl.date, a, b, getWeek(ws).assignments) : null; if(ab) return apartWhy(ab); }
@@ -8199,7 +8354,7 @@ if(sl.roleId && !e.roleIds.includes(sl.roleId)) return false;
 const sh=shiftById(sl.shiftId); if(!sh) return false;
 const [a,b]=shiftMinutes(sh);
 if(!availOk(e,sl.dow,a,b)) return false;
-if(onTimeOff(e.id,sl.date)) return false;
+if(onTimeOffShift(e.id,sl.date,b)) return false;
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return false;
 return !!reqBlocks(e,sl.date,a,b,empWeekMinutes(e.id,ws));
 });
@@ -9855,8 +10010,9 @@ S.weeks[k].assignments.forEach(a=>{ if(a.empId===empId && a.date>=from && a.date
 });
 return t;
 }
+ 
 function ptoUsedH(e, from, to){
-let h=0;
+const perDay={};
 (S.timeoff||[]).forEach(t=>{
 if(t.empId!==e.id || t.status!=="approved" || !t.usePto) return;
 let d=t.start<from? from : t.start;
@@ -9864,10 +10020,14 @@ const end=t.end>to? to : t.end;
 let guard=0;
 while(d<=end && guard++<400){
 const dow=parseYmd(d).getDay();
-if(!S.hours[dow].closed) h+=(t.hoursPerDay || e.holidayPayH || 8);
+if(!S.hours[dow].closed){
+const hrs=(t.hoursPerDay || e.holidayPayH || 8);
+if(!(perDay[d]>hrs)) perDay[d]=hrs;
+}
 d=addDays(d,1);
 }
 });
+let h=0; Object.keys(perDay).forEach(d=>{ h+=perDay[d]; });
 return h;
 }
  
@@ -10197,6 +10357,10 @@ push("crit","Outside stated availability — "+e.name, DSHORT[dow]+" "+m2disp(a.
 if(onTimeOff(e.id,d)){
 const t=timeOffFor(e.id,d);
 push("crit","Scheduled during time off — "+e.name, (t?t.type:"Time off")+" "+prettyDate(t?t.start:d)+"–"+prettyDate(t?t.end:d)+".", {date:d,empId:e.id, code:"timeoff", aId:a.id});
+}
+else if(a.endMin>1440 && onTimeOff(e.id, addDays(d,1))){
+const t=timeOffFor(e.id, addDays(d,1));
+push("crit","Runs into their time off — "+e.name, DSHORT[dow]+" "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+" carries on past midnight into "+(t?t.type:"time off")+" "+prettyDate(t?t.start:addDays(d,1))+"\u2013"+prettyDate(t?t.end:addDays(d,1))+".", {date:d,empId:e.id, code:"timeoff", aId:a.id});
 }
 });
 });
@@ -11538,6 +11702,16 @@ return `
     ${wk.auto && wk.suggested && !wk.published && !(S.ui&&S.ui.autoTipSeen)? `<div class="hnotice"><span><b>Weeksolved drafted this week when you opened it</b> \u2014 a starting point, nothing more. It is not posted, nobody has seen it, and Draft again gives you a different take.</span>
       <button class="btn sm" id="autotipok" style="flex:none">Got it</button></div>`:""}
     ${queueCard(null)}
+    ${(function(){
+ 
+try{
+if(!(typeof FB!=="undefined" && FB && FB.user)) return "";
+if(!GOOGLE_SIGNIN || FB.user.emailVerified) return "";
+if(!hasProvider(FB.user,"password") || hasProvider(FB.user,"google.com")) return "";
+return `<div class="hnotice"><span><b>Confirm your email address.</b> Until ${esc(FB.user.email||"it")} is confirmed, anyone who can sign in to Google as that address can open this account.</span>
+          <button class="btn sm primary" data-go="settings" style="flex:none">Confirm it</button></div>`;
+}catch(e){ return ""; }
+})()}
     ${updDue()? `<div class="hnotice"><span><b>Weeksolved was updated.</b> A few new settings arrived — your setup and team are untouched.</span>
       <button class="btn sm primary" id="updgo" style="flex:none">Review — 1 min</button></div>`:""}
     ${S.sample? `<div class="hnotice"><span>This is a <b>sample business</b> — poke around freely, then make it yours.</span>
@@ -12527,9 +12701,7 @@ const rs=root.querySelector("#setrestore");
 if(rs) rs.onclick=()=>modal("Restore from a backup",
 `<div class="field"><label>Paste the backup file's contents</label><textarea id="rsbox" style="min-height:180px;font-family:'IBM Plex Mono',monospace;font-size:11px"></textarea></div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="rsgo">Restore</button>`,
-r=>{ r.querySelector("#rsgo").onclick=()=>{
-try{ S=migrate(JSON.parse(r.querySelector("#rsbox").value)); priorityRefresh(); save(); closeModal(); render(); toast("Restored"); }
-catch(e){ toast("That doesn't look like a backup file"); } }; });
+r=>{ r.querySelector("#rsgo").onclick=()=>{ restoreBoard(r.querySelector("#rsbox").value); }; });
 const so=root.querySelector("#setsignout");
 if(so) so.onclick=()=>{ signOutClean(); };
 const sw=root.querySelector("#setswapok");
