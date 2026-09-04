@@ -1274,6 +1274,8 @@ tiers:[[360,1],[600,2],[840,3],[1080,4],[1320,5]],
 minShiftMin:210 },
 premium:"One extra hour of pay at the regular rate per day for a missed/late meal period, plus one more for missed rest — up to 2 hours per day.",
 note:"Meal must begin before the end of the 5th hour worked. A 2nd meal is owed past 10 hours and must begin before the end of the 10th hour. Rest is 10 paid minutes per 4 hours worked or major fraction thereof.",
+ 
+minorBreak:{ meal:{} },
 minorNote:"16–17 yr olds: max 4 h/school day, 48 h/week; 14–15: max 3 h/school day, 18 h/school week."
 },
 WA:{ name:"Washington", short:"WA",
@@ -1283,6 +1285,8 @@ second:{ afterMin:600, mustStartByMin:660, waivableIfShiftUnderMin:0, requiresFi
 rest:{ lengthMin:10, paid:true, tiers:[[360,1],[600,2],[840,3],[1080,4]], minShiftMin:180 },
 premium:"Missed breaks are compensable time worked.",
 note:"30-minute meal between the 3rd and 5th hour; 10 paid minutes per 4 hours worked, scheduled no more than 3 hours from shift start.",
+ 
+minorBreak:{ meal:{ firstAfterMin:241, mustStartByMin:240, lengthMin:30, second:null } },
 minorNote:"Minors: 30-min meal after no more than 4 hours; 10-min rest per 4 hours." },
 OR:{ name:"Oregon", short:"OR",
 meal:{ firstAfterMin:361, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0,
@@ -1291,6 +1295,8 @@ second:{ afterMin:840, mustStartByMin:780, waivableIfShiftUnderMin:0, requiresFi
 rest:{ lengthMin:10, paid:true, tiers:[[360,1],[600,2],[840,3],[1080,4],[1320,5],[1440,6]], minShiftMin:121 },
 premium:"Unpaid break time is wages owed.",
 note:"Meal required for shifts over 6 hours, taken between the 2nd and 5th hour. Paid 10-minute rest for each 4-hour segment.",
+ 
+minorBreak:{ rest:{ lengthMin:15 } },
 minorNote:"Minors get a 30-min meal per 8-hour shift and 15-min (not 10) rest breaks." },
 NY:{ name:"New York", short:"NY",
 meal:{ firstAfterMin:361, mustStartByMin:360, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
@@ -1298,12 +1304,15 @@ rest:null,
 premium:"No statutory premium; unprovided meal periods are a Labor Law violation.",
  
 note:"Non-factory employees working more than 6 hours over the noon period get a 30-minute lunch \u2014 that is the rule Weeksolved applies. New York also gives an extra 20-minute meal between 5 and 7pm on shifts starting before 11am and ending after 7pm, and conditions the midday meal on the shift spanning the noon period; Weeksolved does not work either of those out for you, so check them yourself on any long or evening shift. No statutory rest breaks.",
+ 
+minorBreak:{ meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, second:null } },
 minorNote:"Minors under 18: 30-minute meal after 5 consecutive hours." },
 CO:{ name:"Colorado", short:"CO",
 meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
 rest:{ lengthMin:10, paid:true, tiers:[[360,1],[600,2],[840,3],[1080,4],[1320,5],[1440,6]], minShiftMin:121 },
 premium:"Missed rest periods are paid as time worked.",
 note:"30-minute uninterrupted meal for shifts over 5 hours; 10 paid minutes per 4 hours worked.",
+minorBreak:{ meal:{} },
 minorNote:"Minors under 18: 30-minute meal after 5 consecutive hours." },
 IL:{ name:"Illinois", short:"IL",
 meal:{ firstAfterMin:451, mustStartByMin:300, lengthMin:20, paid:false, waivableIfShiftUnderMin:0,
@@ -1312,12 +1321,16 @@ second:{ afterMin:750, mustStartByMin:750, waivableIfShiftUnderMin:0, requiresFi
 rest:null,
 premium:"One Day Rest In Seven Act: civil penalties per offense.",
 note:"20-minute meal no later than 5 hours into a shift of 7.5 hours or more, plus another for each additional 4.5 hours. Employees are owed 24 consecutive hours of rest every calendar week.",
+ 
+minorBreak:{ meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, second:null } },
 minorNote:"Minors: 30-minute meal after 5 consecutive hours." },
 NV:{ name:"Nevada", short:"NV",
 meal:{ firstAfterMin:481, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
 rest:{ lengthMin:10, paid:true, tiers:[[420,1],[660,2],[900,3],[1140,4]], minShiftMin:210 },
 premium:"Unprovided breaks are wages owed.",
 note:"30-minute meal for continuous shifts of 8 hours or more; 10 paid minutes per 4 hours worked.",
+ 
+minorBreak:{ meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, second:null } },
 minorNote:"Minors: 30-minute meal after 5 consecutive hours." },
 NONE:{ name:"No break rules (I'll set my own)", short:"—", meal:null, rest:null,
 note:"No jurisdiction rules applied. Break lengths below are used exactly as you set them.", minorNote:"" }
@@ -2205,8 +2218,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "44d76ba7";       
-const BUILD_AT = "2026-09-04 09:27 UTC";       
+const BUILD_ID = "63e0db3a";       
+const BUILD_AT = "2026-09-04 09:53 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -4124,14 +4137,27 @@ return parts.join(" \u00b7 ");
  
 function computeBreaks(startMin, endMin, opts){
 opts = opts || {};
-const L = law();
+let L = law();
+ 
+const minorHere = !!(opts.emp && minorsOn() && L.minorBreak
+&& (function(){ const a=ageOnDate(opts.emp, opts.date || (opts.a && opts.a.date) || ymd(new Date())); return a!==null && a<18; })());
+if(minorHere){
+const mb=L.minorBreak;
+L = Object.assign({}, L);
+if(mb.meal) L.meal = Object.assign({}, L.meal || {paid:false, waivableIfShiftUnderMin:0, second:null}, mb.meal);
+if(mb.rest) L.rest = Object.assign({}, L.rest || {paid:true, tiers:[[360,1],[600,2],[840,3],[1080,4]], minShiftMin:180}, mb.rest);
+if(L.meal){                                     
+L.meal = Object.assign({}, L.meal, {waivableIfShiftUnderMin:0});
+if(L.meal.second) L.meal.second = Object.assign({}, L.meal.second, {waivableIfShiftUnderMin:0});
+}
+}
  
 const g = (opts.gap && opts.gap.to > opts.gap.from
 && opts.gap.from >= startMin && opts.gap.to <= endMin) ? opts.gap : null;
 const gapLen = g? g.to - g.from : 0;
 const span = endMin - startMin;
 const worked = span - gapLen;
-const out = { meals:[], rests:[], notes:[], owed:{meals:0,rests:0}, worked, netWorked:worked, span, gap:g };
+const out = { meals:[], rests:[], notes:[], owed:{meals:0,rests:0}, worked, netWorked:worked, span, gap:g, minor:minorHere };
 if(worked<=0) return out;
 const before = g? g.from - startMin : span;       
  
@@ -4195,6 +4221,7 @@ out.owed.rests = nRest;
 out.rests = layRests(startMin, endMin, out.meals, nRest, L.rest? L.rest.lengthMin : 10, g);
 
 out.netWorked = netWorked;
+if(minorHere && (out.owed.meals || out.owed.rests)) out.notes.push("Under-18 break rules applied");
 if(mealMode==="self") out.notes.push("Meal times coordinated by staff");
 else if(mealMode==="lengths") out.notes.push("Meal length set, timing by staff");
 if(restMode==="self") out.notes.push("Rest breaks coordinated by staff");
@@ -4797,7 +4824,8 @@ if(m){ aMin=(+m[1])*60+(+m[2]); bMin=(+m[3])*60+(+m[4]); }
 else { const hr=S.hours[d.dow]; if(hr && !hr.closed){ aMin=t2m(hr.open); bMin=t2m(hr.close); } else { aMin=600; bMin=840; } }
 if(bMin<=aMin) bMin=aMin+240;
  
-if(minorsOn() && minorBlock(e, d.date, d.dow, aMin, bMin, 0, ws)) return;
+const sofar=assignments.filter(x=>x.empId===e.id).reduce((t,x)=>t+paidMinutes(x),0);
+if(minorsOn() && minorBlock(e, d.date, d.dow, aMin, bMin, sofar, ws)) return;
 const match=S.shifts.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===aMin&&y===bMin; });
 const a={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:match? match.id:null,
 startMin:aMin, endMin:bMin, roleId:rrow.roleId||e.roleIds[0]||null, locked:true, holAssign:h.id};
@@ -5504,11 +5532,14 @@ save(); render(); }});
 }
 
 const MINOR_FED = {sd:3, sw:18, nd:8, nw:40, from:"07:00", to:"19:00", summerTo:"21:00"};
+ 
 const MINOR_STATE = {
 CA:{ a16:{sd:4, sw:48, nd:8, nw:48, from:"05:00", to:"22:00"} },
 WA:{ a14:{sw:16}, a16:{sd:4, sw:20, nd:8, nw:48, from:"07:00", to:"22:00"} },
-CO:{ a14:{from:"05:00", to:"21:30"} },
-OR:{}, NY:{}, IL:{}, NV:{}, FED:{}, NONE:{}
+CO:{ a14:{from:"05:00", to:"21:30"}, a16:{sd:8, sw:40, nd:8, nw:40} },
+OR:{ a16:{sd:10, sw:44, nd:10, nw:44} },
+NY:{ a16:{sd:4, sw:28, nd:8, nw:48, from:"06:00", to:"22:00", summerTo:"24:00"} },
+IL:{}, NV:{}, FED:{}, NONE:{}
 };
 function minorsOn(){ return !!(S.rules && S.rules.minorsOn); }
 
@@ -5632,9 +5663,21 @@ const s16=st.a16;
 if(!s16) return null;
 return Object.assign({}, s16);
 }
+ 
+function schoolTermSet(){
+const sc=(S.org.school)||{};
+return !!(sc.from && sc.to);
+}
 function schoolDayOn(date){
 const sc=(S.org.school)||{};
-if(!sc.from || !sc.to) return false;                  
+if(!sc.from || !sc.to){
+ 
+const d=parseYmd(date).getDay();
+if(d===0 || d===6) return false;
+if(inSummerWindow(date)) return false;
+if((S.holidays.list||[]).some(h=>h.date===date)) return false;
+return true;
+}
 if(date < sc.from || date > sc.to) return false;
 const d=parseYmd(date).getDay();
 if(!(sc.days||[1,2,3,4,5]).includes(d)) return false;
@@ -5968,6 +6011,15 @@ if(U.restH) L.minRestH = Math.max(L.minRestH||0, U.restH);
 if(U.maxConsecH) L.maxStretchH = Math.min(L.maxStretchH||99, U.maxConsecH);
 L.noSplit = !!U.noSplit;
 }
+ 
+L.otWeeklyH = +S.org.otWeeklyH>0? +S.org.otWeeklyH : 40;
+L.otDailyH  = +S.org.otDailyH>0?  +S.org.otDailyH  : 0;
+if(unionOn()){
+const U=union();
+if(U.otWeeklyH>0) L.otWeeklyH = Math.min(L.otWeeklyH, U.otWeeklyH);
+if(U.otDailyH>0)  L.otDailyH  = L.otDailyH? Math.min(L.otDailyH, U.otDailyH) : U.otDailyH;
+L.otFromAgreement = (U.otWeeklyH>0 && U.otWeeklyH<=L.otWeeklyH) || (U.otDailyH>0 && U.otDailyH<=(L.otDailyH||99));
+}
 return L;
 }
 
@@ -6118,11 +6170,13 @@ const [aMin,bMin]=shiftMinutes(sh);
 const wk=peekWeek(ws);
 const out=[];
 const when=DSHORT[slot.dow]+" "+prettyDate(slot.date);
-const otLine=(S.org.otWeeklyH||40)*60;
 
 S.employees.filter(e=>e.active).forEach(e=>{
 if(slot.roleId && !e.roleIds.includes(slot.roleId)) return;
 const lim=effLimits(e, ws);
+ 
+const otLine=(lim.otWeeklyH||40)*60;
+const otWord=(lim.otWeeklyH||40)+"h line"+(lim.otFromAgreement? " in your agreement" : "");
 const mins=empWeekMinutes(e.id,ws), add=paidEstimate(aMin,bMin);
 const total=mins+add;
 const sameDay=wk.assignments.filter(a=>a.empId===e.id && a.date===slot.date);
@@ -6208,8 +6262,8 @@ const overOT=Math.max(0, total - otLine);
 if(overOT > 1){
 out.push({kind:"overtime", emp:e, rank:4,
 title:"Ask "+e.name+" to work overtime",
-why:"Would take them to "+fmtHrs(total)+" — "+fmtHrs(overOT)+" past the "+(S.org.otWeeklyH||40)+
-"h line"+(e.rate? ", about "+money(overOT/60*e.rate*1.5)+" at time and a half":"")+".",
+why:"Would take them to "+fmtHrs(total)+" \u2014 "+fmtHrs(overOT)+" past the "+otWord
++(e.rate? ", about "+money(overOT/60*e.rate*1.5)+" at time and a half":"")+".",
 cost: e.rate? (add-overOT)/60*e.rate + overOT/60*e.rate*1.5 : 0,
 apply:()=>placeInSlot(e,slot,ws,{overtime:true})});
 } else {
@@ -6218,8 +6272,8 @@ if(overCap) bits.push(fmtHrs(total - lim.maxH*60)+" past their usual "+lim.maxH+
 if(overDays) bits.push("a "+(days+1)+(days+1===6?"th":days+1===7?"th":"th")+" day, one more than they normally do");
 out.push({kind:"extra", emp:e, rank:2,
 title:"Ask "+e.name+" to pick up an extra shift",
-why:"Would take them to "+fmtHrs(total)+" — "+bits.join(" and ")+". Still under the "+
-(S.org.otWeeklyH||40)+"h line, so it's paid at the normal rate"+(e.rate? " (about "+money(add/60*e.rate)+")":"")+".",
+why:"Would take them to "+fmtHrs(total)+" \u2014 "+bits.join(" and ")+". Still under the "+
+otWord+", so it's paid at the normal rate"+(e.rate? " (about "+money(add/60*e.rate)+")":"")+".",
 cost: e.rate? add/60*e.rate : 0,
 apply:()=>placeInSlot(e,slot,ws,{extra:true})});
 }
@@ -10384,6 +10438,16 @@ DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+", past the "+union().otDailyH+"h 
 {date:d,empId:e.id,premium:true,posted:!!wk.published && !postPending(wk), code:"union", aIds:list.map(a=>a.id)});
 if(dtDailyMin() && dm > dtDailyMin()+1)
 push("warn","Double time — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+S.org.dtDailyH+"h).", {date:d,empId:e.id, code:"dot", aIds:list.map(a=>a.id)});
+ 
+if(minorsOn() && e.birth){
+list.forEach(a=>{
+const soFar=mine.filter(x=>x.id!==a.id).reduce((t,x)=>t+paidMinutes(x),0);
+const why=minorBlock(e, d, dow, a.startMin, a.endMin, soFar, ws);
+if(why) push("crit","Under-18 limit — "+e.name,
+DSHORT[dow]+" "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+": "+why+".",
+{date:d, empId:e.id, code:"minor", aId:a.id});
+});
+}
 list.forEach(a=>{
 if(!availOk(e,dow,a.startMin,a.endMin))
 push("crit","Outside stated availability — "+e.name, DSHORT[dow]+" "+m2disp(a.startMin)+"–"+m2disp(a.endMin)+" falls outside the hours "+e.name.split(" ")[0]+" can work.", {date:d,empId:e.id, code:"avail", aId:a.id});
@@ -12497,7 +12561,7 @@ return m.length? m.length+" on the roster: "+esc(m.map(x=>x.name.split(" ")[0]+"
 `<select data-set="rules.minorsOn"><option value="0" ${minorsOn()?"":"selected"}>Off</option><option value="1" ${minorsOn()?"selected":""}>On</option></select>`)}
       ${minorsOn()? setRow("Your local school year", (S.org.school&&S.org.school.from)
 ? "Term runs "+esc(prettyDate(S.org.school.from))+" to "+esc(prettyDate(S.org.school.to))+" \u2014 school days are Mon to Fri, minus any holiday you\u2019ve listed"
-: "Not set \u2014 without term dates every day counts as a non-school day, which is the more generous limit. Set it so school-day limits actually apply.",
+: "Not set \u2014 until you set it, Weeksolved assumes any weekday outside June to Labor Day is a school day, which is the tighter reading. Set the real dates so the limits match your district.",
 `<input type="date" data-bind="org.school.from" value="${esc((S.org.school||{}).from||"")}" data-rerender="no" style="max-width:150px">
          <input type="date" data-bind="org.school.to" value="${esc((S.org.school||{}).to||"")}" data-rerender="no" style="max-width:150px">`) : ""}
       ${minorsOn()? setRow("What the law says where you are", (()=>{
@@ -12564,6 +12628,7 @@ sel("support.remind", [[1,"On"],[0,"Off"]], (S.support||{}).remind!==false?1:0))
     </div></div>
 
     <div class="card"><header><h3>Who gets first pick</h3></header><div class="setbody">
+      ${(unionOn() && union().seniorityRules)? `<div class="banner info"><div>Your agreement says seniority governs, so the ladder below is <b>start dates</b> and it decides rather than nudges, whatever is picked here. Your own setting is kept and applies again the moment the agreement is switched off.</div></div>`:""}
       ${setRow("How standing is decided", esc((PRI_MODES.find(m=>m[0]===P.mode)||PRI_MODES[4])[2]), sel("priority.mode", PRI_MODES.map(m=>[m[0],m[1]]), P.mode))}
       ${P.mode!=="off"? setRow("How much it counts", "", sel("priority.strength", PRI_STRENGTH.map(x=>[x[0],x[1]]), P.strength)) : ""}
       ${P.mode!=="off"? setRow("Apply it to", "", sel("priority.applyTo", [["desirable","Wanted and unwanted shifts only"],["all","Every shift"]], P.applyTo)) : ""}
@@ -12676,7 +12741,8 @@ save(); render(); return;
 }
  
 if((path==="union.seniorityRules" && v===true) || (path==="union.on" && v===true && union().seniorityRules)){
-S.priority.mode="seniority"; S.priority.strength=3;
+if(S.priority.mode!=="seniority")
+toast("Seniority governs while the agreement is on \u2014 your own setting is kept and comes back if you switch it off");
 }
  
 if(path==="union.on" && v===false){
@@ -15510,7 +15576,7 @@ return `<div class="mini">${f.end
 r=>{
 const paint=()=>{
 const s=t2m(r.querySelector("#as").value); let en=t2m(r.querySelector("#ae").value); if(en<=s)en+=1440;
-const bb=computeBreaks(s,en,{emp:empById((r.querySelector("#am")||{}).value||a.empId), waive:a.waive});
+const bb=computeBreaks(s,en,{date:a.date, emp:empById((r.querySelector("#am")||{}).value||a.empId), waive:a.waive});
 r.querySelector("#brklist").innerHTML = (bb.owed.meals||bb.owed.rests)? `
           <div class="stack" style="gap:7px">
             ${bb.meals.map((m,i)=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:7px 10px">
@@ -15519,7 +15585,7 @@ r.querySelector("#brklist").innerHTML = (bb.owed.meals||bb.owed.rests)? `
               <div class="row" style="gap:6px"><input type="time" class="bm" data-i="${i}" value="${m2t(m.start)}" style="width:120px">
                 ${m.waivable?`<label class="switch"><input type="checkbox" class="bw" data-i="${i}" ${(a.breaks&&a.breaks.meals[i]&&a.breaks.meals[i].waived)?"checked":""}> waived</label>`:""}</div></div>`).join("")}
             ${bb.rests.length?`<div style="border:1px solid var(--line);border-radius:6px;padding:7px 10px">
-              <strong>${bb.rests.length} paid rest break${bb.rests.length===1?"":"s"}</strong> <span class="mini">${L.rest?L.rest.lengthMin:10} min each</span>
+              <strong>${bb.rests.length} paid rest break${bb.rests.length===1?"":"s"}</strong> <span class="mini">${bb.rests[0]?bb.rests[0].len:(L.rest?L.rest.lengthMin:10)} min each</span>
               <div class="mini mono">${bb.rests.map(x=>m2disp(x.start)).join("  ·  ")}</div></div>`:""}
           </div>`
 : `<div class="mini">This shift is short enough that no meal or rest break is owed.</div>`;
@@ -18116,7 +18182,12 @@ const sd=schoolDayOn(a.date);
 rows.push([prettyDate(a.date), esc(e.name), age, sd? "school day":"non-school day",
 m2disp(a.startMin)+"\u2013"+m2disp(a.endMin), H(paidMinutes(a)),
 R? ((sd? R.sd : R.nd)+"h, until "+m2disp(t2m((R.summerTo&&inSummerWindow(a.date))? R.summerTo : R.to))) : "no limit",
-minorBlock(e,a.date,a.dow,a.startMin,a.endMin,0,weekStartOf(a.date,S.org.weekStart))? '<b class="bad">check</b>':"ok"]);
+ 
+minorBlock(e,a.date,a.dow,a.startMin,a.endMin,
+all.filter(x=>x.empId===a.empId && x.id!==a.id &&
+weekStartOf(x.date,S.org.weekStart)===weekStartOf(a.date,S.org.weekStart))
+.reduce((t,x)=>t+paidMinutes(x),0),
+weekStartOf(a.date,S.org.weekStart))? '<b class="bad">check</b>':"ok"]);
 });
 body=repTable(["Date","Person","Age","Day","Shift","Hours","Limit that applied","\u00a0"], rows)+
 '<p class="foot">Federal law is the floor everywhere and a state may only be stricter, so the limit shown is whichever was tighter. Work permits and the hazardous-job list are not covered here.</p>';
@@ -23377,25 +23448,37 @@ const sameDay = wk.assignments.filter(a=>a.empId===e.id && a.date===date);
 if(sameDay.length) blocks.push("already on "+(shiftById(sameDay[0].shiftId)||{label:"a shift"}).label);
 { const ab=apartOn()? apartBlock(e.id, date, aMin, bMin, wk.assignments.filter(a=>a.empId!==excludeEmpId)) : null;
 if(ab) blocks.push("kept apart from "+(empById(ab.other)||{name:"someone"}).name); }
+ 
+const LIM = effLimits(e, ws);
 const mins = empWeekMinutes(e.id,ws), add = paidEstimate(aMin,bMin);
-if(e.maxH && mins+add > e.maxH*60+1) blocks.push("would hit "+fmtHrs(mins+add)+" against a "+e.maxH+"h cap");
+const capH = LIM.maxH || 0;
+if(LIM.capSpent && !capH) blocks.push("their averaging period is already fully spent");
+else if(capH && mins+add > capH*60+1)
+blocks.push("would hit "+fmtHrs(mins+add)+" against a "+fmtHrs(capH*60)+" cap"
++ (LIM.cycleCap===capH? " for this week of their cycle"
+: LIM.guaranteedOnly? " until extra hours are approved"
+: LIM.groups.length? " ("+LIM.groups[0]+")" : ""));
 const days = empDays(e.id,ws);
-if(e.maxD && days>=e.maxD && !sameDay.length) blocks.push(days+" days already, cap is "+e.maxD);
+if(LIM.maxD && days>=LIM.maxD && !sameDay.length) blocks.push(days+" days already, cap is "+LIM.maxD);
+if(LIM.maxShiftH && (bMin-aMin) > LIM.maxShiftH*60+1)
+blocks.push("longer than their "+LIM.maxShiftH+"h shift limit");
 const prev = wk.assignments.filter(a=>a.empId===e.id && a.date===addDays(date,-1));
 if(prev.length){
 const gap = (aMin+1440) - Math.max.apply(null,prev.map(x=>x.endMin));
-if(gap < (S.rules.minRestH||0)*60) blocks.push("only "+fmtHrs(gap)+" off after the night before");
+if(gap < (LIM.minRestH||0)*60)
+blocks.push("only "+fmtHrs(gap)+" off after the night before"
++ ((unionOn() && union().restH && LIM.minRestH===union().restH)? " \u2014 your agreement asks for "+union().restH+"h" : ""));
 }
 const likes=[];
 if(e.prefShiftIds.includes(shiftId)) likes.push("asked for this shift");
 if(e.avoidShiftIds.includes(shiftId)) likes.push("would rather avoid it");
 if((e.prefDaysOff||[]).includes(dow)) likes.push("prefers "+DSHORT[dow]+" off");
-if(e.minH && mins < e.minH*60) likes.push(fmtHrs(e.minH*60-mins)+" short of guaranteed hours");
-out.push({emp:e, blocks, likes, mins, add,
+if(LIM.minH && mins < LIM.minH*60) likes.push(fmtHrs(LIM.minH*60-mins)+" short of guaranteed hours");
+out.push({emp:e, blocks, likes, mins, add, cap:capH,
 rank: blocks.length*1000 - (e.prefShiftIds.includes(shiftId)?30:0)
 + (e.avoidShiftIds.includes(shiftId)?25:0)
 + ((e.prefDaysOff||[]).includes(dow)?20:0)
-+ (e.minH&&mins<e.minH*60? -20:0) + mins/60 });
++ (LIM.minH&&mins<LIM.minH*60? -20:0) + mins/60 });
 });
 return out.sort((a,b)=>a.rank-b.rank);
 }
@@ -23404,7 +23487,7 @@ if(!list.length) return '<div class="mini">Nobody else on the roster.</div>';
 return list.slice(0,10).map(c=>`<div class="cand ${c.blocks.length?"blocked":""}">
     <div style="flex:none;font-weight:600;font-size:13px;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.emp.name)}</div>
     <div class="why">${c.blocks.length? esc(c.blocks.join(" · ")) : (c.likes.length? esc(c.likes.join(" · ")) : "free and within every limit")}
-      <div class="mono" style="font-size:10.5px;opacity:.75">${fmtHrs(c.mins)} → ${fmtHrs(c.mins+c.add)}${c.emp.maxH?" of "+c.emp.maxH+"h":""}</div></div>
+      <div class="mono" style="font-size:10.5px;opacity:.75">${fmtHrs(c.mins)} → ${fmtHrs(c.mins+c.add)}${c.cap?" of "+fmtHrs(c.cap*60):""}</div></div>
     <button class="btn sm ${c.blocks.length?"":"primary"}" ${onPickAttr}="${c.emp.id}">${c.blocks.length?"Assign anyway":"Assign"}</button>
   </div>`).join("");
 }
