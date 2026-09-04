@@ -2123,8 +2123,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "c4a6f446";       
-const BUILD_AT = "2026-09-04 03:07 UTC";       
+const BUILD_ID = "622c4d57";       
+const BUILD_AT = "2026-09-04 04:07 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -4779,7 +4779,7 @@ if(lim.maxShiftH && (paidEstimate(s2,e2)-gapM) > lim.maxShiftH*60) continue;
 if(lim.maxSpanH && (e2-s2) > lim.maxSpanH*60) continue;
 if(minorsOn() && minorBlock(e, date, dow, s2, e2, weekElse, ws)) continue;
 const paid = paidEstimate(s2,e2) - gapM;
-if(lim.maxH && weekElse + paid > lim.maxH*60 + 1) continue;
+if(hasCap(lim) && weekElse + paid > (lim.maxH||0)*60 + 1) continue;
 if(lim.exactH && weekElse + paid > lim.exactH*60 + 1) continue;    
 if(prevA.length){
 const g=(s2+1440)-Math.max.apply(null, prevA.map(x=>x.endMin));
@@ -5070,8 +5070,8 @@ if(mb){ note("they\u2019re under 18 and it\u2019s "+mb); return; }
 }
 if(L.maxShiftH && paidSpan(aMin, bMin, gapM) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
 if(L.maxSpanH && (bMin-aMin) > L.maxSpanH*60){ note("that shift keeps them at work longer than their span allows"); return; }
-if(L.maxH && state[e.id].min + paidEstimate(aMin,bMin) > L.maxH*60+1){
-note("another shift would take them past their "+L.maxH+"h cap"); return; }
+if(hasCap(L) && state[e.id].min + paidEstimate(aMin,bMin) > (L.maxH||0)*60+1){
+note("another shift would take them past their "+(L.maxH||0)+"h cap"); return; }
 if(reqBlocks(e,d.date,aMin,bMin,state[e.id].min)){ note("a request of theirs rules those days out"); return; }
 if(L.noSplit && shiftGap(sh)){ note(unionLabel()+" does not allow a day broken in two, and that shift is"); return; }
 const prev=(state[e.id].byDate[addDays(d.date,-1)]||[]);
@@ -5575,7 +5575,7 @@ if(st.byDate[date] && st.byDate[date].length) return false;
 if(apartOn() && apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).byDate[date]||[])) return false;   
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return false;  
 const add = paidEstimate(aMin,bMin);
-if(lim.maxH && (st.min + add) > lim.maxH*60 + 1) return false;         
+if(hasCap(lim) && (st.min + add) > (lim.maxH||0)*60 + 1) return false;         
 if(lim.maxShiftH && paidSpan(aMin, bMin, gapM) > lim.maxShiftH*60) return false;
 if(lim.maxSpanH && (bMin-aMin) > lim.maxSpanH*60) return false;
 if(lim.noSplit && gapM>0) return false;                               
@@ -5719,11 +5719,15 @@ w.extraOK[empId]=Math.max(0, +hours||0);
 if(!w.extraOK[empId]) delete w.extraOK[empId];
 save();
 }
+ 
 function extraAskList(ws){
 return (S.employees||[]).filter(e=>e.active && e.extraH==="ask")
 .map(e=>{ const L=effLimits(e, ws); return {e, L}; })
-.filter(x=>x.L.askAbove && x.L.couldBe>x.L.askAbove);
+.filter(x=>x.L.askAbove && x.L.couldBe>x.L.askAbove)
+.filter(x=>(x.L.couldBe - x.L.askAbove - (x.L.approvedExtra||0)) > 0.05);
 }
+ 
+function hasCap(L){ return !!(L && (L.maxH || L.capSpent)); }
 function effLimits(e, ref){
 const exact = e.hoursMode==="exact" ? (e.maxH||0) : 0;
 const L={ minH: exact||e.minH||0, maxH: exact||e.maxH||0, exactH: exact, maxD:e.maxD||7,
@@ -5733,7 +5737,11 @@ maxConsecDays:S.rules.maxConsecDays, canBeAlone:true, groups:[] };
 if(e.maxShiftH)     L.maxShiftH     = Math.min(L.maxShiftH||99, e.maxShiftH);
 if(e.maxConsecDays) L.maxConsecDays = Math.min(L.maxConsecDays||99, e.maxConsecDays);
 const wcap = cyclesOn()? cycleWeekCap(e, weekStartOf(ref|| curWeek(), S.org.weekStart)) : null;
-if(wcap!=null){ L.maxH = L.maxH? Math.min(L.maxH, wcap) : wcap; L.cycleCap=wcap; }
+if(wcap!=null){
+L.maxH = L.maxH? Math.min(L.maxH, wcap) : wcap; L.cycleCap=wcap;
+ 
+if(wcap<=0) L.capSpent=true;
+}
  
 if(!L.exactH && e.extraH==="ask" && L.minH && L.maxH && L.maxH>L.minH){
 const ws=weekStartOf(ref|| curWeek(), S.org.weekStart);
@@ -5868,7 +5876,7 @@ const [a0,b0]=shiftMinutes(sh);
 if(!availOk(e, d.dow, a0, b0)) return;
 if(minorsOn() && minorBlock(e, d.date, d.dow, a0, b0, empWeekMinutes(e.id, ws), ws)) return;
 if(lim.maxShiftH && (b0-a0) > lim.maxShiftH*60) return;
-if(lim.maxH && empWeekMinutes(e.id, ws)+paidEstimate(a0,b0) > lim.maxH*60+1) return;
+if(hasCap(lim) && empWeekMinutes(e.id, ws)+paidEstimate(a0,b0) > (lim.maxH||0)*60+1) return;
 if((S.requests||[]).length && reqBlocks(e, d.date, a0, b0, empWeekMinutes(e.id, ws))) return;
 if(vetoed(e.id, d.date, sh.id)) return;            
 const overlap=wk.assignments.filter(x=>x.date===d.date && x.startMin < b0 && x.endMin > a0).length;
@@ -5926,7 +5934,7 @@ if(lim.maxShiftH && paidSpan(aMin,bMin,0) > lim.maxShiftH*60) return;
 if(apartOn() && apartBlock(e.id, slot.date, aMin, bMin, wk.assignments)) return;    
 
 const reqBlock=reqBlocks(e,slot.date,aMin,bMin,mins);
-const overCap = lim.maxH && total > lim.maxH*60+1;
+const overCap = hasCap(lim) && total > (lim.maxH||0)*60+1;
 const overDays = days >= (lim.maxD||7) && !sameDay.length;
 let restGap=null;
 const prev=wk.assignments.filter(a=>a.empId===e.id && a.date===addDays(slot.date,-1));
@@ -6330,7 +6338,7 @@ org:S.org.name||"Our team", site:S.org.site||"", token:sw.token, week:prettyDate
 staff: S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name})),
 shifts: wk.assignments.filter(a=>a.empId).map((a,i)=>{
 const sh=aShift(a)||{label:"Shift"};
-return {i, emp:a.empId, day:DAYS[parseYmd(a.date).getDay()], date:prettyFull(a.date), ymd:a.date,
+return {i, aid:a.id, emp:a.empId, day:DAYS[parseYmd(a.date).getDay()], date:prettyFull(a.date), ymd:a.date,
 label:sh.label||"Shift", time:m2disp(a.startMin)+" to "+m2disp(a.endMin),
 hours:Math.round((a.endMin-a.startMin)/6)/10};
 })
@@ -6375,7 +6383,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'if(!k){L.innerHTML="<div class=hint>Pick your name first.</div>";return;}',
 'if(!mine.length){L.innerHTML="<div class=hint>You are not on this week’s schedule.</div>";return;}',
 'mine.forEach(function(sh){var el=document.createElement("label");el.className="sh";',
-'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" · "+esc(sh.time)+" · "+esc(String(sh.hours))+"h</span></span>";',
+'el.innerHTML="<input type=checkbox value=\'"+(sh.aid||sh.i)+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" · "+esc(sh.time)+" · "+esc(String(sh.hours))+"h</span></span>";',
 'L.appendChild(el);});}',
 'who.onchange=paint;',
 'document.getElementById("mk").onclick=function(){',
@@ -6393,24 +6401,40 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<\/script></body></html>'].join("\n");
 }
  
+ 
+function swapAskByToken(token){
+if(!token) return null;
+const keys=Object.keys(S.weeks||{});
+for(let i=0;i<keys.length;i++){
+const w=S.weeks[keys[i]];
+if(w && w.swapAsk && w.swapAsk.token===token) return {ws:keys[i], sw:w.swapAsk};
+}
+return null;
+}
 function readSwap(ws, code){
-const sw=swapAsk(ws);
-if(!sw) return {err:"You have not sent a hand-back form for this week yet."};
 let raw="";
 try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn’t look like a reply code — check it was copied whole."}; }
 const bits=raw.split("|");
 if(bits[0]!=="SW1") return {err:"That’s a code for something else, not a shift being handed back."};
-if(bits[1]!==sw.token) return {err:"That code is from an earlier form. Ask them to open the newest one you sent."};
+const sw=swapAsk(ws);
+if(!sw || bits[1]!==sw.token){
+ 
+const other=swapAskByToken(bits[1]);
+if(other && other.ws!==ws) return {err:"That code is for the week of "+prettyDate(other.ws)+", not the one you are looking at. Switch to that week and paste it again.", week:other.ws};
+if(!sw) return {err:"You have not sent a hand-back form for this week yet."};
+return {err:"That code is from an earlier form. Ask them to open the newest one you sent."};
+}
 const emp=empById(bits[2]||"");
 if(!emp) return {err:"That code names somebody who is no longer on your roster."};
 const wk=peekWeek(ws);
 const all=wk.assignments.filter(a=>a.empId);
-const idx=(bits[3]||"").split(",").filter(x=>/^\d+$/.test(x.trim())).map(Number);
+ 
+const picked=(bits[3]||"").split(",").map(x=>x.trim()).filter(Boolean);
 const why=(bits[4]||"").slice(0,140);
-const items=idx.map(i=>{
-const a=all[i];
-if(!a) return {gone:true};
-if(a.empId!==emp.id) return {gone:true};
+if(!picked.length) return {err:"That code does not name any shift — it looks like only part of it came through. Ask them to send the whole line."};
+const items=picked.map(tok=>{
+const a = /^\d+$/.test(tok) ? all[+tok] : all.find(x=>x.id===tok);
+if(!a || a.empId!==emp.id) return {gone:true};
 const sh=aShift(a)||{label:"Shift"};
 return {id:a.id, date:a.date, label:sh.label||"Shift",
 when:prettyFull(a.date)+" · "+m2disp(a.startMin)+"–"+m2disp(a.endMin)};
@@ -6457,13 +6481,35 @@ logIt("request", "Kept "+(empById(ask.empId)||{name:"Someone"}).name+" on "+ask.
 }
 
  
+ 
 const CODE_KINDS = {
-OS1:{what:"someone taking an open shift",     go:(c)=>claimModal(curWeek(), c)},
-SW1:{what:"someone handing a shift back",     go:(c)=>handBackFromCode(c)},
-RQ1:{what:"a request — time off, hours or a day",  go:(c)=>askReadModal(c)},
-TM1:{what:"a starter form",                    go:(c)=>intakeReadModal(c)},
-VC1:{what:"a vacation pick",                   go:(c)=>vacPasteModal(c)},
-CD1:{what:"a holiday poll answer",             go:(c)=>pasteCodeModal(c)}
+OS1:{what:"someone taking an open shift",
+read:(c)=>{ const r=readClaim(curWeek(), c); return r.err? {err:r.err} : {who:(r.emp&&r.emp.name)||""}; },
+go:(c)=>claimModal(curWeek(), c)},
+SW1:{what:"someone handing a shift back",
+read:(c)=>{ let ws=curWeek();
+try{ const o=swapAskByToken(b64d(String(c||"").trim()).split("|")[1]); if(o) ws=o.ws; }catch(e){}
+const r=readSwap(ws, c); return r.err? {err:r.err} : {who:(r.emp&&r.emp.name)||"", quiet:true}; },
+go:(c)=>handBackFromCode(c)},
+RQ1:{what:"a request — time off, hours or a day",
+read:(c)=>{ const r=readAsk(c); return r.err? {err:r.err} : {who:(r.emp&&r.emp.name)||""}; },
+go:(c)=>askReadModal(c)},
+TM1:{what:"a starter form",
+read:(c)=>{ const r=readIntake(c); return r.err? {err:r.err} : {who:r.name||""}; },
+go:(c)=>intakeReadModal(c)},
+VC1:{what:"a vacation pick",
+read:(c)=>{ try{ const r=vacParseCode(String(c||"").trim());
+if(!r.empId) return {err:"That code names somebody who is not on your roster: “"+r.name+"”."};
+if(!r.picks.length) return {err:"That code has no dates in it — it looks like only part of it came through."};
+return {who:r.name}; }
+catch(e){ return {err:"That doesn’t look like a vacation code — check the whole line came through."}; } },
+go:(c)=>vacPasteModal(c)},
+CD1:{what:"a holiday poll answer",
+read:(c)=>{ try{ const r=parseCode(String(c||"").trim());
+if(!r.empId) return {err:"That code names somebody who is not on your roster: “"+r.name+"”."};
+return {who:r.name}; }
+catch(e){ return {err:"That doesn’t look like a holiday poll code — check the whole line came through."}; } },
+go:(c)=>pasteCodeModal(c)}
 };
 function codeKind(code){
 const t=String(code||"").trim();
@@ -6475,12 +6521,25 @@ return CODE_KINDS[k]? {kind:k, what:CODE_KINDS[k].what} : null;
 }
  
 function handBackFromCode(code){
-const ws=curWeek();
+let ws=curWeek();
+ 
+try{
+const bits=b64d(String(code||"").trim()).split("|");
+const other=swapAskByToken(bits[1]);
+if(other) ws=other.ws;
+}catch(e){}
 const res=readSwap(ws, code);
-if(res.err){ toast(res.err); return; }
+if(res.err){ toast(res.err); return false; }
 const n=addSwapAsks(ws, res);
+if(!n){
+ 
+toast("Already had that one — nothing new in it.");
+handBackModal(ws);
+return false;
+}
 inboxLog("SW1", res.emp.name, n+" shift"+(n===1?"":"s")+" they cannot work");
 handBackModal(ws);
+return true;
 }
 function inboxLog(kind, who, what){
 S.inbox=S.inbox||[];
@@ -6519,9 +6578,19 @@ msg.textContent = code? "That doesn’t look like a Weeksolved reply code. Check
 : "Paste the code they sent you.";
 return;
 }
+ 
+let pre=null;
+try{ pre = CODE_KINDS[k.kind].read? CODE_KINDS[k.kind].read(code) : {who:""}; }
+catch(e){ pre = {who:""}; }         
+if(pre && pre.err){
+msg.style.color="var(--crit)";
+msg.textContent=pre.err;
+return;
+}
 msg.style.color=""; msg.textContent="That’s "+k.what+".";
 closeModal(true);
-if(k.kind!=="SW1") inboxLog(k.kind, "", k.what);
+ 
+if(!(pre && pre.quiet)) inboxLog(k.kind, (pre&&pre.who)||"", k.what);
 setTimeout(()=>CODE_KINDS[k.kind].go(code), 120);
 };
 });
@@ -7049,7 +7118,7 @@ const ASK_PAGE_JS = [
 'document.getElementById("fh0").onclick=function(){setHard(0);};',
 'function paintKind(){',
 ' var k=D.kinds[+fk.value]||{};',
-' if(k.shift){ fxrow.className="row"; fx.innerHTML=D.shifts.map(function(s){return "<option value=\'"+s.i+"\'>"+esc(s.l)+"</option>";}).join(""); }',
+' if(k.shift){ fxrow.className="row"; fx.innerHTML=D.shifts.map(function(s){return "<option value=\'"+(s.id||s.i)+"\'>"+esc(s.l)+"</option>";}).join(""); }',
 ' else if(k.time){ fxrow.className="row"; fx.innerHTML=D.times.map(function(t){return "<option value=\'"+t.m+"\'>"+esc(t.l)+"</option>";}).join(""); }',
 ' else if(k.num){ fxrow.className="row"; fx.innerHTML=D.hours.map(function(h){return "<option value=\'"+h+"\'>no more than "+h+" hours</option>";}).join(""); }',
 ' else fxrow.className="row hide";',
@@ -7059,7 +7128,7 @@ const ASK_PAGE_JS = [
 'function label(p){',
 ' var k=D.kinds[p.k]||{}, when = p.w==="W"? "the whole stretch" : (D.days[+p.w]||{}).l;',
 ' var x="";',
-' if(k.shift){ var s=D.shifts.filter(function(z){return z.i===+p.x;})[0]; x = s? " \\u00b7 "+s.l : ""; }',
+' if(k.shift){ var s=D.shifts.filter(function(z){return String(z.id||z.i)===String(p.x);})[0]; x = s? " \\u00b7 "+s.l : ""; }',
 ' else if(k.time){ var t=D.times.filter(function(z){return z.m===+p.x;})[0]; x = t? " \\u00b7 "+t.l : ""; }',
 ' else if(k.num){ x=" \\u00b7 no more than "+p.x+" hours"; }',
 ' return {t:k.t+x, d:(k.num? "for this stretch" : when)+" \\u00b7 "+(p.f? "I really can\\u2019t" : "I\\u2019d prefer not")+(p.n? " \\u00b7 \\u201c"+p.n+"\\u201d" : "")};',
@@ -7130,7 +7199,7 @@ span: A.weeks>1? prettyDate(A.ws)+" to "+prettyDate(addDays(A.ws, A.weeks*7-1)) 
 by: S.ask.by||"",
 kinds: ASK_KINDS.map(k=>({k:k.k, t:k.t, hint:k.hint, shift:!!k.shift, time:!!k.time, num:!!k.num})),
 days: days.map(d=>({y:d.ymd, l:DAYS[d.dow]+", "+prettyDate(d.ymd)})),
-shifts: S.shifts.map((s,i)=>({i, l:s.label+" · "+m2disp(t2m(s.start))+"–"+m2disp(t2m(s.end))})),
+shifts: S.shifts.map((s,i)=>({i, id:s.id, l:s.label+" · "+m2disp(t2m(s.start))+"–"+m2disp(t2m(s.end))})),
 times: askTimes().map(x=>({m:x.m, l:x.t})),
 hours: [4,8,12,16,20,24,28,32,36,40],
 staff: S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name}))
@@ -7206,7 +7275,10 @@ const it={kind:K.k, K, hard:f[3]==="1", note:(f[4]||"").trim().slice(0,60)};
 if(K.num){ it.from=A.ws; it.to=addDays(A.ws, A.weeks*7-1); it.num=Math.max(1,Math.min(80,+f[2]||0)); }
 else if(f[1]==="W"){ it.from=A.ws; it.to=addDays(A.ws, A.weeks*7-1); }
 else { const d=days[+f[1]]; if(!d) return null; it.from=d.ymd; it.to=d.ymd; }
-if(K.shift){ const sh=S.shifts[+f[2]]; if(!sh) return null; it.shiftId=sh.id; }
+ 
+if(K.shift){ const tok=String(f[2]||"");
+const sh = /^\d+$/.test(tok) ? S.shifts[+tok] : shiftById(tok);
+if(!sh) return null; it.shiftId=sh.id; }
 if(K.time){ it.min=Math.max(0,Math.min(1439,+f[2]||0)); }
 return it;
 }).filter(Boolean);
@@ -7344,7 +7416,8 @@ const TM_PAGE_JS = [
 ' row.querySelectorAll("select").forEach(function(s){s.disabled=!c.checked;});});}',
 'AV.querySelectorAll(".dok").forEach(function(c){c.onchange=paintAv;}); paintAv();',
 'function boxes(el,list,cls){el.innerHTML=list.map(function(t,i){',
-' return "<label class=sw><input type=checkbox class="+cls+" value="+i+"> <span>"+esc(t)+"</span></label>";}).join("")||"<span class=hint>Nothing to pick.</span>";}',
+' var v=(t&&t.v!=null)?t.v:i, l=(t&&t.l!=null)?t.l:t;',
+' return "<label class=sw><input type=checkbox class="+cls+" value=\'"+v+"\'> <span>"+esc(l)+"</span></label>";}).join("")||"<span class=hint>Nothing to pick.</span>";}',
 'boxes(document.getElementById("roles"),D.roles,"rk");',
 'boxes(document.getElementById("pshift"),D.shifts,"ps");',
 'boxes(document.getElementById("ashift"),D.shifts,"as");',
@@ -7396,8 +7469,8 @@ licKinds: LIC_TYPES.map(t=>({k:t.k, t:t.t})),
 licJurs: Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)).map(k=>({k:k, t:LIC_DIR[k].n})),
 licJurDefault: (LIC_DIR[S.org.jurisdiction||""]? S.org.jurisdiction : ""),
 days: DAYS.slice(),
-roles: S.roles.map(r=>r.name),
-shifts: S.shifts.map(s=>s.label+" · "+m2disp(t2m(s.start))+"–"+m2disp(t2m(s.end))),
+roles: S.roles.map(r=>({v:r.id, l:r.name})),
+shifts: S.shifts.map(s=>({v:s.id, l:s.label+" · "+m2disp(t2m(s.start))+"–"+m2disp(t2m(s.end))})),
 times: askTimes().map(x=>({m:x.m, l:x.t})),
 defFrom: askTimes().findIndex(x=>x.m===360),
 defTo: askTimes().findIndex(x=>x.m===1320),
@@ -7488,6 +7561,10 @@ const name=(f[2]||"").trim();
 if(!name) return {err:"That code has no name on it."};
 const times=askTimes();
 const idx=s=>(s||"").split(".").filter(x=>/^\d+$/.test(x)).map(Number);
+ 
+const pick=(str, list)=>String(str||"").split(".").map(x=>x.trim()).filter(Boolean)
+.map(tok=>/^\d+$/.test(tok)? list[+tok] : list.find(z=>z.id===tok))
+.filter(Boolean);
 const av=(f[6]||"").split(",").map(seg=>{
 const b=seg.split(".");
 const fi=+b[1], ti=+b[2];
@@ -7504,8 +7581,8 @@ const licBits=(licAll.length>=4)
 const existing=S.employees.find(e=>e.name.trim().toLowerCase()===name.toLowerCase());
 return { name, existing:existing||null,
 email:(f[3]||"").trim(), phone:(f[4]||"").trim(),
-roleIdx:idx(f[5]), avail:av.slice(0,7),
-prefIdx:idx(f[7]), avoidIdx:idx(f[8]), offIdx:idx(f[9]).filter(d=>d>=0&&d<7),
+roles:pick(f[5], S.roles), avail:av.slice(0,7),
+pref:pick(f[7], S.shifts), avoid:pick(f[8], S.shifts), offIdx:idx(f[9]).filter(d=>d>=0&&d<7),
 canOpen:oc[0]!=="0", canClose:oc[1]!=="0",
 hours: /^\d+$/.test(f[11]||"")? +f[11] : null,
 licLabel:(licBits[0]||"").trim(), licExp:/^\d{4}-\d{2}-\d{2}$/.test(licBits[1]||"")? licBits[1] : "",
@@ -7556,9 +7633,9 @@ const out=r.querySelector("#tmout");
 const show=()=>{
 const v=readIntake(r.querySelector("#tmcode").value);
 if(v.err){ out.innerHTML=`<div class="banner crit"><div>${esc(v.err)}</div></div>`; return; }
-const roles=v.roleIdx.map(i=>S.roles[i]).filter(Boolean);
-const pref=v.prefIdx.map(i=>S.shifts[i]).filter(Boolean);
-const avoid=v.avoidIdx.map(i=>S.shifts[i]).filter(Boolean);
+const roles=v.roles;
+const pref=v.pref;
+const avoid=v.avoid;
 const line=(lab,val)=>`<div class="setrow"><div class="sq"><strong>${esc(lab)}</strong><div class="mini">${val||"<span style='opacity:.6'>not given</span>"}</div></div><div class="sc"></div></div>`;
 out.innerHTML=`<div class="stack">
           <div class="banner ${v.existing?"warn":"info"}"><div>${v.existing
@@ -7582,9 +7659,9 @@ v.licExp? "expires "+esc(prettyDate(v.licExp)) : ""].filter(Boolean).join(" · "
           <button class="btn primary" id="tmsave">${v.existing? "Update "+esc(v.name) : "Add "+esc(v.name)+" to the team"}</button>
         </div>`;
 out.querySelector("#tmsave").onclick=()=>{
-const roleIds=v.roleIdx.map(i=>S.roles[i]).filter(Boolean).map(x=>x.id);
-const prefIds=v.prefIdx.map(i=>S.shifts[i]).filter(Boolean).map(x=>x.id);
-const avoidIds=v.avoidIdx.map(i=>S.shifts[i]).filter(Boolean).map(x=>x.id);
+const roleIds=v.roles.map(x=>x.id);
+const prefIds=v.pref.map(x=>x.id);
+const avoidIds=v.avoid.map(x=>x.id);
 let e=v.existing;
 const fresh=!e;
 if(fresh){
@@ -7952,7 +8029,7 @@ if(mb) return "they\u2019re "+ageOnDate(e, sl.date)+" and it\u2019s "+mb;
 }
 const lim=effLimits(e, ws);
 const mins=empWeekMinutes(e.id, ws)+paidEstimate(a,b);
-if(lim.maxH && mins/60 > lim.maxH) return "it would put them at "+fmtHrs(mins)+", past their "+lim.maxH+"h cap";
+if(hasCap(lim) && mins/60 > (lim.maxH||0)) return "it would put them at "+fmtHrs(mins)+", past their "+(lim.maxH||0)+"h cap"+(lim.capSpent? " \u2014 their averaging period is already fully spent":"");
 if(empLicensed(e) && e.licExp && e.licExp < sl.date) return "their "+(e.licLabel||"license")+" has expired";
 return "a rule you set blocks it \u2014 Cover the gaps spells out which";
 }
@@ -9895,8 +9972,8 @@ push("warn","License expiring — "+e.name.split(" ")[0],
 (e.licLabel||"Their license")+" runs out "+prettyDate(e.licExp)+". Get the renewal moving now — with a date past, the drafter will refuse to schedule them.",
 {empId:e.id, code:"lic"});
 }
-if(lim.maxH && mins > lim.maxH*60+1)
-push("warn","Over hour cap — "+e.name, fmtHrs(mins)+" scheduled against a "+lim.maxH+"h cap"+
+if(hasCap(lim) && mins > (lim.maxH||0)*60+1)
+push("warn","Over hour cap — "+e.name, fmtHrs(mins)+" scheduled against a "+(lim.maxH||0)+"h cap"+(lim.capSpent? " (their averaging period is already spent)":"")+
 (lim.groups.length&&lim.maxH!==e.maxH? " (set by the "+lim.groups.join(" and ")+" group)":"")+".", {empId:e.id, code:"cap"});
 if(cyclesOn()){
 const p=cyclePeriod(e, ws);
@@ -13365,9 +13442,13 @@ if(P.set.cycle && !cyclesOn()){ S.rules.useCycles=true; }
 const anchor=weekStartOf(ymd(new Date()), S.org.weekStart);
 ids.forEach(id=>{
 const e=empById(id); if(!e) return;
-if(P.set.maxH) e.maxH=P.set.maxH;
+ 
+if(P.set.maxH!==undefined) e.maxH=P.set.maxH;
 if(P.set.maxD) e.maxD=P.set.maxD;
 if(P.set.maxH && e.minH>P.set.maxH) e.minH=P.set.maxH;
+ 
+if(P.set.maxShiftH!==undefined)     e.maxShiftH     = P.set.maxShiftH || 0;
+if(P.set.maxConsecDays!==undefined) e.maxConsecDays = P.set.maxConsecDays || 0;
 e.cycle = P.set.cycle? Object.assign({anchor}, P.set.cycle) : null;
 });
 if(r.querySelector("#bpgrp").checked){
@@ -13680,6 +13761,7 @@ modal(id?"Edit "+e.name:"Add someone", `
       <div class="field" id="eextrawrap"><label>Hours past the guarantee</label><select id="eextra">
         <option value="auto" ${(e.extraH||"auto")!=="ask"?"selected":""}>Schedule them freely, up to the cap</option>
         <option value="ask" ${e.extraH==="ask"?"selected":""}>Ask me first \u2014 guarantee is the cap until I say</option></select>
+        <span class="mini warnnote" id="eextrawarn" style="display:none;color:var(--warn)"></span>
         <span class="mini">Ask me first suits a part-timer who wants their guaranteed hours and no more unless it is agreed. The drafter stops at the guarantee; if the week then comes up short, covering the gap offers you the extra hours to approve, for that week only. If instead you want somebody used <b>only</b> when the week is short, that is <b>How they\u2019re used</b> above \u2014 set it to only called in when there\u2019s a gap.</span></div>
       <div class="field"><label>Max days / week</label><select id="emaxd">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${e.maxD===n?"selected":""}>${n} day${n===1?"":"s"}</option>`).join("")}</select></div>
       <div class="field"><label>Started</label><input type="date" id="esen" value="${esc(e.seniority||"")}"></div>
@@ -13901,7 +13983,7 @@ const w=patternWarn(ep.value);
 epw.style.display=w?"":"none"; if(w) epw.firstElementChild.textContent=w;
 if(!P.set){ epn.textContent="Sets the hour and day boxes below. Pick Custom to leave them alone."; return; }
 epn.textContent=P.d||"";
-if(P.set.maxH) put("#emax", P.set.maxH);
+if(P.set.maxH!==undefined) put("#emax", P.set.maxH||"");
 if(P.set.maxD) put("#emaxd", P.set.maxD);
  
 e.maxShiftH     = P.set.maxShiftH || 0;
@@ -13919,7 +14001,19 @@ const hm=root.querySelector("#ehm"), note=root.querySelector("#ehmnote");
 const paintHM=()=>{
 const ex = hm.value==="exact";
 root.querySelector("#eminwrap").style.display = ex? "none":"";
-{ const xw=root.querySelector("#eextrawrap"); if(xw) xw.style.display = ex? "none":""; }
+{ const xw=root.querySelector("#eextrawrap"); if(xw) xw.style.display = ex? "none":"";
+ 
+const xs=root.querySelector("#eextra"), xn=root.querySelector("#eextrawarn");
+const gm=root.querySelector("#emin");
+const paint=()=>{ if(!xs||!xn) return;
+const bad = xs.value==="ask" && !(+((gm&&gm.value)||0)>0);
+xn.style.display = bad? "" : "none";
+xn.textContent = bad? "Set a guaranteed number of hours as well — with a guarantee of 0 there is nothing to stop at, so nothing is ever put to you to approve." : "";
+};
+if(xs && !xs.__warnWired){ xs.__warnWired=true; xs.addEventListener("change", paint); }
+if(gm && !gm.__warnWired){ gm.__warnWired=true; gm.addEventListener("input", paint); }
+paint();
+}
 root.querySelector("#emaxlab").textContent = ex? "Exactly this many hours" : "Hour cap";
 note.textContent = ex
 ? "The scheduler will land on this figure or leave a shift open rather than go over — and it tells you when the shift lengths can't add up to it."
@@ -15003,7 +15097,16 @@ modal(e.name+" — "+sh.label,`
         <div class="field"><label>Starts</label><input type="time" id="as" value="${m2t(a.startMin)}"></div>
         <div class="field"><label>Ends</label><input type="time" id="ae" value="${m2t(a.endMin)}"></div>
         <div class="field"><label>Working as</label><select id="ar">${(e.roleIds.length?e.roleIds:[null]).map(id=>`<option value="${id||""}" ${a.roleId===id?"selected":""}>${esc(roleName(id))}</option>`).join("")}</select></div>
-        <div class="field"><label>Move to</label><select id="am">${S.employees.filter(x=>x.active).map(x=>`<option value="${x.id}" ${x.id===a.empId?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
+        <div class="field"><label>Move to</label><select id="am">${(()=>{
+ 
+const live=S.employees.filter(x=>x.active);
+const rows=live.slice();
+if(a.empId && !rows.some(x=>x.id===a.empId)){
+const who=empById(a.empId);
+rows.unshift({id:a.empId, name:(who&&who.name||"Someone who has left")+" \u2014 no longer on the roster"});
+}
+return rows.map(x=>`<option value="${x.id}" ${x.id===a.empId?"selected":""}>${esc(x.name)}</option>`).join("");
+})()}</select></div>
       </div>
       ${(()=>{ const f=shiftFlex(sh); if(!f) return "";
 return `<div class="mini">${f.end
@@ -15076,7 +15179,8 @@ r.querySelector("#asave").onclick=()=>{
 a.startMin=t2m(r.querySelector("#as").value);
 a.endMin=t2m(r.querySelector("#ae").value); if(a.endMin<=a.startMin) a.endMin+=1440;
 a.roleId=r.querySelector("#ar").value||null;
-a.empId=r.querySelector("#am").value;
+ 
+{ const pick=r.querySelector("#am").value; if(pick) a.empId=pick; }
 a.locked=r.querySelector("#al").checked;
 applyBreaks(a);
 r.querySelectorAll(".bm").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]){ { let v=t2m(inp.value);
@@ -15371,12 +15475,32 @@ S.requests=(S.requests||[]).filter(r=>r.empId!==id);
 S.apart=(S.apart||[]).filter(p=>p.a!==id && p.b!==id);
 save();
 }
+ 
 function removeEverything(id){
 S.employees=S.employees.filter(x=>x.id!==id);
-Object.values(S.weeks||{}).forEach(w=>{ w.assignments=(w.assignments||[]).filter(a=>a.empId!==id); });
+Object.values(S.weeks||{}).forEach(w=>{
+w.assignments=(w.assignments||[]).filter(a=>a.empId!==id);
+if(w.extraOK) delete w.extraOK[id];
+if(w.swapAsk && Array.isArray(w.swapAsk.asks)) w.swapAsk.asks=w.swapAsk.asks.filter(a=>a.empId!==id);
+if(w.offer && Array.isArray(w.offer.claims)) w.offer.claims=w.offer.claims.filter(c=>c.empId!==id);
+});
 S.timeoff=(S.timeoff||[]).filter(t=>t.empId!==id);
 S.requests=(S.requests||[]).filter(r=>r.empId!==id);
 S.apart=(S.apart||[]).filter(p=>p.a!==id && p.b!==id);
+S.callouts=(S.callouts||[]).filter(c=>c.empId!==id);
+if(S.vacations){
+S.vacations.responses=(S.vacations.responses||[]).filter(v=>v.empId!==id);
+S.vacations.tweaks=(S.vacations.tweaks||[]).filter(v=>v.empId!==id);
+if(S.vacations.result && Array.isArray(S.vacations.result.grants))
+S.vacations.result.grants=S.vacations.result.grants.filter(g=>g.empId!==id);
+}
+if(S.holidays){
+S.holidays.responses=(S.holidays.responses||[]).filter(h=>h.empId!==id);
+if(S.holidays.result && Array.isArray(S.holidays.result.picks))
+S.holidays.result.picks=S.holidays.result.picks.filter(x=>x.empId!==id);
+}
+(S.groups||[]).forEach(g=>{ if(g.match && Array.isArray(g.match.empIds))
+g.match.empIds=g.match.empIds.filter(x=>x!==id); });
 S.gone=(S.gone||[]).filter(g=>g.id!==id);
 save();
 }
@@ -16397,15 +16521,19 @@ if(pref){ O.forEach(o=>o.rec=false); pref.rec=true; }
  
 if((v.code==="cover" || v.code==="open" || v.code==="fill") && typeof extraAskList==="function"){
 extraAskList(ws).slice(0,3).forEach(x=>{
+const had=x.L.approvedExtra||0;                  
 const room=Math.round((x.L.couldBe - x.L.askAbove)*10)/10;
 if(room<=0) return;
-now("Approve extra hours for "+x.e.name.split(" ")[0]+" this week",
-x.e.name.split(" ")[0]+" is set to guaranteed hours only \u2014 "+x.L.askAbove+"h \u2014 with a cap of "+x.L.couldBe+
-"h. Approving lets the drafter use up to "+room+"h more, this week only. It does not change their profile and it does not carry into next week.",
+const first=x.e.name.split(" ")[0];
+now("Approve extra hours for "+first+" this week",
+first+" is set to guaranteed hours only \u2014 "+x.L.askAbove+"h \u2014 with a cap of "+x.L.couldBe+"h."+
+(had? " You have already approved "+had+"h of that." : "")+
+" Approving lets the drafter use up to "+room+"h more, this week only. It does not change their profile and it does not carry into next week.",
 ()=>{ approveExtra(x.e.id, ws, room);
 render();
-toast("Up to "+room+"h extra approved for "+x.e.name.split(" ")[0]+" this week",
-{label:"Undo", run:()=>{ approveExtra(x.e.id, ws, 0); render(); }}); });
+ 
+toast("Up to "+room+"h extra approved for "+first+" this week",
+{label:"Undo", run:()=>{ approveExtra(x.e.id, ws, had); render(); }}); });
 });
 }
  
@@ -16418,6 +16546,11 @@ function consequencesOf(ws, mutate){
 ws = ws || curWeek();
 const key=ws;
 const snap=JSON.stringify(S.weeks[key]||null);
+ 
+const origWeek = S.weeks[key];
+const origArr  = (origWeek && Array.isArray(origWeek.assignments))? origWeek.assignments : null;
+const origById = {};
+if(origArr) origArr.forEach(a=>{ if(a && a.id) origById[a.id]=a; });
 let before=[], after=[];
 try{ before=validate(ws)||[]; }catch(e){ return {added:[], gone:[], failed:true}; }
 const wasSig=new Set(before.map(checkSig));
@@ -16432,10 +16565,24 @@ return {added:[], gone:[], failed:true};
 try{
 if(snap==="null"){ delete S.weeks[key]; }
 else{
-const fresh=JSON.parse(snap), w=S.weeks[key];
+const fresh=JSON.parse(snap), w = origWeek || S.weeks[key];
 if(w && typeof w==="object"){
+S.weeks[key]=w;
 Object.keys(w).forEach(k=>{ if(!(k in fresh)) delete w[k]; });
+const freshA = Array.isArray(fresh.assignments)? fresh.assignments : null;
+delete fresh.assignments;
 Object.assign(w, fresh);
+if(freshA && origArr){
+const rebuilt = freshA.map(f=>{
+const keep = f && f.id && origById[f.id];
+if(!keep) return f;
+Object.keys(keep).forEach(k=>{ if(!(k in f)) delete keep[k]; });
+Object.assign(keep, f);
+return keep;
+});
+origArr.length=0; rebuilt.forEach(a=>origArr.push(a));
+w.assignments=origArr;
+} else if(freshA){ w.assignments=freshA; }
 } else S.weeks[key]=fresh;
 }
 }catch(e){}
@@ -20630,18 +20777,24 @@ modal("Paste vacation reply codes", `
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="dovac">Read them in</button>`,
 r=>{ r.querySelector("#dovac").onclick=()=>{
 const lines=r.querySelector("#vcin").value.split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean);
-let ok=0,bad=0,unknown=[];
+let ok=0,bad=0,unknown=[],stale=[],trimmed=[];
 lines.forEach(l=>{ try{
 const pr=vacParseCode(l);
 if(!pr.empId){ unknown.push(pr.name); bad++; return; }
-if(!pr.picks.length){ bad++; return; }
+if(!pr.picks.length){ bad++; if(pr.outside) stale.push(pr.name); return; }
+if(pr.outside) trimmed.push(pr.name);
 S.vacations.responses=S.vacations.responses.filter(x=>x.empId!==pr.empId);
 S.vacations.responses.push({empId:pr.empId, picks:pr.picks.slice(0,S.vacations.maxPicks||3), at:Date.now()});
 ok++;
 }catch(e){ bad++; } });
 save();
-if(ok){ closeModal(); render(); toast(ok+" response"+(ok===1?"":"s")+" read in"+(bad?" · "+bad+" couldn't be matched":"")); }
-else r.querySelector("#vcres").innerHTML=`<div class="banner crit"><div>None of those matched. ${unknown.length? "Not on the roster: "+esc(unknown.join(", "))+".":"Check the whole code was copied."}</div></div>`;
+if(ok){ closeModal(); render();
+toast(ok+" response"+(ok===1?"":"s")+" read in"+(bad?" · "+bad+" couldn\u2019t be matched":"")
++(trimmed.length? " \u00b7 dates outside the window dropped for "+trimmed.join(", ") : "")); }
+else r.querySelector("#vcres").innerHTML=`<div class="banner crit"><div>None of those matched.
+        ${unknown.length? "Not on the roster: "+esc(unknown.join(", "))+"." : ""}
+        ${stale.length? "Every date in "+esc(stale.join(", "))+"\u2019s code falls outside the stretch you opened \u2014 that looks like an old form. Send them the current one." : ""}
+        ${(!unknown.length && !stale.length)? "Check the whole code was copied." : ""}</div></div>`;
 }; });
 }
 function vacManualModal(){
@@ -20986,10 +21139,16 @@ function parseCode(code){
 const raw=b64d(String(code).trim());
 const p=raw.split("|");
 if(p[0]!=="CD1") throw new Error("bad");
-const H=S.holidays.list;
+ 
+const H=S.holidays.list, ST=holStaffed();
 const key=p[1];
-const rank=(p[2]||"").split(".").filter(x=>x!=="").map(i=>H[+i]&&H[+i].id).filter(Boolean);
-const cant=(p[3]||"").split(".").filter(x=>x!=="").map(i=>H[+i]&&H[+i].id).filter(Boolean);
+const one=tok=>{
+tok=String(tok||"").trim(); if(!tok) return null;
+if(/^\d+$/.test(tok)) return ST[+tok]? ST[+tok].id : null;
+return H.some(h=>h.id===tok)? tok : null;
+};
+const rank=(p[2]||"").split(".").map(one).filter(Boolean);
+const cant=(p[3]||"").split(".").map(one).filter(Boolean);
 let emp = S.employees.find(e=>e.id===key);
 if(!emp) emp = S.employees.find(e=>e.name.toLowerCase()===key.toLowerCase());
 return {empId:emp?emp.id:null, name:emp?emp.name:key, rank, cant};
@@ -21116,10 +21275,14 @@ if(parts[0]!=="VC1") throw new Error("not a vacation code");
 const key=parts[1];
 const e=S.employees.find(x=>x.id===key) ||
 S.employees.find(x=>x.name.trim().toLowerCase()===String(key).trim().toLowerCase());
-const picks=(parts[2]||"").split(".").filter(Boolean).map(seg=>{
+const all=(parts[2]||"").split(".").filter(Boolean).map(seg=>{
 const [f,t]=seg.split("~"); return {from:f,to:t};
 }).filter(p=>/^\d{4}-\d{2}-\d{2}$/.test(p.from)&&/^\d{4}-\d{2}-\d{2}$/.test(p.to)&&p.to>=p.from);
-return {empId:e? e.id:null, name:e? e.name:key, picks};
+ 
+const V=S.vacations||{}, lo=V.windowFrom||"", hi=V.windowTo||"";
+const inWindow = p => (!lo || p.to>=lo) && (!hi || p.from<=hi);
+const picks = (lo||hi) ? all.filter(inWindow) : all;
+return {empId:e? e.id:null, name:e? e.name:key, picks, outside:all.length-picks.length};
 }
 
 function pasteCodeModal(prefill){
@@ -21323,7 +21486,7 @@ function buildPollFile(){
 const payload = {
 org: S.org.name||"Our team",
 site: S.org.site||"",
-holidays: holStaffed().map(h=>({name:h.name,date:h.date,hours:h.hours||""})),
+holidays: holStaffed().map(h=>({id:h.id, name:h.name, date:h.date, hours:h.hours||""})),
 staff: S.employees.filter(e=>e.active).map(e=>({id:e.id,name:e.name}))
 };
 const data = b64e(JSON.stringify(payload));
@@ -21386,7 +21549,8 @@ const P = [
 'var k=who.value;if(!k){alert("Pick your name first.");return;}',
 'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;k=String(k).replace(/[|;~]/g," ").trim().slice(0,60);if(!k)return;}',
 'var c=[];order.forEach(function(hi){if(cant[hi])c.push(hi);});',
-'var raw="CD1|"+k+"|"+order.join(".")+"|"+c.join(".");',
+'var id=function(hi){var h=D.holidays[hi];return (h&&h.id)?h.id:hi;};',
+'var raw="CD1|"+k+"|"+order.map(id).join(".")+"|"+c.map(id).join(".");',
 'var code=btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,"");',
 'document.getElementById("cd").textContent=code;',
 'document.getElementById("out").className="";',
