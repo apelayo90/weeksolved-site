@@ -2205,8 +2205,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "93f8f82e";       
-const BUILD_AT = "2026-09-04 08:50 UTC";       
+const BUILD_ID = "44d76ba7";       
+const BUILD_AT = "2026-09-04 09:27 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -4358,6 +4358,33 @@ return S.weeks[ws];
 const BLANK_WEEK = {assignments:[], published:false, generatedAt:null};
 function peekWeek(ws){ return S.weeks[ws||curWeek()] || BLANK_WEEK; }
  
+function reweekAll(newStart){
+const rows=[];
+Object.keys(S.weeks||{}).forEach(k=>{ (S.weeks[k].assignments||[]).forEach(a=>rows.push(a)); });
+const oldKeys=Object.keys(S.weeks||{});
+const wasPosted={};
+oldKeys.forEach(k=>{ if(S.weeks[k].published) wasPosted[k]=1; });
+const next={};
+rows.forEach(a=>{
+const k=weekStartOf(a.date, newStart);
+if(!next[k]) next[k]={assignments:[], published:false, generatedAt:Date.now()};
+a.dow=parseYmd(a.date).getDay();
+next[k].assignments.push(a);
+});
+ 
+oldKeys.forEach(k=>{
+const w=S.weeks[k];
+const keep=Object.keys(w).filter(x=>x!=="assignments" && x!=="published" && x!=="generatedAt");
+if(!(w.assignments||[]).length && keep.length){
+const nk=weekStartOf(k, newStart);
+if(!next[nk]) next[nk]=Object.assign({assignments:[], published:false, generatedAt:null}, w, {assignments:[], published:false});
+}
+});
+S.weeks=next;
+S.currentWeek=weekStartOf(curWeek(), newStart);
+return {moved:rows.length, unposted:Object.keys(wasPosted).length};
+}
+ 
 const empById = id => S.employees.find(e=>e.id===id) || goneById(id);
 function goneById(id){
 const g=(S.gone||[]).find(x=>x.id===id);
@@ -4597,6 +4624,8 @@ const wd = weekDates(ws).find(x=>x.dow===dow);
 return wd? ((S.holidays.list||[]).find(h=>h.date===wd.date)||null) : null;
 }
 function expandDemand(dow, ws){
+ 
+if(S.hours && S.hours[dow] && S.hours[dow].closed) return [];
 let rows = (demandOf(ws)[dow])||[];
 const hol = holOn(dow, ws);
 if(hol){
@@ -10034,9 +10063,13 @@ return h;
 const PAY_TYPES=[["none","Not tracked"],["weekly","Weekly"],["biweekly","Every two weeks"],
 ["semi","Twice a month (1st and 16th)"],["monthly","Monthly"]];
 function payOn(){ return !!(S.org.pay && S.org.pay.type && S.org.pay.type!=="none"); }
+ 
 function payAnchor(){
 const a=(S.org.pay&&S.org.pay.anchor)||"";
-return a || weekStartOf(ymd(new Date()), S.org.weekStart);
+if(a) return a;
+const start=weekStartOf(ymd(new Date()), S.org.weekStart);
+try{ if(payOn()){ S.org.pay=S.org.pay||{}; S.org.pay.anchor=start; lsSave(); } }catch(e){}
+return start;
 }
  
 function payPeriod(date){
@@ -11392,13 +11425,19 @@ root.querySelectorAll("[data-bind]").forEach(el=>{
 const path=el.dataset.bind;
 const typed = el.tagName==="TEXTAREA" ||
 (el.tagName==="INPUT" && ["text","number","time","date","email","tel"].includes(el.type));
+ 
+const numHere=["org.weekStart"];
 const commit=()=>{
 let v = el.type==="checkbox"? (el.dataset.invert? !el.checked : el.checked) : (el.type==="number"? (el.value===""?0:parseFloat(el.value)) : el.value);
 if(path==="rules.stationFamilies" || path==="rules.skillsOn") v = v===true || v==="1" || v===1;
+else if(numHere.includes(path)) v = parseFloat(v);
 if(path==="org.jurisdiction") otFollowState(v);
 setPath(S,path,v);
 if(path==="rules.mealWaiverMode") S.rules.allowMealWaiver = v!=="off";
 if(path==="org.name" && S.sample) S.sample=false;    
+if(path.indexOf("rules.meal")===0 || path==="rules.breakMode" || path==="rules.restMode"
+|| path==="rules.staggerMeals" || path==="rules.allowMealWaiver" || path==="org.jurisdiction")
+rebuildBreaks();
 };
 if(typed){
  
@@ -12837,8 +12876,9 @@ return `
     <div class="card"><header><h3>Business</h3></header><div class="body grid2">
       <div class="field"><label>Business or department name</label><input type="text" data-bind="org.name" value="${esc(S.org.name)}" placeholder="${esc(bizEx().name)}" data-rerender="no"></div>
       <div class="field"><label>Location / site</label><input type="text" data-bind="org.site" value="${esc(S.org.site)}" placeholder="e.g. Main Campus, Suite 120" data-rerender="no"></div>
-      <div class="field"><label>Week starts on</label><select data-bind="org.weekStart">
-        ${DAYS.map((d,i)=>`<option value="${i}" ${S.org.weekStart===i?"selected":""}>${d}</option>`).join("")}</select></div>
+      <div class="field"><label>Week starts on</label><select id="orgws">
+        ${DAYS.map((d,i)=>`<option value="${i}" ${(+S.org.weekStart||0)===i?"selected":""}>${d}</option>`).join("")}</select>
+        <span class="mini">${Object.keys(S.weeks||{}).length? "You already have weeks built. Moving the boundary re-cuts them, so you will be asked to confirm." : "Set this before you build any weeks."}</span></div>
       <div class="field"><label>Jurisdiction (break rules)</label><select data-bind="org.jurisdiction">
         ${Object.keys(LAW).map(k=>`<option value="${k}" ${S.org.jurisdiction===k?"selected":""}>${esc(LAW[k].name)}</option>`).join("")}</select></div>
     </div></div>
@@ -12900,6 +12940,34 @@ return `
   </div>`;
 }
 WIRE.org = root=>{
+{ const ws=root.querySelector("#orgws");
+if(ws) ws.onchange=()=>{
+const next=parseFloat(ws.value)||0, was=+S.org.weekStart||0;
+if(next===was) return;
+const built=Object.keys(S.weeks||{}).filter(k=>((S.weeks[k].assignments)||[]).length).length;
+const apply=()=>{
+S.org.weekStart=next;
+const r=built? reweekAll(next) : (S.currentWeek=weekStartOf(curWeek(), next), {moved:0, unposted:0});
+save(); render();
+toast(built? "Week now starts on "+DAYS[next]+" \u2014 "+r.moved+" shift"+(r.moved===1?"":"s")+" moved into the weeks they now fall in"+(r.unposted? ", and "+r.unposted+" week"+(r.unposted===1?" is":"s are")+" no longer marked as posted" : "")
+: "Week now starts on "+DAYS[next]);
+};
+if(!built){ apply(); return; }
+modal("Move the week boundary?", `
+        <div class="stack">
+          <div class="banner warn"><div><b>You have ${built} week${built===1?"":"s"} built on a ${esc(DAYS[was])} boundary.</b> Moving it to ${esc(DAYS[next])} re-cuts them: every shift keeps its date, but the weeks they sit in change shape.</div></div>
+          <div class="help">Anything already posted stops counting as posted, because a week whose days have changed is not the week your team was sent. Post it again once you have looked at it. Take a backup first if you want a way back \u2014 Settings \u2192 Back up.</div>
+        </div>`,
+`<button class="btn" data-close>Leave it on ${esc(DAYS[was])}</button>
+         <button class="btn primary" id="wsgo">Move it to ${esc(DAYS[next])}</button>`,
+r=>{
+const cancel=()=>{ closeModal(true); ws.value=String(was); };
+MODAL_GUARD=cancel;
+r.querySelectorAll("[data-close]").forEach(b=>b.onclick=cancel);
+r.querySelector("#wsgo").onclick=()=>{ closeModal(true); apply(); };
+});
+};
+}
 root.querySelector("#runsetup").onclick=()=>wizard();
 root.querySelector("#clearall").onclick=()=>{
 modal("Clear everything?", `<p>This removes everything${S.sample?" — it's all sample data anyway":""} — roles, shifts, team, schedules, holidays — and leaves you an empty board. There is no undo, so grab a backup first if you want one.</p>`,
@@ -13121,10 +13189,30 @@ toast("The break has to sit inside the shift \u2014 check the times"); return; }
 const i=S.shifts.findIndex(x=>x.id===s.id);
 if(i>=0) S.shifts[i]=rec; else S.shifts.push(rec);
  
-Object.keys(S.weeks).forEach(ws=>{ (S.weeks[ws].assignments||[]).forEach(x=>{
-if(x.shiftId===rec.id && !x.locked) x.gap=shiftGap(rec); }); });
+const [na,nb]=shiftMinutes(rec);
+const moved=[], posted=[];
+Object.keys(S.weeks).forEach(ws=>{
+const wk=S.weeks[ws];
+const mine=(wk.assignments||[]).filter(x=>x.shiftId===rec.id);
+if(!mine.length) return;
+const stale=mine.filter(x=>x.startMin!==na || x.endMin!==nb);
+if(wk.published){ if(stale.length) posted.push(ws); }
+else mine.forEach(x=>{
+if(x.locked) return;
+if(x.startMin!==na || x.endMin!==nb){ x.startMin=na; x.endMin=nb; moved.push(x); }
+});
+mine.forEach(x=>{ if(!x.locked) x.gap=shiftGap(rec); });
+});
 rebuildBreaks();
 save(); closeModal(); render();
+if(posted.length) setTimeout(()=>modal("Weeks already posted keep the old times", `
+          <div class="stack">
+            <div class="banner warn"><div><b>${esc(label)} now runs ${esc(m2disp(na))}\u2013${esc(m2disp(nb))}.</b> ${posted.length} week${posted.length===1?" has":"s have"} already gone out to your team on the old times, so ${posted.length===1?"it has":"they have"} been left as ${posted.length===1?"it is":"they are"} \u2014 changing what somebody was told to turn up to is not something to do quietly.</div></div>
+            <div class="card"><div class="body"><div class="lab">Posted on the old times</div>
+              <div class="mini">${posted.map(w=>esc(prettyFull(w))).join(" \u00b7 ")}</div></div></div>
+            <div class="help">To move them, open the week, draft it again and post it again \u2014 your team gets the corrected sheet with the change on it.</div>
+          </div>`, `<button class="btn primary" data-close>Understood</button>`), 250);
+else if(moved.length) toast(moved.length+" shift"+(moved.length===1?"":"s")+" already drafted moved to the new times");
 };
 const d=root.querySelector("#delshift");
 if(d) d.onclick=()=>{
@@ -18825,7 +18913,9 @@ const raw=localStorage.getItem(WIZKEY); if(!raw) return null;
 const d=JSON.parse(raw);
 if(!d || !d.W || typeof d.W.step!=="number") return null;
 if(Date.now()-(d.at||0) > 30*86400000) return null;       
-if(d.W.step<1) return null;
+ 
+if(d.W.step<0) return null;
+if(d.W.step===0 && !(d.W.name||d.W.biz)) return null;
 return d;
 }catch(e){ return null; }
 }
@@ -18938,8 +19028,24 @@ return t;
 const namesIn = b => { const seen=new Set(), out=[];
 (W.bucketNames[b]||"").split(/\n/).map(cleanNameLine).filter(Boolean).forEach(n=>{ const k=n.toLowerCase(); if(seen.has(k)) return; seen.add(k); out.push(n); });
 return out; };
+ 
 const allNames = () => { const out=[];
-for(let b=0;b<W.bucketCount;b++) namesIn(b).forEach((n,i)=>out.push({name:n,b,i})); return out; };
+for(let b=0;b<W.bucketCount;b++){
+const seen={};
+namesIn(b).forEach((n,i)=>{
+const nk=String(n).trim().toLowerCase();
+seen[nk]=(seen[nk]||0)+1;
+out.push({name:n, b, i, key:b+"|"+nk+(seen[nk]>1? "#"+seen[nk] : "")});
+});
+}
+return out; };
+ 
+const pset = (pn) => {
+if(W.people[pn.key]) return W.people[pn.key];
+const old=W.people[pn.b+":"+pn.i];
+if(old){ W.people[pn.key]=old; delete W.people[pn.b+":"+pn.i]; return W.people[pn.key]; }
+return null;
+};
 const curShifts = () => {
 if(W.shiftPreset==="custom" && (W.custom||[]).length)
 return {id:"custom", t:"Shifts you set up here", d:"", shifts:W.custom};
@@ -19513,7 +19619,7 @@ box.innerHTML = `
 : "<b>Nothing listed yet.</b> Add at least one name to continue."}</div></div>
       ${listed? `<div class="scroll" style="max-height:210px;margin-top:12px"><table>
         <thead><tr><th>Name</th><th style="width:130px">Role</th><th style="width:130px">Type</th><th style="width:92px">Min hrs</th><th style="width:92px">Max hrs</th></tr></thead>
-        <tbody>${allNames().map(pn=>{ const key=pn.b+":"+pn.i, pp=W.people[key]||{};
+        <tbody>${allNames().map(pn=>{ const key=pn.key, pp=pset(pn)||{};
 return `<tr><td><strong>${esc(pn.name)}</strong></td><td class="mini">${esc(bucketLabel(W,pn.b))}</td>
             <td><select class="wpt" data-k="${key}">${Object.keys(TYPES).map(t=>`<option value="${t}" ${(pp.type||"FT")===t?"selected":""}>${TYPES[t]}</option>`).join("")}</select></td>
             <td><input type="number" inputmode="decimal" class="wmn" data-k="${key}" min="0" max="80" value="${pp.minH!=null? pp.minH : (pp.type==="PT"?16:pp.type==="PRN"?0:pp.type==="TEMP"?24:32)}"></td>
@@ -19572,7 +19678,8 @@ const b=document.createElement("div");
 b.id="wleave"; b.style.cssText="flex:1;display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)";
 b.innerHTML='Leave for now? Your answers are saved \u2014 you can pick up here. <button class="btn sm danger" id="wleaveyes">Leave</button><button class="btn sm" id="wleaveno">Stay</button>';
 foot.prepend(b);
-b.querySelector("#wleaveyes").onclick=()=>closeModal(true);
+ 
+b.querySelector("#wleaveyes").onclick=()=>{ try{ collect(); wizSave(W); }catch(e){} closeModal(true); };
 b.querySelector("#wleaveno").onclick=()=>b.remove();
 }
 } : null;
@@ -19585,12 +19692,35 @@ collect(); W[g]=v;
 if(g==="biz"){ rebuildSteps(); const bt=BIZ_TYPES.find(x=>x.id===v);
 if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=bt.shifts;
  
-W.bucketCount=bt.roles.length; W.buckets=["","","",""]; W.bucketLic=(bt.lic||[]).concat([false,false,false,false]).slice(0,4); W.shifts=[]; W.perShift={};
+ 
+const wasCount=W.bucketCount||0, newCount=bt.roles.length;
+if(newCount<wasCount){
+const spare=[];
+for(let b=newCount;b<wasCount;b++){
+const txt=(W.bucketNames&&W.bucketNames[b])||"";
+String(txt).split("\n").map(x=>x.trim()).filter(Boolean).forEach(nm=>spare.push(nm));
+if(W.bucketNames) W.bucketNames[b]="";
+}
+if(spare.length){
+const last=Math.max(0,newCount-1);
+W.bucketNames=W.bucketNames||[];
+const cur=String(W.bucketNames[last]||"").replace(/\s+$/,"");
+W.bucketNames[last]=(cur? cur+"\n":"")+spare.join("\n");
+setTimeout(()=>toast(spare.length+" name"+(spare.length===1?"":"s")+" moved into "+
+(bt.roles[last]||"the last group")+" \u2014 that trade has fewer groups. Move them if that is wrong."), 250);
+}
+}
+W.bucketCount=newCount; W.buckets=["","","",""]; W.bucketLic=(bt.lic||[]).concat([false,false,false,false]).slice(0,4); W.shifts=[]; W.perShift={};
 if(bt.rules) Object.assign(W, bt.rules); } }
 if(g==="shiftPreset"){ W.shifts=[]; W.perShift={}; }
 if(g==="biz"){ W.custom=null; }
-if(g==="hoursPreset"){ W.shifts=[]; W.perShift={}; }
+if(g==="hoursPreset"){ W.shifts=[]; W.perShift={}; W.custom=null; }
 paint();
+});
+ 
+["#wo","#wc","#wsato","#wsatc","#wsuno","#wsunc"].forEach(id=>{
+const el=r.querySelector(id);
+if(el) el.addEventListener("change", ()=>{ W.shifts=[]; W.perShift={}; W.custom=null; });
 });
 { const wsa=r.querySelector("#wsadd");
 if(wsa) wsa.onclick=()=>{ collect();
@@ -19794,7 +19924,7 @@ roleId:null,color:PALETTE[i%PALETTE.length],note:"",unpaidBreakMin:30,desire:sh.
  
 const people=allNames();
 N.employees=people.map(pn=>{
-const pp=W.people[pn.b+":"+pn.i]||{};
+const pp=pset(pn)||{};
 const type=pp.type||"FT";
 const maxH=pp.maxH || (type==="FT"?40: type==="PT"?28: type==="PRN"?20:32);
 const roleId=N.roles[pn.b]? N.roles[pn.b].id : (N.roles[0]&&N.roles[0].id);
@@ -19822,6 +19952,16 @@ const sh={id:uid("s"),label,start:o,end:c,roleId:null,
 color:PALETTE[N.shifts.length%PALETTE.length],note:"",unpaidBreakMin:30,desire:-1};
 N.shifts.push(sh); made[key]=sh; weekendShift[dow]=sh;
 });
+}
+ 
+{ const held={}; N.employees.forEach(e=>(e.roleIds||[]).forEach(id=>{ held[id]=1; }));
+const dropped=N.roles.filter(r=>!held[r.id]);
+if(dropped.length && N.roles.length>dropped.length){
+N.roles=N.roles.filter(r=>held[r.id]);
+setTimeout(()=>toast(dropped.length===1
+? "\u201c"+dropped[0].name+"\u201d had nobody in it, so it is not on the board \u2014 add it under Roles when you have somebody"
+: dropped.length+" groups had nobody in them, so they are not on the board \u2014 add them under Roles when you have somebody"), 900);
+}
 }
 const openDays = [0,1,2,3,4,5,6].filter(d=>!N.hours[d].closed).length || 7;
 const cap = Math.max(1, Math.floor((people.length||1)*4.6/openDays));
