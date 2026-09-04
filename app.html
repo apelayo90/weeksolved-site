@@ -1083,9 +1083,121 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 <div id="sheetroot"></div>
 <div id="toastroot" role="status" aria-live="polite"></div>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+/* Self-contained on purpose: the cover has to work even if nothing else does. */
+#bootveil{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:#fbfbfa;color:#1b1f20;
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+#bootveil .bv-in{max-width:30rem;text-align:center}
+#bootveil .bv-mark{width:44px;height:44px;margin:0 auto 18px;border-radius:11px;background:#2c5f57;color:#fff;
+  font-weight:700;font-size:16px;letter-spacing:.5px;display:flex;align-items:center;justify-content:center}
+#bootveil .bv-msg{font-size:17px;font-weight:600}
+#bootveil .bv-sub{margin-top:12px;font-size:14px;line-height:1.6;opacity:.78;text-align:left}
+#bootveil .bv-acts{margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#bootveil .bv-acts button,#bootveil .bv-acts a{font:inherit;font-weight:600;padding:10px 18px;border-radius:9px;
+  border:1px solid #2c5f57;background:#2c5f57;color:#fff;cursor:pointer;text-decoration:none}
+#bootveil .bv-acts a{background:transparent;color:#2c5f57}
+#bootveil:not(.failed) .bv-mark{animation:bvpulse 1.4s ease-in-out infinite}
+@keyframes bvpulse{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-color-scheme:dark){
+  #bootveil{background:#191d1e;color:#e8eceb}
+  #bootveil .bv-acts a{color:#7fd1c1;border-color:#7fd1c1}
+  #bootveil .bv-mark,#bootveil .bv-acts button{background:#2f7d6d;border-color:#2f7d6d}
+}
+@media (prefers-reduced-motion:reduce){ #bootveil .bv-mark{animation:none} }
+</style>
+<div id="bootveil" role="status" aria-live="polite">
+  <div class="bv-in">
+    <div class="bv-mark">ws</div>
+    <div class="bv-msg" id="bvmsg">Getting your schedule…</div>
+    <div class="bv-sub" id="bvsub"></div>
+    <div class="bv-acts" id="bvacts"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" onerror="window.__fbFail=(window.__fbFail||0)+1"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" onerror="window.__fbFail=(window.__fbFail||0)+1"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js" onerror="window.__fbFail=(window.__fbFail||0)+1"></script>
+<script>
+/* ------------------------------------------------------------------
+   The page must never sit on its own empty markup.
+
+   Everything below the header is drawn by script. If the Firebase
+   libraries fail to arrive — a dropped connection, a content blocker,
+   a VPN, a captive wi-fi that swallows the request — the first line of
+   boot() throws and the page freezes on the bare shell: a header, the
+   word "Overview", and nothing that works. It looks like a broken app
+   and says nothing at all. This covers the shell until the app takes
+   over, and says plainly what happened if it never does.
+   Deliberately kept in its own script with no dependencies, so it
+   still runs when everything after it is broken. ------------------- */
+(function(){
+  var done=false;
+  /* The screens the app draws (the gate, sign-in, the board) each replace the
+     whole body, which takes this cover with them. So a failure that happens
+     LATER — after the access code, say — has to be able to put it back. */
+  function ensureVeil(){
+    var v=document.getElementById("bootveil");
+    if(!v){
+      v=document.createElement("div");
+      v.id="bootveil";
+      v.innerHTML='<div class="bv-in"><div class="bv-mark">ws</div>'
+        +'<div class="bv-msg" id="bvmsg"></div><div class="bv-sub" id="bvsub"></div>'
+        +'<div class="bv-acts" id="bvacts"></div></div>';
+      document.body.appendChild(v);
+    }
+    /* inline, because the stylesheet may have gone with the body it lived in */
+    var dark=false;
+    try{ dark=window.matchMedia && window.matchMedia("(prefers-color-scheme:dark)").matches; }catch(e){}
+    v.style.cssText="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;"
+      +"justify-content:center;padding:24px;text-align:center;"
+      +"background:"+(dark?"#191d1e":"#fbfbfa")+";color:"+(dark?"#e8eceb":"#1b1f20")+";"
+      +'font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+    return v;
+  }
+  window.bootDone=function(){
+    done=true;
+    try{ document.documentElement.classList.remove("booting"); }catch(e){}
+    var v=document.getElementById("bootveil"); if(v && v.parentNode) v.parentNode.removeChild(v);
+  };
+  window.bootFail=function(why){
+    if(window.__bootFailed) return;
+    window.__bootFailed=true;
+    var v=ensureVeil();
+    v.className="failed";
+    var m=document.getElementById("bvmsg"), s=document.getElementById("bvsub"), a=document.getElementById("bvacts");
+    if(m) m.textContent = why || "Weeksolved could not finish loading";
+    if(s) s.innerHTML = "This is almost always the connection rather than your schedule — nothing has been lost. "
+      + "It can also be a content blocker, a VPN or a work network standing between this page and the sign-in service."
+      + "<br><br>Try again in a moment. If it keeps happening, open it in a different browser or turn a content blocker off for weeksolved.com.";
+    if(a) a.innerHTML = '<button type="button" id="bvretry">Try again</button>'
+      + '<a href="mailto:weeksolved@gmail.com?subject=Weeksolved%20will%20not%20load">Tell us about it</a>';
+    var r=document.getElementById("bvretry");
+    if(r) r.onclick=function(){ try{ location.reload(); }catch(e){} };
+  };
+  /* A library that 404s or is blocked trips this straight away — but only while
+     the cover is still the thing on screen. Once a real screen has drawn over it
+     the person is not stuck, and a missing library is reported at the point it is
+     actually needed instead (cloudBoot). */
+  function stuck(){ return !done && !!document.getElementById("bootveil"); }
+  var t=setInterval(function(){
+    if(done){ clearInterval(t); return; }
+    if(window.__fbFail && stuck()){ clearInterval(t); window.bootFail("Weeksolved could not reach the sign-in service"); }
+  }, 400);
+  /* and anything else that leaves the page dead is caught by the clock */
+  setTimeout(function(){ if(stuck()) window.bootFail(); }, 15000);
+  function fatal(msg){
+    if(!/firebase is not defined|Can't find variable: firebase|firebase.*undefined/i.test(msg||"")) return;
+    window.bootFail("Weeksolved could not reach the sign-in service");
+  }
+  window.addEventListener("error", function(ev){ fatal((ev && ev.message)||""); });
+  window.addEventListener("unhandledrejection", function(ev){
+    var r=ev && ev.reason; fatal((r && (r.message||String(r)))||"");
+  });
+})();
+</script>
+
 <script>
 /*! Weeksolved | Copyright (c) 2026 Alberto Pelayo. All rights reserved. */
 "use strict";
@@ -2218,8 +2330,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "63e0db3a";       
-const BUILD_AT = "2026-09-04 09:53 UTC";       
+const BUILD_ID = "69075159";       
+const BUILD_AT = "2026-09-04 11:40 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -2302,6 +2414,8 @@ function cloudOn(){ return !!(CLOUD && CLOUD.apiKey && window.firebase); }
 
 function startApp(){
 if(SHELL && !document.querySelector(".app")) document.body.innerHTML=SHELL;
+ 
+try{ if(window.bootDone) window.bootDone(); }catch(e){}
 render();
  
 if(S.sample && !(S.ui&&S.ui.wizOffered)){
@@ -2316,6 +2430,11 @@ if(!S.setupDone && !S.employees.length) setTimeout(wizard, 500);
 }
 
 function cloudBoot(){
+ 
+if(typeof firebase==="undefined" || !firebase.initializeApp){
+if(window.bootFail) window.bootFail("Weeksolved could not reach the sign-in service");
+return;
+}
 SHELL=document.body.innerHTML;           
 firebase.initializeApp(CLOUD);
  
@@ -3736,6 +3855,11 @@ muts.forEach(m=>m.addedNodes.forEach(n=>{ if(n && n.nodeType===1) enhanceDates(n
 }
 async function boot(){
 if(FRAMED){ paintFrameRefusal(); return; }     
+ 
+if(CLOUD && CLOUD.apiKey && !window.firebase){
+if(window.bootFail) window.bootFail("Weeksolved could not reach the sign-in service");
+return;
+}
 if(cloudOn()){ cloudBoot(); return; }          
 if(!accessOk()){ gateScreen(); return; }
 const local = lsLoad();
@@ -11052,6 +11176,8 @@ let LAST_VIEW=null;
 function render(){
  
 if(!document.querySelector("#ttl")) return;
+ 
+try{ if(window.bootDone) window.bootDone(); }catch(e){}
 WAS_PHONE = isPhone(); RECUR_CACHE=null;
 settlePending(); runQueued(); dailyTick(); graceTick(); paintAccount();
 const keepY = (LAST_VIEW===VIEW)? window.scrollY : null;
@@ -23929,7 +24055,8 @@ return {empId:emp.id, date:dates[idx].date, dow:dates[idx].dow};
 }
 
  
-boot();
+try{ boot(); }
+catch(e){ try{ (window.bootFail||function(){})("Weeksolved could not finish loading"); }catch(_){} }
 </script>
 <!-- The PDF engine is only needed when somebody exports, so it must never hold
      the page up: on a network that quietly swallows requests to this host, a
