@@ -2330,8 +2330,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "69075159";       
-const BUILD_AT = "2026-09-04 11:40 UTC";       
+const BUILD_ID = "af1619f9";       
+const BUILD_AT = "2026-09-05 22:47 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5245,16 +5245,63 @@ filled+=r.filled; unfilled+=r.unfilled.length; built.push(ws);
 }
 return {filled, unfilled, built, held};
 }
+ 
+function draftedModal(nWeeks){
+modal(nWeeks+" weeks drafted", `
+    <div class="stack">
+      <p class="whead">They\u2019re on the board. Anything you want to do with all ${nWeeks} at once, do it from here.</p>
+      <div class="wopts" id="dnext">
+        <button type="button" class="wopt" data-go="print">
+          <span class="wt">Print them</span>
+          <span class="wd">All ${nWeeks} weeks, a page each or flowing down to save paper</span></button>
+        <button type="button" class="wopt" data-go="cards">
+          <span class="wt">A card for each person</span>
+          <span class="wd">One page per person, their own shifts only \u2014 this week</span></button>
+        <button type="button" class="wopt" data-go="check">
+          <span class="wt">Show me the problems first</span>
+          <span class="wd">Anything left open, and every limit the draft had to bend</span></button>
+      </div>
+      <div class="mini">Nothing is posted yet. Printing a draft is fine \u2014 the team only sees it when you post.</div>
+    </div>`,
+`<button class="btn" data-close>Not now</button>`,
+r=>{
+r.querySelectorAll("#dnext .wopt").forEach(b=>b.onclick=()=>{
+const go_=b.dataset.go; closeModal(true);
+setTimeout(()=>{
+if(go_==="print"){
+printModal();
+ 
+setTimeout(()=>{
+const sel=document.querySelector("#prwk"), box=document.querySelector("#prwkn");
+if(!sel) return;
+if([...sel.options].some(o=>o.value===String(nWeeks))) sel.value=String(nWeeks);
+else { sel.value="other"; if(box) box.value=nWeeks; }
+sel.dispatchEvent(new Event("change",{bubbles:true}));
+}, 120);
+}
+else if(go_==="cards") exportPersonCards().catch(()=>pdfUnavailable());
+else go("week");
+}, 60);
+});
+});
+}
 function draftModal(){
 const start=S.currentWeek;
 modal("Draft a schedule", `
     <div class="stack">
       <p class="whead">How far ahead do you want to work? Each week is drafted knowing what the one before it did, so nobody closes on Sunday and opens on Monday across the boundary.</p>
       <div class="wopts" id="dwk">
-        ${[1,2,4,6].map(n=>`<button type="button" class="wopt ${(S.horizon||1)===n?"on":""}" data-n="${n}">
+        ${[1,2,4,6,8].map(n=>`<button type="button" class="wopt ${(S.horizon||1)===n?"on":""}" data-n="${n}">
           <span class="wt">${n===1?"Just this week":n+" weeks"}</span>
           <span class="wd">${esc(prettyDate(start))}${n>1? " through "+prettyDate(addDays(start,n*7-1)):""}</span></button>`).join("")}
+        <button type="button" class="wopt ${![1,2,4,6,8].includes(S.horizon||1)?"on":""}" data-n="other">
+          <span class="wt">A number I choose</span>
+          <span class="wd">Anything up to 26 weeks \u2014 half a year at a time</span></button>
       </div>
+      <div class="field" id="dwknWrap" style="display:${![1,2,4,6,8].includes(S.horizon||1)?"":"none"}">
+        <label>How many weeks</label>
+        <input type="number" inputmode="decimal" id="dwkn" min="1" max="26" value="${![1,2,4,6,8].includes(S.horizon||1)? (S.horizon||8) : 8}" style="width:110px">
+        <span class="mini">Twenty-six is the ceiling \u2014 past that a draft is guesswork, and posted weeks are skipped anyway.</span></div>
       <div class="sep"></div>
       <div class="field"><label>Or start somewhere else</label><input type="date" id="dfrom" value="${esc(start)}">
         <span class="mini">Snaps to the start of whichever week that date falls in.</span></div>
@@ -5264,10 +5311,15 @@ modal("Draft a schedule", `
     </div>`,
 `<button class="btn" data-close>Cancel</button><button class="btn primary" id="ddraft">Draft it</button>`,
 r=>{
-let n=S.horizon||1;
-r.querySelectorAll("#dwk .wopt").forEach(b=>b.onclick=()=>{ n=+b.dataset.n;
+let n=S.horizon||1, custom=![1,2,4,6,8].includes(n);
+const nbox=r.querySelector("#dwkn"), nwrap=r.querySelector("#dwknWrap");
+r.querySelectorAll("#dwk .wopt").forEach(b=>b.onclick=()=>{
+custom = b.dataset.n==="other";
+if(!custom) n=+b.dataset.n;
+nwrap.style.display = custom? "":"none";
 r.querySelectorAll("#dwk .wopt").forEach(x=>x.classList.toggle("on",x===b)); });
 r.querySelector("#ddraft").onclick=()=>{
+if(custom) n = clamp(Math.round(+nbox.value||1), 1, 26);
 const from = weekStartOf(r.querySelector("#dfrom").value||start, S.org.weekStart);
 const keep = r.querySelector("#dkeep").checked;
 closeModal(true);
@@ -5277,6 +5329,8 @@ S.horizon=n; S.currentWeek=from;
 const res=generateRange(from,n);
 save(); render();
 toast(res.filled+" shifts drafted across "+res.built.length+" week"+(res.built.length===1?"":"s")+(res.unfilled? " · "+res.unfilled+" left open":"")+(res.held? " · "+res.held+" week"+(res.held===1?"":"s")+" past the trial horizon left alone":""));
+ 
+if(res.built.length>1) setTimeout(()=>draftedModal(res.built.length), 350);
 });
 };
 });
@@ -8088,7 +8142,7 @@ const avoidIds=v.avoid.map(x=>x.id);
 let e=v.existing;
 const fresh=!e;
 if(fresh){
-e={id:uid("e"), name:v.name, roleIds:[], type:"FT", hoursMode:"range", minH:0, maxH:40, maxD:5,
+e={id:uid("e"), name:v.name, roleIds:[], type:"FT", hoursMode:"exact", minH:40, maxH:40, maxD:5, projectOk:"no",
 holidayPay:true, holidayPayH:8, onCall:false, cycle:null,
 avail:[], prefShiftIds:[], avoidShiftIds:[], prefDaysOff:[], canOpen:true, canClose:true,
 notes:"", seniority:ymd(new Date()), active:true, rate:0};
@@ -10410,6 +10464,57 @@ push("crit","Below required coverage — "+DSHORT[dow],
 });
 
  
+ 
+if(wk.assignments.length) dates.forEach(({date,dow})=>{
+const win=dayWindow(dow); if(!win) return;                  
+const day=dayList(date, ws);
+const STEPM=15;
+const runs=(test)=>{                                        
+const out=[]; let cur=null;
+for(let t=win[0]; t<win[1]; t+=STEPM){
+if(shutAt(t, dow, date)){ if(cur){ out.push(cur); cur=null; } continue; }
+if(test(t)){ if(cur) cur.to=t+STEPM; else cur={from:t, to:t+STEPM}; }
+else if(cur){ out.push(cur); cur=null; }
+}
+if(cur) out.push(cur);
+return out;
+};
+ 
+runs(t=>onDutyAt(day, t, null, {ignoreMeals:true})===0).forEach(r=>{
+push("crit","Nobody on the floor — "+DSHORT[dow],
+prettyDate(date)+": open from "+m2disp(win[0])+" to "+m2disp(win[1])+
+", but nobody is scheduled between "+m2disp(r.from)+" and "+m2disp(r.to)+
+". Either the shifts you've defined don't reach that far, or the numbers under Coverage needs stop short of it.",
+{date, dow, code:"empty", from:r.from, to:r.to});
+});
+ 
+(S.stations||[]).filter(st=>st.critical && !st.off && st.kind!=="admin").forEach(st=>{
+if((st.days||[]).length && !st.days.includes(dow)) return;
+const a = st.from? t2m(st.from) : win[0];
+const b = st.to?   t2m(st.to)   : win[1];
+const from=Math.max(a,win[0]), to=Math.min(b,win[1]);
+if(to<=from) return;
+ 
+const gaps=[];
+let cur=null;
+for(let t=from; t<to; t+=STEPM){
+if(shutAt(t, dow, date)){ if(cur){ gaps.push(cur); cur=null; } continue; }
+const have=onDutyAt(day, t, st.roleId||null, {ignoreMeals:true});
+if(have===0){ if(cur) cur.to=t+STEPM; else cur={from:t, to:t+STEPM}; }
+else if(cur){ gaps.push(cur); cur=null; }
+}
+if(cur) gaps.push(cur);
+gaps.forEach(g=>{
+push("crit","Nobody can cover "+st.name+" — "+DSHORT[dow],
+prettyDate(date)+": this post is marked must-cover from "+m2disp(from)+" to "+m2disp(to)+
+", and there is nobody"+(st.roleId? " qualified as "+roleName(st.roleId):"")+
+" on the floor between "+m2disp(g.from)+" and "+m2disp(g.to)+".",
+{date, dow, code:"stationgap", stationId:st.id, from:g.from, to:g.to});
+});
+});
+});
+
+ 
 S.employees.forEach(e=>{
 const mine = wk.assignments.filter(a=>a.empId===e.id).sort((a,b)=>a.date.localeCompare(b.date));
 const mins = mine.reduce((t,a)=>t+paidMinutes(a),0);
@@ -11019,7 +11124,11 @@ const pending=bugsSince((S.support||{}).lastSent||0).length;
 sheetRoot().innerHTML =
 '<div class="sheet"><div class="sheetbox" role="dialog" aria-modal="true" aria-label="More">'+
 '<div class="grab"></div>'+
-'<h4>Account</h4><div class="sheetlist"><button data-sheetacct="1">'+
+ 
+'<h4>Appearance</h4>'+
+'<div class="themetog" id="sheettheme" role="group" aria-label="Color theme" style="width:100%">'+
+'<button data-t="light">Light</button><button data-t="system">System</button><button data-t="dark">Dark</button></div>'+
+'<h4 style="margin-top:14px">Account</h4><div class="sheetlist"><button data-sheetacct="1">'+
 esc(((typeof FB!=="undefined" && FB && FB.user && FB.user.email) || "Not signed in"))+
 '</button></div>'+
 (main.length? '<h4>Go to</h4><div class="sheetlist">'+main.map(row).join("")+'</div>':"")+
@@ -11028,9 +11137,6 @@ esc(((typeof FB!=="undefined" && FB && FB.user && FB.user.email) || "Not signed 
 '<button data-sheetgo="settings">Settings</button>'+
 '<button data-sheetbug="1">Report a problem'+(pending? '<span class="n">'+pending+'</span>':"")+'</button>'+
 '</div>'+
-'<h4>Appearance</h4>'+
-'<div class="themetog" id="sheettheme" role="group" aria-label="Color theme" style="width:100%">'+
-'<button data-t="light">Light</button><button data-t="system">System</button><button data-t="dark">Dark</button></div>'+
 '<div class="mini" style="margin-top:12px;text-align:center" id="sheetsync">'+esc(($("#syncmsg")||{textContent:""}).textContent)+'</div>'+
 '</div></div>';
 const r=sheetRoot();
@@ -11607,6 +11713,14 @@ paint();
 }
 function wireCommon(root){
 wireWhy(root);
+ 
+const pj=root.querySelector("#pjallow");
+if(pj) pj.onclick=()=>{
+let n=0;
+S.employees.forEach(e=>{ if(e.active && projectOk(e)==="no"){ e.projectOk="yes"; n++; } });
+save(); render();
+toast(n+" "+(n===1?"person":"people")+" can take project time now");
+};
 wireAdvice(root);
 wireSug(root);
  
@@ -12569,6 +12683,12 @@ sel("rules.projectMinH", [[0,"No minimum"],[2,"2 hours"],[4,"Half a day (4h)"],[
 ? "Stacked — fill up your first-in-line people before anyone else gets any"
 : "Shared out — spread across everyone eligible, a turn each",
 sel("rules.projectShare", [["fair","Share it round"],["best","Stack it on the people who are best at it"]], S.rules.projectShare||"fair")) : ""}
+      ${S.rules.fillMode==="full" && S.employees.filter(e=>e.active).length
+&& !S.employees.some(e=>e.active && projectOk(e)!=="no")
+? `<div class="banner warn"><div><b>Nobody can receive project time, so nobody will be topped up.</b>
+             You've asked Weeksolved to keep going until everyone has their contracted hours, but every active
+             person is set to "keep them on the floor". New profiles start that way on purpose \u2014 open the ones
+             who should be eligible, or <button class="btn sm" id="pjallow">let everyone take a turn</button>.</div></div>` : ""}
       ${S.rules.fillMode==="full" && projectRulesOn()? setRow("Who's in line for it", (()=>{
 const f=S.employees.filter(e=>e.active&&projectOk(e)==="first"), n=S.employees.filter(e=>e.active&&projectOk(e)==="no");
 return [f.length? "First: "+esc(f.map(e=>e.name.split(" ")[0]).join(", ")):"",
@@ -14278,7 +14398,7 @@ if(pairs.length!==before) logIt("change", pairs.length>before? "Kept-apart rule 
 function empModal(id){
 const blankAvail=()=>[0,1,2,3,4,5,6].map(()=>({ok:true,from:"06:00",to:"22:00"}));
 const e = id? JSON.parse(JSON.stringify(empById(id))) :
-{id:uid("e"),name:"",email:"",phone:"",roleIds:[],type:"FT",hoursMode:"range",minH:0,maxH:40,maxD:5,
+{id:uid("e"),name:"",email:"",phone:"",roleIds:[],type:"FT",hoursMode:"exact",minH:40,maxH:40,maxD:5,projectOk:"no",
 holidayPay:true,holidayPayH:8,onCall:false,cycle:null,
 avail:blankAvail(),prefShiftIds:[],avoidShiftIds:[],prefDaysOff:[],canOpen:true,canClose:true,
 notes:"",seniority:ymd(new Date()),active:true,rate:0};
@@ -14320,8 +14440,8 @@ modal(id?"Edit "+e.name:"Add someone", `
       <div id="ecycopts" class="grid3" style="margin-top:8px"></div>
       <div id="ecycprev"></div></div>`:""}
     <div class="field"><label>How their hours work</label><select id="ehm">
-      <option value="range" ${e.hoursMode!=="exact"?"selected":""}>A range — somewhere between a guarantee and a cap</option>
-      <option value="exact" ${e.hoursMode==="exact"?"selected":""}>Exactly this many, every week</option></select>
+      <option value="exact" ${e.hoursMode==="exact"?"selected":""}>Exactly this many, every week</option>
+      <option value="range" ${e.hoursMode!=="exact"?"selected":""}>A range — somewhere between a guarantee and a cap</option></select>
       <span class="mini" id="ehmnote"></span></div>
     <div class="grid3">
       <div class="field" id="eminwrap"><label>Guaranteed hours</label><input type="number" inputmode="decimal" id="emin" min="0" max="80" value="${e.minH}">
@@ -21058,8 +21178,9 @@ modal(id? "Edit "+st.name : isAdmin? "New administrative duty" : "New station", 
       ${skillsOn()? `<label class="switch"><input type="checkbox" id="stskill" ${st.needSkilled?"checked":""}> Only people comfortable on this post \u2014 nobody who needs more time is left here alone <span class="chip">optional</span></label>`:""}`}
       <div class="field"><label>Which days</label><select id="stdaysel">
         <option value="all" ${(!st.days||!st.days.length)?"selected":""}>Every day</option>
-        <option value="custom" ${(st.days&&st.days.length)?"selected":""}>Pick my own…</option></select>
-        <div id="stdaycustom" style="display:${(st.days&&st.days.length)?"":"none"};margin-top:8px"><div class="row" id="stcd">
+        <option value="wkday" ${(st.days&&st.days.join()==="1,2,3,4,5")?"selected":""}>Monday to Friday</option>
+        <option value="custom" ${(st.days&&st.days.length&&st.days.join()!=="1,2,3,4,5")?"selected":""}>Pick my own…</option></select>
+        <div id="stdaycustom" style="display:${(st.days&&st.days.length&&st.days.join()!=="1,2,3,4,5")?"":"none"};margin-top:8px"><div class="row" id="stcd">
           ${DAYS.map((d,i)=>`<label class="switch" style="border:1px solid var(--line);padding:4px 8px;border-radius:6px;font-size:12px">
             <input type="checkbox" data-d="${i}" ${(st.days||[]).includes(i)?"checked":""}> ${DSHORT[i]}</label>`).join("")}</div></div></div>
       <label class="switch"><input type="checkbox" id="stoff" ${st.off?"checked":""}> Out of use for now</label>
@@ -21070,7 +21191,11 @@ let des=st.desire||0;
 r.querySelectorAll("#stdes button").forEach(b=>b.onclick=()=>{ des=+b.dataset.v;
 r.querySelectorAll("#stdes button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
 const dsel=r.querySelector("#stdaysel"), dc=r.querySelector("#stdaycustom");
-dsel.onchange=()=>{ dc.style.display = dsel.value==="custom"? "":"none"; };
+dsel.onchange=()=>{
+dc.style.display = dsel.value==="custom"? "":"none";
+if(dsel.value==="wkday")                        
+r.querySelectorAll("#stcd input").forEach(x=>{ x.checked=[1,2,3,4,5].includes(+x.dataset.d); });
+};
 const crit=r.querySelector("#stcrit"), rw=r.querySelector("#streliefwrap");
 if(crit && rw) crit.onchange=()=>{ rw.style.display = crit.checked? "":"none"; };
 r.querySelector("#stsave").onclick=()=>{
@@ -21092,7 +21217,8 @@ to:   isAdmin? "" : ((r.querySelector("#stto")||{}).value||""),
 slots: isAdmin? [] : (((r.querySelector("#stslot")||{}).value)? [r.querySelector("#stslot").value] : []),
 holdAllDay: isAdmin? false : !!(r.querySelector("#sthold")||{}).checked,
 needSkilled: isAdmin? false : !!(r.querySelector("#stskill")||{}).checked,
-days: dsel.value==="custom"? [...r.querySelectorAll("#stcd input:checked")].map(x=>+x.dataset.d) : [],
+days: dsel.value==="wkday"? [1,2,3,4,5]
+: dsel.value==="custom"? [...r.querySelectorAll("#stcd input:checked")].map(x=>+x.dataset.d) : [],
 off: r.querySelector("#stoff").checked };
 S.stations=S.stations||[];
 const i=S.stations.findIndex(x=>x.id===st.id);
@@ -23809,10 +23935,12 @@ const doc=newDoc("portrait");
 const W=doc.internal.pageSize.getWidth();
 const people=S.employees.filter(e=>e.active && wk.assignments.some(a=>a.empId===e.id));
 if(!people.length){ toast("Nothing scheduled to hand out yet"); return false; }
+ 
 let y=52, first=true;
 people.forEach((e,idx)=>{
-if(!first && y>620){ doc.addPage(); y=52; }
-if(first){ pdfHeader(doc,(S.org.name||"Schedule"),"Individual schedules · week of "+prettyFull(ws)); y=88; first=false; }
+if(!first){ doc.addPage(); y=52; }
+pdfHeader(doc,(S.org.name||"Schedule"),"Individual schedule · week of "+prettyFull(ws));
+y=88; first=false;
 doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(20,32,30);
 doc.text(e.name, 40, y);
 doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(105,119,115);
@@ -23833,7 +23961,6 @@ columnStyles:{0:{cellWidth:76,fontStyle:"bold"},1:{cellWidth:74},2:{cellWidth:88
 margin:{left:40,right:40}
 });
 y = doc.lastAutoTable.finalY + 26;
-if(y>690 && idx<people.length-1){ doc.addPage(); y=52; }
 });
 pdfFooter(doc);
 return await saveFile("individual-schedules-"+ws+".pdf", doc.output("arraybuffer"));
