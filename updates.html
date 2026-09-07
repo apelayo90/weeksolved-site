@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What's new in Weeksolved — the latest changes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%231c6a66%27/%3E%3Ctext x=%2732%27 y=%2743%27 font-family=%27Arial,Helvetica,sans-serif%27 font-size=%2728%27 font-weight=%27800%27 fill=%27%23fff%27 text-anchor=%27middle%27%3EWS%3C/text%3E%3C/svg%3E">
+<meta name="description" content="The latest changes to Weeksolved staff scheduling, in plain words: what shipped this week and the tester requests behind it.">
+<link rel="canonical" href="https://weeksolved.com/updates.html">
+<meta property="og:site_name" content="Weeksolved">
+<meta property="og:title" content="What's new — Weeksolved">
+<meta property="og:description" content="The latest changes to Weeksolved staff scheduling, in plain words: what shipped this week and the tester requests behind it.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="What's new in Weeksolved — the latest changes">
+<meta name="twitter:description" content="The latest changes to Weeksolved staff scheduling, in plain words: what shipped this week and the tester requests behind it.">
+<meta property="og:url" content="https://weeksolved.com/updates.html">
+<meta name="theme-color" content="#1c6a66">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Public+Sans:wght@400;600;700&display=swap">
+
+<style>
+:root{
+  --bg:#f4f7f6; --surface:#ffffff; --sunken:#e9efed;
+  --ink:#141d1b; --ink2:#3c4a47; --muted:#63716d;
+  --line:#dbe2e0; --line-strong:#7d8b87;
+  --accent:#176a65; --accent-deep:#134744; --accent-soft:#ddedeb; --on-accent:#fff;
+  --ok:#2c7a4b; --ok-soft:#ddefe3;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0e1413; --surface:#171f1e; --sunken:#111817;
+    --ink:#e8edec; --ink2:#c2ccc9; --muted:#8d9b97;
+    --line:#28322f; --line-strong:#778682;
+    --accent:#48b1a7; --accent-deep:#0d2f2d; --accent-soft:#16342f; --on-accent:#0b1210;
+    --ok:#5cb87f; --ok-soft:#16301f;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.65 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif;text-rendering:optimizeLegibility}
+h1,h2,h3{font-family:"Archivo","Public Sans",sans-serif;letter-spacing:-.02em;line-height:1.15;margin:0}
+.wrap{max-width:820px;margin:0 auto;padding:0 20px 60px}
+header.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -20px;padding:0 20px}
+.topin{display:flex;align-items:center;gap:11px;padding-top:14px;padding-bottom:14px;max-width:780px;margin:0 auto}
+.mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;display:grid;place-items:center;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px}
+.brand{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px}
+nav.hn{margin-left:auto;display:flex;gap:20px;align-items:center}
+nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap;display:inline-block;padding:11px 2px}
+nav.hn a:hover{color:var(--accent)}
+nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:10px;padding:10px 18px}
+@media(max-width:560px){nav.hn a.plain{display:none}}
+@media(max-width:420px){.brand{font-size:17px}nav.hn a.go{padding:9px 14px;font-size:13.5px}.topin{gap:9px}}
+h1{font-size:clamp(27px,5vw,38px);margin:38px 0 10px}
+.sub{color:var(--muted);font-size:16.5px;max-width:62ch;margin:0 0 30px}
+h2{font-size:19px;margin:34px 0 10px}
+p{color:var(--ink2);margin:0 0 14px;max-width:72ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:20px 22px;margin-bottom:12px}
+details{border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:9px;padding:0 18px}
+summary{cursor:pointer;font-weight:600;font-size:15px;padding:14px 0;font-family:"Archivo","Public Sans",sans-serif}
+details p{font-size:14px}
+details[open]{padding-bottom:6px}
+a{color:var(--accent)}
+footer{border-top:1px solid var(--line);margin-top:52px;padding-top:22px;color:var(--muted);font-size:12.5px;text-align:center}
+footer nav{display:flex;gap:8px 18px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+footer a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:13px}
+footer a:hover{color:var(--accent)}
+footer a{white-space:nowrap;display:inline-block;padding:8px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div class="topin">
+    <div class="mark">WS</div><div class="brand">Weeksolved</div>
+    <nav class="hn">
+      <a class="plain" href="/pricing.html">Pricing</a>
+      <a class="plain" href="/faq.html">FAQ</a>
+      <a class="go" href="/app.html">Open the app</a>
+    </nav>
+  </div></header>
+
+  <h1>What's new</h1>
+  <p class="sub">The latest changes, in plain words. Weeksolved ships continuously — most tester reports become a fix the same day — so this page keeps the recent few and lets the rest go. Items marked <b>Asked for by a tester</b> came from somebody using it and telling us.</p>
+
+  <h2>This week</h2>
+  <div class="card"><p style="margin:0"><b>Required cover comes first. <span style="color:var(--accent)">Reported by you.</span></b> A Monday asking for two on C, one on E, two on G and <i>at least</i> four on D came back with ten people on D and nobody at all on C, E or G. Coverage needs is filled first and then a second pass tops people up to their guaranteed hours &mdash; and that second pass was allowed to pile onto the &ldquo;at least&rdquo; row while the exact ones stood open. An &ldquo;at least&rdquo; row is a floor, not a licence to swallow the day: while a day still has an opening somebody <b>could</b> work, they take it before any already-satisfied shift gets deeper. When nobody left can work the open shift &mdash; the usual reason it is still open &mdash; hours owed are still made up elsewhere rather than thrown away on a slot nobody could ever fill. The same pass also drew from every shift you have with all of them equally likely, so a shift named for Saturday could turn up on a Monday beside the four shifts Monday actually runs; a shift the day asks for now outranks one it does not. And every shift name printed on the day sheet opens that shift, so &ldquo;what <i>is</i> this?&rdquo; is one press rather than a hunt.</p></div>
+  <div class="card"><p style="margin:0"><b>Holidays, properly. <span style="color:var(--accent)">Reported by you.</span></b> Every holiday added from the standard list arrives with a setting of its own &mdash; Christmas closed, Veterans Day normal &mdash; and <b>a holiday&rsquo;s own setting beats the general one</b>, so switching the general one could change nothing and say nothing about it. Weeksolved now tells you the truth (&ldquo;used by 3 of 11&rdquo;) and offers to clear the individual settings so your choice actually takes. Holiday hours are time pickers instead of typed text, one button sets the same hours on every holiday at once, and a new <b>Minimum cover only</b> option means a holiday gets exactly what you asked for and nobody else &mdash; not for hours owed, and not to fill the floor.</p></div>
+  <div class="card"><p style="margin:0"><b>Two privacy faults found and fixed.</b> The reason somebody was away &mdash; <i>Sick</i>, <i>Parental leave</i>, <i>Leave of absence</i> &mdash; was printed in the grid on the week PDF, the per-person print pack, the CSV and the workbook, so everyone learned everyone else&rsquo;s. Every shared sheet now says only &ldquo;off&rdquo;; the reason stays on your own screens. And &ldquo;send to everyone it applies to&rdquo; by email put <b>every</b> person&rsquo;s message in one body &mdash; whose leave was approved, whose was declined, by name &mdash; while the screen promised BCC kept them apart. BCC hides addresses, not words. It now opens one email per person.</p></div>
+  <div class="card"><p style="margin:0"><b>Nothing goes out in half, and deletes clean up after themselves.</b> A week emailed or texted to the whole team was silently cut at 1,800 characters (900 for a text) &mdash; a schedule that stopped somewhere in Friday &mdash; and the board then recorded the week as handed out. It now refuses rather than send half, and says what to do instead. Separately: deleting a role used to leave posts, shifts, ratio rules, patterns and holidays still pointing at it, so a post restricted to that role became unfillable by anybody, permanently, and the day sheet gave the reason as &ldquo;not Any role&rdquo;. Deleting a shift left posts pinned to it. Both now clean up every table. And moving your week boundary no longer throws away day-sheet notes, approved overtime, staff claims or the week&rsquo;s pattern.</p></div>
+  <div class="card"><p style="margin:0"><b>Holidays: say what actually runs. <span style="color:var(--accent)">Reported by you.</span></b> A holiday was drafted <b>exactly like that weekday</b> &mdash; a Thursday holiday got your ordinary Thursday, whole roster and all. Holiday cover did exist, but it lived on the Holidays page behind a dropdown and only counted once you had switched it on, so nobody found it. It is now the eighth day on Coverage needs: under Sunday to Saturday there is a <b>Holidays</b> block, edited by the same dialog as every other day, with the same &ldquo;exactly this many&rdquo; meaning. One press turns it on. And the week&rsquo;s checks now name it either way &mdash; a holiday drafted like an ordinary weekday says so, and one carrying more people than you asked for explains that the floor still has to be covered and points at holiday hours.</p></div>
+  <div class="card"><p style="margin:0"><b>A new shift is eight hours plus the meal. <span style="color:var(--accent)">Asked for by you.</span></b> Type 8:00 and the shift ends at 16:30 &mdash; eight paid hours plus the unpaid meal the law where you are owes for them. Move the start and the end follows it; type your own end and it stops following, so a deliberate twelve-hour shift is never quietly pulled back.</p></div>
+  <div class="card"><p style="margin:0"><b>Fewer places to look. <span style="color:var(--accent)">Asked for by you.</span></b> Six &ldquo;Set up&rdquo; menu rows, four of which nobody could tell apart by name, are now one <b>Schedule setup</b> with tabs &mdash; shifts and roles, coverage needs, who gets first pick, posts on the floor. Time away joins Requests as a tab, so time off has one front door instead of five. And Business &amp; law and Scheduling rules were quietly editing the same stored values as Settings through a second set of controls with different wording; they are now a statement of what is in force, and Settings owns the editing, so the two can never disagree. Every old link, fix button and search result still lands exactly where it did.</p></div>
+  <div class="card"><p style="margin:0"><b>Busy stretches, and a menu that makes sense. <span style="color:var(--accent)">Both asked for by you.</span></b> You can now say <b>when</b> a day is busy, not just that it is: Coverage needs &rarr; a day &rarr; &ldquo;Set a busy stretch&rdquo;. Like the busy-day label it never adds anybody &mdash; it decides where the people you already have go, so hours owed land on a shift that covers the rush, and the checks tell you when the rush is the thinnest part of the day. Alongside it, a full pass over the menus: one Settings card had grown to 54 rows under the title &ldquo;Meals and rest breaks&rdquo; while holding pay periods, email setup and licences &mdash; it is now seven cards that say what they hold, the groups are named for one thing instead of two, a dead screen is gone, and on the phone Settings and the day sheet are at the top of the menu instead of the bottom.</p></div>
+  <div class="card"><p style="margin:0"><b>Search actually searches. <span style="color:var(--accent)">Asked for by you.</span></b> Settings holds 89 rows, and the group you were on hid 81 of them &mdash; so searching for &ldquo;pay period&rdquo; found nothing unless you had already guessed which group it lived in, which is the one thing a search box exists to save you. Searching now looks across every group, and a row can be found by the name of the card it sits in (&ldquo;business name&rdquo; now finds it). Results still appear from the first character, narrow as you type, and go straight there when you press one.</p></div>
+  <div class="card"><p style="margin:0"><b>Exports, checked at real size. <span style="color:var(--accent)">Asked for by you.</span></b> Tested against 150 people and twelve drafted weeks &mdash; 6,672 shifts. Two real faults fixed: a long table lost its column headings on page two and could have a row sliced in half by the page break, on every printed schedule and day sheet; and a custom report could only leave as CSV. Reports now export as a proper Excel workbook &mdash; real number cells so hours add up, a frozen bold heading, your subtotals and total, and a second sheet recording what the report covered and when it was run.</p></div>
+  <div class="card"><p style="margin:0"><b>Coverage needs now opens on what the week you are looking at is actually drafted from. <span style="color:var(--accent)">Reported by you.</span></b> If a week is on a pattern, the page used to open on the standard week regardless &mdash; so you could add, remove or change a role on a shift, press Generate, and watch the week come back exactly as before. The change was real; it was written on a set that week never reads. The page now follows the week, and if you deliberately edit a different set it says so at the top with one press to switch back. Alongside it: when every row on a shift is exact, that is now the whole shift &mdash; nobody is quietly added beside them to make up somebody else&rsquo;s hours.</p></div>
+
+  <details><summary>Earlier</summary>
+    <h3 style="font-size:15px;margin:14px 0 6px">September 7, 2026</h3>
+    <ul style="margin:0 0 6px;padding-left:20px;color:var(--ink2);font-size:14px"><li style="margin:4px 0">A small ? on anything that needs one.  Every setting and every field whose name does not explain itself now carries a round ?. Press it and you get what it actually does, what changes if you move it, and &mdash; wherever a number makes it clearer &mdash; a worked example. &ldquo;Shortest this shift </li><li style="margin:4px 0">Guaranteed hours are met by the drafter, not by you.  If a profile promises someone 16 hours, the week comes back with 16 hours on it — not 19 from an extra whole shift, and not 9¾ from one stretched shift. Ordinary shifts are added where you choose — busiest days first, evenly through the week, or </li><li style="margin:4px 0">&ldquo;Monday is my busiest day, so why is it my thinnest?&rdquo;  The week now says so itself: if your busiest day asks for fewer shifts than a quieter one &mdash; or two days you marked equally busy are staffed very differently &mdash; you get one line explaining that a busy label never adds peopl</li><li style="margin:4px 0">Exports and printouts got a going-over. Somebody removed from the roster with their record kept now still appears on the paperwork for weeks they actually worked &mdash; their hours were always in the totals, so the sheet used to disagree with itself. A shift that runs past midnight prints its finis</li><li style="margin:4px 0">People you set aside stop asking for hours.  Somebody set aside is off the roster, so the drafter cannot schedule or top them up &mdash; their guaranteed hours are no longer checked while they have no shifts. What is reported instead is the opposite: a set-aside person who still holds a shift, with </li><li style="margin:4px 0">Less on the screen at once. The person and shift dialogs keep the everyday fields in view and fold the rest under &ldquo;More&rdquo;; the week&rsquo;s review card and the Team page tuck their secondary buttons into a menu; Home shows two notices and folds the rest. With several locations, the Week v</li><li style="margin:4px 0">Time away, and reports you build yourself.  A new Time away page lists who is off or asking for what, coming up and gone by &mdash; with the date and time each request was entered and what happened to it. And under Analytics you can now build your own report from shifts, hours, requests, leave or th</li><li style="margin:4px 0">On the phone: a side menu that slides in, and a sheet that scrolls. The &#9776; button at the top opens the full menu with search; it slides away when you pick something. The More sheet now scrolls properly on iPhone. Coverage needs can add a row to Saturday and Sunday together. And when coverage ne</li><li style="margin:4px 0">Two means two.  A new Coverage needs row is exact unless you open it up &mdash; the dialog now asks plainly whether the drafter may add more than you asked for. Rows that still say &ldquo;at least&rdquo; are named at the top of the page with one button to make them all exact. And when someone is sho</li><li style="margin:4px 0">Pay periods you can see at a glance.  Turn pay periods on under Settings and every other period is shaded — on the week grid, the phone view, the week cards, All schedules, and on the printed sheets, with a small key beside the title. A week that straddles two periods shows exactly where one ends and the next begins. And tell Weeksolved which month your fiscal year starts in (Settings → Your busin</li></ul>
+    <h3 style="font-size:15px;margin:14px 0 6px">September 6, 2026</h3>
+    <ul style="margin:0 0 6px;padding-left:20px;color:var(--ink2);font-size:14px"><li style="margin:4px 0">Cover comes before fairness: the drafter moves a scarce person's other shift so a gap closes and nobody loses hours.</li><li style="margin:4px 0">Search anything from Home or the More sheet — pages, settings, shifts, posts, people — typo-tolerant.</li><li style="margin:4px 0">Holiday rush can mean the nearest open weekday, so weekend cover is never lifted by a Monday holiday.</li><li style="margin:4px 0">Several locations: every location after the first is half price.</li><li style="margin:4px 0">Exports fixed: split shifts, calendar events, handout cards, and a printed draft says Draft.</li><li style="margin:4px 0">Every reply code checks itself; a one-character typo is caught and named.</li><li style="margin:4px 0">Links to pricing, help, security, terms, privacy and contact at the foot of every page.</li><li style="margin:4px 0">Each shift decides whether it takes extra people who are short of hours (yes / prefer this shift / never).</li><li style="margin:4px 0">Open-ended shifts keep the length you typed as their usual length; longer only for cover or as a last resort for hours owed.</li><li style="margin:4px 0">Fewer trips between pages: every check that names a problem carries a button to the place that fixes it.</li><li style="margin:4px 0">A side menu that stays put, with search; a pinned index on Settings; required fields shaded rather than starred.</li></ul>
+    <h3 style="font-size:15px;margin:14px 0 6px">September 3, 2026</h3>
+    <ul style="margin:0 0 6px;padding-left:20px;color:var(--ink2);font-size:14px"><li style="margin:4px 0">Staff can tell you they can't work a shift, from a one-page form with no app and no account.</li><li style="margin:4px 0">Set somebody aside for leave without losing a thing about them.</li><li style="margin:4px 0">Hand out today's schedule on its own, and have the day sheet go out by itself each morning if you say so.</li></ul>
+    <h3 style="font-size:15px;margin:14px 0 6px">September 2, 2026</h3>
+    <ul style="margin:0 0 6px;padding-left:20px;color:var(--ink2);font-size:14px"><li style="margin:4px 0">Meal waivers, three ways — not used, you decide shift by shift, or automatic where the law allows.</li><li style="margin:4px 0"><b>Worth a look</b>: a second opinion on your rules, on Home and at the top of Scheduling rules.</li><li style="margin:4px 0">The on-screen keyboard never covers a button; more time to test; help and FAQ cover all of it.</li></ul>
+    <h3 style="font-size:15px;margin:14px 0 6px">September 1, 2026</h3>
+    <ul style="margin:0 0 6px;padding-left:20px;color:var(--ink2);font-size:14px"><li style="margin:4px 0"><b>This keeps happening</b>: repeat problems get a Fix for good.</li><li style="margin:4px 0">Nothing scrolls sideways on a phone any more; every red thing explains itself.</li></ul>
+    <h3 style="font-size:15px;margin:14px 0 6px">August 31, 2026</h3>
+    <ul style="margin:0 0 6px;padding-left:20px;color:var(--ink2);font-size:14px"><li style="margin:4px 0">A real Excel workbook; sign in with Google; keep two people apart; reminders in the calendar you already carry.</li><li style="margin:4px 0">Staff under 18 are scheduled lawfully, automatically; offer an open shift to the team; every device on your account, listed.</li></ul>
+    <h3 style="font-size:15px;margin:14px 0 6px">August 30, 2026</h3>
+    <ul style="margin:0 0 6px;padding-left:20px;color:var(--ink2);font-size:14px"><li style="margin:4px 0">Weeksolved opened to invited testers.</li></ul>
+  </details>
+
+
+<footer>
+  <nav>
+    <a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a>&nbsp;· <a href="/compare.html">How we compare</a><a href="/faq.html">FAQ</a>
+    <a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a>
+    <a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a><a href="/refunds.html">Refunds</a>
+  </nav>
+  <div>Weeksolved, operated by Alberto Pelayo · support@weeksolved.com</div>
+</footer>
+</div>
+</body>
+</html>

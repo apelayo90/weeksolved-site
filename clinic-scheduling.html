@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clinic and medical office staff scheduling — Weeksolved</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c6a66'/%3E%3Ctext x='32' y='43' font-family='Arial,Helvetica,sans-serif' font-size='28' font-weight='800' fill='%23fff' text-anchor='middle'%3EWS%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;600;700&display=swap">
+<meta name="description" content="Cover appointment hours with licensed staff, keep ratios, place meal breaks lawfully, and never schedule an expired credential. Flat price per site.">
+<link rel="canonical" href="https://weeksolved.com/clinic-scheduling.html">
+<meta property="og:site_name" content="Weeksolved">
+<meta property="og:title" content="Clinic and medical office staff scheduling">
+<meta property="og:description" content="Licensed cover, role ratios and credential expiry — staff scheduling built for a clinic, flat priced per site.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Clinic and medical office staff scheduling">
+<meta name="twitter:description" content="Licensed cover, role ratios and credential expiry — staff scheduling built for a clinic, flat priced per site.">
+<meta property="og:url" content="https://weeksolved.com/clinic-scheduling.html">
+<meta name="theme-color" content="#1c6a66">
+<style>
+:root{
+  --bg:#f2f5f4; --surface:#ffffff; --sunken:#e8edec;
+  --ink:#18211f; --ink2:#3c4a47; --muted:#697773;
+  --line:#d2d8d6; --line-strong:#7d8b87;
+  --accent:#1c6a66; --accent-soft:#dcebe9; --on-accent:#fff;
+  --ok:#2c7a4b; --ok-soft:#dcefe2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#101514; --surface:#191f1e; --sunken:#131817;
+    --ink:#e7ecea; --ink2:#c2ccc9; --muted:#8d9b97;
+    --line:#2c3634; --line-strong:#778682;
+    --accent:#4cb3a9; --accent-soft:#173432; --on-accent:#0c1211;
+    --ok:#5cb87f; --ok-soft:#1a2f22;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15.5px/1.6 "Public Sans",-apple-system,"Segoe UI",Roboto,sans-serif;text-rendering:optimizeLegibility}
+h1,h2,h3,.tn,.price{font-family:"Archivo","Public Sans",sans-serif}
+.wrap{max-width:1020px;margin:0 auto;padding:0 20px 60px}
+header.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -20px;padding:0 20px}
+.topin{display:flex;align-items:center;gap:11px;padding:14px 0;max-width:980px;margin:0 auto}
+.mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#0d2f2d);color:#fff;
+  display:grid;place-items:center;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em}
+.brand{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
+nav.hn{margin-left:auto;display:flex;gap:20px;align-items:center}
+nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap;display:inline-block;padding:11px 2px}
+nav.hn a:hover{color:var(--accent)}
+nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:10px;padding:10px 18px}
+@media(max-width:560px){nav.hn a.plain{display:none}}
+@media(max-width:420px){.brand{font-size:17px}nav.hn a.go{padding:9px 14px;font-size:13.5px}.topin{gap:9px}}
+h1{font-size:clamp(28px,5.4vw,42px);letter-spacing:-.022em;line-height:1.12;margin:34px 0 12px;text-align:center;text-wrap:balance}
+.sub{color:var(--muted);text-align:center;max-width:56ch;margin:0 auto 8px;font-size:16px}
+.beta{display:flex;justify-content:center;margin:18px 0 30px}
+.beta span{background:var(--ok-soft);color:var(--ok);border-radius:99px;padding:8px 16px;font-weight:700;font-size:13.5px}
+.toggle{display:flex;justify-content:center;gap:0;margin-bottom:26px}
+.toggle button{font:inherit;font-weight:600;font-size:13.5px;padding:8px 18px;border:1px solid var(--line-strong);
+  background:var(--surface);color:var(--ink2);cursor:pointer}
+.toggle button:first-child{border-radius:8px 0 0 8px}
+.toggle button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.toggle button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.toggle .save{font-size:11.5px;font-weight:700;opacity:.85;margin-left:6px}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:16px;align-items:stretch}
+.tier{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px 22px;display:flex;flex-direction:column}
+.tier.hot{border-color:var(--accent);box-shadow:0 8px 28px rgba(28,106,102,.14);position:relative}
+.tier.hot .flag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;border-radius:99px;padding:4px 12px;white-space:nowrap}
+.tn{font-weight:800;font-size:16px}
+.tfor{color:var(--muted);font-size:12.5px;margin:2px 0 14px}
+.price{font-size:34px;font-weight:800;letter-spacing:-.02em}
+.price small{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0}
+.per{color:var(--muted);font-size:12px;margin:2px 0 16px;min-height:16px}
+ul.feats{list-style:none;margin:0 0 20px;padding:0;font-size:13.5px;color:var(--ink2)}
+ul.feats li{padding:5px 0 5px 24px;position:relative}
+ul.feats li::before{content:"✓";position:absolute;left:2px;color:var(--ok);font-weight:800}
+ul.feats li.hd{padding-left:0;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:4px}
+ul.feats li.hd::before{content:""}
+.cta{margin-top:auto;display:block;text-align:center;text-decoration:none;font-weight:700;font-size:14px;
+  border-radius:9px;padding:12px;border:1px solid var(--line-strong);color:var(--ink)}
+.tier.hot .cta{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.taxline{text-align:center;color:var(--muted);font-size:12.5px;margin:18px 0 40px}
+.why{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px;margin-bottom:40px}
+.why h2{margin:0 0 8px;font-size:20px;letter-spacing:-.01em}
+.why p{margin:0;color:var(--ink2);max-width:74ch}
+.why .math{margin-top:14px;background:var(--sunken);border-radius:9px;padding:14px 16px;font-size:13.5px;color:var(--ink2)}
+.faq{max-width:760px;margin:0 auto}
+.faq h2{font-size:20px;letter-spacing:-.01em;margin:0 0 14px}
+.faq details{border:1px solid var(--line);border-radius:9px;background:var(--surface);margin-bottom:8px;padding:0 16px}
+.faq summary{cursor:pointer;font-weight:600;font-size:14px;padding:13px 0}
+.faq details p{color:var(--ink2);font-size:13.5px;margin:0 0 14px}
+footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px}
+footer a{color:var(--accent);text-decoration:none;white-space:nowrap;display:inline-block;padding:7px 0}
+footer nav,footer .fnav{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:2px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="topin">
+      <div class="mark">WS</div><div class="brand">Weeksolved</div>
+      <nav class="hn">
+        <a class="plain" href="/pricing.html">Pricing</a>
+        <a class="plain" href="/faq.html">FAQ</a>
+        <a class="go" href="/app.html">Open the app</a>
+      </nav>
+    </div>
+  </header>
+  <h1>Scheduling for clinics and medical offices</h1>
+  <p class="sub">A clinic schedule has a rule most trades do not: some of the work can only be done by somebody with a current credential, and the day does not run without them.</p>
+  <div class="beta"><span>Free during testing · $29 a month flat when billing opens</span></div>
+
+  <p>Weeksolved drafts a week for providers, medical assistants, front desk and lab staff from the rules you set, checks it against your state's meal and rest
+  break law before it goes up, and tells you exactly which rule stopped a person when a shift cannot be filled.
+  It costs one flat price for the location, and your staff never need an account.</p>
+
+  <h2>Licensed cover, checked before you post</h2>
+  <p>Mark a role as needing a licence and record each person's credential and expiry. Weeksolved will not draft somebody onto that work without it, warns as an expiry approaches, and flags any already-posted shift that would fall after the date. The most expensive scheduling mistake in a clinic is the one nobody noticed until the morning.</p>
+
+  <h2>Ratios between roles, not just headcount</h2>
+  <p>Coverage in a clinic is rarely "three people". It is a provider on site whenever the doors are open, an assistant per provider, somebody on the front desk through lunch. Set those as rules and every draft is checked against them — including the awkward half-hours around meals, where cover quietly disappears.</p>
+
+  <h2>Meal and rest breaks that hold the floor</h2>
+  <p>Every meal is placed inside its legal window for your state, rest breaks are laid around it, and meals are staggered so the front desk is never empty while somebody eats. Where your state allows a waiver you decide shift by shift, or per person for anyone with one signed and on file.</p>
+
+  <h2>Time off that doesn't leave a hole</h2>
+  <p>Approve a day and the draft honours it. When a request cannot be met, Weeksolved names the rule — cover, a ratio, a licence, an hour cap — rather than silently declining it, and shows you which other request you would have to drop to say yes.</p>
+
+  <h2>Managers and supervisors are not paid seats</h2>
+  <p>Several tools count every admin as a paid user, so the practice manager, the lead MA and the person who covers weekends all appear on the bill. Weeksolved is one flat price for the site, whoever touches the schedule.</p>
+
+  <h2>Nothing about your staff is sold or used to train a model</h2>
+  <p>Names, contact details, pay rates, accrued time off, credential dates and your notes stay in your account. That is a term of the agreement rather than a policy line, and none of it is required — Weeksolved drafts a full week from first names alone.</p>
+
+  <h2>What it will not do</h2>
+  <p>This is staff scheduling, not patient scheduling. It does not hold appointments and it is not a records system. It also does not clock people in.</p>
+
+  <h2>What it costs</h2>
+  <p>One flat price per location — $29 a month on Solo, $49 on Pro, two months free paid yearly — whatever the
+  headcount. No per-user fees, no paid admin seats, no charge for the manager who covers weekends. Break law is
+  on every plan including the cheapest. During testing it is free with an access code.</p>
+
+  <p style="margin-top:26px"><a class="go" href="/app.html" style="background:var(--accent);color:var(--on-accent);border-radius:10px;padding:12px 20px;text-decoration:none;font-weight:700;display:inline-block">Open Weeksolved</a>
+  &nbsp;<a href="/pricing.html" style="color:var(--accent);font-weight:700">See the pricing →</a>
+  &nbsp;<a href="/compare.html" style="color:var(--accent);font-weight:700">How it compares →</a></p>
+
+  <footer>
+    <a href="/">Home</a>&nbsp;· <a href="/app.html">Open Weeksolved</a>&nbsp;· <a href="/faq.html">FAQ</a> <a href="/updates.html">What's new</a>&nbsp;· <a href="/about.html">About</a>&nbsp;· <a href="/security.html">Security</a>&nbsp;· <a href="/contact.html">Contact</a>&nbsp;· <a href="/terms.html">Terms</a>&nbsp;· <a href="/privacy.html">Privacy</a>&nbsp;· <a href="/dpa.html">Data processing</a>&nbsp;· <a href="/accessibility.html">Accessibility</a>&nbsp;· <a href="/tester-agreement.html">Tester agreement</a>&nbsp;· <a href="/refunds.html">Refunds</a><br>
+    Questions? Use Contact us inside the app — a person reads every message.
+  
+  <div style="margin-top:6px">Scheduling for: <a href="/restaurant-scheduling.html">Restaurants</a> &nbsp;·&nbsp; <a href="/retail-scheduling.html">Shops</a> &nbsp;·&nbsp; <a href="/salon-scheduling.html">Salons</a> &nbsp;·&nbsp; <a href="/clinic-scheduling.html">Clinics</a> &nbsp;·&nbsp; <a href="/pharmacy-scheduling.html">Pharmacies</a> &nbsp;·&nbsp; <a href="/warehouse-scheduling.html">Warehouses</a></div>
+  </footer>
+</div>
+</body>
+</html>
