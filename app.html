@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 9c329395 2026-09-08 03:19 UTC -->
+<!-- build 8dce0364 2026-09-08 03:56 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2682,8 +2682,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "9c329395";       
-const BUILD_AT = "2026-09-08 03:19 UTC";       
+const BUILD_ID = "8dce0364";       
+const BUILD_AT = "2026-09-08 03:56 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5411,16 +5411,37 @@ const wd = weekDates(ws).find(x=>x.dow===dow);
 return wd? ((S.holidays.list||[]).find(h=>h.date===wd.date)||null) : null;
 }
  
-function holCreditMin(empId, ws){
+function holCreditCore(e, ws, isOnDate){
 if(S.rules && S.rules.holCounts===false) return 0;
-const e=empById(empId);
 if(!e || !e.holidayPay) return 0;
-const worked=new Set(peekWeek(ws).assignments.filter(a=>a.empId===empId).map(a=>a.date));
-return holidaysIn(ws).reduce((t,h)=> t + (worked.has(h.date)? 0 : holPayH(e)*60), 0);
+const hols=holidaysIn(ws);
+if(!hols.length) return 0;                        
+return hols.reduce((t,h)=> t + (isOnDate(h.date)? 0 : holPayH(e)*60), 0);
+}
+function holCreditMin(empId, ws){
+const e=empById(empId);
+if(!e) return 0;
+let worked=null;
+return holCreditCore(e, ws, d=>{
+if(!worked) worked=new Set(peekWeek(ws).assignments.filter(a=>a.empId===empId).map(a=>a.date));
+return worked.has(d);
+});
+}
+ 
+function holCreditLive(e, date, st){
+const ws=weekStartOf(date, S.org.weekStart);
+return holCreditCore(e, ws, d=>!!((st && st.byDate && st.byDate[d])||[]).length);
 }
  
 function empWeekPaidMinutes(empId, ws){
 return empWeekMinutes(empId, ws) + holCreditMin(empId, ws);
+}
+ 
+function owedFloorMin(e, ws){
+const L=effLimits(e, ws);
+const hours = L.exactH || L.minH || 0;
+if(!hours) return 0;
+return Math.max(0, Math.round(hours*60*minHFactor(e.id, ws)) - holCreditMin(e.id, ws));
 }
  
 function holNeedRows(h){
@@ -5643,9 +5664,8 @@ let work=0;
 const spent=()=> work>BUDGET;
 
  
-const deficit=(e, st)=>{ const L=effLimits(e, ws);
-const goal=(L.exactH||L.minH||0)*60*minHFactor(e.id, ws);
-return goal? Math.round(goal - ((st&&st.min)||0) - holCreditMin(e.id, ws)) : 0; };
+const deficit=(e, st)=>{ const goal=owedFloorMin(e, ws);
+return goal? Math.round(goal - ((st&&st.min)||0)) : 0; };
 
 const place=(e, shiftId, roleId, date, dow, list, ignore, siteId)=>{
 work++;
@@ -5803,7 +5823,7 @@ st.lastEnd[d.date]=bMin; if(d.dow===0||d.dow===6) st.weekend++; } }
 const target = {};
 S.employees.forEach(e=>{ const L=effLimits(e, ws);
 const base = L.exactH? L.exactH*60 : (((L.minH||0)+(L.maxH||0))/2*60 || (L.maxH||0)*60);
-target[e.id] = Math.round(base * minHFactor(e.id, ws)); });
+target[e.id] = Math.max(0, Math.round(base * minHFactor(e.id, ws)) - holCreditMin(e.id, ws)); });
 
 
 dates.forEach(({date,dow})=>{
@@ -6005,8 +6025,7 @@ const dates=weekDates(ws);
 const isFlex=a=>{ const sh=shiftById(a.shiftId); return !!(sh && shiftFlex(sh)); };
  
  
-const target=e=>{ const L=effLimits(e, ws);
-return Math.round((L.exactH || L.minH || 0)*60*minHFactor(e.id, ws)); };
+const target=e=>owedFloorMin(e, ws);
  
 for(let sweep=0; sweep<2; sweep++)
 dates.forEach(({date,dow})=>{
@@ -6056,7 +6075,7 @@ if(lim.maxSpanH && (e2-s2) > lim.maxSpanH*60) return;
 if(minorsOn() && minorBlock(e, date, dow, s2, e2, weekElse, ws)) return;
 const paid = paidEstimate(s2,e2) - gapM;
 if(hasCap(lim) && weekElse + paid > (lim.maxH||0)*60 + 1) return;
-if(lim.exactH && weekElse + paid > lim.exactH*60 + 5) return;    
+if(lim.exactH && weekElse + paid > target(e) + 5) return;    
  
 if(prevA.length){
 const pe=Math.max.apply(null, prevA.map(x=>x.endMin));
@@ -6330,7 +6349,7 @@ const L=effLimits(e, ws);
 return (L.exactH || L.minH) > 0;
 });
 const exhausted=new Set();
-const deficit=e=>{ const L=effLimits(e, ws); return Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws) - holCreditMin(e.id, ws)) - state[e.id].min; };
+const deficit=e=>owedFloorMin(e, ws) - state[e.id].min;
 const mineTag=a=> guaranteeMode? !!a.guarantee : !!a.topUp;
 const soFar=e=>assignments.filter(a=>a.empId===e.id && mineTag(a)).length;
 let guard=0;
@@ -6444,8 +6463,8 @@ have:state[e.id].min, why:whyNotPlaced(e, ws, state, assignments, dates)
  
 if(!guaranteeMode) S.employees.filter(e=>e.active && !e.onCall && projectOk(e)==="no").forEach(e=>{
 const L=effLimits(e, ws);
-if(Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws)) - state[e.id].min > 30)
-short.push({empId:e.id, deficit:Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws))-state[e.id].min,
+if(owedFloorMin(e, ws) - state[e.id].min > 30)
+short.push({empId:e.id, deficit:owedFloorMin(e, ws)-state[e.id].min,
 owed:(L.exactH||L.minH), have:state[e.id].min, held:true,
 why:"they're set to stay on the floor rather than take "+projectLabel().toLowerCase()});
 });
@@ -7101,6 +7120,11 @@ if(apartOn()){ const ab=apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate
 if(ab) return "they are kept apart from "+((empById(ab.other)||{name:"someone"}).name.split(" ")[0]); }
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return "that is more days than their limit of "+lim.maxD;
 if(hasCap(lim) && (st.min + paidEstimate(aMin,bMin,{emp:e})) > (lim.maxH||0)*60 + 1) return "it puts them over their "+lim.maxH+"h cap";
+if(lim.exactH){
+const credit = holCreditLive(e, date, st);
+if(credit && (st.min + paidEstimate(aMin,bMin,{emp:e})) > Math.max(0, lim.exactH*60 - credit) + 1)
+return "it puts them past their "+lim.exactH+"h contract \u2014 "+fmtHrs(credit)+" of it is holiday pay this week";
+}
 if(lim.maxShiftH && paidSpan(aMin,bMin,gapM) > lim.maxShiftH*60) return "the shift is longer than their "+lim.maxShiftH+"h limit";
 if(lim.maxSpanH && (bMin-aMin) > lim.maxSpanH*60) return "the day is longer than the "+lim.maxSpanH+"h span allowed";
 if(lim.noSplit && gapM>0) return "a split shift is not allowed under your agreement";
@@ -7144,6 +7168,11 @@ if(apartOn() && apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).by
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return false;  
 const add = paidEstimate(aMin,bMin);
 if(hasCap(lim) && (st.min + add) > (lim.maxH||0)*60 + 1) return false;         
+ 
+if(lim.exactH){
+const credit = holCreditLive(e, date, st);
+if(credit && (st.min + add) > Math.max(0, lim.exactH*60 - credit) + 1) return false;
+}
 if(lim.maxShiftH && paidSpan(aMin, bMin, gapM) > lim.maxShiftH*60) return false;
 if(lim.maxSpanH && (bMin-aMin) > lim.maxSpanH*60) return false;
 if(lim.noSplit && gapM>0) return false;                               
@@ -7230,7 +7259,8 @@ if((e.prefDaysOff||[]).includes(dow)) sc -= 26;
 const lim = effLimits(e, date);
 const after = st.min + paidEstimate(aMin,bMin);
 if(lim.exactH){
-const goal = lim.exactH*60;
+ 
+const goal = target[e.id] || lim.exactH*60;
 const before = Math.abs(goal - st.min), now = Math.abs(goal - after);
 sc += (before - now)/60 * 55;                  
 if(after > goal + 1) sc -= 200;                
@@ -10978,7 +11008,8 @@ return {open:o, close:c, pts, rules};
 function exactHoursFeasible(e, ws){
 const L=effLimits(e, ws);
 if(!L.exactH) return {ok:true};
-const goal=Math.round(L.exactH*60);
+ 
+const goal=owedFloorMin(e, ws);
 const maxD=L.maxD||7;
  
 const lens=new Set();
@@ -20149,6 +20180,32 @@ const openDay=()=>{ if(dow==null) return; DAYVIEW=dow; go("day"); };
 const editShift=(x,t,d)=>{ if(!x) return; now(t||("Edit "+ownerOf(x)+"’s "+DSHORT[x.dow]+" shift"), d||"Change the times or the meal, hand it over, or take it off the board.", ()=>assignModal(x.id)); };
 const handOff=(x,rec)=>{ if(!x) return; now("Hand "+ownerOf(x)+"’s "+DSHORT[x.dow]+" shift to someone else", "See who is clear to take it — every limit is checked — then one press.",
 ()=>{ assignModal(x.id); setTimeout(()=>{ const b=document.querySelector("#acands"); if(b) b.click(); }, 60); }, rec); };
+ 
+const takeOff=(x, rec, why)=>{
+if(!x) return;
+const who=ownerOf(x), lab=(aShift(x)||{}).label||"shift";
+now("Take "+who+"\u2019s "+DSHORT[x.dow]+" "+m2disp(x.startMin)+"\u2013"+m2disp(x.endMin)+" off",
+why || ("Frees "+fmtHrs(paidMinutes(x))+". Anything it would cause is shown before it happens."),
+()=>{
+const cut=()=>{ const w=S.weeks[ws]; if(w) w.assignments=w.assignments.filter(y=>y.id!==x.id); };
+const c=consequencesOf(ws, cut);
+if(!c.added.length){ cut(); save(); render(); toast(who+"\u2019s "+DSHORT[x.dow]+" shift removed"); return; }
+modal("Take this shift off?", `
+          <div class="stack">
+            <p class="whead">Taking ${esc(who)}\u2019s ${esc(lab)} off ${esc(prettyDate(x.date))} fixes what you are looking at. It also causes this:</p>
+            <div class="stack" style="gap:6px">
+              ${c.added.slice(0,5).map(z=>`<div class="look"><span class="sv ${esc(z.sev||"warn")}"></span>
+                <div style="flex:1"><strong>${esc(z.title)}</strong>${z.detail? `<div class="mini">${esc(z.detail)}</div>`:""}</div></div>`).join("")}
+              ${c.added.length>5? `<div class="mini">and ${c.added.length-5} more.</div>`:""}
+            </div>
+            ${c.gone.length? `<div class="mini">It does clear: ${esc(c.gone.slice(0,3).map(z=>z.title).join("; "))}.</div>`:""}
+            <div class="mini">Nothing has changed yet. Taking it off is often still the right answer \u2014 this is so you know what follows it.</div>
+          </div>`,
+`<button class="btn" data-close>Leave it as it is</button><button class="btn danger" id="tkyes">Take it off anyway</button>`,
+rr=>{ rr.querySelector("#tkyes").onclick=()=>{ closeModal(true); cut(); save(); render();
+toast("Shift removed \u2014 "+c.added.length+" new thing"+(c.added.length===1?"":"s")+" flagged"); }; });
+}, rec);
+};
 const bringIn=(date,rec)=>{ if(!date) return; now("Bring someone else in on "+DSHORT[parseYmd(date).getDay()], "Pick a name, then one of your shifts. Anything it would break is flagged before you save.", ()=>addToDayModal(date, parseYmd(date).getDay()), rec); };
 const dayLink=()=>{ if(dow!=null && VIEW!=="day") now("Open the day sheet for "+dayName, "The floor hour by hour, meals and rest breaks placed.", openDay); };
 const profile=(t,d)=>{ if(e) later(t||("Change "+first+"’s profile"), d||"Limits, availability, license and contract live there.", ()=>empModal(e.id)); };
@@ -20209,7 +20266,8 @@ const opts=[];
 if(Math.abs(paid-480)>5) opts.push(480);
 if(Math.abs(paid-usual)>5 && usual!==480) opts.push(usual);
 if(direction!=="less" && e){
-const L=effLimits(e, ws); const owe=Math.round((L.exactH||L.minH||0)*60*minHFactor(e.id,ws)) - empWeekMinutes(e.id, ws);
+const owe=owedFloorMin(e, ws) - empWeekMinutes(e.id, ws);
+const L=effLimits(e, ws);
 const f=shiftFlex(sh); const capH=(L.maxShiftH||S.rules.maxShiftH||12)*60;
 const target=Math.min(paid+Math.max(0,owe), f? f.hi : capH, capH);
 if(owe>5 && target>paid+5 && !opts.includes(target)) opts.push(target);
@@ -20293,6 +20351,8 @@ break;
 case "cap": case "wot": case "dot": case "consec": case "period": {
 const mine=dayShifts();
 const pick = v.aIds? mine.filter(x=>v.aIds.includes(x.id)) : mine;
+ 
+pick.slice().sort((p,q)=>paidMinutes(q)-paidMinutes(p)).slice(0,2).forEach((x,i)=>takeOff(x, i===0));
 pick.slice().sort((p,q)=>paidMinutes(q)-paidMinutes(p)).slice(0,2).forEach(x=>lengthFixes(x, "less"));
 pick.slice(0,4).forEach((x,i)=>editShift(x, "Shorten or move "+first+"’s "+DSHORT[x.dow]+" "+m2disp(x.startMin)+"–"+m2disp(x.endMin), i===0? "Trim the hours, or hand it to somebody with room." : null));
 if(mine[0]) handOff(mine[0]);
@@ -20304,6 +20364,27 @@ break;
 }
 case "contract": case "under": {
 const mine=dayShifts(); const busy=new Set(mine.map(x=>x.date));
+ 
+const over = (v.code==="contract" && e)
+? empWeekPaidMinutes(e.id, ws) - owedFloorMin(e, ws) - holCreditMin(e.id, ws) : 0;
+if(over > 5){
+const excess=over;
+ 
+const ranked=mine.slice().sort((x,y)=>
+Math.abs(paidMinutes(x)-excess) - Math.abs(paidMinutes(y)-excess));
+ranked.slice(0,3).forEach((x,i)=>takeOff(x, i===0,
+Math.abs(paidMinutes(x)-excess)<=5
+? "Frees "+fmtHrs(paidMinutes(x))+" \u2014 exactly the "+fmtHrs(excess)+" over the contract."
+: "Frees "+fmtHrs(paidMinutes(x))+", against "+fmtHrs(excess)+" over the contract."));
+ranked.slice().sort((x,y)=>paidMinutes(y)-paidMinutes(x)).slice(0,2).forEach(x=>lengthFixes(x, "less"));
+if(mine[0]) handOff(mine[0]);
+const credit=holCreditMin(e.id, ws);
+if(credit) later("Stop counting holiday pay toward guaranteed hours",
+"Right now "+fmtHrs(credit)+" of holiday pay counts toward "+first+"\u2019s contract, which is why "+fmtHrs(owedFloorMin(e,ws))+" on the floor fills it. Change it under Hours, guarantees and patterns if your contract means hours worked.",
+()=>go("settings"));
+profile("Change "+first+"\u2019s contract");
+break;
+}
 const cands=weekDates(ws).filter(({date,dow:d2})=>!busy.has(date) && e && (e.avail[d2]||{}).ok && !onTimeOff(e.id,date) && !(S.hours[d2]||{}).closed).slice(0,3);
 cands.forEach(({date,dow:d2},i)=>now("Add a shift for "+first+" on "+DSHORT[d2]+" "+prettyDate(date), "One of your named shifts; the hours impact is shown before you save.", ()=>newAssignModal(e.id, date, d2), i===0));
  
