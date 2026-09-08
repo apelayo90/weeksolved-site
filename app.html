@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 9ed08a56 2026-09-08 02:15 UTC -->
+<!-- build b4415aec 2026-09-08 02:51 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2682,8 +2682,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "9ed08a56";       
-const BUILD_AT = "2026-09-08 02:15 UTC";       
+const BUILD_ID = "b4415aec";       
+const BUILD_AT = "2026-09-08 02:51 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5411,6 +5411,18 @@ const wd = weekDates(ws).find(x=>x.dow===dow);
 return wd? ((S.holidays.list||[]).find(h=>h.date===wd.date)||null) : null;
 }
  
+function holCreditMin(empId, ws){
+if(S.rules && S.rules.holCounts===false) return 0;
+const e=empById(empId);
+if(!e || !e.holidayPay) return 0;
+const worked=new Set(peekWeek(ws).assignments.filter(a=>a.empId===empId).map(a=>a.date));
+return holidaysIn(ws).reduce((t,h)=> t + (worked.has(h.date)? 0 : holPayH(e)*60), 0);
+}
+ 
+function empWeekPaidMinutes(empId, ws){
+return empWeekMinutes(empId, ws) + holCreditMin(empId, ws);
+}
+ 
 function holNeedRows(h){
 if(!h || !h.need) return null;
 const roles=Object.keys(h.need).filter(rid=>(+h.need[rid]||0)>0);
@@ -5633,7 +5645,7 @@ const spent=()=> work>BUDGET;
  
 const deficit=(e, st)=>{ const L=effLimits(e, ws);
 const goal=(L.exactH||L.minH||0)*60*minHFactor(e.id, ws);
-return goal? Math.round(goal - ((st&&st.min)||0)) : 0; };
+return goal? Math.round(goal - ((st&&st.min)||0) - holCreditMin(e.id, ws)) : 0; };
 
 const place=(e, shiftId, roleId, date, dow, list, ignore, siteId)=>{
 work++;
@@ -6316,7 +6328,7 @@ const L=effLimits(e, ws);
 return (L.exactH || L.minH) > 0;
 });
 const exhausted=new Set();
-const deficit=e=>{ const L=effLimits(e, ws); return Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws)) - state[e.id].min; };
+const deficit=e=>{ const L=effLimits(e, ws); return Math.round((L.exactH||L.minH)*60*minHFactor(e.id,ws) - holCreditMin(e.id, ws)) - state[e.id].min; };
 const mineTag=a=> guaranteeMode? !!a.guarantee : !!a.topUp;
 const soFar=e=>assignments.filter(a=>a.empId===e.id && mineTag(a)).length;
 let guard=0;
@@ -12139,6 +12151,10 @@ prettyDate(date)+": this post is marked must-cover from "+m2disp(from)+" to "+m2
 S.employees.forEach(e=>{
 const mine = wk.assignments.filter(a=>a.empId===e.id).sort((a,b)=>a.date.localeCompare(b.date));
 const mins = mine.reduce((t,a)=>t+paidMinutes(a),0);
+ 
+const holMin = holCreditMin(e.id, ws);
+const empPaidMins = mins + holMin;
+const holSay = holMin? " (" + fmtHrs(mins) + " on the floor + " + fmtHrs(holMin) + " holiday pay)" : "";
 const lim = effLimits(e, ws);
  
 if(e.active===false){
@@ -12228,13 +12244,13 @@ if(lim.exactH && e.onCall && mins < Math.round(lim.exactH*60*minHFactor(e.id, ws
 push("info","On call, but a fixed contract — "+e.name,
 e.name.split(" ")[0]+" is only called in when the week is short, so the drafter never fills a contract for them \u2014 yet their profile says exactly "+lim.exactH+"h. Change one or the other.",
 {empId:e.id, code:"oncallguar"});
-} else if(lim.exactH && Math.abs(mins - Math.round(lim.exactH*60*minHFactor(e.id, ws))) > 5){    
+} else if(lim.exactH && Math.abs(empPaidMins - Math.round(lim.exactH*60*minHFactor(e.id, ws))) > 5){    
  
 const fac=minHFactor(e.id, ws);
 const owe=Math.round(lim.exactH*60*fac);
 const f=exactHoursFeasible(e, ws);
 push("crit","Off contract — "+e.name,
-e.name.split(" ")[0]+" is contracted to exactly "+lim.exactH+"h and has "+fmtHrs(mins)+
+e.name.split(" ")[0]+" is contracted to exactly "+lim.exactH+"h and has "+fmtHrs(empPaidMins)+holSay+
 (fac<1? ", against "+fmtHrs(owe)+" owed this week (contract scaled \u2014 they're away part of it)" : "")+". "+
 (f.ok? "It can be done from the shifts you've defined — something else got in the way this week, so try locking one of their shifts and drafting again."
 : "Can't be done: "+f.why+". Add a shift of the right length under Roles & shifts, or change the contract."),
@@ -12243,20 +12259,20 @@ e.name.split(" ")[0]+" is contracted to exactly "+lim.exactH+"h and has "+fmtHrs
 const fac=minHFactor(e.id, ws);
 const owe=Math.round(lim.minH*60*fac);
  
-if(lim.extraAuto && mins > lim.askAbove*60 + 1){
+if(lim.extraAuto && empPaidMins > lim.askAbove*60 + 1){
 push("info","Above the guarantee \u2014 "+e.name,
-fmtHrs(mins)+" scheduled against "+lim.askAbove+"h guaranteed, up to a cap of "+lim.couldBe+"h. "+
+fmtHrs(empPaidMins)+holSay+" scheduled against "+lim.askAbove+"h guaranteed, up to a cap of "+lim.couldBe+"h. "+
 "You set the drafter to top people up without asking; change that under Ground rules to be asked each week.",
 {empId:e.id, code:"aboveguar"});
 }
-if(mins < owe-1 && e.onCall){
+if(empPaidMins < owe-1 && e.onCall){
 push("info","On call, but guaranteed hours — "+e.name,
 e.name.split(" ")[0]+" is set to be used only when the week is short, so the drafter never tops them up \u2014 yet their profile guarantees "+lim.minH+"h. "+
 "Change one or the other and this goes away.", {empId:e.id, code:"oncallguar"});
-} else if(mins < owe-1){
+} else if(empPaidMins < owe-1){
 const sh=(wk.short||[]).find(x=>x.empId===e.id);
 push(S.rules.fillMode==="full"? "crit":"warn","Under guaranteed hours — "+e.name,
-fmtHrs(mins)+" scheduled, "+fmtHrs(owe)+" owed"+(fac<1? " (guarantee scaled — they're away part of this week)":" ("+lim.minH+"h guaranteed)")+"."+
+fmtHrs(empPaidMins)+holSay+" scheduled, "+fmtHrs(owe)+" owed"+(fac<1? " (guarantee scaled — they're away part of this week)":" ("+lim.minH+"h guaranteed)")+"."+
 " "+(sh? "The drafter tried to close it and could not: "+sh.why+"." : "Nothing else in the pool fits."), {empId:e.id, code:"under"});
 }
 }
@@ -14456,6 +14472,7 @@ const EXPLAIN = {
 "rules.projectMinH": "The smallest block of project time worth scheduling. Example: 4 means the drafter will add a half-day but never an isolated 90 minutes.",
 "rules.projectShare": "Whether project time is spread around or piled on the people who want it. Example: “pile it on” gives one person a full extra day rather than giving four people two hours each.",
 "rules.topUpLabel": "What project time is CALLED on your schedules and printouts. Example: type “projects”, “inventory” or “clinic admin” and that is the word your team sees, not a piece of software jargon.",
+"rules.holCounts": "Whether the hours somebody is paid for a holiday count toward the hours they are guaranteed or contracted. Example: a full-timer contracted to 40h with 8 hours of holiday pay is on contract at 32 hours on the floor \u2014 32 worked plus 8 paid is the 40 their payslip shows. Turn it off only if your guarantee is a promise of hours actually worked. A holiday they are rostered to WORK never counts twice: those hours are already in the week, and the holiday premium is money on top.",
 "rules.guaranteeSpread": "Where the extra shifts go when somebody is under their guaranteed hours. Example: a part-timer guaranteed 16 hours with only 8 scheduled needs one more shift — “busiest days first” puts it where you are stretched, “evenly” puts it where the floor is thinnest, and “on one named shift” always uses the shift you pick.",
 "rules.guaranteeShift": "The one shift that soaks up hours owed, when you chose to spread them that way. Example: pick your 8:00–16:30 and every top-up lands there rather than scattering across openings and closings.",
 "rules.preferLong": "When there is a choice, give people longer shifts rather than more of them. Example: somebody owed 16 hours gets two eight-hour days instead of four four-hour ones.",
@@ -15126,6 +15143,14 @@ const p=props.find(y=>y.busy.d===x.busy.d && y.quiet.d===x.quiet.d);
 return `<div class="setrow"><div class="sq"><strong style="color:var(--warn)">Worth a look</strong>
           <div class="mini">${DAYS[x.busy.d]} is ${esc((LOAD_LABEL[dayLoad(x.busy.d)]||"").toLowerCase())} but has ${x.busy.cover} shift${x.busy.cover===1?"":"s"} against ${DAYS[x.quiet.d]}'s ${x.quiet.cover}.${p? " "+esc(p.title)+"?" : " Coverage needs is where you'd even that up — nothing is changed for you."}</div></div>
           <div class="sc">${p? `<button class="btn sm primary" data-loadfix="0">Do it</button> `:""}<button class="btn sm" data-go="demand">Coverage needs →</button></div></div>`;})()}
+      ${setRow("Does holiday pay count toward guaranteed hours?",
+(S.rules.holCounts===false
+? "No \u2014 a full-timer owed 40h still owes 40h on the floor in a holiday week"
+: "Yes \u2014 a full-timer owed 40h with 8h of holiday pay is on contract at 32h worked"),
+`<select data-set="rules.holCounts">
+          <option value="1" ${S.rules.holCounts!==false?"selected":""}>Yes \u2014 it counts</option>
+          <option value="0" ${S.rules.holCounts===false?"selected":""}>No \u2014 floor hours only</option>
+        </select>`)}
       ${setRow("How guaranteed hours are spread", (function(){ const g=S.rules.guaranteeSpread||"busy";
 return g==="even"? "Anyone owed hours beyond the cover you asked for is put on the thinnest days first, so the extra body is spread through the week"
 : g==="shift"? "Anyone owed hours is put on "+esc((shiftById(S.rules.guaranteeShift)||{label:"the named shift"}).label)+" wherever it fits, and on other shifts only when it does not"
@@ -15583,7 +15608,7 @@ const t=root.querySelector("#aptheme"); if(t) t.onchange=()=>applyTheme(t.value)
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-const boolPaths=["rules.trackLic","rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","rules.familyBiz","rules.familyHazard","ui.recurOff","ui.adviceOff","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger"];
+const boolPaths=["rules.trackLic","rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","rules.familyBiz","rules.familyHazard","ui.recurOff","ui.adviceOff","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger","rules.holCounts"];
 const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.maxSpanH","org.weekStart","org.fiscalStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
@@ -16290,12 +16315,13 @@ return `<span class="dpill ${ok?"on":"off"}" title="${esc(t)}" aria-label="${esc
 }
 function teamFacts(e, ws){
 const mins=empWeekMinutes(e.id,ws);
-const pct = e.maxH? clamp(mins/(e.maxH*60),0,1.3):0;
+const holM=holCreditMin(e.id, ws), paidM=mins+holM;
+const pct = e.maxH? clamp(paidM/(e.maxH*60),0,1.3):0;
 const over = e.maxH && mins>e.maxH*60+1;
-const under = e.minH && mins<e.minH*60-1 && e.type!=="PRN";
+const under = e.minH && paidM<e.minH*60-1 && e.type!=="PRN";
 const L=effLimits(e);
 const target = L.exactH? "exactly "+L.exactH+"h" : (L.minH||0)+"–"+(L.maxH||0)+"h"+((L.maxH&&L.maxH!==e.maxH)||(L.minH&&L.minH!==e.minH)?" *":"");
-const bar=`<div class="mono" style="font-size:12px">${fmtHrs(mins)}${over? ' <span class="chip crit" style="margin-left:4px"'+whyAttrs(e.name.split(" ")[0]+" has "+fmtHrs(mins)+" this week against a "+e.maxH+"h cap. Shorten or hand over a shift, or raise the cap on their profile.", "fix:cap:"+e.id)+'>over cap</span>' : under? ' <span class="chip warn" style="margin-left:4px"'+whyAttrs(e.name.split(" ")[0]+" has "+fmtHrs(mins)+" this week and is guaranteed "+e.minH+"h. Add a shift for them, or change the guarantee on their profile.", "fix:under:"+e.id)+'>under</span>':""}</div>
+const bar=`<div class="mono" style="font-size:12px">${fmtHrs(mins)}${holM? ` <span class="mini" title="Holiday pay counts toward guaranteed hours">+${fmtHrs(holM)} hol</span>`:""}${over? ' <span class="chip crit" style="margin-left:4px"'+whyAttrs(e.name.split(" ")[0]+" has "+fmtHrs(mins)+" this week against a "+e.maxH+"h cap. Shorten or hand over a shift, or raise the cap on their profile.", "fix:cap:"+e.id)+'>over cap</span>' : under? ' <span class="chip warn" style="margin-left:4px"'+whyAttrs(e.name.split(" ")[0]+" has "+fmtHrs(paidM)+(holM? " ("+fmtHrs(mins)+" on the floor + "+fmtHrs(holM)+" holiday pay)":"")+" this week and is guaranteed "+e.minH+"h. Add a shift for them, or change the guarantee on their profile.", "fix:under:"+e.id)+'>under</span>':""}</div>
     <div style="height:4px;border-radius:2px;background:var(--sunken);overflow:hidden;margin-top:3px"><i style="display:block;height:100%;width:${Math.min(100,pct*100)}%;background:${over?"var(--crit)":under?"var(--warn)":"var(--accent)"}"></i></div>`;
 const notes=[];
 if(prefsBlank(e)) notes.push(`<span class="mini" title="Nothing on file, so they can be scheduled any time you are open. Perfectly fine — send the starter form if you would like their preferences.">nothing on file · open availability</span>`);
@@ -18663,13 +18689,16 @@ return `<div class="hcell ${h.closed?"closed":""}${_cut?" paycut":""}${payShade(
       </div>
       ${roster.length? roster.map(e=>{
 const mins=empWeekMinutes(e.id,ws);
+ 
+const _hol=holCreditMin(e.id, ws);
+const _paid=mins+_hol;
 const _sp=payOn()? paySplit(ws) : null;
-const pct=e.maxH?clamp(mins/(e.maxH*60),0,1):0;
-const over = e.maxH && mins>e.maxH*60+1, under = e.minH && mins<e.minH*60-1 && e.type!=="PRN";
+const pct=e.maxH?clamp(_paid/(e.maxH*60),0,1):0;
+const over = e.maxH && mins>e.maxH*60+1, under = e.minH && _paid<e.minH*60-1 && e.type!=="PRN";
 return `<div class="erow">
           <div class="name">
             <div class="nm" title="${esc(e.name)}">${esc(e.name)}</div>
-            <div class="meta"><span class="mono">${fmtHrs(mins)}</span>${_sp? ` <span class="mini">(${fmtHrs(payHours(e.id,ws,"before"))} + ${fmtHrs(payHours(e.id,ws,"after"))})</span>`:""} · ${esc(e.type)}${cyclesOn()&&cycleLabel(e)? " · "+esc(cycleLabel(e)):""}
+            <div class="meta"><span class="mono">${fmtHrs(mins)}</span>${_hol? ` <span class="mini" title="Holiday pay counts toward guaranteed hours \u2014 change that under Hours, guarantees and patterns">+${fmtHrs(_hol)} hol</span>`:""}${_sp? ` <span class="mini">(${fmtHrs(payHours(e.id,ws,"before"))} + ${fmtHrs(payHours(e.id,ws,"after"))})</span>`:""} · ${esc(e.type)}${cyclesOn()&&cycleLabel(e)? " · "+esc(cycleLabel(e)):""}
               ${e.roleIds.slice(0,2).map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span>`:"";}).join("")}</div>
             <div class="bar"><i style="width:${pct*100}%;background:${over?"var(--crit)":under?"var(--warn)":"var(--accent)"}"></i></div>
           </div>
@@ -19847,7 +19876,7 @@ if(!wk.assignments.length) return `<div class="card"><div class="body stack" sty
 const openShifts = V.filter(v=>v.openSlot);
 const gaps = V.filter(v=>v.sev==="crit" && !v.openSlot);
 const under = S.employees.filter(e=>{ const L=effLimits(e);
-return e.active!==false && !e.onCall && L.minH && e.type!=="PRN" && empWeekMinutes(e.id,ws) < L.minH*60-1; });
+return e.active!==false && !e.onCall && L.minH && e.type!=="PRN" && empWeekPaidMinutes(e.id,ws) < L.minH*60-1; });
 const overtime = S.employees.filter(e=>e.active!==false && empWeekMinutes(e.id,ws) > (S.org.otWeeklyH||40)*60+1);
 const days = new Set(wk.assignments.map(a=>a.date)).size;
 const need = fwwNotice();
@@ -19869,7 +19898,7 @@ d:gaps[0].title.replace(/ — .*/,"")+": "+gaps[0].detail,
 act:gaps[0].date?"day":null, ref:gaps[0].date? parseYmd(gaps[0].date).getDay():null, fixv:V.indexOf(gaps[0])});
 if(under.length) looks.push({sev:"warn",
 t:under.length===1? under[0].name+" is short of guaranteed hours" : under.length+" people are short of guaranteed hours",
-d:under.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekMinutes(e.id,ws))+" of "+effLimits(e).minH+"h").join(", "), act:"team",
+d:under.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekPaidMinutes(e.id,ws))+" of "+effLimits(e).minH+"h").join(", "), act:"team",
 fixv:V.indexOf(V.find(v=>(v.code==="under"||v.code==="contract") && v.empId===under[0].id))});
 if(overtime.length) looks.push({sev:"warn",
 t:overtime.length+" heading into overtime",
@@ -27153,6 +27182,8 @@ a:"Tap the \u2630 button at the top left of the screen. The menu slides in from 
 a:"Settings \u2192 Your business \u2192 When you're open: a table with each day's open and close time and a switch for days you are shut. Change a time and it is saved as you type; the next draft uses it. Nothing here needs the setup questions. It is also one search away \u2014 type \u201cbusiness hours\u201d into the Go anywhere box, the Home search, or the phone menu's search."},
 {t:"I asked for 2 on Saturday and got 3 \u2014 why?", k:"exactly at least extra people saturday busy 2 got 3 coverage needs row exact flexible cap more than asked", go:"demand",
 a:"Because that row said \u201cat least 2\u201d, and an at-least row is one the drafter may add to when somebody is owed hours or the floor is short. Rows you add now are exact unless you choose otherwise \u2014 the dialog asks whether the drafter may add more than you asked for. Older rows that still say at least are named in a banner at the top of Coverage needs, with one button to make them all exact; then open up just the shift that should take the hours owed. A busy or quiet label never adds people on its own; it only decides where extra people go first."},
+{t:"Does holiday pay count toward somebody's guaranteed or contracted hours?", k:"holiday pay guaranteed hours contract 40 hours 32 short under guaranteed full timer 8 hours paid holiday week counts toward", go:"settings",
+a:"Yes, by default. A full-timer contracted to 40 hours with 8 hours of holiday pay is on contract at 32 hours on the floor \u2014 32 worked plus 8 paid is the 40 their payslip shows \u2014 so the drafter stops there and the week is not flagged. A holiday somebody is rostered to WORK never counts twice: those hours are already in the week, and the holiday premium is money on top. If your guarantee is a promise of hours actually worked, turn it off under Settings \u2192 Hours, guarantees and patterns. An hour CAP is unaffected either way: a cap is about hours on the floor."},
 {t:"Can I choose which shifts take extra people who are short of hours?", k:"extra people shift option prefer never guaranteed hours which shift 8 to 4:30 soak up hours owed coverage needs at most", go:"shifts",
 a:"Yes — open the shift under Roles & shifts and look for Extra people beyond Coverage needs. Yes (the default) lets the drafter add people who are short of their hours to that shift; Prefer this shift puts hours owed there before anywhere else; Never keeps the shift to exactly what Coverage needs asks for. An At most figure on the Coverage needs row still caps the head count either way."},
 {t:"What does an open-ended shift actually do with its length?", k:"open ended shift flexible length usual stretch shrink shortest longest 8 hours 10 hours when needed low priority last resort", go:"shifts",
@@ -28263,12 +28294,13 @@ const likes=[];
 if(e.prefShiftIds.includes(shiftId)) likes.push("asked for this shift");
 if(e.avoidShiftIds.includes(shiftId)) likes.push("would rather avoid it");
 if((e.prefDaysOff||[]).includes(dow)) likes.push("prefers "+DSHORT[dow]+" off");
-if(LIM.minH && mins < LIM.minH*60) likes.push(fmtHrs(LIM.minH*60-mins)+" short of guaranteed hours");
+{ const pm=mins+holCreditMin(e.id, ws);
+if(LIM.minH && pm < LIM.minH*60) likes.push(fmtHrs(LIM.minH*60-pm)+" short of guaranteed hours"); }
 out.push({emp:e, blocks, likes, mins, add, cap:capH,
 rank: blocks.length*1000 - (e.prefShiftIds.includes(shiftId)?30:0)
 + (e.avoidShiftIds.includes(shiftId)?25:0)
 + ((e.prefDaysOff||[]).includes(dow)?20:0)
-+ (LIM.minH&&mins<LIM.minH*60? -20:0) + mins/60 });
++ (LIM.minH&&(mins+holCreditMin(e.id, ws))<LIM.minH*60? -20:0) + mins/60 });
 });
 return out.sort((a,b)=>a.rank-b.rank);
 }
