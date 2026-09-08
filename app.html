@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build d88e2dc5 2026-09-08 00:12 UTC -->
+<!-- build 33e85624 2026-09-08 00:55 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2682,8 +2682,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "d88e2dc5";       
-const BUILD_AT = "2026-09-08 00:12 UTC";       
+const BUILD_ID = "33e85624";       
+const BUILD_AT = "2026-09-08 00:55 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5410,6 +5410,29 @@ function holOn(dow, ws){
 const wd = weekDates(ws).find(x=>x.dow===dow);
 return wd? ((S.holidays.list||[]).find(h=>h.date===wd.date)||null) : null;
 }
+ 
+function holNeedRows(h){
+if(!h || !h.need) return null;
+const roles=Object.keys(h.need).filter(rid=>(+h.need[rid]||0)>0);
+if(!roles.length) return null;
+ 
+const hrs=(typeof holHoursOf==="function")? holHoursOf(h) : {from:"",to:""};
+const a = hrs.from? t2m(hrs.from) : null, b = hrs.to? t2m(hrs.to) : null;
+const pick=(()=>{
+const all=(S.shifts||[]).filter(sh=>sh && !sh.off);
+if(!all.length) return null;
+if(a==null || b==null) return all[0];
+const exact=all.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===a && y===b; });
+if(exact) return exact;
+let best=null, bestOv=-1;
+all.forEach(sh=>{ const [x,y]=shiftMinutes(sh);
+const ov=Math.max(0, Math.min(y,b)-Math.max(x,a));
+if(ov>bestOv){ bestOv=ov; best=sh; } });
+return best;
+})();
+if(!pick) return null;
+return roles.map(rid=>({shiftId:pick.id, roleId:rid, count:(+h.need[rid]||0), max:(+h.need[rid]||0)}));
+}
 function expandDemand(dow, ws){
  
 if(S.hours && S.hours[dow] && S.hours[dow].closed) return [];
@@ -5419,7 +5442,10 @@ if(hol){
 if(holPolled(hol)) return [];                
 const m=holMode(hol);
 if(m==="closed") return [];                  
-if(m==="reduced") rows = S.holidays.demand||[];    
+if(m==="reduced"){
+ 
+rows = holNeedRows(hol) || (S.holidays.demand||[]);
+}
  
 }
 const slots=[];
@@ -5831,7 +5857,7 @@ if(!dayOpen(date, dow)) return;
 { const h=(S.holidays.list||[]).find(x=>x.date===date);
 if(h && holPolled(h)) return;    
  
-if(h && holNoExtra()) return; }
+if(h && holCapped(h)) return; }
 const pool=S.shifts.filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(dow));
  
 const asked=new Set(demandRowsFor(dow, ws, date).map(r=>r.shiftId));
@@ -6346,7 +6372,7 @@ outer:
 for(const d of days){
 if(!dayOpen(d.date, d.dow)) continue;       
  
-if(holNoExtra() && holOn(d.dow, ws)) continue;
+{ const hh=holOn(d.dow, ws); if(hh && holCapped(hh)) continue; }
  
 const P=peakOf(d.dow);
  
@@ -10225,10 +10251,14 @@ return T;
 }
 
  
+ 
+const ringsTurn = (S.rules.stationSpan||"day")!=="day";
+ 
+const fixedPost = st => !!st.holdAllDay;
 const done=new Set(), rings=[];
 posts.forEach(st=>{
-if(done.has(st.id)) return;
-const ring=linkRingOf(st).filter(id=>posts.some(o=>o.id===id) && !done.has(id));
+if(done.has(st.id) || fixedPost(st)) return;
+const ring=linkRingOf(st).filter(id=>posts.some(o=>o.id===id) && !done.has(id) && !fixedPost(stationById(id)));
 if(ring.length>1){ ring.forEach(id=>done.add(id)); rings.push(ring.map(stationById)); }
 });
 const singles=posts.filter(st=>!done.has(st.id)).sort((a,b)=>(b.desire||0)-(a.desire||0));
@@ -10248,7 +10278,7 @@ const hi=Math.min.apply(null, picks.map(x=>x.p.a.endMin));
 const at=Math.round((hi>lo? (lo+hi)/2
 : (Math.min.apply(null, picks.map(x=>x.p.a.startMin))+Math.max.apply(null, picks.map(x=>x.p.a.endMin)))/2)/15)*15;
  
-const able=picks.filter(({p})=> at>p.a.startMin && at<p.a.endMin);
+const able=ringsTurn? picks.filter(({p})=> at>p.a.startMin && at<p.a.endMin) : [];
 if(able.length>=2){
 const to=able.map((x,i)=> ring[ able[(i+1)%able.length].k ]);
 const ok=able.every((x,i)=> to[i] && to[i].id!==ring[x.k].id && canHold(x.p, to[i]));
@@ -17742,6 +17772,12 @@ const D=editDemand(); D[dow]=D[dow]||[]; return D[dow];
 function holCoverOwn(){ return (S.holidays&&S.holidays.mode)==="custom"; }
  
 function holNoExtra(){ return !!(S.holidays && S.holidays.noExtra); }
+ 
+function holCapped(h){
+if(!h) return false;
+if(holNoExtra()) return true;
+return !!(typeof holNeedRows==="function" && holNeedRows(h));
+}
 function holUsingOwn(){
 const list=(S.holidays&&S.holidays.list)||[];
 return { on:list.filter(h=>holMode(h)==="reduced").length, total:list.length,
@@ -24951,15 +24987,17 @@ modal(id? "Edit "+st.name : isAdmin? "New administrative duty" : "New station", 
           <div class="field"><label>Who can take it</label><select id="strole">
             <option value="">Anyone on shift</option>
             ${S.roles.map(r=>`<option value="${r.id}" ${st.roleId===r.id?"selected":""}>${esc(r.name)}</option>`).join("")}</select></div>
-          <div class="field"><label>Rotate with</label>
+          <div class="field"><label>Swap places with, part-way through the day</label>
             ${others.length? `<div class="row" style="flex-wrap:wrap;gap:6px" id="stlinkbox">${others.map(o=>{
 const on=(Array.isArray(st.linkWith)&&st.linkWith.includes(o.id)) || st.linkedTo===o.id
 || (Array.isArray(o.linkWith)&&o.linkWith.includes(st.id)) || o.linkedTo===st.id;
 return `<label class="switch" style="border:1px solid var(--line);border-radius:7px;padding:4px 9px"><input type="checkbox" class="stlk" value="${esc(o.id)}" ${on?"checked":""}> ${esc(o.name)}</label>`;
 }).join("")}</div>
-            <span class="mini">Tick every post this one rotates with. Two of them swap at the middle of the day; three or more pass along the ring, so nobody spends the whole day on the same one.</span>`
-: `<span class="mini">Nothing else to rotate with yet.</span>`}
-            <span class="mini">Linked pairs swap at the middle of the day</span></div>
+            <span class="mini">This is about people physically changing places mid-shift \u2014 <b>not</b> about two posts counting as the same kind of work. If what you want is &ldquo;a turn on Typist 1 counts as a turn on Typist, so everyone gets variety across the week&rdquo;, that is <b>Numbered posts \u2192 Share one rotation</b> on this page, and posts named with a number already group themselves. Leave this empty for that.</span>
+            <span class="mini">${(S.rules.stationSpan||"day")==="day"
+? `You have the floor set to <b>All day \u2014 one post per person</b>, so ticking a post here changes nothing during the day \u2014 nobody swaps. It still means \u201csomeone from the same rotation\u201d covers this post at a meal. To make people change over mid-shift, set <b>How long someone holds a post</b> to half a day or an hourly block.`
+: `Tick every post this one swaps with. Two of them change places at the middle of the day; three or more pass along the ring, so nobody spends the whole day on the same one.`}</span>`
+: `<span class="mini">Nothing else to rotate with yet.</span>`}</div>
         </div>
         <label class="switch"><input type="checkbox" id="stdbl" ${st.double?"checked":""}> Take a second person here when there's someone spare</label>
         <span class="mini">Off by default. On busy posts a second pair of hands beats an idle one — anyone still spare after that goes to ${esc((S.rules.topUpLabel||"project time").toLowerCase())}.</span>
@@ -25564,7 +25602,7 @@ return `
           <div><strong style="font-size:13px">Topping people up on a holiday</strong>
             <div class="mini">${holNoExtra()
 ? "A holiday gets exactly the cover you asked for and nobody else \u2014 not for hours owed, and not to fill the floor. If that leaves a stretch uncovered the checks will say so, but nothing is added behind your back."
-: "Somebody short of their guaranteed hours may be given a holiday shift, and the floor is filled if a stretch would otherwise stand empty."}</div></div>
+: "Somebody short of their guaranteed hours may be given a holiday shift, and the floor is filled if a stretch would otherwise stand empty. This applies only to holidays that carry no cover of their own \u2014 any holiday with a <b>Coverage needed</b> figure gets exactly that and nobody else, because asking for one and being handed ten would make the figure meaningless."}</div></div>
           <select id="holnoextra" style="margin-left:auto">
             <option value="0" ${holNoExtra()?"":"selected"}>Top up and cover the floor as usual</option>
             <option value="1" ${holNoExtra()?"selected":""}>Minimum cover only \u2014 add nobody</option>
