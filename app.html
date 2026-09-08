@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 33e85624 2026-09-08 00:55 UTC -->
+<!-- build 9ed08a56 2026-09-08 02:15 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2682,8 +2682,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "33e85624";       
-const BUILD_AT = "2026-09-08 00:55 UTC";       
+const BUILD_ID = "9ed08a56";       
+const BUILD_AT = "2026-09-08 02:15 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -6379,7 +6379,14 @@ const P=peakOf(d.dow);
 const runsToday=new Set(demandRowsFor(d.dow, ws, d.date).map(r=>r.shiftId));
 const dayRank=sh=> rank(sh) + ((runsToday.size && !runsToday.has(sh.id))? 5 : 0);
  
-const dayShifts = shifts.filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(d.dow))
+ 
+const dayShifts = shifts.filter(sh=>{
+if(Array.isArray(sh.days) && sh.days.length && !sh.days.includes(d.dow)) return false;
+ 
+if(sh.extra==="first" || (onlyShift && sh.id===onlyShift)) return true;
+if(runsToday.size && !runsToday.has(sh.id)) return false;
+return true;
+})
 .sort((x,y)=> (dayRank(x)-dayRank(y)) || (P.length? (peakSpan(y,P)-peakSpan(x,P)) : 0));
  
 const openHere = openDemandOn(d.date, d.dow, ws, assignments);
