@@ -240,9 +240,9 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 <li>We do not buy personal information from data brokers.</li>
 <li>Anything typed into the in-app help assistant stays on your device and is not sent to us.</li>
 </ul>
-<h3>2.3a Three other companies see your browser connect</h3>
+<h3>2.3a One other company sees your browser connect</h3>
 <p>We want to be exact about this, because "no trackers" is true and still not the whole picture.</p>
-<p>When the page loads, your browser fetches three things from outside our control:</p>
+<p>When the page loads, your browser fetches one thing from outside our control:</p>
 <table>
 <thead>
 <tr>
@@ -253,25 +253,19 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 </thead>
 <tbody>
 <tr>
-<td>Typefaces</td>
-<td>Google Fonts (<code>fonts.googleapis.com</code>, <code>fonts.gstatic.com</code>)</td>
-<td>Your IP address, browser and operating system, and that a Weeksolved page was opened</td>
-</tr>
-<tr>
 <td>The Firebase sign-in and sync library</td>
 <td>Google (<code>www.gstatic.com</code>)</td>
-<td>The same</td>
-</tr>
-<tr>
-<td>The library that builds PDF exports</td>
-<td>Cloudflare's public CDN (<code>cdnjs.cloudflare.com</code>)</td>
-<td>The same</td>
+<td>Your IP address, browser and operating system, and that a Weeksolved page was opened</td>
 </tr>
 </tbody>
 </table>
-<p><strong>None of them receive your schedule, your staff, or anything you typed.</strong> They serve a file; that is all. But a request carries an IP address, and an IP address is personal information, so we are not going to describe this product as "nothing leaves your browser" when three requests do.</p>
-<p><strong>None of these are required for the product to work.</strong> With all three blocked — by a corporate firewall, an ad blocker, or no internet at all — Weeksolved still opens, still drafts a schedule, still places breaks and still prints. You lose the designed typefaces (it falls back to your system's), PDF export, and signing in to an account. Everything else is unaffected. We test this.</p>
-<p>If your organization cannot accept those requests, tell us: a build that carries the typefaces and the PDF library inside the file, so nothing is fetched at all, is a change to how we package it, not to how it works.</p>
+<p>It used to be three. The typefaces came from Google Fonts and the library that
+builds PDF exports came from Cloudflare's public CDN; both are now carried inside
+the page itself, so neither company is contacted at all. Firebase is the one that
+cannot go, because it <em>is</em> the service that holds your account and your board.</p>
+<p><strong>It does not receive your schedule, your staff, or anything you typed.</strong> It serves a file; that is all. But a request carries an IP address, and an IP address is personal information, so we are not going to describe this product as "nothing leaves your browser" when one request does.</p>
+<p><strong>It is not required for the product to work.</strong> Blocked — by a corporate firewall, an ad blocker, or no internet at all — Weeksolved still opens, still drafts a schedule, still places breaks, still prints and still exports a PDF, in the designed typefaces. The only thing you lose is signing in to an account, and with it the copy of your board that syncs between devices. Everything else is unaffected. We test this.</p>
+<p>If your organization cannot accept even that one request, tell us. A build with no account service at all — the board stored on the device and nothing sent anywhere — is a change to how we package it, not to how it works.</p>
 <h3>2.4 Sensitive personal information</h3>
 <p>The CCPA defines a specific list of "sensitive personal information" — Social Security and government ID numbers, financial account details, precise geolocation, racial or ethnic origin, religious or philosophical beliefs, union membership, contents of private communications, genetic and biometric data, health information, and sexual orientation or sex life.</p>
 <p><strong>The product has no fields for any of it, and we do not ask you for any of it.</strong> Date of birth is not on that list. We do not use or disclose sensitive personal information for any purpose that would require us to offer a "Limit the Use of My Sensitive Personal Information" link.</p>
