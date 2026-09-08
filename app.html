@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build b4415aec 2026-09-08 02:51 UTC -->
+<!-- build 9c329395 2026-09-08 03:19 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2682,8 +2682,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "b4415aec";       
-const BUILD_AT = "2026-09-08 02:51 UTC";       
+const BUILD_ID = "9c329395";       
+const BUILD_AT = "2026-09-08 03:19 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5779,8 +5779,10 @@ const match=S.shifts.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===aMin&&y
 const roleId=rrow.roleId||e.roleIds[0]||null;
  
 { const slot={shiftId:match? match.id:null, roleId, sh:(match||{id:null, start:m2hhmm(aMin%1440), end:m2hhmm(bMin%1440)}), _hol:true};
-const why = (typeof whyNotPlaced1==="function")
-? whyNotPlaced1(e, slot, d.date, d.dow, state, assignments) : null;
+ 
+const why = hardOk(e, slot, d.date, d.dow, state, assignments)
+? null
+: ((typeof whyNotPlaced1==="function")? whyNotPlaced1(e, slot, d.date, d.dow, state, assignments) : "a rule the drafter enforces");
 if(why){
 unfilled.push({date:d.date, dow:d.dow, shiftId:slot.shiftId, roleId,
 why:(e.name||"Somebody")+" was drawn for "+(h.name||"this holiday")+" but cannot work it \u2014 "+why});
@@ -17808,6 +17810,8 @@ function holNoExtra(){ return !!(S.holidays && S.holidays.noExtra); }
  
 function holCapped(h){
 if(!h) return false;
+ 
+if(typeof holPolled==="function" && holPolled(h)) return true;
 if(holNoExtra()) return true;
 return !!(typeof holNeedRows==="function" && holNeedRows(h));
 }
