@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 888b3792 2026-09-10 16:35 UTC -->
+<!-- build ca89c74a 2026-09-10 17:40 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2684,8 +2684,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "888b3792";       
-const BUILD_AT = "2026-09-10 16:35 UTC";       
+const BUILD_ID = "ca89c74a";       
+const BUILD_AT = "2026-09-10 17:40 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5481,6 +5481,34 @@ const L=effLimits(e, ws);
 const hours = L.exactH || L.minH || 0;
 if(!hours) return 0;
 return Math.max(0, Math.round(hours*60*minHFactor(e.id, ws)) - holCreditMin(e.id, ws));
+}
+ 
+function guaranteeWindow(e, ws){
+if(!payOn()) return null;
+const L=effLimits(e, ws);
+if(L.exactH) return null;
+const h=L.minH||0;
+if(!h || h>=40) return null;
+ 
+const p=payPeriod(addDays(ws,6)); if(!p) return null;
+const days=Math.round((parseYmd(p.to)-parseYmd(p.from))/86400000)+1;
+if(days % 7 || days < 14) return null;
+const list=[]; let k=weekStartOf(p.from, S.org.weekStart), guard=0;
+while(k<=p.to && guard++<12){ list.push(k); k=addDays(k,7); }
+ 
+return {from:p.from, to:p.to, label:p.label, weeks:days/7, weekList:list,
+complete: list.every(x=>!!((S.weeks||{})[x]||{}).assignments)};
+}
+ 
+function empPaidMinutesBetween(empId, from, to){
+let t=0;
+Object.keys(S.weeks||{}).forEach(k=>{
+(((S.weeks||{})[k]||{}).assignments||[]).forEach(a=>{
+if(a.empId!==empId || a.date<from || a.date>to) return;
+t+=paidMinutes(a);
+});
+});
+return t;
 }
  
 function holNeedRows(h){
@@ -11133,8 +11161,15 @@ if(L.maxShiftH && (b-a) > L.maxShiftH*60) return;
 lens.add(paidEstimate(a,b));
 });
 });
+ 
+(peekWeek(ws).assignments||[]).forEach(a=>{
+if(a.empId!==e.id) return;
+if(L.maxShiftH && (a.endMin-a.startMin) > L.maxShiftH*60) return;
+const len=paidMinutes(a);
+if(len>0) lens.add(len);
+});
 const list=[...lens].filter(x=>x>0).sort((a,b)=>a-b);
-if(!list.length) return {ok:false, why:"none of the shifts running that week are ones "+e.name.split(" ")[0]+" can fill", lens:[]};
+if(!list.length) return {ok:false, why:"there is nothing in the week "+e.name.split(" ")[0]+" can be given — no shift the week asks for is one they can fill, and they are not on anything already", lens:[]};
  
 let reach=new Set([0]);
 for(let k=0;k<maxD;k++){
@@ -12420,9 +12455,31 @@ e.name.split(" ")[0]+" is set to be used only when the week is short, so the dra
 } else if(empPaidMins < owe-1){
  
 const sh=(wk.short||[]).find(x=>x.empId===e.id && !x.held) || null;
+ 
+const gw=guaranteeWindow(e, ws);
+const facs=gw? gw.weekList.map(k=>minHFactor(e.id,k)) : [];
+if(gw && facs.every(f=>f>=1)){
+const got=empPaidMinutesBetween(e.id, gw.from, gw.to);
+const owedPeriod=Math.round(lim.minH*60*gw.weeks);
+const shortBy=owedPeriod-got;
+if(!gw.complete){
+ 
+push("info","Hours so far this pay period — "+e.name,
+fmtHrs(got)+" of "+fmtHrs(owedPeriod)+" across "+gw.label+
+(shortBy>0? ", "+fmtHrs(shortBy)+" still to place" : ", already there")+
+". A guarantee under 40h is measured over the pay period, so a light week here is only a problem if the period ends short.",
+{empId:e.id, code:"periodguar"});
+} else if(shortBy>1){
+push(S.rules.fillMode==="full"? "crit":"warn","Under guaranteed hours over the pay period — "+e.name,
+fmtHrs(got)+" across "+gw.label+", "+fmtHrs(owedPeriod)+" owed ("+lim.minH+"h a week over "+gw.weeks+" weeks)."+
+" "+(sh? "The drafter tried to close it and could not: "+sh.why+"." : "Nothing else in the pool fits."),
+{empId:e.id, code:"under"});
+}
+} else {
 push(S.rules.fillMode==="full"? "crit":"warn","Under guaranteed hours — "+e.name,
 fmtHrs(empPaidMins)+holSay+" scheduled, "+fmtHrs(owe)+" owed"+(fac<1? " (guarantee scaled — they're away part of this week)":" ("+lim.minH+"h guaranteed)")+"."+
 " "+(sh? "The drafter tried to close it and could not: "+sh.why+"." : "Nothing else in the pool fits."), {empId:e.id, code:"under"});
+}
 }
 }
 if(lim.canBeAlone===false){
