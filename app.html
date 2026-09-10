@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 8dce0364 2026-09-08 03:56 UTC -->
+<!-- build 65223072 2026-09-10 00:51 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -610,6 +610,8 @@ ol.a2hs li{padding-left:2px}
 .rank{display:flex;flex-direction:column;gap:6px}
 .rankitem{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface2)}
 .rankitem .no{width:22px;height:22px;border-radius:5px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.rankitem .grip{flex:none;width:22px;text-align:center;color:var(--muted);cursor:grab;touch-action:none;user-select:none;font-size:16px;line-height:1}
+.rankitem.dragging{opacity:.55;outline:2px dashed var(--accent)}
 .codebox{font-family:"IBM Plex Mono",monospace;font-size:11px;background:var(--sunken);border:1px solid var(--line);border-radius:6px;padding:10px;word-break:break-all;max-height:130px;overflow:auto;line-height:1.45}
 .banner{display:flex;flex-wrap:wrap;gap:10px;padding:11px 14px;border-radius:var(--r);font-size:13px;align-items:flex-start;border:1px solid}
 .banner>*{min-width:0;max-width:100%}.banner>.btn{white-space:normal;text-align:left}
@@ -2682,8 +2684,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "8dce0364";       
-const BUILD_AT = "2026-09-08 03:56 UTC";       
+const BUILD_ID = "65223072";       
+const BUILD_AT = "2026-09-10 00:51 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5381,6 +5383,35 @@ const HOLIDAY_PRESETS=[
 ];
 function addDaysD(d,k){ const x=new Date(d.getTime()); x.setDate(x.getDate()+k); return x; }
  
+function holPresetFor(h){
+const n=String((h&&h.name)||"").trim().toLowerCase();
+return HOLIDAY_PRESETS.find(x=>x.n.toLowerCase()===n) || null;
+}
+function holNextDate(h){
+const today=ymd(new Date());
+const pre=holPresetFor(h);
+let y=new Date().getFullYear();
+for(let k=0;k<3;k++){
+let d;
+if(pre) d=ymd(pre.f(y+k));
+else { const m=/^(\d{4})-(\d{2}-\d{2})$/.exec(h.date||""); if(!m) return h.date; d=(y+k)+"-"+m[2]; }
+if(d>=today && d>(h.date||"")) return d;
+}
+return h.date;
+}
+function pastHolidays(){
+const today=ymd(new Date());
+return ((S.holidays&&S.holidays.list)||[]).filter(h=>h.date && h.date<today && h.repeat!==false);
+}
+function rollHolidays(){
+const past=pastHolidays(); if(!past.length) return 0;
+past.forEach(h=>{ h.date=holNextDate(h); });
+S.holidays.list.sort((a,b)=>a.date.localeCompare(b.date));
+S.holidays.result=null; S.holidays.responses=[];
+save(); render();
+return past.length;
+}
+ 
 function holidayCandidates(){
 const today=ymd(new Date()), y=new Date().getFullYear();
 return HOLIDAY_PRESETS.map(h=>{
@@ -5401,6 +5432,7 @@ return !!(h && S.holidays.result && (S.holidays.result.result||[]).some(r=>r.hol
 }
  
 function minHFactor(empId, ws){
+ 
 const ds=weekDates(ws).filter(d=>!S.hours[d.dow].closed);
 if(!ds.length) return 1;
 const here=ds.filter(d=>!onTimeOff(empId,d.date)).length;
@@ -5826,7 +5858,17 @@ const base = L.exactH? L.exactH*60 : (((L.minH||0)+(L.maxH||0))/2*60 || (L.maxH|
 target[e.id] = Math.max(0, Math.round(base * minHFactor(e.id, ws)) - holCreditMin(e.id, ws)); });
 
 
-dates.forEach(({date,dow})=>{
+ 
+const dayOrder = dates.slice().map(d=>{
+if(!dayOpen(d.date, d.dow)) return {d, pool:Infinity};
+const miss = matchDemand(expandDemand(d.dow, ws), assignments.filter(a=>a.date===d.date)).missing;
+let pool=Infinity;
+miss.forEach(w=>{ const n=S.employees.filter(e=>hardOk(e,{shiftId:w.shiftId, roleId:w.roleId, sh:w.sh, siteId:w.siteId}, d.date, d.dow, state, assignments)).length;
+if(n<pool) pool=n; });
+return {d, pool};
+}).sort((x,y)=> (x.pool-y.pool) || x.d.date.localeCompare(y.d.date)).map(x=>x.d);
+
+dayOrder.forEach(({date,dow})=>{
 let slots = expandDemand(dow, ws);
  
 const held = matchDemand(slots, kept.filter(a=>a.date===date));
@@ -5965,9 +6007,13 @@ shortG = topUpPass(ws, assignments, state, dates, "guarantee-any");
 if(shortG.length){ try{ flexPass(ws, {beyond:true, only:new Set(shortG.map(x=>x.empId))}); }catch(e){} refresh();
 shortG = topUpPass(ws, assignments, state, dates, "guarantee-any"); }
 }
-const short = S.rules.fillMode==="full"
-? topUpPass(ws, assignments, state, dates, "project")
-: shortG;
+ 
+let short = shortG;
+if(S.rules.fillMode==="full"){
+const shortP = topUpPass(ws, assignments, state, dates, "project");
+const named = new Set(shortG.map(x=>x.empId));
+short = shortG.concat(shortP.filter(x=>!named.has(x.empId)));
+}
 
  
  
@@ -6399,10 +6445,23 @@ return base + (SHUFFLE? jitter(e.id+x.id+SHUFFLE)-jitter(e.id+y.id+SHUFFLE) : 0)
 });
 
  
+const canFillDates=new Set();
+days.forEach(d=>{
+if(!dayOpen(d.date, d.dow)) return;
+{ const hh=holOn(d.dow, ws); if(hh && holCapped(hh)) return; }
+const oh=openDemandOn(d.date, d.dow, ws, assignments);
+if(oh.some(x=>{ const osh=shiftById(x.shiftId); if(!osh) return false;
+return hardOk(e, {shiftId:x.shiftId, roleId:x.roleId||roleId, sh:osh}, d.date, d.dow, state, assignments); }))
+canFillDates.add(d.date);
+});
+ 
 let placed=false;
+for(const phase of (canFillDates.size? ["required","any"] : ["any"])){
+if(placed) break;
 for(const floorMin of (minBlock? [minBlock, 0] : [0])){
 outer:
 for(const d of days){
+if(phase==="required" && !canFillDates.has(d.date)) continue;    
 if(!dayOpen(d.date, d.dow)) continue;       
  
 { const hh=holOn(d.dow, ws); if(hh && holCapped(hh)) continue; }
@@ -6429,7 +6488,7 @@ const osh=shiftById(x.shiftId); if(!osh) return false;
 return hardOk(e, {shiftId:x.shiftId, roleId:x.roleId||roleId, sh:osh}, d.date, d.dow, state, assignments);
 });
 for(const sh of dayShifts){
-if(owes && !mustFirst.has(sh.id)) continue;
+if((owes || phase==="required") && !mustFirst.has(sh.id)) continue;
 const [aMin,bMin]=shiftMinutes(sh);
 if(floorMin && paidSpan(aMin,bMin,0) < floorMin) continue;    
  
@@ -6451,6 +6510,7 @@ placed=true; break outer;
 }
 }
 if(placed) break;
+}
 }
 if(!placed) exhausted.add(e.id);
 }
@@ -7281,7 +7341,7 @@ sc += reqScore(e, slot.shiftId, date);
  
 { const bias=skillsBias(date, weekStartOf(date, S.org.weekStart));
 if(bias.dir>0){
-const posts=stationsOn(dow).filter(x=>x.kind!=="admin");
+const posts=stationsOn(dow, date).filter(x=>x.kind!=="admin");
 if(posts.length){
 const lv=posts.reduce((t,st)=>t+skillOf(e, st.id),0)/posts.length;
 sc += (lv-1)*7*bias.mult;
@@ -9972,7 +10032,13 @@ r.querySelectorAll("[data-keep]").forEach(b=>b.onclick=()=>{ closeModal(); fixMo
  
 function activeStations(){ return (S.stations||[]).filter(x=>!x.off); }
 function stationById(id){ return (S.stations||[]).find(x=>x.id===id); }
-function stationsOn(dow){ return activeStations().filter(x=>!x.days || !x.days.length || x.days.includes(dow)); }
+ 
+function stationsOn(dow, date){
+const all=activeStations();
+if(date){ const h=(S.holidays&&S.holidays.list||[]).find(x=>x.date===date);
+if(h && Array.isArray(h.posts)) return all.filter(x=>h.posts.includes(x.id)); }
+return all.filter(x=>!x.days || !x.days.length || x.days.includes(dow));
+}
 
  
  
@@ -10191,8 +10257,8 @@ const list=wk.assignments.filter(a=>a.date===date).sort((a,b)=>a.startMin-b.star
 if(!list.length) return;
 list.forEach(a=>{ if(!a.stationLocked){ delete a.station; delete a.station2; delete a.stationAt; delete a.second; delete a.project; delete a.stationPlan; } });
 
-const posts=stationsOn(dow).filter(x=>x.kind!=="admin");
-const admin=stationsOn(dow).filter(x=>x.kind==="admin");
+const posts=stationsOn(dow, date).filter(x=>x.kind!=="admin");
+const admin=stationsOn(dow, date).filter(x=>x.kind==="admin");
 const T = tally || seedTally(ws, date);
 const ladder=priorityOrder();
 const mode=S.rules.stationRotation||"fair";
@@ -10586,7 +10652,25 @@ if((r==="after" ||r==="both") && R.after===dateStr)  return {side:"after",  name
 }
 return null;
 }
-function dateLoad(dateStr,dow){ const a=holAdj(dateStr); return Math.max(-2, Math.min(2, dayLoad(dow)+(a?1:0))); }
+ 
+function isHolidayDate(dateStr){ return !!dateStr && ((S.holidays&&S.holidays.list)||[]).some(h=>h.date===dateStr); }
+function dateLoad(dateStr,dow){ if(isHolidayDate(dateStr)) return 0; const a=holAdj(dateStr); return Math.max(-2, Math.min(2, dayLoad(dow)+(a?1:0))); }
+ 
+ 
+function holidayTag(dateStr){
+const hol=(S.holidays&&S.holidays.list||[]).find(x=>x.date===dateStr);
+if(!hol) return "";
+const m=holMode(hol);
+return (hol.name||"Holiday") + (m==="closed" && !holPolled(hol)? " (closed)" : m==="reduced"? " (holiday hours)" : "");
+}
+function dayHoursLabel(dateStr, dow){
+const h=S.hours[dow];
+const hol=(S.holidays&&S.holidays.list||[]).find(x=>x.date===dateStr);
+if(hol && !holPolled(hol) && holMode(hol)==="closed") return "Closed \u2014 holiday";
+if(hol){ const hh=holHoursOf(hol); if(hh.from && hh.to) return m2disp(t2m(hh.from))+"\u2013"+m2disp(t2m(hh.to)); }
+if(!h || h.closed) return "Closed";
+return m2disp(t2m(h.open))+"\u2013"+m2disp(t2m(h.close));
+}
  
 function coverOn(dow, ws){ return expandDemand(dow, ws).length; }
 function loadMismatch(ws){
@@ -12303,7 +12387,8 @@ push("info","On call, but guaranteed hours — "+e.name,
 e.name.split(" ")[0]+" is set to be used only when the week is short, so the drafter never tops them up \u2014 yet their profile guarantees "+lim.minH+"h. "+
 "Change one or the other and this goes away.", {empId:e.id, code:"oncallguar"});
 } else if(empPaidMins < owe-1){
-const sh=(wk.short||[]).find(x=>x.empId===e.id);
+ 
+const sh=(wk.short||[]).find(x=>x.empId===e.id && !x.held) || null;
 push(S.rules.fillMode==="full"? "crit":"warn","Under guaranteed hours — "+e.name,
 fmtHrs(empPaidMins)+holSay+" scheduled, "+fmtHrs(owe)+" owed"+(fac<1? " (guarantee scaled — they're away part of this week)":" ("+lim.minH+"h guaranteed)")+"."+
 " "+(sh? "The drafter tried to close it and could not: "+sh.why+"." : "Nothing else in the pool fits."), {empId:e.id, code:"under"});
@@ -14056,6 +14141,21 @@ if(MODAL_DIRTY && !force){ askKeepEditing(); return; }
 MODAL_GUARD=null; MODAL_DIRTY=false; modalRoot().innerHTML="";
 if(MODAL_OPENER && MODAL_OPENER.isConnected){ try{ MODAL_OPENER.focus({preventScroll:true}); }catch(e){} }
 MODAL_OPENER=null;
+}
+ 
+function saveNextBtn(ids, id, label){
+const i=(ids||[]).indexOf(id);
+if(i<0 || i>=ids.length-1) return "";
+return '<button class="btn" id="savenext" title="Save this one and open the next">'+(label||"Save &amp; next \u2192")+'</button>';
+}
+function wireSaveNext(r, saveSel, ids, id, open){
+const b=r.querySelector("#savenext"); if(!b) return;
+const i=(ids||[]).indexOf(id); const nextId=(i>=0 && i<ids.length-1)? ids[i+1] : null;
+b.onclick=()=>{
+const sv=r.querySelector(saveSel); if(!sv) return;
+sv.click();
+setTimeout(()=>{ if(!modalRoot().querySelector(".modal") && nextId) open(nextId); }, 60);
+};
 }
  
 function askKeepEditing(){
@@ -16183,8 +16283,9 @@ modal(id? ("Edit "+((s&&s.label)||"shift")) : "New shift", `
       </details>
       <div id="brkprev" class="banner info"></div>
     </div>`,
-`${id?'<button class="btn danger" id="delshift">Delete</button>':""}<button class="btn" data-close>Cancel</button><button class="btn primary" id="saveshift">Save shift</button>`,
+`${id?'<button class="btn danger" id="delshift">Delete</button>':""}<button class="btn" data-close>Cancel</button>${id? saveNextBtn(S.shifts.map(x=>x.id), id) : ""}<button class="btn primary" id="saveshift">Save shift</button>`,
 root=>{
+wireSaveNext(root, "#saveshift", S.shifts.map(x=>x.id), id, shiftModal);
 let color=s.color;
 const prev=()=>{
 const a=t2m(root.querySelector("#ss").value); let b=t2m(root.querySelector("#se").value); if(b<=a)b+=1440;
@@ -17458,8 +17559,9 @@ return (bal==null? "" : "<br><b>Balance today: "+bal+"h.</b>")+
       </div>
     </div>
   </div>`,
-`${id?'<button class="btn danger" id="delemp">Remove</button>':""}<button class="btn" data-close>Cancel</button>${id? "" : '<button class="btn" id="saveempnext">Save &amp; add another</button>'}<button class="btn primary" id="saveemp">Save</button>`,
+`${id?'<button class="btn danger" id="delemp">Remove</button>':""}<button class="btn" data-close>Cancel</button>${id? saveNextBtn(S.employees.filter(x=>x.active).map(x=>x.id), id) : '<button class="btn" id="saveempnext">Save &amp; add another</button>'}<button class="btn primary" id="saveemp">Save</button>`,
 root=>{
+wireSaveNext(root, "#saveemp", S.employees.filter(x=>x.active).map(x=>x.id), id, empModal);
 root.querySelectorAll("[data-eact]").forEach(b=>b.onclick=()=>{
 const on = b.dataset.eact==="1";
 root.querySelectorAll("[data-eact]").forEach(x=>x.classList.toggle("on", x===b));
@@ -18097,8 +18199,24 @@ modal((cur? "Edit the "+DAY_LABEL(dow)+" row" : "Add a shift to "+DAY_LABEL(dow)
 : `<div class="field"><label>Also apply to</label><select id="dall"><option value="one">Just ${DAYS[dow]}</option><option value="week">Mon–Fri</option><option value="wknd">Saturday and Sunday</option><option value="all">Every open day</option></select></div>`}
       ${multiSite()? `<div class="field"><label>At which location</label><select id="dsite">${sitesList().map(z=>`<option value="${esc(z.id)}" ${cur&&siteOf(cur)===z.id?"selected":""}>${esc(siteName(z.id))}</option>`).join("")}</select></div>` : ""}
     </div></div>`,
-`${cur? '<button class="btn danger" id="deldem">Remove</button>' : ""}<button class="btn" data-close>Cancel</button><button class="btn primary" id="savedem">${cur? "Save" : "Add"}</button>`,
+`${cur? '<button class="btn danger" id="deldem">Remove</button>' : ""}<button class="btn" data-close>Cancel</button>${(()=>{
+ 
+if(!cur) return "";
+const rows=(demSetFor(dow)||[]);
+if(ri < rows.length-1) return '<button class="btn" id="savenext" title="Save and open the next row on this day">Save &amp; next row \u2192</button>';
+const later=[1,2,3,4,5,6,0].filter(d=>{ const o=[1,2,3,4,5,6,0]; return o.indexOf(d)>o.indexOf(dow) && (demSetFor(d)||[]).length; });
+return later.length? '<button class="btn" id="savenext" title="Save and open '+esc(DAY_LABEL(later[0]))+'">Save &amp; next day \u2192</button>' : "";
+})()}<button class="btn primary" id="savedem">${cur? "Save" : "Add"}</button>`,
 r=>{
+{ const b=r.querySelector("#savenext");
+if(b) b.onclick=()=>{
+const rows=(demSetFor(dow)||[]);
+const order=[1,2,3,4,5,6,0];
+const later=order.filter(d=>order.indexOf(d)>order.indexOf(dow) && (demSetFor(d)||[]).length);
+const go = (ri < rows.length-1)? ()=>demModal(dow, ri+1) : (later.length? ()=>demModal(later[0], 0) : null);
+r.querySelector("#savedem").click();
+setTimeout(()=>{ if(!modalRoot().querySelector(".modal") && go) go(); }, 60);
+}; }
 const de=r.querySelector("#dshiftedit"); if(de) de.onclick=(ev)=>{ ev.preventDefault(); closeModal(); shiftModal(r.querySelector("#ds").value); };
 { const dm=r.querySelector("#dmode"), dw=r.querySelector("#dmwrap"); if(dm && dw) dm.onchange=()=>{ dw.style.display = dm.value==="range"? "" : "none"; }; }
 const dd=r.querySelector("#deldem"); if(dd) dd.onclick=()=>{ demSetFor(dow).splice(ri,1); save(); closeModal(); render(); };
@@ -18715,8 +18833,8 @@ const _sp=payOn()? paySplit(ws) : null;
 const _cut=_sp && _sp.date===d.date;
 return `<div class="hcell ${h.closed?"closed":""}${_cut?" paycut":""}${payShade(d.date)}">
             ${_cut? `<div class="mini" style="color:var(--accent);font-weight:700">new pay period</div>`:""}
-            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
-            <div class="dd">${h.closed?"Closed":m2disp(t2m(h.open))+"–"+m2disp(t2m(h.close))}</div>
+            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${isHolidayDate(d.date)? "" : holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
+            <div class="dd">${dayHoursLabel(d.date, d.dow)}</div>
             ${covStrip(d)}
             <div style="margin-top:4px"><button class="btn sm ghost" data-openday="${d.dow}" style="padding:2px 6px;font-size:11px">Day sheet →</button></div>
           </div>`;
@@ -20385,7 +20503,13 @@ if(credit) later("Stop counting holiday pay toward guaranteed hours",
 profile("Change "+first+"\u2019s contract");
 break;
 }
-const cands=weekDates(ws).filter(({date,dow:d2})=>!busy.has(date) && e && (e.avail[d2]||{}).ok && !onTimeOff(e.id,date) && !(S.hours[d2]||{}).closed).slice(0,3);
+ 
+const cands=weekDates(ws).filter(({date,dow:d2})=>{
+if(busy.has(date) || !e || !(e.avail[d2]||{}).ok || onTimeOff(e.id,date) || (S.hours[d2]||{}).closed) return false;
+if(!dayOpen(date, d2)) return false;
+const hh=(S.holidays.list||[]).find(x=>x.date===date);
+return !(hh && holCapped(hh));
+}).slice(0,3);
 cands.forEach(({date,dow:d2},i)=>now("Add a shift for "+first+" on "+DSHORT[d2]+" "+prettyDate(date), "One of your named shifts; the hours impact is shown before you save.", ()=>newAssignModal(e.id, date, d2), i===0));
  
 mine.slice().sort((p,q)=>paidMinutes(q)-paidMinutes(p)).slice(0,2).forEach(x=>lengthFixes(x, "any"));
@@ -21123,7 +21247,14 @@ const blob = data instanceof Blob? data : new Blob([data],{type:mimeFor(filename
 const url=URL.createObjectURL(blob); const a=document.createElement("a");
 a.href=url; a.download=filename;
  
-if(/\.pdf$/i.test(filename)){ a.target="_blank"; a.rel="noopener"; }
+if(/\.pdf$/i.test(filename)){ a.target="_blank"; a.rel="noopener";
+ 
+const plat=(typeof a2hsPlatform==="function")? a2hsPlatform() : "desktop";
+if(plat!=="desktop" || (typeof isStandalone==="function" && isStandalone())){
+let w=null; try{ w=window.open(url, "_blank"); }catch(e){}
+if(w){ setTimeout(()=>URL.revokeObjectURL(url), 60000); toast("Opened "+filename+" in a new tab"); return true; }
+}
+}
 document.body.appendChild(a); a.click(); a.remove();
 setTimeout(()=>URL.revokeObjectURL(url),1500);
 toast("Saved "+filename); return true;
@@ -21323,6 +21454,17 @@ doc.text(sub, 40, 60);
 doc.setDrawColor(210,216,214); doc.line(40,70,doc.internal.pageSize.getWidth()-40,70);
 }
 function pdfFooter(doc){
+ 
+const total=(typeof doc.getNumberOfPages==="function")? doc.getNumberOfPages() : 1;
+doc.__footed = doc.__footed || new Set();
+const cur=(doc.internal.getCurrentPageInfo && doc.internal.getCurrentPageInfo().pageNumber) || total;
+for(let pg=1; pg<=total; pg++){
+if(doc.__footed.has(pg)) continue;
+doc.setPage(pg); pdfFooterOne(doc); doc.__footed.add(pg);
+}
+doc.setPage(cur);
+}
+function pdfFooterOne(doc){
 const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
 doc.setFontSize(7.5); doc.setTextColor(140,150,147);
 const L=law();
@@ -21332,12 +21474,22 @@ doc.text(lawVintage()+". "+(L.premium?L.premium:"")+
 40, H-26, {maxWidth:W-160});
 doc.text("Generated "+new Date().toLocaleString([],{dateStyle:"short",timeStyle:"short"}), W-40, H-26, {align:"right"});
 }
-async function exportWeekPDF(){
+ 
+async function exportWeekPDF(opts){
 if(!jsPDFReady()){ pdfUnavailable(); return false; }
-const ws=S.currentWeek, wk=getWeek(ws), dates=weekDates(ws);
+opts=opts||{};
+const first=opts.ws||S.currentWeek;
+const n=clamp(Math.round(opts.weeks||1), 1, 26);
+const weeks=[]; for(let i=0;i<n;i++){ const w=addDays(first, 7*i); getWeek(w); weeks.push(w); }
 const doc=newDoc("landscape");
+weeks.forEach((w,i)=>{ if(i) doc.addPage(); pdfWeekPage(doc, w); });
+pdfFooter(doc);
+return await saveFile(n>1? "schedule-"+n+"-weeks-from-"+first+".pdf" : "schedule-week-of-"+first+".pdf", doc.output("arraybuffer"));
+}
+function pdfWeekPage(doc, ws){
+const wk=getWeek(ws), dates=weekDates(ws);
 pdfHeader(doc, (S.org.name||"Weekly schedule"), (S.org.site?S.org.site+"  ·  ":"")+"Week of "+prettyFull(ws));
-const head=[["Staff","Role"].concat(dates.map(d=>DSHORT[d.dow]+" "+prettyDate(d.date))).concat(["Hrs"])];
+const head=[["Staff","Role"].concat(dates.map(d=>DSHORT[d.dow]+" "+prettyDate(d.date)+(holidayTag(d.date)? "\n"+holidayTag(d.date):""))).concat(["Hrs"])];
 const body=exportPeople(wk).map(e=>{
 const cells=dates.map(d=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id&&a.date===d.date);
@@ -21364,17 +21516,25 @@ doc.text("Open items ("+V.length+")",40,y); y+=6;
 doc.autoTable({body:V.map(v=>[v.title,v.detail]),startY:y+4,theme:"plain",
 styles:{fontSize:7.4,cellPadding:3,textColor:[80,92,89]},columnStyles:{0:{cellWidth:190,fontStyle:"bold"}},margin:{left:40,right:40}});
 }
-pdfFooter(doc);
-return await saveFile("schedule-week-of-"+ws+".pdf", doc.output("arraybuffer"));
 }
-async function exportDayPDF(){
-if(!jsPDFReady()){ pdfUnavailable(); return; }
-const ws=S.currentWeek, wk=getWeek(ws);
-const entry=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
+ 
+async function exportDayPDF(opts){
+if(!jsPDFReady()){ pdfUnavailable(); return false; }
+opts=opts||{};
+const ws=opts.ws||S.currentWeek;
+let dates=(opts.dates&&opts.dates.length)? opts.dates.slice() : null;
+if(!dates){ const entry=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0]; dates=[entry.date]; }
+const doc=newDoc("portrait");
+dates.forEach((date,i)=>{ if(i) doc.addPage(); pdfDayPage(doc, weekStartOf(date, S.org.weekStart), date); });
+pdfFooter(doc);
+return await saveFile(dates.length>1? "day-sheets-"+dates[0]+"-to-"+dates[dates.length-1]+".pdf" : "day-sheet-"+dates[0]+".pdf", doc.output("arraybuffer"));
+}
+function pdfDayPage(doc, ws, date){
+const wk=getWeek(ws);
+const entry={date, dow:parseYmd(date).getDay()};
 const list=wk.assignments.filter(a=>a.date===entry.date).sort((a,b)=>a.startMin-b.startMin);
 const L=law();
-const doc=newDoc("portrait");
-pdfHeader(doc,(S.org.name||"Day sheet"), prettyFull(entry.date)+"  ·  "+(S.hours[entry.dow].closed?"Closed":m2disp(t2m(S.hours[entry.dow].open))+"–"+m2disp(t2m(S.hours[entry.dow].close))));
+pdfHeader(doc,(S.org.name||"Day sheet"), prettyFull(entry.date)+(holidayTag(entry.date)? "  ·  "+holidayTag(entry.date):"")+"  ·  "+(dayOpen(entry.date, entry.dow)? dayHoursLabel(entry.date, entry.dow) : "Closed"));
 let tableY=82;
 if((wk.dayNotes||{})[entry.date]){
 doc.setFont("helvetica","bold"); doc.setFontSize(8.6); doc.setTextColor(28,106,102);
@@ -21426,8 +21586,6 @@ doc.text("Break rules — "+L.name, 40, y); y+=13;
 doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90,102,99);
 doc.text(L.note||"No statutory meal or rest breaks apply.", 40, y, {maxWidth:doc.internal.pageSize.getWidth()-80}); y+=24;
 if(L.premium){ doc.setTextColor(168,112,26); doc.text(L.premium, 40, y, {maxWidth:doc.internal.pageSize.getWidth()-80}); }
-pdfFooter(doc);
-await saveFile("day-sheet-"+entry.date+".pdf", doc.output("arraybuffer"));
 }
  
 function printCSS(orient){
@@ -21505,7 +21663,7 @@ const roster=weekPeople(wk).sort((a,b)=>a.name.localeCompare(b.name));
 const cell=(e,d)=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id && a.date===d.date)
 .sort((x,y)=>x.startMin-y.startMin);
-if(!dayOpen(d.date,d.dow)) return '<span class="off">closed</span>';
+if(!dayOpen(d.date,d.dow)) return '<span class="off">'+(isHolidayDate(d.date)? "closed \u2014 holiday":"closed")+'</span>';
 if(onTimeOff(e.id,d.date)) return '<span class="off">'+esc(offWord(e.id, d.date, forName))+'</span>';
 if(!mine.length) return '<span class="off">\u2014</span>';
 return mine.map(a=>{
@@ -21523,7 +21681,7 @@ payOn()? " \u00b7 pay period "+esc((payPeriod(ws)||{label:""}).label):""}${
 sp? " (changes on "+esc(prettyDate(sp.date))+")":""}${payOn()? printPayKey(ws):""}</div>`}
     ${forName? `<div class="forwho">Copy for: <b>${esc(forName)}</b></div>`:""}
     <table><thead><tr><th style="width:15%">Staff</th>
-      ${dates.map(d=>`<th class="${payShade(d.date).trim()}"${sp&&sp.date===d.date?' style="border-left:3px solid #1c6a66"':""}>${DSHORT[d.dow]} ${prettyDate(d.date)}</th>`).join("")}
+      ${dates.map(d=>`<th class="${payShade(d.date).trim()}"${sp&&sp.date===d.date?' style="border-left:3px solid #1c6a66"':""}>${DSHORT[d.dow]} ${prettyDate(d.date)}${holidayTag(d.date)? '<div class="tot">'+esc(holidayTag(d.date))+'</div>':""}</th>`).join("")}
     </tr></thead><tbody>
       ${roster.map(e=>`<tr>
         <td><span class="nm">${esc(e.name)}</span><div class="tot">${fmtHrs(empWeekMinutes(e.id,ws))}${
@@ -21546,8 +21704,8 @@ const list=wk.assignments.filter(a=>a.date===date).sort((a,b)=>a.startMin-b.star
 const room=(S.rules.sheetNotes||"lines")!=="off";
 const h=S.hours[dow];
 return `<div class="sheet">
-    <h1>${esc(S.org.name||"Day sheet")} \u2014 ${esc(prettyFull(date))}</h1>
-    <div class="sub">${!dayOpen(date,dow)? "Closed" : (h.closed?"Closed":m2disp(t2m(h.open))+"\u2013"+m2disp(t2m(h.close)))}${
+    <h1>${esc(S.org.name||"Day sheet")} \u2014 ${esc(prettyFull(date))}${holidayTag(date)? " \u00b7 "+esc(holidayTag(date)):""}</h1>
+    <div class="sub">${!dayOpen(date,dow)? "Closed" : dayHoursLabel(date, dow)}${
 S.org.site?" \u00b7 "+esc(S.org.site):""} \u00b7 ${list.length} scheduled</div>
     ${forName? `<div class="forwho">Copy for: <b>${esc(forName)}</b></div>`:""}
     ${(wk.dayNotes||{})[date]? `<div class="pad"><b>Today:</b> ${esc(wk.dayNotes[date])}</div>`:""}
@@ -22533,8 +22691,18 @@ sync();
  
 r.querySelector("#prpdf").onclick=()=>{
 const isDay = what.value==="day";
+let list=[], useWs=ws;
+if(isDay){
+if(which.value==="all") list=dates.map(d=>d.date);
+else if(which.value==="one") list=[r.querySelector("#prone").value];
+else if(which.value==="pick") list=[...r.querySelectorAll(".prd:checked")].map(c=>c.value);
+else { useWs=addDays(ws,7); getWeek(useWs); list=weekDates(useWs).map(d=>d.date); }
+if(!list.length){ toast("Pick at least one day"); return; }
+}
+const wkSel=r.querySelector("#prwk");
+const nWeeks = clamp(Math.round(wkSel.value==="other"? (+r.querySelector("#prwkn").value||1) : +wkSel.value), 1, 26);
 closeModal(true);
-(isDay? exportDayPDF() : exportWeekPDF()).then(ok=>{
+(isDay? exportDayPDF({ws:useWs, dates:list}) : exportWeekPDF({ws:useWs, weeks:nWeeks})).then(ok=>{
 if(!ok) return;
 const wk=peekWeek(ws);
 if(!isDay && wk && wk.published && !postPending(wk)){ markTold(ws,"pdf"); render(); }
@@ -25159,8 +25327,9 @@ return `<label class="switch" style="border:1px solid var(--line);border-radius:
             <input type="checkbox" data-d="${i}" ${(st.days||[]).includes(i)?"checked":""}> ${DSHORT[i]}</label>`).join("")}</div></div></div>
       <label class="switch"><input type="checkbox" id="stoff" ${st.off?"checked":""}> Out of use for now</label>
     </div>`,
-`${id?'<button class="btn danger" id="stdel">Delete</button>':""}<button class="btn" data-close>Cancel</button><button class="btn primary" id="stsave">Save</button>`,
+`${id?'<button class="btn danger" id="stdel">Delete</button>':""}<button class="btn" data-close>Cancel</button>${id? saveNextBtn((S.stations||[]).map(x=>x.id), id) : ""}<button class="btn primary" id="stsave">Save</button>`,
 r=>{
+wireSaveNext(r, "#stsave", (S.stations||[]).map(x=>x.id), id, id2=>stationModal(id2));
 let des=st.desire||0;
 r.querySelectorAll("#stdes button").forEach(b=>b.onclick=()=>{ des=+b.dataset.v;
 r.querySelectorAll("#stdes button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
@@ -25290,16 +25459,22 @@ const assignedByHoliday={}; H.forEach(h=>assignedByHoliday[h.id]=[]);
 slots.forEach(s=>{ s._pool = pool.filter(e=>eligible(e.id,s.roleId) && cost(e.id,s.holidayId)!==Infinity).length; });
 slots.sort((a,b)=>a._pool-b._pool);
 
+ 
+const seed = (S.holidays.seed||0);
+const tie=(empId,hid)=> ((jitter(empId+"|"+hid+"|"+seed)+7)/14)*0.6;    
 const result=[], unfilled=[];
 slots.forEach(s=>{
 const cands = pool.filter(e=>eligible(e.id,s.roleId)
 && cost(e.id,s.holidayId)!==Infinity
 && !assignedByHoliday[s.holidayId].includes(e.id));
 if(!cands.length){ unfilled.push(s); return; }
+ 
+const musts = cands.filter(e=>wanted(e.id, s.holidayId));
+const minLoad = Math.min.apply(null, cands.map(e=>load[e.id]));
+const tier = musts.length? musts : cands.filter(e=>load[e.id]===minLoad);
 let best=null,bestC=Infinity;
-cands.forEach(e=>{
-const over = load[e.id] >= cap ? 6 : 0;
-const c = cost(e.id,s.holidayId) + load[e.id]*2.2 + over;
+tier.forEach(e=>{
+const c = cost(e.id,s.holidayId) + tie(e.id,s.holidayId);
 if(c<bestC){ bestC=c; best=e; }
 });
 load[best.id]++; assignedByHoliday[s.holidayId].push(best.id);
@@ -25686,6 +25861,9 @@ return `
   <div class="stack">
     <div class="banner info"><div><b>Why a poll.</b> Nobody wants every holiday equally. Ask everyone to rank the days from the one they'd least mind working to the one they'd most like off, and the fair split falls out of the answers instead of out of an argument.</div></div>
 
+    ${(()=>{ const past=pastHolidays(); if(!past.length) return "";
+return `<div class="banner warn"><div><b>${past.length} holiday${past.length===1?" has":"s have"} passed</b> \u2014 ${esc(past.slice(0,3).map(h=>h.name).join(", "))}${past.length>3?" and more":""}. Roll ${past.length===1?"it":"them"} forward to next year? Presets come back on their real dates; anything you typed comes back on the same day next year. Your fairness record of who worked what is kept; last year's poll answers are cleared so people can rank again.</div>
+        <button class="btn sm primary" id="rollhols">Roll forward</button></div>`; })()}
     <div class="card">
       <header><h3>Holidays you need covered</h3><span class="hint">${slots.length} shift${slots.length===1?"":"s"} to fill across ${H.length} day${H.length===1?"":"s"}</span>
         <button class="btn sm" id="addstd">Add the usual holidays</button>
@@ -25863,6 +26041,7 @@ return `<span class="chip ${t.kind==="must"?"acc":"warn"}">${esc(nm)} ${t.kind==
 
 WIRE.holidays = root=>{
 root.querySelector("#addhol").onclick=()=>holModal(null);
+{ const rb=root.querySelector("#rollhols"); if(rb) rb.onclick=()=>{ const n=rollHolidays(); toast(n+" holiday"+(n===1?"":"s")+" rolled forward to next year"); }; }
 const as=root.querySelector("#addstd");
 if(as) as.onclick=()=>{
 const have=new Set((S.holidays.list||[]).map(h=>h.date));
@@ -25970,7 +26149,7 @@ const a=allocateHolidays(); if(a) S.holidays.result=a;
 save(); render(); toast("Instruction removed \u2014 worked out again without it");
 });
 { const hr=root.querySelector("#holredo");
-if(hr) hr.onclick=()=>{ const a=allocateHolidays(); if(a) S.holidays.result=a; save(); render(); toast("Worked out again"); }; }
+if(hr) hr.onclick=()=>{ S.holidays.seed=(S.holidays.seed||0)+1; const a=allocateHolidays(); if(a) S.holidays.result=a; save(); render(); toast("Worked out again"); }; }
 const ap=root.querySelector("#allocpdf"); if(ap) ap.onclick=()=>exportHolidayPDF().catch(()=>pdfUnavailable());
 const ac=root.querySelector("#alloccsv"); if(ac) ac.onclick=()=>saveFile("holiday-split.csv", holidayCSV());
 };
@@ -26058,29 +26237,47 @@ modal(id?"Edit holiday":"Add a holiday", `
         </select></div>
       </div>
       <div class="help" id="hmhelp"></div>
+      <label class="row" style="gap:8px"><input type="checkbox" id="hrep" ${h.repeat===false?"":"checked"}> Repeats every year <span class="mini">${holPresetFor(h)? "\u2014 comes back on its real date" : "\u2014 comes back on the same day next year"}</span></label>
       <div class="field"><label>Coverage needed</label>
         ${S.roles.length? S.roles.map(r=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin-bottom:6px">
           <span class="tag" style="--sc:${r.color}">${esc(r.name)}</span>
           <input type="number" inputmode="decimal" class="hneed" data-r="${r.id}" min="0" max="20" value="${(h.need&&h.need[r.id])||0}" style="width:80px"></div>`).join("")
 : `<span class="mini">Add roles first under Roles &amp; shifts.</span>`}</div>
+      ${(S.stations||[]).filter(x=>!x.off).length? `<div class="field"><label>Posts on this day</label>
+        <select id="hposts">
+          <option value="same" ${Array.isArray(h.posts)?"":"selected"}>Same posts as the weekday it lands on</option>
+          <option value="only" ${Array.isArray(h.posts)?"selected":""}>Only the posts ticked below</option>
+        </select>
+        <div id="hpostlist" style="margin-top:6px;${Array.isArray(h.posts)?"":"display:none"}">
+          ${(S.stations||[]).filter(x=>!x.off).map(st=>`<label class="row" style="gap:8px;padding:4px 0"><input type="checkbox" class="hpost" value="${esc(st.id)}" ${Array.isArray(h.posts)&&h.posts.includes(st.id)?"checked":""}> ${esc(st.name)}</label>`).join("")}
+          <div class="mini">Only these posts are staffed on the holiday. Meal relief and rotation run among them as usual.</div>
+        </div></div>` : ""}
     </div>`,
-`${id?'<button class="btn danger" id="delhol">Delete</button>':""}<button class="btn" data-close>Cancel</button><button class="btn primary" id="savehol">Save</button>`,
+`${id?'<button class="btn danger" id="delhol">Delete</button>':""}<button class="btn" data-close>Cancel</button>${id? saveNextBtn((S.holidays.list||[]).map(x=>x.id), h.id) : ""}<button class="btn primary" id="savehol">Save</button>`,
 r=>{
-r.querySelector("#savehol").onclick=()=>{
+wireSaveNext(r, "#savehol", (S.holidays.list||[]).map(x=>x.id), h.id, holModal);
+{ const ps=r.querySelector("#hposts"), pl=r.querySelector("#hpostlist");
+if(ps) ps.onchange=()=>{ pl.style.display = ps.value==="only"? "" : "none"; }; }
+r.querySelector("#savehol").onclick=(ev)=>{
 const name=r.querySelector("#hn").value.trim();
-if(!name){ toast("Name the holiday"); return; }
+if(!name){ toast("Name the holiday"); return false; }
 const hmode=r.querySelector("#hm").value;
 const need={}; if(hmode!=="closed") r.querySelectorAll(".hneed").forEach(i=>{ const v=+i.value||0; if(v) need[i.dataset.r]=v; });
 const f=r.querySelector("#hh1").value, t=r.querySelector("#hh2").value;
-if(hmode!=="closed" && f && t && t2m(t)===t2m(f)){ toast("The closing time has to differ from the opening one"); return; }
+if(hmode!=="closed" && f && t && t2m(t)===t2m(f)){ toast("The closing time has to differ from the opening one"); return false; }
 let hval=(f&&t)? (f+"-"+t) : "";
 if(!HOLWAS && hval===(HOLDEF.from+"-"+HOLDEF.to)) hval="";
+const ps=r.querySelector("#hposts");
+const posts=(ps && ps.value==="only")? Array.from(r.querySelectorAll(".hpost:checked")).map(x=>x.value) : null;
 const rec={id:h.id,name,date:r.querySelector("#hd").value,
 hours:hval, need,hmode};
+if(posts) rec.posts=posts;
+if(!r.querySelector("#hrep").checked) rec.repeat=false;
 const i=S.holidays.list.findIndex(x=>x.id===h.id);
 if(i>=0) S.holidays.list[i]=rec; else S.holidays.list.push(rec);
 S.holidays.list.sort((a,b)=>a.date.localeCompare(b.date));
-S.holidays.result=null; save(); closeModal(); render();
+S.holidays.result=null; save(); closeModal(true); render();
+return true;
 };
 const hmSel=r.querySelector("#hm"), hmHelp=r.querySelector("#hmhelp");
 const hmLine=()=>{ const v=hmSel.value;
@@ -26363,15 +26560,37 @@ if(box) box.innerHTML =
 : '<div class="banner crit"><div>None of those codes matched. Check that the whole code was copied, including the end.</div></div>');
 }; });
 }
+ 
+function makeSortable(box, itemSel, onChange){
+let drag=null;
+box.addEventListener("pointerdown", ev=>{
+const grip=ev.target.closest(".grip"); if(!grip) return;
+const item=grip.closest(itemSel); if(!item) return;
+drag=item; item.classList.add("dragging");
+try{ grip.setPointerCapture(ev.pointerId); }catch(e){}
+ev.preventDefault();
+});
+box.addEventListener("pointermove", ev=>{
+if(!drag) return;
+const items=[...box.querySelectorAll(itemSel)].filter(x=>x!==drag);
+const y=ev.clientY;
+let before=null;
+for(const it of items){ const r=it.getBoundingClientRect(); if(y < r.top + r.height/2){ before=it; break; } }
+if(before){ if(before!==drag.nextElementSibling) box.insertBefore(drag, before); }
+else if(box.lastElementChild!==drag) box.appendChild(drag);
+});
+const end=()=>{ if(!drag) return; drag.classList.remove("dragging"); drag=null; if(onChange) onChange(); };
+box.addEventListener("pointerup", end); box.addEventListener("pointercancel", end);
+}
 function manualRespModal(){
 if(!S.employees.length||!S.holidays.list.length){ toast("Add staff and holidays first"); return; }
 const H=S.holidays.list;
 modal("Enter a response by hand", `
     <div class="stack">
       <div class="field"><label>Who</label><select id="mre">${S.employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></div>
-      <div class="help">Drag isn't needed — use the arrows to put the day they'd <b>least mind</b> working at the top.</div>
+      <div class="help">Drag the handle, or use the arrows, to put the day they'd <b>least mind</b> working at the top.</div>
       <div class="rank" id="mrank">${H.map((h,i)=>`<div class="rankitem" data-h="${h.id}">
-        <span class="no">${i+1}</span><div style="flex:1"><strong>${esc(h.name)}</strong><div class="mini">${esc(prettyDate(h.date))} · ${esc(h.hours||"")}</div></div>
+        <span class="grip" title="Drag to reorder" aria-hidden="true">\u2807</span><span class="no">${i+1}</span><div style="flex:1"><strong>${esc(h.name)}</strong><div class="mini">${esc(prettyDate(h.date))} · ${esc(h.hours||"")}</div></div>
         <label class="switch" style="font-size:11.5px"><input type="checkbox" class="mrc"> can't</label>
         <button class="btn sm" data-up>↑</button><button class="btn sm" data-dn>↓</button></div>`).join("")}</div>
     </div>`,
@@ -26379,6 +26598,7 @@ modal("Enter a response by hand", `
 r=>{
 const box=r.querySelector("#mrank");
 const renum=()=>box.querySelectorAll(".rankitem").forEach((el,i)=>el.querySelector(".no").textContent=i+1);
+makeSortable(box, ".rankitem", renum);
 box.addEventListener("click",ev=>{
 const up=ev.target.closest("[data-up]"), dn=ev.target.closest("[data-dn]");
 if(!up&&!dn) return;
@@ -26562,6 +26782,8 @@ const P = [
 '.it.cant{background:var(--cs);border-color:var(--c);opacity:.9}',
 '.no{width:26px;height:26px;border-radius:6px;background:var(--a);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}',
 '.it.cant .no{background:var(--c)}',
+'.grip{flex:none;width:22px;text-align:center;color:#8a8f98;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:18px;line-height:1}',
+'.it.dragging{opacity:.55;outline:2px dashed var(--a)}',
 '.nm{flex:1;min-width:0}.nm b{display:block;font-size:14.5px}.nm span{color:var(--m);font-size:12px}',
 '.bt{border:1px solid var(--l);background:var(--s);color:inherit;border-radius:6px;width:34px;height:32px;font-size:15px;cursor:pointer;flex:none}',
 '.bt:active{transform:translateY(1px)}.bt.x{width:auto;padding:0 9px;font-size:12px;font-weight:600}',
@@ -26575,7 +26797,7 @@ const P = [
 '<div class="pnote"><b>Before you start.</b> These are preferences, not promises. Your manager builds the schedule around what the business needs first, so nothing you pick here is agreed, guaranteed or owed to you — and how holidays, shifts and rotations are shared out is set by your workplace, not by this form. Putting your order in tells them what you would like when there is room to allow it.</div>',
 '<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
 '<div class="card"><div class="step">Step 2</div>',
-'<div class="hint" style="margin-bottom:12px">Put these in order. <b>Top = the holiday you\'d least mind working.</b> Bottom = the one you most want off. Tap <b>can\'t</b> only if you truly cannot work that day at all.</div>',
+'<div class="hint" style="margin-bottom:12px">Put these in order — drag the handle or use the arrows. <b>Top = the holiday you\'d least mind working.</b> Bottom = the one you most want off. Tap <b>can\'t</b> only if you truly cannot work that day at all.</div>',
 '<div id="list"></div></div>',
 '<div class="card"><div class="step">Step 3</div>',
 '<button class="go" id="mk">Get my reply code</button>',
@@ -26593,11 +26815,16 @@ const P = [
 'function draw(){var L=document.getElementById("list");L.innerHTML="";order.forEach(function(hi,pos){',
 'var h=D.holidays[hi],d=new Date(h.date+"T00:00:00");',
 'var el=document.createElement("div");el.className="it"+(cant[hi]?" cant":"");',
-'el.innerHTML="<span class=\'no\'>"+(pos+1)+"</span><div class=\'nm\'><b>"+esc(h.name)+"</b><span>"+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(h.hours?" · "+esc(h.hours):"")+"</span></div>"+',
+'el.innerHTML="<span class=\'grip\' title=\'Drag to reorder\'>\u2807</span><span class=\'no\'>"+(pos+1)+"</span><div class=\'nm\'><b>"+esc(h.name)+"</b><span>"+d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+(h.hours?" · "+esc(h.hours):"")+"</span></div>"+',
 '"<button class=\'bt\' data-u>↑</button><button class=\'bt\' data-d>↓</button><button class=\'bt x\' data-c>"+(cant[hi]?"can\'t ✓":"can\'t")+"</button>";',
 'el.querySelector("[data-u]").onclick=function(){if(pos>0){var t=order[pos-1];order[pos-1]=order[pos];order[pos]=t;draw();}};',
 'el.querySelector("[data-d]").onclick=function(){if(pos<order.length-1){var t=order[pos+1];order[pos+1]=order[pos];order[pos]=t;draw();}};',
 'el.querySelector("[data-c]").onclick=function(){cant[hi]=!cant[hi];draw();};',
+'el.querySelector(".grip").onpointerdown=function(ev){ev.preventDefault();var from=pos;el.className+=" dragging";try{ev.target.setPointerCapture(ev.pointerId);}catch(e){}',
+'var move=function(e2){var kids=Array.prototype.slice.call(L.children);var to=kids.length-1;for(var i=0;i<kids.length;i++){var r=kids[i].getBoundingClientRect();if(e2.clientY<r.top+r.height/2){to=i;break;}}',
+'if(to!==from){var v=order.splice(from,1)[0];order.splice(to,0,v);from=to;var cur=L.children[to];Array.prototype.forEach.call(L.children,function(k,i){k.querySelector(".no").textContent=i+1;});draw();L.children[from].className+=" dragging";}};',
+'var up=function(){document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",up);draw();};',
+'document.addEventListener("pointermove",move);document.addEventListener("pointerup",up);document.addEventListener("pointercancel",up);};',
 'L.appendChild(el);});}',
 'draw();',
 'document.getElementById("mk").onclick=function(){',
