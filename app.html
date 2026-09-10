@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 65223072 2026-09-10 00:51 UTC -->
+<!-- build 35c24eca 2026-09-10 05:58 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2684,8 +2684,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "65223072";       
-const BUILD_AT = "2026-09-10 00:51 UTC";       
+const BUILD_ID = "35c24eca";       
+const BUILD_AT = "2026-09-10 05:58 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5152,6 +5152,11 @@ function shiftNameLink(a){
 const sh=aShift(a);
 if(!sh || !sh.id || !shiftById(sh.id)) return esc(sh? sh.label : "Shift");
 return '<button type="button" class="shname" data-shiftgo="'+esc(sh.id)+'" title="Open the '+esc(sh.label)+' shift">'+esc(sh.label)+'</button>';
+}
+ 
+function empNameLink(e, cls){
+if(!e || !e.id || !empById(e.id)) return esc(e? e.name : "\u2014");
+return '<button type="button" class="shname'+(cls? " "+cls:"")+'" data-emp="'+esc(e.id)+'" title="Open '+esc(e.name)+'\u2019s profile">'+esc(e.name)+'</button>';
 }
 const roleById = id => S.roles.find(r=>r.id===id);
 function roleName(id){ const r=roleById(id); return r?r.name:"Any role"; }
@@ -13967,7 +13972,7 @@ toast(n+" "+(n===1?"person":"people")+" can take project time now");
 wireAdvice(root);
 wireSug(root);
  
-root.querySelectorAll("[data-emp]").forEach(b=>b.onclick=()=>empModal(b.dataset.emp));
+root.querySelectorAll("[data-emp]:not(select):not(input)").forEach(b=>b.onclick=ev=>{ if(ev) ev.stopPropagation(); empModal(b.dataset.emp); });
  
 root.querySelectorAll("[data-shiftgo]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); shiftModal(b.dataset.shiftgo); });
  
@@ -14445,7 +14450,7 @@ root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.curre
 root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(curWeek()));
 root.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>inboxModal(""));
 root.querySelectorAll("[data-denyreq]").forEach(b=>b.onclick=()=>requestConflictModal(S.currentWeek));
-root.querySelectorAll("[data-emp]").forEach(b=>b.onclick=()=>empModal(b.dataset.emp));
+root.querySelectorAll("[data-emp]:not(select):not(input)").forEach(b=>b.onclick=ev=>{ if(ev) ev.stopPropagation(); empModal(b.dataset.emp); });
 const adv=root.querySelector("#hadv");
 if(adv) adv.onchange=()=>{ S.ui=S.ui||{}; S.ui.advanced=adv.checked; save(); render();
 toast(adv.checked? "Everything's in the sidebar now":"Back to the simple view"); };
@@ -18850,7 +18855,7 @@ const pct=e.maxH?clamp(_paid/(e.maxH*60),0,1):0;
 const over = e.maxH && mins>e.maxH*60+1, under = e.minH && _paid<e.minH*60-1 && e.type!=="PRN";
 return `<div class="erow">
           <div class="name">
-            <div class="nm" title="${esc(e.name)}">${esc(e.name)}</div>
+            <div class="nm" title="${esc(e.name)}">${empNameLink(e)}</div>
             <div class="meta"><span class="mono">${fmtHrs(mins)}</span>${_hol? ` <span class="mini" title="Holiday pay counts toward guaranteed hours \u2014 change that under Hours, guarantees and patterns">+${fmtHrs(_hol)} hol</span>`:""}${_sp? ` <span class="mini">(${fmtHrs(payHours(e.id,ws,"before"))} + ${fmtHrs(payHours(e.id,ws,"after"))})</span>`:""} · ${esc(e.type)}${cyclesOn()&&cycleLabel(e)? " · "+esc(cycleLabel(e)):""}
               ${e.roleIds.slice(0,2).map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span>`:"";}).join("")}</div>
             <div class="bar"><i style="width:${pct*100}%;background:${over?"var(--crit)":under?"var(--warn)":"var(--accent)"}"></i></div>
@@ -19908,7 +19913,7 @@ const sh=aShift(a);
 const b=a.breaks||{meals:[],rests:[]};
 const paid=paidMinutes(a);
 return `<div class="tlrow">
-              <div class="tlname">${esc(e.name)}
+              <div class="tlname">${empNameLink(e)}
                 <small>${shiftNameLink(a)} · ${esc(roleAbbr(a.roleId))} · ${fmtHrs(paid)} paid</small></div>
               <div class="tltrack">
                 <div class="tlgrid">${ticks.map(t=>`<i style="left:${pct(t)}%"></i>`).join("")}</div>
@@ -19958,7 +19963,7 @@ const restTxt = !b.owed.rests? "not owed"
 const stn=a.station? stationById(a.station):null, stn2=a.station2? stationById(a.station2):null;
 const duties=(a.admin||[]).map(x=>stationById(x)).filter(Boolean);
 return `<tr>
-            <td><strong>${esc(e.name)}</strong> <span class="mini">${esc(roleAbbr(a.roleId))}</span>
+            <td><strong>${empNameLink(e)}</strong> <span class="mini">${esc(roleAbbr(a.roleId))}</span>
               ${a.topUp? `<div class="mini"><span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span></div>`:""}
               ${a.cover? `<div class="mini"><span class="chip">Added to keep the floor covered</span> Nothing under Coverage needs asked for this shift that day; without it the floor was empty ${(()=>{ const c=((peekWeek(S.currentWeek).covered)||[]).find(x=>x.date===a.date && x.empId===a.empId && x.shiftId===a.shiftId); return c? m2disp(c.from)+"\u2013"+m2disp(c.to) : "for part of the day"; })()}.</div>`:""}
               ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn"${whyAttrs("An extra duty on top of their post today: "+d.name+". Duties rotate fairly across the team; press Rotate stations to hand them out again, or change them under Stations.", "go:stations")}>${esc(d.name)}</span></div>`).join(""):""}
