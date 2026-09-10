@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 35c24eca 2026-09-10 05:58 UTC -->
+<!-- build 596cb11f 2026-09-10 08:09 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2684,8 +2684,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "35c24eca";       
-const BUILD_AT = "2026-09-10 05:58 UTC";       
+const BUILD_ID = "596cb11f";       
+const BUILD_AT = "2026-09-10 08:09 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -3359,8 +3359,8 @@ if(!GOOGLE_SIGNIN) return false;
 if(typeof firebase==="undefined" || !firebase.auth || !firebase.auth.GoogleAuthProvider) return false;
 try{
 const plat=a2hsPlatform();
-if(isStandalone() && /^ios/.test(plat)) return false;       
-if(/^ios/.test(plat) && !sameOriginAuth()) return false;    
+ 
+if(/^ios/.test(plat) && !sameOriginAuth()) return false;
 }catch(e){}
 return true;
 }
@@ -3404,8 +3404,10 @@ FB.auth.getRedirectResult().catch(e=>{ GOOGLE_REDIRECT_ERR=googleErrSay(e); if(d
 }
 const GOOGLE_MARK='<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true" style="flex:none"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.7 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
 function googleButtonHtml(id, label){
+let note="";
+try{ if(isStandalone() && googleUsesRedirect()) note='<div class="mini" style="text-align:center;margin-top:6px">Google opens in a sheet and brings you back here. If it does not, sign in once at weeksolved.com in Safari, or use your email and password.</div>'; }catch(e){}
 return '<div class="gor" aria-hidden="true"><span>or</span></div>'+
-'<button type="button" class="btn big ggoogle" id="'+id+'">'+GOOGLE_MARK+'<span>'+esc(label||"Continue with Google")+'</span></button>';
+'<button type="button" class="btn big ggoogle" id="'+id+'">'+GOOGLE_MARK+'<span>'+esc(label||"Continue with Google")+'</span></button>'+note;
 }
  
 function codeScreen(msg){
@@ -6383,6 +6385,11 @@ if(h && !holPolled(h) && holMode(h)==="closed") return false;
 return true;
 }
  
+ 
+function guaranteeDays(){
+const d=(S.rules||{}).guaranteeDays;
+return (Array.isArray(d) && d.length && d.length<7)? d.map(Number) : null;
+}
 function topUpPass(ws, assignments, state, dates, mode){
 mode = mode||"project";
 const relaxed = mode==="guarantee-any";    
@@ -6461,12 +6468,16 @@ canFillDates.add(d.date);
 });
  
 let placed=false;
+const gDays = guaranteeMode? guaranteeDays() : null;
+for(const dayTier of (gDays? ["picked","any"] : ["any"])){
+if(placed) break;
 for(const phase of (canFillDates.size? ["required","any"] : ["any"])){
 if(placed) break;
 for(const floorMin of (minBlock? [minBlock, 0] : [0])){
 outer:
 for(const d of days){
 if(phase==="required" && !canFillDates.has(d.date)) continue;    
+if(dayTier==="picked" && !gDays.includes(d.dow)) continue;       
 if(!dayOpen(d.date, d.dow)) continue;       
  
 { const hh=holOn(d.dow, ws); if(hh && holCapped(hh)) continue; }
@@ -6505,6 +6516,7 @@ if(!hardOk(e, slot, d.date, d.dow, state, assignments)) continue;
 const a={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:sh.id,
 startMin:aMin, endMin:bMin, gap:shiftGap(sh), roleId, locked:false};
 if(guaranteeMode) a.guarantee=true; else a.topUp=true;
+if(guaranteeMode && gDays && !gDays.includes(d.dow)) a.offDays=true;    
 applyBreaks(a);
 assignments.push(a);
 const st=state[e.id];
@@ -6515,6 +6527,7 @@ placed=true; break outer;
 }
 }
 if(placed) break;
+}
 }
 }
 if(!placed) exhausted.add(e.id);
@@ -12387,6 +12400,11 @@ fmtHrs(empPaidMins)+holSay+" scheduled against "+lim.askAbove+"h guaranteed, up 
 "You set the drafter to top people up without asking; change that under Ground rules to be asked each week.",
 {empId:e.id, code:"aboveguar"});
 }
+ 
+{ const off=mine.filter(a=>a.guarantee && a.offDays);
+if(off.length) push("warn","Extra hours landed outside the days you picked — "+e.name,
+off.map(a=>DSHORT[a.dow]+" "+prettyDate(a.date)).join(", ")+": the days ticked under Hours, guarantees and patterns could not take "+e.name.split(" ")[0]+"'s hours owed, so the drafter used the next open day. Move the shift, tick more days, or lower the guarantee.",
+{empId:e.id, code:"offdays"}); }
 if(empPaidMins < owe-1 && e.onCall){
 push("info","On call, but guaranteed hours — "+e.name,
 e.name.split(" ")[0]+" is set to be used only when the week is short, so the drafter never tops them up \u2014 yet their profile guarantees "+lim.minH+"h. "+
@@ -14611,6 +14629,7 @@ const EXPLAIN = {
 "rules.projectShare": "Whether project time is spread around or piled on the people who want it. Example: “pile it on” gives one person a full extra day rather than giving four people two hours each.",
 "rules.topUpLabel": "What project time is CALLED on your schedules and printouts. Example: type “projects”, “inventory” or “clinic admin” and that is the word your team sees, not a piece of software jargon.",
 "rules.holCounts": "Whether the hours somebody is paid for a holiday count toward the hours they are guaranteed or contracted. Example: a full-timer contracted to 40h with 8 hours of holiday pay is on contract at 32 hours on the floor \u2014 32 worked plus 8 paid is the 40 their payslip shows. Turn it off only if your guarantee is a promise of hours actually worked. A holiday they are rostered to WORK never counts twice: those hours are already in the week, and the holiday premium is money on top.",
+"rules.guaranteeDays": "Which weekdays hours owed on a guarantee may be added to. Untick Saturday and Sunday and a part-timer short of hours is topped up Monday to Friday. If the ticked days cannot take the hours, the drafter uses the next open day and the week\u2019s checks say so.",
 "rules.guaranteeSpread": "Where the extra shifts go when somebody is under their guaranteed hours. Example: a part-timer guaranteed 16 hours with only 8 scheduled needs one more shift — “busiest days first” puts it where you are stretched, “evenly” puts it where the floor is thinnest, and “on one named shift” always uses the shift you pick.",
 "rules.guaranteeShift": "The one shift that soaks up hours owed, when you chose to spread them that way. Example: pick your 8:00–16:30 and every top-up lands there rather than scattering across openings and closings.",
 "rules.preferLong": "When there is a choice, give people longer shifts rather than more of them. Example: somebody owed 16 hours gets two eight-hour days instead of four four-hour ones.",
@@ -15298,6 +15317,8 @@ return g==="even"? "Anyone owed hours beyond the cover you asked for is put on t
           <option value="even" ${S.rules.guaranteeSpread==="even"?"selected":""}>Evenly through the week</option>
           <option value="shift" ${S.rules.guaranteeSpread==="shift"?"selected":""}>On one particular shift</option>
         </select>${S.rules.guaranteeSpread==="shift"? `<select data-set="rules.guaranteeShift" style="margin-left:6px">${S.shifts.map(x=>`<option value="${x.id}" ${S.rules.guaranteeShift===x.id?"selected":""}>${esc(x.label)}</option>`).join("")}</select>` : ""}`)}
+      ${setRow("Which days extra hours may land on", "Hours owed on a guarantee are only added on the days ticked here. Untick the weekend and a part-timer short of hours is topped up Monday to Friday; if those days cannot take the hours, the drafter falls back to any open day and the week’s checks say so.",
+`<input type="hidden" data-set="rules.guaranteeDays"><div class="daypick" style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(dw=>{ const on=!guaranteeDays() || guaranteeDays().includes(dw); return `<label class="chip ${on?"acc":""}" style="cursor:pointer"><input type="checkbox" data-gday="${dw}" ${on?"checked":""} style="margin-right:4px">${DSHORT[dw]}</label>`; }).join("")}</div>`)}
       ${setRow("Is the cover you asked for a target or a floor?", S.rules.fillMode==="full"
 ? "A floor — after the required shifts are covered, everyone owed hours keeps getting them"
 : "A target — it schedules exactly what you asked for and no more",
@@ -15743,6 +15764,13 @@ root.querySelectorAll("[data-fgo]").forEach(b=>b.onclick=()=>goFeature(b.dataset
 { const a=root.querySelector("#apsize"); if(a) a.onchange=()=>{ applyAppearance(a.value,null); toast("Text size changed"); };
 const d=root.querySelector("#apdens"); if(d) d.onchange=()=>{ applyAppearance(null,d.value); render(); };
 const t=root.querySelector("#aptheme"); if(t) t.onchange=()=>applyTheme(t.value); }
+ 
+root.querySelectorAll("[data-gday]").forEach(cb=>cb.addEventListener("change",()=>{
+const on=[...root.querySelectorAll("[data-gday]")].filter(x=>x.checked).map(x=>+x.dataset.gday);
+if(!on.length){ cb.checked=true; toast("Keep at least one day"); return; }
+S.rules.guaranteeDays = on.length===7? null : on.sort();
+save(); render();
+}));
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
