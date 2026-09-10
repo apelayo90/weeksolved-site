@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 596cb11f 2026-09-10 08:09 UTC -->
+<!-- build 888b3792 2026-09-10 16:35 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2684,8 +2684,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "596cb11f";       
-const BUILD_AT = "2026-09-10 08:09 UTC";       
+const BUILD_ID = "888b3792";       
+const BUILD_AT = "2026-09-10 16:35 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -10833,7 +10833,15 @@ if(e.cycle && e.cycle.type) return e.cycle;
 const g=groupsFor(e).find(g=>g.rules && g.rules.cycle && g.rules.cycle.type);
 return g? g.rules.cycle : null;
 }
-function cycleAnchor(c){ return (c && c.anchor) || weekStartOf(ymd(new Date()), S.org.weekStart); }
+ 
+function cycleAnchor(c){
+if(c && c.anchor) return c.anchor;
+const stored=(S.rules && S.rules.cycleAnchor)||"";
+if(stored) return stored;
+const start=weekStartOf(payOn()? payAnchor() : ymd(new Date()), S.org.weekStart);
+try{ S.rules=S.rules||{}; S.rules.cycleAnchor=start; lsSave(); }catch(e){}
+return start;
+}
 function daysBetween(a,b){ return Math.round((parseYmd(b)-parseYmd(a))/86400000); }
 
  
@@ -20537,13 +20545,26 @@ profile("Change "+first+"\u2019s contract");
 break;
 }
  
-const cands=weekDates(ws).filter(({date,dow:d2})=>{
+const openDays=weekDates(ws).filter(({date,dow:d2})=>{
 if(busy.has(date) || !e || !(e.avail[d2]||{}).ok || onTimeOff(e.id,date) || (S.hours[d2]||{}).closed) return false;
 if(!dayOpen(date, d2)) return false;
 const hh=(S.holidays.list||[]).find(x=>x.date===date);
 return !(hh && holCapped(hh));
-}).slice(0,3);
+});
+ 
+const fixRole=(e && (e.roleIds||[])[0])||null;
+ 
+const takesAShift=(date,d2)=>S.shifts.some(sh=>
+shiftRoom(sh.id, fixRole, date, d2, ws, wk.assignments, true) &&
+!wouldPlace(e, sh.id, fixRole, date, d2, ws, {list:wk.assignments, allowOnCall:false}));
+const cands=openDays.filter(c=>takesAShift(c.date, c.dow)).slice(0,3);
 cands.forEach(({date,dow:d2},i)=>now("Add a shift for "+first+" on "+DSHORT[d2]+" "+prettyDate(date), "One of your named shifts; the hours impact is shown before you save.", ()=>newAssignModal(e.id, date, d2), i===0));
+ 
+if(!cands.length && openDays.length)
+later("No day left this week will take another shift for "+first,
+"The days still clear on "+first+"’s calendar are "+openDays.map(c=>DSHORT[c.dow]).join(", ")+
+" — and every one of them refuses a shift, because of a must request, a work pattern, a turnaround, or a Coverage needs row already at its ceiling. Raising a ceiling, declining a request, or changing the contract are the levers left.",
+()=>go("demand"));
  
 mine.slice().sort((p,q)=>paidMinutes(q)-paidMinutes(p)).slice(0,2).forEach(x=>lengthFixes(x, "any"));
 profile(v.code==="contract"? "Change "+first+"’s contract" : "Change "+first+"’s guaranteed hours");
