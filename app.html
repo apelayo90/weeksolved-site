@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 27418989 2026-09-10 23:20 UTC -->
+<!-- build 0f556be5 2026-09-11 03:57 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Weeksolved">
-<!-- Weeksolved. Copyright (c) 2026 Alberto Pelayo. All rights reserved. -->
+<!-- Weeksolved. Copyright (c) 2026 Weeksolved. All rights reserved. -->
 <title>Weeksolved — Staff Scheduling Software with Break Compliance</title>
 <meta name="description" content="Weeksolved builds your staff schedule from your own rules: required coverage, role ratios, availability, hour caps and state meal and rest break law. Weekly and daily schedules, station sheets, holiday polls, Excel and PDF export.">
 <meta name="keywords" content="employee scheduling software, staff scheduling, shift scheduler, work schedule maker, shift planner, staff rota software, employee rota, break compliance, meal break law, rest break scheduling, California meal break, labor law scheduling, coverage planning, shift rotation, seniority scheduling, healthcare staff scheduling, pharmacy staff scheduling, clinic scheduling software, small business scheduling">
@@ -1374,7 +1374,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 </script>
 
 <script>
-/*! Weeksolved | Copyright (c) 2026 Alberto Pelayo. All rights reserved. */
+/*! Weeksolved | Copyright (c) 2026 Weeksolved. All rights reserved. */
 "use strict";
  
 
@@ -2696,8 +2696,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "27418989";       
-const BUILD_AT = "2026-09-10 23:20 UTC";       
+const BUILD_ID = "0f556be5";       
+const BUILD_AT = "2026-09-11 03:57 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -5577,6 +5577,16 @@ return roles.map(rid=>({shiftId:pick.id, roleId:rid, count:(+h.need[rid]||0), ma
 }
 function expandDemand(dow, ws){
  
+const slots=[];
+demandLive(dow, ws).forEach(r=>{
+const sh = shiftById(r.shiftId);
+const site=siteOf(r);
+for(let i=0;i<(r.count||1);i++) slots.push({shiftId:r.shiftId, roleId:r.roleId||null, sh, siteId:site});
+});
+return slots;
+}
+ 
+function demandLive(dow, ws){
 if(S.hours && S.hours[dow] && S.hours[dow].closed) return [];
 let rows = (demandOf(ws)[dow])||[];
 const hol = holOn(dow, ws);
@@ -5590,14 +5600,7 @@ rows = holNeedRows(hol) || (S.holidays.demand||[]);
 }
  
 }
-const slots=[];
-rows.forEach(r=>{
-const sh = shiftById(r.shiftId); if(!sh) return;
-const site=siteOf(r);
-if(siteClosedOn(site, dow)) return;           
-for(let i=0;i<(r.count||1);i++) slots.push({shiftId:r.shiftId, roleId:r.roleId||null, sh, siteId:site});
-});
-return slots;
+return rows.filter(r=>shiftById(r.shiftId) && !siteClosedOn(siteOf(r), dow));   
 }
 
 
@@ -6505,7 +6508,13 @@ const days=dates.slice().sort((x,y)=>
 : (dateLoad(y.date,y.dow)-dateLoad(x.date,x.dow)) || (heads(x)-heads(y))));
 
  
-const roleId=e.roleIds[0]||null;
+ 
+const roleFor=sh=>{
+const held=e.roleIds||[];
+if(sh && sh.roleId) return held.includes(sh.roleId)? sh.roleId : null;
+return held[0]||null;
+};
+const roleId=e.roleIds[0]||null;    
  
 const fitLen=sh=>{ const [a0,b0]=shiftMinutes(sh); const nominal=paidSpan(a0,b0,0);
 const f=shiftFlex(sh); if(!f) return nominal;
@@ -6582,11 +6591,13 @@ if(floorMin && paidSpan(aMin,bMin,0) < floorMin) continue;
  
 if(guaranteeMode && !relaxed){ const fl=fitLen(sh); const over=fl-want;
 if(over > 60 && over > fl/2) continue; }
-const slot={shiftId:sh.id, roleId, sh};
-if(!shiftRoom(sh.id, roleId, d.date, d.dow, ws, assignments, true)) continue;    
+const rId=roleFor(sh);
+if(rId===null) continue;                  
+const slot={shiftId:sh.id, roleId:rId, sh};
+if(!shiftRoom(sh.id, rId, d.date, d.dow, ws, assignments, true)) continue;    
 if(!hardOk(e, slot, d.date, d.dow, state, assignments)) continue;
 const a={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:sh.id,
-startMin:aMin, endMin:bMin, gap:shiftGap(sh), roleId, locked:false};
+startMin:aMin, endMin:bMin, gap:shiftGap(sh), roleId:rId, locked:false};
 if(guaranteeMode) a.guarantee=true; else a.topUp=true;
 if(guaranteeMode && gDays && !gDays.includes(d.dow)) a.offDays=true;    
 applyBreaks(a);
@@ -7666,6 +7677,170 @@ placed++;
 wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
 }
 
+
+ 
+function setupProblems(ws){
+ws = ws|| curWeek();
+const out=[];
+const dates=weekDates(ws);
+const openDates=dates.filter(({date,dow})=>dayOpen(date,dow) && dayWindow(dow));
+if(!openDates.length) return out;
+
+ 
+{
+const byGap={};
+openDates.forEach(({date,dow})=>{
+ 
+const win=dayWindowOn(date, dow); if(!win) return;
+const slots=expandDemand(dow, ws);
+if(!slots.length) return;                  
+const spanOf=sl=>shiftMinutes(sl.sh||shiftById(sl.shiftId)||{start:"00:00",end:"00:00"});
+const spans=slots.map(spanOf);
+ 
+const pdow=(dow+6)%7, pdate=addDays(date,-1);
+if(dayOpen(pdate, pdow) && dayWindow(pdow))
+expandDemand(pdow, ws).forEach(sl=>{ const sp=spanOf(sl); spans.push([sp[0]-1440, sp[1]-1440]); });
+const holes=[];
+let cur=null;
+for(let t=win[0]; t<win[1]; t+=15){
+ 
+if(shutAt(t, dow, date)){ if(cur){ holes.push(cur); cur=null; } continue; }
+const covered=spans.some(([a,b])=> t>=a && t<b);
+if(!covered){ if(cur) cur.to=t+15; else cur={from:t, to:t+15}; }
+else if(cur){ holes.push(cur); cur=null; }
+}
+if(cur) holes.push(cur);
+holes.forEach(h=>{
+const k=h.from+"-"+h.to;
+(byGap[k]=byGap[k]||{from:h.from, to:h.to, days:[]}).days.push(dow);
+});
+});
+Object.values(byGap).forEach(g=>{
+const when = g.days.length===openDates.length? "every day you are open"
+: g.days.map(d=>DSHORT[d]).join(", ");
+out.push({code:"setupgap", sev:"warn",
+title:"Nothing you have asked for covers "+m2disp(g.from%1440)+" to "+m2disp(g.to%1440),
+detail:"You are open then on "+when+", and none of the shifts on your list runs across it. "+
+"The week will draft with the floor empty for that stretch however many people you have. "+
+"Either move a shift's hours in Schedule setup \u2192 Shifts & roles, or add one that covers it.",
+where:"shifts"});
+});
+}
+
+ 
+{
+const lone={};
+openDates.forEach(({date,dow})=>{
+const slots=expandDemand(dow, ws);
+ 
+const onToday={};
+slots.forEach(sl=>{ if(!onToday[sl.shiftId]) onToday[sl.shiftId]=sl.sh||shiftById(sl.shiftId); });
+Object.keys(onToday).forEach(sid=>{
+const sh=onToday[sid]; if(!sh) return;
+const [a,bM]=shiftMinutes(sh);
+const br=computeBreaks(a,bM,{date});
+ 
+const meals=br.meals.filter(m=>!m.waived);
+if(!meals.length) return;
+ 
+if(meals.every(m=>shutAt(m.start, dow, date) && shutAt(m.end-1, dow, date))) return;
+ 
+const overlapping=slots.filter(sl=>{
+const s2=sl.sh||shiftById(sl.shiftId); if(!s2) return false;
+const [a2,b2]=shiftMinutes(s2);
+return a2 < bM && b2 > a;
+}).length;
+if(overlapping<=1) (lone[sid]=lone[sid]||{label:sh.label, days:[]}).days.push(dow);
+});
+});
+Object.values(lone).forEach(x=>{
+const when = x.days.length===openDates.length? "every day you are open"
+: x.days.map(d=>DSHORT[d]).join(", ");
+out.push({code:"setuplone", sev:"warn",
+title:x.label+" has one person and nobody to cover their meal",
+detail:"On "+when+", "+x.label+" is long enough to owe a meal period and nothing else overlaps it. "+
+"Whoever works it has to leave the floor empty to take it. Ask for a second person on that "+
+"stretch in Schedule setup \u2192 Coverage needs, or overlap another shift across the middle of it.",
+where:"demand"});
+});
+}
+
+ 
+{
+ 
+let work=0, capped=true;
+const dayBest={};
+openDates.forEach(({date,dow})=>{
+const rows=demandLive(dow, ws);
+ 
+if(!rows.length){ capped=false; return; }
+rows.forEach(r=>{
+const sh=shiftById(r.shiftId); if(!sh) return;
+if(r.max==null){ capped=false; return; }
+const [a,bM]=shiftMinutes(sh);
+ 
+const paid=paidEstimate(a,bM,{date, gap:shiftGap(sh)});
+work += (+r.max||0) * paid;
+dayBest[date]=Math.max(dayBest[date]||0, paid);
+});
+});
+ 
+const bestDays=Object.keys(dayBest).map(k=>dayBest[k]).sort((x,y)=>y-x);
+const reachOf=e=>bestDays.slice(0, Math.min(bestDays.length, effLimits(e, ws).maxD||7))
+.reduce((t,v)=>t+v, 0);
+let owed=0, reach=0; const owedWho=[];
+(S.employees||[]).filter(e=>e.active && !e.onCall).forEach(e=>{
+ 
+if(traineeExtra() && isTrainee(e, ws)) return;
+const m=owedFloorMin(e, ws);
+if(m>0){ owed+=m; reach+=reachOf(e); owedWho.push(e.name.split(" ")[0]); }
+});
+const most=Math.min(work, reach);
+if(capped && owed > most+1 && owedWho.length){
+out.push({code:"setupowed", sev:"warn",
+title:"More hours are promised than this week contains",
+detail:owedWho.length+" "+(owedWho.length===1?"person is":"people are")+" owed "+fmtHrs(owed)+
+" between them — "+owedWho.slice(0,5).join(", ")+
+(owedWho.length>5? " and "+(owedWho.length-5)+" more":"")+
+" — and the most this week can put in front of them, everything you have "+
+"asked for at its fullest, is "+fmtHrs(most)+". "+
+"Somebody will finish short however it is drafted. Either ask for more cover in Schedule setup \u2192 Coverage needs, "+
+"or lower a guarantee on the Team page.",
+where:"demand"});
+}
+}
+
+ 
+{
+const short={};
+openDates.forEach(({date,dow})=>{
+const need={};
+expandDemand(dow, ws).forEach(sl=>{ if(sl.roleId) need[sl.roleId]=(need[sl.roleId]||0)+1; });
+Object.keys(need).forEach(rid=>{
+ 
+const hold=(S.employees||[]).filter(e=>e.active && (e.roleIds||[]).includes(rid)
+&& !(traineeExtra() && isTrainee(e, date))).length;
+ 
+if(hold > 0 && hold < need[rid]){
+const k=rid+"|"+need[rid]+"|"+hold;
+(short[k]=short[k]||{rid, need:need[rid], hold, days:[]}).days.push(dow);
+}
+});
+});
+Object.values(short).forEach(x=>{
+out.push({code:"setuprole", sev:"crit",
+title:x.days.map(d=>DSHORT[d]).join(", ")+" asks for "+x.need+" "+roleName(x.rid)+
+(x.need===1?"":"s")+" and only "+x.hold+" "+
+(x.hold===1?"person holds it":"people hold it"),
+detail:"That gap cannot be drafted away — there are not enough people with the role to fill it, "+
+"even before anybody asks for a day off. Either give the role to somebody else on the Team page, "+
+"or ask for fewer of them in Schedule setup \u2192 Coverage needs.",
+where:"team"});
+});
+}
+return out;
+}
+
 function openSlots(ws){
 ws = ws|| curWeek();
 const wk=peekWeek(ws), out=[];
@@ -7763,6 +7938,8 @@ const other=sameDay[0];
 if(other.locked) return;
 const otherSh=shiftById(other.shiftId)||{label:"their other shift"};
 if(otherSh.id===slot.shiftId) return;
+ 
+if(liftHarm(other, ws)) return;
 out.push({kind:"move", emp:e, rank:6, other,
 title:"Move "+e.name.split(" ")[0]+" off "+otherSh.label,
 why:"They're on "+otherSh.label+" that day. Moving them here leaves "+otherSh.label+" open instead — worth it only if this one matters more.",
@@ -7843,6 +8020,34 @@ const board=(peekWeek(ws).assignments||[]).slice();
 const found=[];
 let budget=1500;                         
 
+ 
+const prevRows = peekWeek(addDays(ws,-7)).assignments;
+const chainRows=(chain)=>{
+const drop=new Set(chain.map(l=>l.row).filter(Boolean));
+const rows=board.filter(a=>!drop.has(a));
+chain.forEach(l=>{ const e=empById(l.empId); const r=e&&chainRowFor(e, l.to); if(r) rows.push(r); });
+return rows;
+};
+const onDay=(rows, date)=>anyOvernight()? onFloorFrom(rows, date, prevRows)
+: rows.filter(a=>a.date===date);
+const chainOk=(chain)=>{
+const rows=chainRows(chain);
+const dows={};
+chain.forEach(l=>{ dows[l.to.date]=l.to.dow; if(l.from) dows[l.from.date]=l.from.dow; });
+for(const date in dows) if(dayHarm(date, dows[date], ws, onDay(rows, date))) return false;
+ 
+const asked={};
+for(let i=0;i<chain.length;i++){
+const e=empById(chain[i].empId);
+if(!e || asked[e.id]) continue;
+asked[e.id]=1;
+const was=empWeekMinutes(e.id, ws);
+const now=rows.filter(a=>a.empId===e.id).reduce((t,a)=>t+paidMinutes(a), 0);
+if(now > (effLimits(e, ws).otWeeklyH||40)*60 + 1 && now > was) return false;
+}
+return true;
+};
+
 const canTake=(e, sl, list)=>{
 if(budget-- <= 0) return false;
 if(!e || !e.active || e.onCall) return false;    
@@ -7859,7 +8064,9 @@ if(budget<=0) return;
 const e=S.employees[i];
 if(used[e.id]) continue;
 if(canTake(e, hole, list)){
-found.push(links.concat([{empId:e.id, to:hole, from:null}]));
+const whole=links.concat([{empId:e.id, to:hole, from:null}]);
+if(!chainOk(whole)) continue;      
+found.push(whole);
 return;
 }
 }
@@ -7903,12 +8110,27 @@ l.from
 (i===0? " onto this one" : " onto "+shl(l.to)+" on "+DSHORT[l.to.dow])
 : nm(l.empId)+" picks up "+shl(l.to)+" on "+DSHORT[l.to.dow]);
 const word = chain.length===2? "double" : "triple";
+ 
+const delta={};
+chain.forEach(l=>{
+const e=empById(l.empId); if(!e) return;
+const r=chainRowFor(e, l.to);
+delta[e.id]=(delta[e.id]||0) + (r? paidMinutes(r) : 0) - (l.row? paidMinutes(l.row) : 0);
+});
+const dMin=Object.keys(delta).reduce((t,id)=>t+delta[id], 0);
+const dCost=Object.keys(delta).reduce((t,id)=>{
+const e=empById(id); return t + (e&&e.rate? delta[id]/60*e.rate : 0); }, 0);
+const hours = dMin>1? "It puts "+fmtHrs(dMin)+" more paid time on the board"
+: dMin<-1? "It takes "+fmtHrs(-dMin)+" of paid time off the board"
+: "Nobody's paid hours change";
 return [{
 kind:"chain", emp:first, rank:1.5, chain,
 title:"A "+word+" swap \u2014 "+chain.map(l=>nm(l.empId)).join(", "),
-why: steps.join(", then ")+". Nobody works more hours than they already were, "+
-"nothing bends, and no other shift is left open. One press does the whole thing.",
-cost:0,
+why: steps.join(", then ")+". "+hours+", nothing bends, "+
+"no other shift is left open, nobody crosses their weekly overtime "+
+"line, and no day the chain touches comes out worse than it went in. "+
+"One press does the whole thing.",
+cost:dCost,
 apply:()=>{
 const wkl=getWeek(ws);
  
@@ -10945,6 +11167,13 @@ const sh=shiftById(shiftId); if(!sh) return;
 if(!fitsDay(sh, x.busy.d)) return;
 const spare = qc[k] - (bc[k]||0);
 if(spare<=0) return;
+ 
+const quietOpen = !((S.hours[x.quiet.d]||{}).closed);
+if(quietOpen && qc[k] <= 1) return;
+if(quietOpen){
+const qTotal = Object.keys(qc).reduce((t,kk)=>t+qc[kk], 0);
+if(qTotal - 1 < 1) return;       
+}
 if(!best || spare>best.spare || (spare===best.spare && desireOf(shiftId,x.quiet.d) < desireOf(best.shiftId,x.quiet.d)))
 best={shiftId, roleId, spare, sh};
 });
@@ -11170,16 +11399,67 @@ return S.shifts.some(s=>{ const [a,b]=shiftMinutes(s); return b>1440; });
 }
  
  
-function floorGaps(date, dow, list){
-if(!dayOpen(date, dow)) return {empty:[], stations:[]};     
-let win=dayWindow(dow);
-if(!win) return {empty:[], stations:[]};
  
+function coverageShortMin(date, dow, ws, list){
+const prof=coverageProfile(date, dow, ws, list);
+if(!prof) return 0;
+ 
+return prof.pts.reduce((t,p)=>
+t + (p.detail||[]).reduce((u,d)=>u+Math.max(0, d.need-d.have), 0), 0);
+}
+function dayHarm(date, dow, ws, after){
+if(!dayOpen(date, dow)) return null;           
+const before = dayList(date, ws);
+if(coverageShortMin(date, dow, ws, after) > coverageShortMin(date, dow, ws, before))
+return "it would drop "+DSHORT[dow]+" below the cover you require";
+const fgA=floorGaps(date, dow, after), fgB=floorGaps(date, dow, before);
+const mins=g=>(g||[]).reduce((t,x)=>t+(x.to-x.from), 0);
+ 
+if(mins(fgA.empty) > mins(fgB.empty))
+return "it would leave nobody on the floor on "+DSHORT[dow];
+ 
+const byPost=fg=>{ const m={};
+(fg.stations||[]).forEach(x=>{ m[x.st.id]=(m[x.st.id]||0)+mins(x.gaps); });
+return m; };
+const pA=byPost(fgA), pB=byPost(fgB);
+const hurt=Object.keys(pA).find(k=>pA[k] > (pB[k]||0));
+if(hurt){
+const st=(S.stations||[]).find(x=>x.id===hurt);
+return "it would leave "+((st&&st.name)||"a must-cover post")+" unheld on "+DSHORT[dow];
+}
+return null;
+}
+ 
+function liftHarm(a, ws){
+if(!a) return null;
+const dow = (a.dow!=null? a.dow : parseYmd(a.date).getDay());
+const after = dayList(a.date, ws).filter(x=>x!==a && x.id!==a.id);
+const own = dayHarm(a.date, dow, ws, after);
+if(own) return own;
+ 
+if(a.endMin>1440){
+const nd=addDays(a.date,1);
+const nws=weekStartOf(nd, (S.org&&S.org.weekStart)||0);
+return dayHarm(nd, parseYmd(nd).getDay(), nws,
+dayList(nd, nws).filter(x=>x!==a && x.id!==a.id));
+}
+return null;
+}
+ 
+function dayWindowOn(date, dow){
+let win=dayWindow(dow);
+if(!win) return null;
 const h=(S.holidays.list||[]).find(x=>x.date===date);
 if(h && h.hours){
 const m=/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec(String(h.hours).trim());
 if(m){ let a=(+m[1])*60+(+m[2]), b=(+m[3])*60+(+m[4]); if(b<=a) b+=1440; win=[a,b]; }
 }
+return win;
+}
+function floorGaps(date, dow, list){
+if(!dayOpen(date, dow)) return {empty:[], stations:[]};     
+const win=dayWindowOn(date, dow);
+if(!win) return {empty:[], stations:[]};
 const STEPM=15;
 const runs=(from, to, failsAt)=>{
 const out=[]; let cur=null;
@@ -11287,9 +11567,10 @@ const wk=peekWeek(ws);
 if(!anyOvernight()) return wk.assignments.filter(a=>a.date===date);
 return onFloorFrom(wk.assignments, date, peekWeek(addDays(ws|| curWeek(),-7)).assignments);
 }
-function coverageProfile(date, dow, ws){
+function coverageProfile(date, dow, ws, listOverride){
 const wk=peekWeek(ws);
-const list = dayList(date, ws);
+ 
+const list = listOverride || dayList(date, ws);
 const win = dayWindow(dow);
 if(!win) return null;
 const [o,c]=win;
@@ -12361,6 +12642,10 @@ const dates = weekDates(ws);
 const push=(sev,title,detail,extra)=>V.push(Object.assign({sev,title,detail},extra||{}));
 
  
+setupProblems(ws).forEach(x=>push(x.sev, x.title, x.detail,
+{code:x.code, where:x.where, setup:true}));
+
+ 
 const noRole=(function(){
 const D=demandOf(ws); const held=new Set(); S.employees.filter(e=>e.active).forEach(e=>(e.roleIds||[]).forEach(r=>held.add(r)));
 const asked={}; Object.keys(D).forEach(k=>(D[k]||[]).forEach(r=>{ if(r.roleId && !held.has(r.roleId)) asked[r.roleId]=(asked[r.roleId]||0)+1; }));
@@ -12739,7 +13024,9 @@ push("warn","Seventh day of the week — "+e.name,
 prettyDate(sev)+" is the seventh day of a week they have worked every day of, so "+
 (over? "the first 8h are paid at time and a half and the remaining "+fmtHrs(over)+" at double time"
 : "all "+fmtHrs(sevMin)+" is paid at time and a half")+
-" under "+(law().name||"state law")+". Giving them one of the seven days off costs less and is the point of the rule.",
+" under "+(law().name||"state law")+
+((unionOn() && union().seventhDay)? ", and "+unionLabel()+" carries the same premium" : "")+
+". Giving them one of the seven days off costs less and is the point of the rule.",
 {date:sev, empId:e.id, premium:true, code:"seventh"});
 }
 }
@@ -12769,7 +13056,8 @@ const days=[...new Set(carriedDates(ws, e.id).concat(mine.map(a=>a.date)))].sort
 let run=1;
 for(let i=1;i<days.length;i++){
 run = (addDays(days[i-1],1)===days[i])? run+1 : 1;
-if(run>=7 && days[i]>=ws){           
+ 
+if(run>=7 && days[i]>=ws && days[i]!==seventhDayDate(e.id, ws)){
 push("warn","Seventh day in a row — "+e.name,
 would+prettyDate(days[i])+" is their seventh consecutive day, which "+owes+" a premium under "+unionLabel()+".",
 {date:days[i], empId:e.id, premium:true, posted:live, code:"union"});
@@ -12930,6 +13218,16 @@ const gap = (cur.startMin + 1440) - prev.endMin;
 if(gap < (lim.minRestH||0)*60)
 push("crit","Short turnaround — "+e.name,
 fmtHrs(gap)+" between "+DSHORT[prev.dow]+" out and "+DSHORT[cur.dow]+" in ("+(lim.minRestH||0)+"h required).", {date:cur.date,empId:e.id, code:"rest", aId:cur.id, prevId:prev.id});
+else if(fwwOn() && fwwRestH() && gap < fwwRestH()*60){
+ 
+const agreed = e.clopenOk===true;
+push(agreed? "info":"warn","Back inside the rest window — "+e.name,
+fmtHrs(gap)+" between "+DSHORT[prev.dow]+" out and "+DSHORT[cur.dow]+" in, and "+
+(fwwPlace().n||"your local rule")+" sets the window at "+fwwRestH()+"h. "+
+(agreed? "They have agreed to it in writing, which is what the rule asks for."
+: "Without their written agreement this normally carries an extra hour's pay \u2014 and in some cities the whole shift is at time and a half."),
+{date:cur.date, empId:e.id, premium:!agreed, code:"fwwrest", aId:cur.id, prevId:prev.id});
+}
 else if(S.rules.noClopen && gap < 12*60 && prev.endMin>=19*60 && cur.startMin<=9*60)
 push("warn","Closing then opening — "+e.name, "Closes "+DSHORT[prev.dow]+" and opens "+DSHORT[cur.dow]+" the next morning. This is what a rota calls a clopen.", {date:cur.date,empId:e.id, code:"clopen", aId:cur.id, prevId:prev.id});
 }
@@ -18910,7 +19208,7 @@ return `
     <div class="card"><header><h3>Meals and rest breaks</h3><span class="hint">${esc(L.name)} rules decide what is owed. You decide who picks the clock time.</span></header>
       <div class="body stack">
         ${mode("Meal periods","breakMode",[
-["assigned","Schedule exact times","The day sheet prints a specific meal time for each person, placed inside the legal window and staggered so the floor stays covered."],
+["assigned","Schedule exact times","The day sheet prints a specific meal time for each person, placed to your state's rule and staggered so the floor stays covered."],
 ["lengths","Set the length, staff pick the time","The sheet shows the meal length owed and the latest legal start; staff coordinate the exact minute."],
 ["self","Staff coordinate entirely","The sheet notes that meals are owed and leaves timing to the team. Coverage gaps from meals are not modeled."]])}
         ${R.breakMode==="assigned"? `
@@ -23909,7 +24207,7 @@ if(k==="rules") return `
       </div>`;
 if(k==="meals") return `
       <div class="stack">
-        <p class="whead">This is the part most scheduling tools leave to you. Weeksolved puts every meal inside the legal window for ${esc((LAW[W.juris]||LAW.NONE).name)} and staggers them so the floor never empties.</p>
+        <p class="whead">This is the part most scheduling tools leave to you. Weeksolved places every meal to the rule for ${esc((LAW[W.juris]||LAW.NONE).name)} and staggers them so the floor never empties.</p>
         <div class="field"><label>Meal periods (the unpaid one)</label>
           <div class="wopts">${
 opt("breakMode","assigned",W.breakMode,"Put a time on the schedule","Each meal is placed inside the legal window and staggered so the floor never empties.")+
@@ -27956,7 +28254,7 @@ a:"It is optional and off to begin with. Turn it on at Settings \u2192 Ground ru
 {t:"Calendar files for phones", k:"calendar ics google apple outlook phone subscribe", go:"export",
 a:"Export & share → 'For phone calendars'. Pick one person or the whole team and download a calendar file (.ics). Opened on a phone it drops every shift — times, station, meal — straight into Google or Apple Calendar."},
 {t:"Meal and rest breaks", k:"meal lunch break rest legal law compliance late missing window waive", go:"rules",
-a:"Pick your state under Business & law and every drafted shift gets its meal placed inside the legal window, with paid rest breaks laid around it. Choose under Scheduling rules whether meals are scheduled, length-only, or left to staff. A late or missing meal is flagged before you post, never after."},
+a:"Pick your state under Business & law and every drafted shift gets its meal placed to that state's rule, with paid rest breaks laid around it. Choose under Scheduling rules whether meals are scheduled, length-only, or left to staff. A late or missing meal is flagged before you post, never after."},
 {t:"Close for lunch / set meal times", k:"close lunch fixed slots meal times stagger closed", go:"rules",
 a:"Scheduling rules → meal handling. Three modes: staggered automatically so the floor never empties; your own fixed lunch slots; or close the business for a stretch — while closed, coverage isn't counted against you."},
 {t:"Coverage rules and minimums", k:"coverage minimum ratio never alone floor pharmacist supervisor", go:"demand",
