@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build da1ec5d6 2026-09-11 11:55 UTC -->
+<!-- build 1e6e371f 2026-09-11 12:52 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2683,6 +2683,18 @@ try{ localStorage.setItem(scopedKey(SEENKEY), String(now)); }catch(e){}
 }
 return out;
 }
+ 
+let TRIAL_TIMER=null;
+function trialWatch(){
+if(TRIAL_TIMER || window.TESTER_LIFE || !window.TESTER_FROM) return;
+TRIAL_TIMER=setInterval(()=>{
+if(window.TESTER_LIFE){ clearInterval(TRIAL_TIMER); TRIAL_TIMER=null; return; }
+const expMs=(+window.TESTER_FROM||0)+((+window.TESTER_DAYS||30)*86400000);
+const hardEnd=(typeof ACCESS!=="undefined" && ACCESS && ACCESS.until)? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
+const nowMs=trialNow(null);
+if(nowMs>expMs || nowMs>hardEnd){ clearInterval(TRIAL_TIMER); TRIAL_TIMER=null; expiredScreen(); }
+}, 60000);
+}
 const NDAKEY = "ws.nda";
 function ndaNeeded(){ return !!(typeof ACCESS!=="undefined" && ACCESS && ACCESS.on); }
 function ndaAccepted(){ try{ return JSON.parse(localStorage.getItem(scopedKey(NDAKEY))||"null"); }catch(e){ return null; } }
@@ -2697,8 +2709,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "da1ec5d6";       
-const BUILD_AT = "2026-09-11 11:55 UTC";       
+const BUILD_ID = "1e6e371f";       
+const BUILD_AT = "2026-09-11 12:52 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -2869,6 +2881,7 @@ const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity
  
 const nowMs=trialNow(p);
 if(!p.life && (nowMs>expMs || nowMs>hardEnd)){ expiredScreen(); CLOUD_ENTERING=false; return; }
+trialWatch();                  
  
 if(ndaNeeded() && !ndaCurrent()){
 let sawNda=null;
@@ -5156,6 +5169,10 @@ function offWord(){
  
 return "off";
 }
+ 
+function offClashTag(empId, date, mine){
+return (mine && mine.length && onTimeOff(empId, date))? "also marked off" : "";
+}
 function reweekAll(newStart){
 const rows=[];
 Object.keys(S.weeks||{}).forEach(k=>{ (S.weeks[k].assignments||[]).forEach(a=>rows.push(a)); });
@@ -5223,6 +5240,8 @@ return '<button type="button" class="shname'+(cls? " "+cls:"")+'" data-emp="'+es
 const roleById = id => S.roles.find(r=>r.id===id);
 function roleName(id){ const r=roleById(id); return r?r.name:"Any role"; }
 function roleAbbr(id){ const r=roleById(id); return r?r.abbr:"Any"; }
+ 
+function empRoleAbbrs(e){ return ((e&&e.roleIds)||[]).map(roleAbbr).join("/") || roleAbbr(null); }
 
 function shiftMinutes(sh){
 let a=t2m(sh.start), b=t2m(sh.end);
@@ -12808,7 +12827,8 @@ const end=t.end>to? to : t.end;
 let guard=0;
 while(d<=end && guard++<400){
 const dow=parseYmd(d).getDay();
-if(!S.hours[dow].closed){
+ 
+if(dayOpen(d, dow)){
 const hrs=(t.hoursPerDay || holPayH(e));
 if(!(perDay[d]>hrs)) perDay[d]=hrs;
 }
@@ -13484,7 +13504,16 @@ Math.round(gapH*10)/10+"h between "+DSHORT[prev.dow]+" and "+DSHORT[cur.dow]+", 
 }
 
  
+const offClashSaid={};
 mine.forEach(a=>{
+ 
+if(onTimeOff(e.id, a.date) && !offClashSaid[a.date]){
+offClashSaid[a.date]=1;
+push("crit","Scheduled and marked off — "+e.name,
+DSHORT[a.dow]+" "+prettyDate(a.date)+": "+e.name.split(" ")[0]+" is on approved time off and has a shift on the board. "+
+"Every sheet prints the shift and marks the day; drop one record or the other.",
+{date:a.date, empId:e.id, code:"offclash", aId:a.id});
+}
 if(a.roleId && !(e.roleIds||[]).includes(a.roleId))
 push("crit","Not their role — "+e.name,
 DSHORT[a.dow]+" "+prettyDate(a.date)+" is a "+roleName(a.roleId)+" shift, and "+e.name.split(" ")[0]+" is "+
@@ -17266,7 +17295,34 @@ save(); closeModal(); render();
 const d=root.querySelector("#delrole");
 if(d) d.onclick=()=>{
  
-const rid=r.id;
+const rid=r.id, t=roleTally(rid);
+const say = t.shifts
+? t.shifts+" shift"+(t.shifts===1?"":"s")+" on the board "+(t.shifts===1?"is":"are")+" on this role, across "+
+t.weeks+" week"+(t.weeks===1?"":"s")+
+(t.posted? ", and "+t.posted+" of "+(t.posted===1?"it":"them")+" "+(t.posted===1?"is":"are")+" in a week you have already posted":"")+
+". Those shifts stay exactly where they are and lose the role, so they read as \u201cAny role\u201d everywhere."
+: "No shift on any week is on this role.";
+confirmModal("Delete "+(r.name||"this role")+"?",
+say+" Coverage needs, patterns, holiday slots, ratio rules, posts, shifts and everyone\u2019s file lose it too. This cannot be undone.",
+()=>{ deleteRole(rid); render();
+toast(t.shifts? "Role deleted \u2014 "+t.shifts+" shift"+(t.shifts===1?"":"s")+" now on no role" : "Role deleted"); },
+"Delete role");
+};
+});
+}
+ 
+function roleTally(rid){
+let shifts=0, posted=0; const weeks={};
+Object.keys(S.weeks||{}).forEach(k=>{
+const w=S.weeks[k]||{};
+const c=(w.assignments||[]).filter(a=>a.roleId===rid).length;
+if(!c) return;
+shifts+=c; weeks[k]=1; if(w.published) posted+=c;
+});
+return {shifts, posted, weeks:Object.keys(weeks).length};
+}
+ 
+function deleteRole(rid){
 S.roles=S.roles.filter(x=>x.id!==rid);
 S.employees.forEach(e=>e.roleIds=(e.roleIds||[]).filter(x=>x!==rid));
 Object.keys(S.demand).forEach(k=>S.demand[k]=(S.demand[k]||[]).filter(x=>x.roleId!==rid));
@@ -17278,11 +17334,12 @@ S.coverage=(S.coverage||[]).filter(c=>c.roleId!==rid);
 (S.coverage||[]).forEach(c=>{ if(c.perRoleId===rid) delete c.perRoleId; });
 (S.stations||[]).forEach(st=>{ if(st.roleId===rid) delete st.roleId; });
 (S.shifts||[]).forEach(sh=>{ if(sh.roleId===rid) delete sh.roleId; });
+Object.keys(S.weeks||{}).forEach(k=>{
+(S.weeks[k].assignments||[]).forEach(a=>{ if(a.roleId===rid) a.roleId=null; });
+});
 (S.holidays&&S.holidays.list||[]).forEach(h=>{ if(h.need) delete h.need[rid]; });
 S.holidays && (S.holidays.result=null);
-save(); closeModal(); render();
-};
-});
+save();
 }
  
 function defaultShiftSpanMin(){
@@ -22383,14 +22440,15 @@ exportPeople(wk).forEach(e=>{
 const cells = dates.map(d=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id&&a.date===d.date);
 if(!mine.length) return onTimeOff(e.id,d.date)? offWord(e.id, d.date, null) : "";
+const clash=offClashTag(e.id, d.date, mine);
 return mine.map(a=>{
 const b=a.breaks||{meals:[]};
 const meal = S.rules.breakMode==="assigned" && b.meals.length? " | meal "+b.meals.filter(m=>!m.waived).map(m=>m2disp(m.start)).join("/") : "";
  
 return aShift(a).label+" "+aTimes(a)+meal;
-}).join(" ; ");
+}).join(" ; ")+(clash? " ; "+clash : "");
 });
-rows.push([e.name+(e.active? "" : " (set aside)"), e.roleIds.map(roleAbbr).join("/"), e.type]
+rows.push([e.name+(e.active? "" : " (set aside)"), empRoleAbbrs(e), e.type]
 .concat(cells).concat([fmtHrs(empWeekMinutes(e.id,ws))]));
 });
 rows.push([]);
@@ -22400,9 +22458,10 @@ return rows;
 function shiftListRows(){
 const ws=S.currentWeek, wk=getWeek(ws);
  
+ 
 const rows=[["Date","Day","Employee","Role","Shift","Start","End","Gross hours",
 "Unpaid meal min","Unpaid split min","Paid hours","Away between",
-"Meal times","Rest breaks","Notes"]];
+"Meal times","Rest breaks"]];
 wk.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.startMin-b.startMin).forEach(a=>{
 const e=empById(a.empId)||{name:"—"}, b=a.breaks||{meals:[],rests:[]};
 const unpaid=b.meals.filter(m=>!m.waived).reduce((t,m)=>t+m.len,0);
@@ -22412,14 +22471,15 @@ aShift(a).label, m2t(a.startMin), m2t(a.endMin)+(a.endMin>=1440? " +1d" : ""),
 (aSpanMin(a)/60).toFixed(2), unpaid, gapMin(a), (paidMinutes(a)/60).toFixed(2),
 g? m2t(g.from)+"-"+m2t(g.to) : "",
 b.meals.map(m=>m.waived?"waived":m2t(m.start)).join(" "),
-b.rests.map(r=>m2t(r.start)).join(" "), e.notes||""]);
+b.rests.map(r=>m2t(r.start)).join(" ")]);
 });
 return rows;
 }
 function dayRows(){
 const ws=S.currentWeek, wk=getWeek(ws);
 const entry=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
-const list=wk.assignments.filter(a=>a.date===entry.date).sort((a,b)=>a.startMin-b.startMin);
+ 
+const list=dayList(entry.date, ws).sort((a,b)=>a.startMin-b.startMin);
 const rows=[[ (S.org.name||"Day sheet")+" — "+prettyFull(entry.date) ],[],
 ["Employee","Role","Shift","In","Out","Meal","Rest breaks","Paid hours","Split shift"]];
 list.forEach(a=>{
@@ -22440,7 +22500,7 @@ exportPeople(wk).forEach(e=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id);
 if(!mine.length) return;
 const per=dates.map(d=>{ const m=mine.filter(a=>a.date===d.date).reduce((t,a)=>t+paidMinutes(a),0); return m? Math.round(m/60*100)/100 : ""; });
-rows.push([e.name, e.roleIds.map(roleAbbr).join("/"), e.type].concat(per).concat([Math.round(empWeekMinutes(e.id,ws)/60*100)/100, mine.length]));
+rows.push([e.name, empRoleAbbrs(e), e.type].concat(per).concat([Math.round(empWeekMinutes(e.id,ws)/60*100)/100, mine.length]));
 });
 const tot=wk.assignments.reduce((t,a)=>t+paidMinutes(a),0);
 rows.push([]); rows.push(["Everyone","","",...dates.map(()=>""), Math.round(tot/60*100)/100, wk.assignments.length]);
@@ -22582,13 +22642,14 @@ const body=exportPeople(wk).map(e=>{
 const cells=dates.map(d=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id&&a.date===d.date);
 if(!mine.length) return onTimeOff(e.id,d.date)? offWord(e.id, d.date, null).toUpperCase() : "—";
+const clash=offClashTag(e.id, d.date, mine);
 return mine.map(a=>{
 const b=a.breaks||{meals:[]};
 const meal = S.rules.breakMode==="assigned"&&b.meals.length? "\nmeal "+b.meals.filter(m=>!m.waived).map(m=>m2disp(m.start)).join("/") : "";
 return aShift(a).label+"\n"+aTimes(a)+meal;
-}).join("\n");
+}).join("\n")+(clash? "\n"+clash : "");
 });
-return [e.name+(e.active? "" : " (set aside)"), e.roleIds.map(roleAbbr).join("/")]
+return [e.name+(e.active? "" : " (set aside)"), empRoleAbbrs(e)]
 .concat(cells).concat([fmtHrs(empWeekMinutes(e.id,ws))]);
 });
 doc.autoTable({head,body,startY:82,styles:{fontSize:7.4,cellPadding:4,lineColor:[210,216,214],lineWidth:.5,textColor:[35,48,45]},
@@ -22620,7 +22681,7 @@ return await saveFile(dates.length>1? "day-sheets-"+dates[0]+"-to-"+dates[dates.
 function pdfDayPage(doc, ws, date){
 const wk=getWeek(ws);
 const entry={date, dow:parseYmd(date).getDay()};
-const list=wk.assignments.filter(a=>a.date===entry.date).sort((a,b)=>a.startMin-b.startMin);
+const list=dayList(entry.date, ws).sort((a,b)=>a.startMin-b.startMin);    
 const L=law();
 pdfHeader(doc,(S.org.name||"Day sheet"), prettyFull(entry.date)+(holidayTag(entry.date)? "  ·  "+holidayTag(entry.date):"")+"  ·  "+(dayOpen(entry.date, entry.dow)? dayHoursLabel(entry.date, entry.dow) : "Closed"));
 let tableY=82;
@@ -22647,7 +22708,8 @@ const stn=a.station?stationById(a.station):null, stn2=a.station2?stationById(a.s
 const duties=(a.admin||[]).map(x=>(stationById(x)||{}).name).filter(Boolean);
 const nt=shiftNote(ws, entry.date, a.empId, a.startMin);
 const mn=a.mentor? (empById(a.mentor)||{}).name : "";
-const row=[e.name+(mn? "\ntraining with "+mn : "")+(duties.length? "\n"+duties.join(", "):"")+(nt? "\n"+nt:"")];
+ 
+const row=[e.name+(mn? "\ntraining with "+mn : "")+(duties.length? "\n"+duties.join(", "):"")];
 if((S.stations||[]).length) row.push((stn?stn.name:"—")+(stn2?"\nthen "+stn2.name+" from "+m2disp(stationAtOf(a)):""));
 const gp=aGap(a);
 return row.concat([roleAbbr(a.roleId), m2disp(a.startMin),
@@ -22728,10 +22790,14 @@ const roster=weekPeople(wk).sort((a,b)=>a.name.localeCompare(b.name));
 const short=n=>{ const p=String(n||"").split(" "); return p.length>1? p[0]+" "+p[1][0] : (p[0]||""); };
 const cell=(e,d)=>{
 if(!dayOpen(d.date,d.dow)) return '<span class="off">\u2014</span>';
-if(onTimeOff(e.id,d.date)) return '<span class="off">'+esc(offWord(e.id, d.date, null).slice(0,4).toLowerCase())+'</span>';
 const mine=wk.assignments.filter(a=>a.empId===e.id && a.date===d.date).sort((x,y)=>x.startMin-y.startMin);
-if(!mine.length) return '<span class="off">\u2014</span>';
-return mine.map(a=>esc(aTimes(a)).replace(/:00/g,"")).join("<br>");
+ 
+if(!mine.length) return onTimeOff(e.id,d.date)
+? '<span class="off">'+esc(offWord(e.id, d.date, null).slice(0,4).toLowerCase())+'</span>'
+: '<span class="off">\u2014</span>';
+const clash=offClashTag(e.id, d.date, mine);
+return mine.map(a=>esc(aTimes(a)).replace(/:00/g,"")).join("<br>")+
+(clash? '<br><span class="off" title="'+esc(clash)+'">'+esc(clash)+'</span>' : "");
 };
 if(!roster.length) return '<div class="cw"><h2>'+esc(prettyDate(ws))+'</h2><div class="off" style="font-size:9px">Nothing drafted</div></div>';
 return '<div class="cw"><h2>Week of '+esc(prettyDate(ws))+(payOn()? printPayKey(ws):"")+'</h2><table>'+
@@ -22752,14 +22818,17 @@ const cell=(e,d)=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id && a.date===d.date)
 .sort((x,y)=>x.startMin-y.startMin);
 if(!dayOpen(d.date,d.dow)) return '<span class="off">'+(isHolidayDate(d.date)? "closed \u2014 holiday":"closed")+'</span>';
-if(onTimeOff(e.id,d.date)) return '<span class="off">'+esc(offWord(e.id, d.date, forName))+'</span>';
-if(!mine.length) return '<span class="off">\u2014</span>';
+ 
+if(!mine.length) return onTimeOff(e.id,d.date)
+? '<span class="off">'+esc(offWord(e.id, d.date, forName))+'</span>'
+: '<span class="off">\u2014</span>';
+const clash=offClashTag(e.id, d.date, mine);
 return mine.map(a=>{
 const st=a.station? stationById(a.station):null;
 return esc(aTimes(a))+
 (st? "<br><span class='tot'>"+esc(st.name)+"</span>":"")+
 (a.trainee? "<br><span class='tot'>training</span>":"");
-}).join("<br>");
+}).join("<br>")+(clash? "<br><span class='tot'>"+esc(clash)+"</span>" : "");
 };
 const sp=payOn()? paySplit(ws):null;
 return `<div class="${inRun?"":"sheet"}">
@@ -22788,7 +22857,7 @@ e.type==="TRAIN"? " \u00b7 in training":""}</div></td>
 function daySheetHTML(ws, date, forName){
 const wk=peekWeek(ws), L=law();
 const dow=parseYmd(date).getDay();
-const list=wk.assignments.filter(a=>a.date===date).sort((a,b)=>a.startMin-b.startMin);
+const list=dayList(date, ws).sort((a,b)=>a.startMin-b.startMin);    
 const room=(S.rules.sheetNotes||"lines")!=="off";
 const h=S.hours[dow];
 return `<div class="sheet">
@@ -23853,7 +23922,7 @@ send();
 function printDay(){
 const ws=S.currentWeek, wk=getWeek(ws);
 const entry=weekDates(ws).find(d=>d.dow===DAYVIEW)||weekDates(ws)[0];
-const list=wk.assignments.filter(a=>a.date===entry.date).sort((a,b)=>a.startMin-b.startMin);
+const list=dayList(entry.date, ws).sort((a,b)=>a.startMin-b.startMin);    
 const L=law();
 const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(S.org.name||"Day sheet")} — ${esc(prettyFull(entry.date))}</title>
   <style>body{font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#18211f;margin:36px;max-width:900px}
@@ -23880,7 +23949,9 @@ const stn=a.station?stationById(a.station):null, stn2=a.station2?stationById(a.s
 const duties=(a.admin||[]).map(x=>(stationById(x)||{}).name).filter(Boolean);
 const nt=shiftNote(ws, entry.date, a.empId, a.startMin);
 const mn=a.mentor? (empById(a.mentor)||{}).name : "";
-return `<tr><td><b>${esc(e.name)}</b>${mn?'<br><small><b>Training with '+esc(mn)+"</b></small>":""}${duties.length?"<br><small>"+esc(duties.join(", "))+"</small>":""}${nt?'<br><small style="color:#a8701a">'+esc(nt)+"</small>":""}</td>${(S.stations||[]).length?`<td>${esc(stn?stn.name:"—")}${stn2?"<br><small>then "+esc(stn2.name)+" from "+esc(m2disp(stationAtOf(a)))+"</small>":""}</td>`:""}<td>${esc(roleAbbr(a.roleId))}</td><td>${m2disp(a.startMin)}</td><td>${m2disp(a.endMin)}</td><td>${esc(mealTxt)}</td><td>${esc(restTxt)}</td><td>${fmtHrs(paidMinutes(a))}</td>${(S.rules.sheetNotes||"lines")!=="off"?'<td class="wr">'+(nt?esc(nt):"")+"</td>":""}</tr>`;}).join("")}
+const gp=aGap(a);
+ 
+return `<tr><td><b>${esc(e.name)}</b>${mn?'<br><small><b>Training with '+esc(mn)+"</b></small>":""}${duties.length?"<br><small>"+esc(duties.join(", "))+"</small>":""}</td>${(S.stations||[]).length?`<td>${esc(stn?stn.name:"—")}${stn2?"<br><small>then "+esc(stn2.name)+" from "+esc(m2disp(stationAtOf(a)))+"</small>":""}</td>`:""}<td>${esc(roleAbbr(a.roleId))}</td><td>${m2disp(a.startMin)}</td><td>${esc(outDisp(a))}${gp?'<br><small>off '+esc(m2disp(gp.from))+"–"+esc(m2disp(gp.to))+"</small>":""}</td><td>${esc(mealTxt)}</td><td>${esc(restTxt)}</td><td>${fmtHrs(paidMinutes(a))}</td>${(S.rules.sheetNotes||"lines")!=="off"?'<td class="wr">'+(nt?esc(nt):"")+"</td>":""}</tr>`;}).join("")}
   </tbody></table>
   ${(S.rules.sheetNotes||"lines")!=="off"? `<div class="pad"><h3>Anything else about today</h3>
     ${Array.from({length:(S.rules.sheetNotes==="wide")?8:5}).map(()=>`<div class="rule"></div>`).join("")}</div>`:""}
@@ -29007,6 +29078,22 @@ return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"T"+p(d.getUTCH
 function icsDT(date, min){ const d=min>=1440? addDays(date,1):date; const m=((min%1440)+1440)%1440;
 const p=n=>String(n).padStart(2,"0");
 return d.replace(/-/g,"")+"T"+p(Math.floor(m/60))+p(m%60)+"00"; }
+ 
+function icsFold(line){
+const bytes=new TextEncoder().encode(line);
+if(bytes.length<=75) return line;
+const dec=new TextDecoder();
+const parts=[]; let i=0, limit=75;
+while(i<bytes.length){
+let take=Math.min(limit, bytes.length-i);
+ 
+while(take>1 && i+take<bytes.length && (bytes[i+take]&0xC0)===0x80) take--;
+parts.push(dec.decode(bytes.slice(i, i+take)));
+i+=take;
+limit=74;                       
+}
+return parts.join("\r\n ");
+}
 function icsEsc(x){ return String(x||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
  
 const REMIND_KINDS = [
@@ -29266,7 +29353,7 @@ L.splice(L.length-1, 0,
 }
 });
 L.push("END:VCALENDAR");
-return L.filter(Boolean).join("\r\n")+"\r\n";
+return L.filter(Boolean).map(icsFold).join("\r\n")+"\r\n";
 }
 function vExport(){
 const ws=S.currentWeek, wk=getWeek(ws);
@@ -29300,7 +29387,8 @@ return `
         <div class="row">
           <select id="xicwho" style="width:auto;min-width:170px">
             <option value="">Whole team — one calendar</option>
-            ${S.employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)} — just their shifts</option>`).join("")}
+            ${ 
+exportPeople(wk).map(e=>`<option value="${e.id}">${esc(e.name)}${e.active? "":" (set aside)"} — just their shifts</option>`).join("")}
           </select>
           <button class="btn" id="xics">Calendar file (.ics)</button>
         </div>
@@ -29959,7 +30047,7 @@ y=88;
 doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(20,32,30);
 doc.text(e.name, 40, y);
 doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(105,119,115);
-doc.text(fmtHrs(empWeekMinutes(e.id,ws))+" · "+e.roleIds.map(roleAbbr).join("/"), W-40, y, {align:"right"});
+doc.text(fmtHrs(empWeekMinutes(e.id,ws))+" · "+empRoleAbbrs(e), W-40, y, {align:"right"});
 doc.autoTable({
  
 body: dates.reduce((acc,d)=>{
@@ -29967,7 +30055,8 @@ const mine=wk.assignments.filter(a=>a.empId===e.id && a.date===d.date)
 .sort((x,y)=>x.startMin-y.startMin);
 const day=DSHORT[d.dow]+" "+prettyDate(d.date);
 if(!mine.length){
-acc.push([day, onTimeOff(e.id,d.date)? ((timeOffFor(e.id,d.date)||{}).type||"Off").toUpperCase() : "Off", "", ""]);
+ 
+acc.push([day, onTimeOff(e.id,d.date)? offWord().toUpperCase() : "Off", "", ""]);
 return acc;
 }
 mine.forEach((a,i)=>{
