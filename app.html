@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 1e6e371f 2026-09-11 12:52 UTC -->
+<!-- build b6f6e85b 2026-09-11 14:36 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1576,6 +1576,8 @@ minorNote:"Under 16: no work during school hours; 3 h/school day, 18 h/school we
 CA:{
 name:"California", short:"CA",
 meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, paid:false,
+ 
+earliestStartMin:0,
 waivableIfShiftUnderMin:360,
  
 second:{ afterMin:601, mustStartByMin:600, waivableIfShiftUnderMin:720, requiresFirstNotWaived:true, fromNet:true } },
@@ -1590,53 +1592,61 @@ minorBreak:{ meal:{} },
 minorNote:"16–17 yr olds: max 4 h/school day, 48 h/week; 14–15: max 3 h/school day, 18 h/school week."
 },
 WA:{ name:"Washington", short:"WA",
-meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0,
+ 
+meal:{ firstAfterMin:301, earliestStartMin:120, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0,
  
 second:{ afterMin:600, mustStartByMin:660, waivableIfShiftUnderMin:0, requiresFirstNotWaived:false, fromNet:false } },
 rest:{ lengthMin:10, paid:true, tiers:[[360,1],[600,2],[840,3],[1080,4]], minShiftMin:180 },
 premium:"Missed breaks are compensable time worked.",
-note:"30-minute meal between the 3rd and 5th hour; 10 paid minutes per 4 hours worked, scheduled no more than 3 hours from shift start.",
+note:"30-minute meal beginning no less than 2 and no more than 5 hours from the start of the shift; 10 paid minutes per 4 hours worked, scheduled no more than 3 hours from shift start.",
  
 minorBreak:{ meal:{ firstAfterMin:241, mustStartByMin:240, lengthMin:30, second:null } },
 minorNote:"Minors: 30-min meal after no more than 4 hours; 10-min rest per 4 hours." },
 OR:{ name:"Oregon", short:"OR",
-meal:{ firstAfterMin:361, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0,
+ 
+meal:{ firstAfterMin:361, earliestStartMin:120, mustEndByMin:240, mustStartByMin:210, lengthMin:30, paid:false, waivableIfShiftUnderMin:0,
+variants:[{workedOverMin:420, set:{earliestStartMin:180, mustEndByMin:300, mustStartByMin:270}}],
  
 second:{ afterMin:840, mustStartByMin:780, waivableIfShiftUnderMin:0, requiresFirstNotWaived:false, fromNet:false } },
 rest:{ lengthMin:10, paid:true, tiers:[[360,1],[600,2],[840,3],[1080,4],[1320,5],[1440,6]], minShiftMin:121 },
 premium:"Unpaid break time is wages owed.",
-note:"Meal required for shifts over 6 hours, taken between the 2nd and 5th hour. Paid 10-minute rest for each 4-hour segment.",
+note:"Meal required for a work period over 6 hours. On seven hours or less it begins after the 2nd hour worked and must be finished before the 5th; over seven hours it begins after the 3rd and must be finished before the 6th. Paid 10-minute rest for each 4-hour segment.",
  
 minorBreak:{ rest:{ lengthMin:15 } },
 minorNote:"Minors get a 30-min meal per 8-hour shift and 15-min (not 10) rest breaks." },
 NY:{ name:"New York", short:"NY",
-meal:{ firstAfterMin:361, mustStartByMin:360, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
+meal:{ firstAfterMin:361, earliestStartMin:0, mustStartByMin:360, lengthMin:30, paid:false, waivableIfShiftUnderMin:0,
+ 
+variants:[{startsFromMin:780, startsBeforeMin:360, set:{lengthMin:45}}],
+second:null },
 rest:null,
 premium:"No statutory premium; unprovided meal periods are a Labor Law violation.",
  
-note:"Non-factory employees working more than 6 hours over the noon period get a 30-minute lunch \u2014 that is the rule Weeksolved applies. New York also gives an extra 20-minute meal between 5 and 7pm on shifts starting before 11am and ending after 7pm, and conditions the midday meal on the shift spanning the noon period; Weeksolved does not work either of those out for you, so check them yourself on any long or evening shift. No statutory rest breaks.",
+note:"Non-factory employees working more than 6 hours over the noon period get a 30-minute lunch, and a shift of more than 6 hours starting between 1pm and 6am gets 45 minutes (Lab. L. 162(4)) \u2014 those are the rules Weeksolved applies. It does not work out the extra 20-minute meal between 5 and 7pm on a shift starting before 11am and ending after 7pm (162(3)), it does not test whether a midday shift actually spans the noon period, and it does not handle factory work, where the figures are 60 minutes rather than 30 and 45. Check those yourself. No statutory rest breaks.",
  
 minorBreak:{ meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, second:null } },
 minorNote:"Minors under 18: 30-minute meal after 5 consecutive hours." },
 CO:{ name:"Colorado", short:"CO",
-meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
+ 
+meal:{ firstAfterMin:301, earliestStartMin:0, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
 rest:{ lengthMin:10, paid:true, tiers:[[360,1],[600,2],[840,3],[1080,4],[1320,5],[1440,6]], minShiftMin:121 },
 premium:"Missed rest periods are paid as time worked.",
 note:"30-minute uninterrupted meal for shifts over 5 hours; 10 paid minutes per 4 hours worked.",
 minorBreak:{ meal:{} },
 minorNote:"Minors under 18: 30-minute meal after 5 consecutive hours." },
 IL:{ name:"Illinois", short:"IL",
-meal:{ firstAfterMin:451, mustStartByMin:300, lengthMin:20, paid:false, waivableIfShiftUnderMin:0,
+meal:{ firstAfterMin:451, earliestStartMin:0, mustStartByMin:300, lengthMin:20, paid:false, waivableIfShiftUnderMin:0,
  
-second:{ afterMin:750, mustStartByMin:750, waivableIfShiftUnderMin:0, requiresFirstNotWaived:false, fromNet:true } },
+second:{ afterMin:720, mustStartByMin:750, waivableIfShiftUnderMin:0, requiresFirstNotWaived:false, fromNet:false } },
 rest:null,
 premium:"One Day Rest In Seven Act: civil penalties per offense.",
-note:"20-minute meal no later than 5 hours into a shift of 7.5 hours or more, plus another for each additional 4.5 hours. Employees are owed 24 consecutive hours of rest every calendar week.",
+note:"20-minute meal beginning no later than 5 hours into a work period of 7.5 continuous hours or more, plus another 20 minutes for every additional 4.5 continuous hours \u2014 so a second at 12 hours, counted gross rather than net of the first meal. Employees are owed 24 consecutive hours of rest every calendar week.",
  
 minorBreak:{ meal:{ firstAfterMin:301, mustStartByMin:300, lengthMin:30, second:null } },
 minorNote:"Minors: 30-minute meal after 5 consecutive hours." },
 NV:{ name:"Nevada", short:"NV",
-meal:{ firstAfterMin:481, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
+ 
+meal:{ firstAfterMin:481, earliestStartMin:0, mustStartByMin:300, lengthMin:30, paid:false, waivableIfShiftUnderMin:0, second:null },
 rest:{ lengthMin:10, paid:true, tiers:[[420,1],[660,2],[900,3],[1140,4]], minShiftMin:210 },
 premium:"Unprovided breaks are wages owed.",
 note:"30-minute meal for continuous shifts of 8 hours or more; 10 paid minutes per 4 hours worked.",
@@ -2709,8 +2719,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "1e6e371f";       
-const BUILD_AT = "2026-09-11 12:52 UTC";       
+const BUILD_ID = "b6f6e85b";       
+const BUILD_AT = "2026-09-11 14:36 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -4734,8 +4744,9 @@ const m=((t%1440)+1440)%1440;
 return m>=c.from && m<c.to;
 }
  
-function mealTarget(startMin, endMin, natural, deadline, len, ctx){
-const lo=startMin+60, hi=Math.min(deadline, endMin-30-len);
+function mealTarget(startMin, endMin, natural, deadline, len, ctx, earliestClock){
+ 
+const lo=Math.max(startMin+60, earliestClock||0), hi=Math.min(deadline, endMin-30-len);
 if(hi<lo) return natural;
 const plan=mealPlan();
 if(plan==="closed"){
@@ -4888,23 +4899,47 @@ const mode=waiverMode(); if(mode==="off") return "off";
 const w=empWaiver(emp);
 if(w==="no") return "off";
 if(w==="yes") return "auto";
-return mode;
+ 
+return mode==="auto"? "manual" : mode;
 }
  
 function waiverPossible(){ const L=law(); return !!(L.meal && (L.meal.waivableIfShiftUnderMin || (L.meal.second && L.meal.second.waivableIfShiftUnderMin))); }
-const WAIVER_WORDS={off:"Not used", manual:"Manager decides, shift by shift", auto:"Automatic whenever the law allows"};
+ 
+const WAIVER_WORDS={off:"Not used", manual:"Manager decides, shift by shift", auto:"Automatic for anyone with a waiver on file"};
 function waiverCounts(){
 const act=(S.employees||[]).filter(e=>e.active);
 return {yes:act.filter(e=>empWaiver(e)==="yes").length, no:act.filter(e=>empWaiver(e)==="no").length, n:act.length};
 }
 function waiverSummary(){
 const c=waiverCounts(), m=waiverMode();
-const parts=[m==="auto"? "Automatic for everyone by default" : m==="manual"? "Waived only when you choose to" : "Nobody's meal is waived"];
+const parts=[m==="auto"? "Automatic for anyone with a waiver on file" : m==="manual"? "Waived only when you choose to" : "Nobody's meal is waived"];
 if(c.yes) parts.push(c.yes+" always (waiver on file)");
 if(c.no) parts.push(c.no+" never (not signed)");
 return parts.join(" \u00b7 ");
 }
 
+ 
+function mealRow(meal, worked, startMin){
+if(!meal || !meal.variants) return meal;
+let M=meal;
+const s=((startMin%1440)+1440)%1440;
+meal.variants.forEach(v=>{
+if(v.workedOverMin!=null && !(worked > v.workedOverMin)) return;
+if(v.startsFromMin!=null || v.startsBeforeMin!=null){
+const a=v.startsFromMin, b=v.startsBeforeMin;
+ 
+const hit = (a!=null && b!=null)? (a>b? (s>=a || s<b) : (s>=a && s<b))
+: (a!=null)? s>=a : s<b;
+if(!hit) return;
+}
+M=Object.assign({}, M, v.set);
+});
+return M;
+}
+ 
+function mealEarliest(M){
+return Math.max(60, +(S.rules.mealEarliestMin||0) || 60, (M && M.earliestStartMin) || 0);
+}
  
 function computeBreaks(startMin, endMin, opts){
 opts = opts || {};
@@ -4939,29 +4974,35 @@ const fit = (t, len) => (g && t < g.to && t+len > g.from)? g.to : t;
 
 const mealMode = S.rules.breakMode;   
 const restMode = S.rules.restMode;
- 
-const earliest = Math.max(60, +(S.rules.mealEarliestMin||0) || 60);
 
  
-if(L.meal && worked >= L.meal.firstAfterMin){
+ 
+const M = mealRow(L.meal, worked, startMin);
+if(M && worked >= M.firstAfterMin){
 out.owed.meals = 1;
-const len = L.meal.lengthMin;
-const deadline = W2C(L.meal.mustStartByMin);
+const len = M.lengthMin;
+ 
+const byWorked = M.mustEndByMin!=null? M.mustEndByMin - len : M.mustStartByMin;
+const deadline = W2C(byWorked);
+const earliest = mealEarliest(M);
+const earlyClock = M.earliestStartMin? W2C(M.earliestStartMin) : null;
  
 const pol = opts.emp? waiverPolicy(opts.emp) : waiverMode();
 const ov = opts.waive||{};
-const waivable = pol!=="off" && !!L.meal.waivableIfShiftUnderMin && worked <= L.meal.waivableIfShiftUnderMin;
+const waivable = pol!=="off" && !!M.waivableIfShiftUnderMin && worked <= M.waivableIfShiftUnderMin;
 const waived1 = ov[1]===true ? true : ov[1]===false ? false : (waivable && pol==="auto");
-let tw = Math.floor(worked/2) - len/2;                  
+let tw = Math.floor(worked/2) - Math.floor(len/2);      
 if(opts.nudge) tw += opts.nudge;
-tw = clamp(tw, earliest, L.meal.mustStartByMin);
+tw = clamp(tw, earliest, byWorked);
 if(tw+len > worked-30) tw = Math.max(earliest, worked-30-len);
 let target = fit(round5(W2C(tw)), len);
-target = fit(mealTarget(startMin, endMin, target, deadline, len, opts), len);
-out.meals.push({start:target,end:target+len,len,waivable,waived:waived1,auto:waived1 && ov[1]!==true,deadline,late:target>deadline,idx:1});
+target = fit(mealTarget(startMin, endMin, target, deadline, len, opts, earlyClock), len);
+out.meals.push({start:target,end:target+len,len,waivable,waived:waived1,auto:waived1 && ov[1]!==true,deadline,
+earliest:earlyClock, mustEndBy:(M.mustEndByMin!=null? W2C(M.mustEndByMin) : null),
+late:target>deadline,idx:1});
 
  
-const sec = L.meal.second;
+const sec = M.second;
 const off  = out.meals[0].waived? 0 : len;           
 const workedForSecond = sec && sec.fromNet===false ? worked : worked - off;
 if(sec && workedForSecond >= sec.afterMin){
@@ -4970,7 +5011,7 @@ const dl2 = W2C(sec.mustStartByMin + (sec.fromNet===false? 0 : off));
 const w2 = pol!=="off" && !!sec.waivableIfShiftUnderMin && workedForSecond <= sec.waivableIfShiftUnderMin
 && !(sec.requiresFirstNotWaived && out.meals[0].waived);
 const waived2 = ov[2]===true ? true : ov[2]===false ? false : (w2 && pol==="auto");
-let t2w = Math.floor(worked*0.72) - len/2;
+let t2w = Math.floor(worked*0.72) - Math.floor(len/2);
 t2w = clamp(t2w, C2W(target)+len+90, C2W(dl2));
 if(t2w+len > worked-30) t2w = Math.max(C2W(target)+len+60, worked-30-len);
 let t2 = fit(round5(W2C(t2w)), len);
@@ -4981,7 +5022,8 @@ if(ok.length) t2 = mealPlan()==="slotsrandom"
 ? ok[jitterInt((opts.emp? opts.emp.id : "")+"|2|"+(opts.date||"")+"|"+weekSeed(opts.date), ok.length)]
 : ok.reduce((b,x)=>Math.abs(x-t2)<Math.abs(b-t2)?x:b, ok[0]);
 }
-out.meals.push({start:t2,end:t2+len,len,waivable:!!w2,waived:waived2,auto:waived2 && ov[2]!==true,deadline:dl2,late:t2>dl2,idx:2});
+out.meals.push({start:t2,end:t2+len,len,waivable:!!w2,waived:waived2,auto:waived2 && ov[2]!==true,deadline:dl2,
+earliest:null, mustEndBy:null, late:t2>dl2,idx:2});
 }
 }
 
@@ -5088,7 +5130,10 @@ const workClock=(a,n)=>{ const g=aGap(a); const before=g? g.from-a.startMin : In
 return (!g || n<=before)? a.startMin+n : g.to+(n-before); };
 withMeals.forEach(a=>{
  
-const earliest = Math.max(45, +(S.rules.mealEarliestMin||0) || 45);
+const gp = aGap(a);
+const workedA = (a.endMin - a.startMin) - (gp? gp.to - gp.from : 0);
+const lawM = mealRow(law().meal, workedA, a.startMin);
+const earliest = mealEarliest(lawM);
 let floor = workClock(a, earliest);         
 a.breaks.meals.forEach(m=>{
 const home = m.start;
@@ -6810,8 +6855,9 @@ const FWW_PLACES = [
 {k:"", n:"Nowhere in particular / I\u2019m not sure"},
 {k:"la",   n:"Los Angeles (city or county)", notice:14, rest:10, staff:300, sites:1,
 note:"Retail employers with 300 or more staff nationally. Two weeks\u2019 notice, and a 10-hour gap between shifts unless the employee agrees in writing."},
-{k:"sf",   n:"San Francisco", notice:14, rest:11, sites:20, staff:56,
-note:"Chain retail with 20 or more locations worldwide and 20+ staff here. Two weeks\u2019 notice; a change afterwards owes an extra hour\u2019s pay."},
+ 
+{k:"sf",   n:"San Francisco", notice:14, rest:null, sites:20, staff:56,
+note:"Chain retail with 20 or more locations worldwide and 20+ staff here. Two weeks\u2019 notice; a change afterwards owes an extra hour\u2019s pay. This ordinance sets no rest window between shifts."},
 {k:"berk", n:"Berkeley", notice:14, rest:11, staff:10, sites:1,
 note:"The lowest bar anywhere: 10 or more employees in the city can be enough. Worth taking seriously even if you are small."},
 {k:"emv",  n:"Emeryville", notice:14, rest:11, staff:56, sites:20,
@@ -6862,7 +6908,8 @@ return "Where a collective agreement is in place, some city scheduling rules can
 "Weeksolved does not read your agreement and takes no view on whether yours waives anything \u2014 it keeps checking the "+
 "city requirement either way. If your counsel has said otherwise, set the notice period here to match what you actually follow.";
 }
-function fwwRestH(){ return fwwOn()? (fwwPlace().rest||10) : 0; }
+ 
+function fwwRestH(){ if(!fwwOn()) return 0; const P=fwwPlace(); return P.rest===null? 0 : (P.rest||10); }
  
 function fwwClopens(ws){
 const wk=peekWeek(ws||curWeek());
@@ -6907,7 +6954,8 @@ return [
 "On-call shifts: we do not schedule on-call shifts.",
 "",
 "Schedules are posted at least "+fwwNotice()+" days before the week begins.",
-"Turnaround between shifts is set to "+(fwwRestH()||10)+" hours.",
+ 
+"Turnaround between shifts is set to "+(L.minRestH||0)+" hours.",
 "",
 "\u2014 end of worksheet \u2014"
 ].join("\n");
@@ -7203,7 +7251,8 @@ return "over the "+dayCap+"-hour limit for a "+(sd?"school day":"non-school day"
 const weekCap = sw? R.sw : R.nw;
 if(weekCap && (minsSoFar+paidEstimate(aMin,bMin))/60 > weekCap+0.001)
 return "past the "+weekCap+"-hour limit for a "+(sw?"school week":"non-school week")+" at "+a;
-const from=R.from, to=(R.summerTo && inSummerWindow(date))? R.summerTo : R.to;
+ 
+const from=R.from, to=(R.summerTo && !sd)? R.summerTo : R.to;
 if(from && aMin < t2m(from))
 return "starts before "+m2disp(t2m(from))+", the earliest they may work at "+a;
 if(to && bMin > t2m(to))
@@ -7699,6 +7748,9 @@ if(U.restH) L.minRestH = Math.max(L.minRestH||0, U.restH);
 if(U.maxConsecH) L.maxStretchH = Math.min(L.maxStretchH||99, U.maxConsecH);
 L.noSplit = !!U.noSplit;
 }
+ 
+L.houseRestH = L.minRestH||0;
+if(fwwOn() && fwwRestH()) L.minRestH = Math.max(L.minRestH||0, fwwRestH());
  
 L.otWeeklyH = +S.org.otWeeklyH>0? +S.org.otWeeklyH : 40;
 L.otDailyH  = +S.org.otDailyH>0?  +S.org.otDailyH  : 0;
@@ -13634,9 +13686,11 @@ const prev=mine[i-1], cur=mine[i];
 const dayGap = Math.round((parseYmd(cur.date)-parseYmd(prev.date))/86400000);
 if(dayGap===1){
 const gap = (cur.startMin + 1440) - prev.endMin;
-if(gap < (lim.minRestH||0)*60)
+ 
+const houseRest = (lim.houseRestH!=null? lim.houseRestH : (lim.minRestH||0));
+if(gap < houseRest*60)
 push("crit","Short turnaround — "+e.name,
-fmtHrs(gap)+" between "+DSHORT[prev.dow]+" out and "+DSHORT[cur.dow]+" in ("+(lim.minRestH||0)+"h required).", {date:cur.date,empId:e.id, code:"rest", aId:cur.id, prevId:prev.id});
+fmtHrs(gap)+" between "+DSHORT[prev.dow]+" out and "+DSHORT[cur.dow]+" in ("+houseRest+"h required).", {date:cur.date,empId:e.id, code:"rest", aId:cur.id, prevId:prev.id});
 else if(fwwOn() && fwwRestH() && gap < fwwRestH()*60){
  
 const agreed = e.clopenOk===true;
@@ -13670,13 +13724,31 @@ if(owedM>gotM)
 push("crit","Missing meal period — "+e.name, DSHORT[a.dow]+" "+fmtHrs(aSpanMin(a))+" shift needs "+owedM+" meal period"+(owedM>1?"s":"")+" under "+L.name+" rules. "+(L.premium||""), {date:a.date,empId:e.id, code:"meal", sub:"missing", aId:a.id});
 b.meals.forEach((m,mi)=>{
 if(!m.waived && m.start>m.deadline)
-push("crit","Late meal period — "+e.name, DSHORT[a.dow]+" meal starts "+m2disp(m.start)+", must begin by "+m2disp(m.deadline)+". "+(L.premium||""), {date:a.date,empId:e.id, code:"meal", sub:"late", aId:a.id, mi});
+push("crit","Late meal period — "+e.name, DSHORT[a.dow]+" meal starts "+m2disp(m.start)+", must begin by "+m2disp(m.deadline)+
+ 
+(m.mustEndBy? " and be finished by "+m2disp(m.mustEndBy) : "")+". "+(L.premium||""), {date:a.date,empId:e.id, code:"meal", sub:"late", aId:a.id, mi});
+ 
+if(!m.waived && m.earliest && m.start<m.earliest)
+push("crit","Meal period too early — "+e.name, DSHORT[a.dow]+" meal starts "+m2disp(m.start)+", and under "+L.name+" rules it cannot begin before "+m2disp(m.earliest)+". "+(L.premium||""), {date:a.date,empId:e.id, code:"meal", sub:"early", aId:a.id, mi});
 if(m.waived && !m.waivable)
 push("crit","Invalid meal waiver — "+e.name, DSHORT[a.dow]+" shift is too long for the meal to be waived under "+L.name+" rules.", {date:a.date,empId:e.id, code:"meal", sub:"waiver", aId:a.id, mi});
 });
 if(b.owed.rests > b.rests.length && S.rules.restMode==="assigned")
 push("warn","Rest breaks short — "+e.name, DSHORT[a.dow]+" owes "+b.owed.rests+" paid rest break"+(b.owed.rests>1?"s":"")+", "+b.rests.length+" placed.", {date:a.date,empId:e.id, code:"meal", sub:"rests", aId:a.id});
 });
+ 
+const waived=[];
+mine.forEach(a=>{
+const b=a.breaks; if(!b || !Array.isArray(b.meals)) return;
+b.meals.forEach((m,mi)=>{ if(m.waived && m.waivable) waived.push(DSHORT[a.dow]+(mi? " (2nd)":"")); });
+});
+if(waived.length)
+push("info","Meal waived — "+e.name,
+waived.length+" meal period"+(waived.length===1?"":"s")+" waived this week ("+waived.join(", ")+"). "+
+(empWaiver(e)==="yes"? "Their profile records a signed waiver."
+: "Waived on this board shift by shift — nothing on their profile says they have signed one.")+
+" Weeksolved marks a waiver, it does not hold the signature; without one "+L.name+" treats the meal as not provided. "+(L.premium||""),
+{empId:e.id, code:"meal", sub:"waived"});
 }
 });
 
@@ -15689,7 +15761,7 @@ const EXPLAIN = {
 "rules.mealPlan": "How meals are handled across the day — staggered so the floor is never empty, at fixed times, at random inside the legal window, or by closing the doors. Example: with one person on duty, “close the doors” shuts you for 30 minutes and stops that half-hour counting as a coverage gap.",
 "rules.mealEarliestMin": "The earliest a meal may start, in minutes after the shift begins. It stops the software putting lunch at half past nine. Example: 120 means somebody starting at 09:00 gets nothing before 11:00.",
 "rules.staggerMeals": "Keeps two people from going to lunch at the same time. Example: with three on the floor and this on, meals go at 11:30, 12:00 and 12:30 rather than all at noon.",
-"rules.mealWaiverMode": "Whether a meal may be waived on a shift short enough for the law to allow it, and who decides. A waiver always needs the person's written agreement — this only tells the drafter what it may assume. Example: on California, a six-hour shift may be worked straight through by agreement; “ask me” means the drafter never assumes it.",
+"rules.mealWaiverMode": "Whether a meal may be waived on a shift short enough for the law to allow it, and who decides. A waiver always needs the person's written agreement, so even “automatic” only waives for people whose profile records one — anybody you have not asked keeps their meal. Example: on California, a six-hour shift may be worked straight through by agreement; “ask me” means the drafter never assumes it.",
 "rules.mealClose.when": "Whether the doors shut for lunch every day, or only on days when one person is on duty. Example: “only when one person is on” keeps you open on busy days and shuts for half an hour on the quiet ones.",
 
  
@@ -16475,7 +16547,7 @@ sel("org.pay.type", PAY_TYPES, S.org.pay.type||"none"))}
 const n=S.employees.filter(e=>e.active).length;
 return "Several places require one on the day someone is hired. Weeksolved writes it from their profile \u2014 "+n+" on the roster.";
 })(), `<button class="btn sm" id="setgfe">Write one</button>`) : ""}
-      ${fwwOn()? setRow("Shifts closer together than the rest window", (()=>{
+      ${fwwOn() && fwwRestH()? setRow("Shifts closer together than the rest window", (()=>{
 const c=fwwClopens(S.currentWeek);
 if(!c.length) return "None this week \u2014 nobody is back inside "+fwwRestH()+" hours of their last shift.";
 const noCon=c.filter(x=>!x.consented).length;
@@ -17051,7 +17123,7 @@ return `
         <div class="help">${esc(L.note||"")}</div>
         <div class="grid3">
           ${L.meal? `<div class="kpi"><span class="k">First meal</span><span class="v">${L.meal.lengthMin}<span style="font-size:14px">min</span></span>
-            <span class="m">owed past ${fmtHrs(L.meal.firstAfterMin-1)}, must start by hour ${(L.meal.mustStartByMin/60)}</span></div>`
+            <span class="m">owed past ${fmtHrs(L.meal.firstAfterMin-1)}, ${L.meal.mustEndByMin!=null? `finished by hour ${(L.meal.mustEndByMin/60)}` : `must start by hour ${(L.meal.mustStartByMin/60)}`}</span></div>`
 : `<div class="kpi"><span class="k">Meal periods</span><span class="v">—</span><span class="m">none required here</span></div>`}
           ${L.meal&&L.meal.second? `<div class="kpi"><span class="k">Second meal</span><span class="v">${L.meal.lengthMin}<span style="font-size:14px">min</span></span>
             <span class="m">owed past ${fmtHrs(L.meal.second.afterMin-1)}, by hour ${(L.meal.second.mustStartByMin/60)}</span></div>`:""}
@@ -17735,7 +17807,7 @@ return n? `<span class="chip" title="They can still be scheduled \u2014 nothing 
 staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places used":""}</span>
         ${staffCount()>SMOOTH_STAFF? `<span class="chip"${whyAttrs("One board is comfortable up to about "+SMOOTH_STAFF+" people and runs to "+MAX_STAFF+". Past "+SMOOTH_STAFF+" a draft takes noticeably longer, most of all on a phone \u2014 everything else stays quick. If you are well past it, separate boards for separate sites or departments usually work better than one large one.", "go:help")}>${staffCount()} people \u00b7 drafting will be slower</span>`:""}
         ${apartOn()? `<span class="chip" title="Set on each person\u2019s file. Private to you \u2014 never printed, sent or exported.">${(S.apart||[]).length} pair${(S.apart||[]).length===1?"":"s"} kept apart</span>`:""}
-        ${waiverPossible() && S.employees.length? `<span class="chip ${waiverMode()==="auto"?"acc":""} chipbtn"${whyAttrs("Meal waivers: "+waiverSummary()+". The board setting lives under Scheduling rules; each person can stand apart from it on their profile — always (a signed waiver is on file) or never (not signed). A waived meal keeps a short shift short; the signature stays on paper with you.", "go:rules")}>meal waivers: ${waiverMode()==="auto"?"automatic":waiverMode()==="manual"?"as needed":"off"}${(()=>{const c=waiverCounts(); return (c.yes||c.no)? " \u00b7 "+[c.yes? c.yes+" always":"", c.no? c.no+" never":""].filter(Boolean).join(", ") : "";})()}</span>`:""}
+        ${waiverPossible() && S.employees.length? `<span class="chip ${waiverMode()==="auto"?"acc":""} chipbtn"${whyAttrs("Meal waivers: "+waiverSummary()+". The board setting lives under Scheduling rules, but it never waives a meal for somebody whose profile does not say they have signed — a waiver is an agreement, not a default. Set each person to always (a signed waiver is on file) or never (not signed). A waived meal keeps a short shift short; the signature stays on paper with you.", "go:rules")}>meal waivers: ${waiverMode()==="auto"?"automatic":waiverMode()==="manual"?"as needed":"off"}${(()=>{const c=waiverCounts(); return (c.yes||c.no)? " \u00b7 "+[c.yes? c.yes+" always":"", c.no? c.no+" never":""].filter(Boolean).join(", ") : "";})()}</span>`:""}
         ${S.employees.length? `<details class="btnmore"><summary class="btn sm">More…</summary><div class="btnmenu">
           <button class="btn sm" id="tmform">Starter form</button>
           ${otLedgerOn()? `<button class="btn sm" id="otoffer">Offer overtime</button>`:""}
@@ -18564,7 +18636,7 @@ return `<input type="number" inputmode="decimal" id="ehphx" step="0.25" min="0" 
         </div>`:""}
       <div class="help" style="margin-top:8px">This is about <b>${esc((e.name||"they").split(" ")[0])} as a whole</b> \u2014 whether they count as cover yet. It is not the same as the post-by-post training record further down, which is only about which posts suit them on the day.</div>
     </div>`}
-    ${fwwOn()? `<div class="field"><label>Shifts closer together than ${fwwRestH()} hours</label>
+    ${fwwOn() && fwwRestH()? `<div class="field"><label>Shifts closer together than ${fwwRestH()} hours</label>
       <select id="eclop">
         <option value="" ${e.clopenOk==null?"selected":""}>Not asked</option>
         <option value="1" ${e.clopenOk===true?"selected":""}>They\u2019ve agreed in writing</option>
@@ -21202,7 +21274,7 @@ return `${tellBanner(ws)}<div class="card review">
           <p style="margin:0 0 4px;font-size:15px;line-height:1.5;max-width:60ch">
             <b>${wk.assignments.length} shift${wk.assignments.length===1?"":"s"} across ${days} day${days===1?"":"s"}</b>, ${fmtHrs(wk.assignments.reduce((t,a)=>t+paidMinutes(a),0))} of paid time.
             ${verdict}</p>
-          <div class="mini">Breaks sit inside the ${esc(law().name)} window and no limit is bent — a shift is left open rather than a rule broken.</div>
+          <div class="mini">Drafted to the rules Weeksolved carries — ${esc(lawVintage())} — leaving a shift open rather than bending one of them. That is what the software did, not a warranty that the week is lawful: ${esc(LAWNOTE)}</div>
         </div>
         <div class="row" style="flex:none;max-width:100%;flex-wrap:wrap;gap:6px">
           <details class="btnmore"><summary class="btn">More…</summary><div class="btnmenu">
@@ -21700,6 +21772,8 @@ case "meal": {
 const x=a; const m=x? ((x.breaks||{}).meals||[])[v.mi] : null;
 if(x && v.sub==="late" && m)
 now("Move the meal to "+m2disp(m.deadline), "The latest legal start. Locks the shift so a redraft keeps it.", ()=>{ moveMeal(ws, x, v.mi, m.deadline); toast("Meal moved to "+m2disp(m.deadline)); }, true);
+if(x && v.sub==="early" && m && m.earliest)
+now("Move the meal to "+m2disp(m.earliest), "The earliest legal start. Locks the shift so a redraft keeps it.", ()=>{ moveMeal(ws, x, v.mi, m.earliest); toast("Meal moved to "+m2disp(m.earliest)); }, true);
 if(x && (v.sub==="missing"||v.sub==="rests"))
 now("Place the breaks again", "Works them out from the shift as it is now.", ()=>{ applyBreaks(x); save(); render(); toast("Breaks placed again"); }, true);
 if(x && v.sub==="waiver" && m)
@@ -22086,7 +22160,7 @@ case "avail":  return who+" is put on "+day+", outside their availability";
 case "timeoff": return who+" is scheduled during time off";
 case "rest":   return who+" gets too little rest between shifts";
 case "clopen": return who+" closes then opens";
-case "meal":   return v.sub==="late"? who+"’s meal starts too late" : v.sub==="rests"? who+" is short on rest breaks" : v.sub==="waiver"? who+"’s meal waiver is not allowed" : who+" is missing a meal period";
+case "meal":   return v.sub==="late"? who+"’s meal starts too late" : v.sub==="early"? who+"’s meal starts too early" : v.sub==="rests"? who+" is short on rest breaks" : v.sub==="waiver"? who+"’s meal waiver is not allowed" : v.sub==="waived"? who+"’s meal is being waived" : who+" is missing a meal period";
 case "double": return who+" is double-booked on "+day;
 case "apart":  { const B=v.empB? empById(v.empB):null; return who+" and "+(B? B.name.split(" ")[0] : "someone")+" end up on the same day"; }
 case "union":  return "An agreement term bends for "+who;
@@ -23212,7 +23286,7 @@ const band=minorBand(e, a.date), R=minorRule(band, a.date, fx);
 const sd=schoolDayOn(a.date);
 rows.push([prettyDate(a.date), esc(e.name)+(fx? " (family)":""), age, sd? "school day":"non-school day",
 m2disp(a.startMin)+"\u2013"+m2disp(a.endMin), H(paidMinutes(a)),
-R? ((sd? R.sd : R.nd)+"h, until "+m2disp(t2m((R.summerTo&&inSummerWindow(a.date))? R.summerTo : R.to))) : "no limit",
+R? ((sd? R.sd : R.nd)+"h, until "+m2disp(t2m((R.summerTo && !sd)? R.summerTo : R.to))) : "no limit",
  
 minorBlock(e,a.date,a.dow,a.startMin,a.endMin,
 all.filter(x=>x.empId===a.empId && x.id!==a.id &&
@@ -28143,6 +28217,8 @@ if(src==="shifts") return base.concat([
 {k:"clock", n:"Clock hours", num:true, get:r=>Math.round((r.endMin-r.startMin)/6)/10},
 {k:"paid", n:"Paid hours", num:true, get:r=>Math.round(paidMinutes(r)/6)/10},
 {k:"meal", n:"Meal minutes", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>!m.waived).reduce((t,m)=>t+m.len,0)},
+ 
+{k:"mealw", n:"Meals waived", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>m.waived).length},
 {k:"cost", n:"Cost", num:true, money:true, get:r=>Math.round(costOf(r)), when:()=>!!(S.org&&S.org.trackCost)},
 {k:"how", n:"How it got there", get:r=>[r.locked?"locked":"", r.cover?"floor cover":"", r.guarantee?"hours owed":"", r.topUp?"project time":"", r.flexed?"stretched":"", r.resized?"resized":"", r.perDiemAuto?"per diem":""].filter(Boolean).join(", ")||"drafted"},
 {k:"holiday", n:"Holiday", get:r=>{ const h=(S.holidays.list||[]).find(x=>x.date===r.date); return h? h.name : ""; }},
