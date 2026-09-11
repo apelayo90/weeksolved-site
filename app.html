@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build b6f6e85b 2026-09-11 14:36 UTC -->
+<!-- build 036a4ea3 2026-09-11 15:47 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -17,7 +17,7 @@
 <meta name="author" content="Weeksolved">
 <meta name="robots" content="index,follow">
 
-<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' blob: https://www.gstatic.com; connect-src 'self' blob: data: https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#1c6a66">
 <meta property="og:type" content="website">
@@ -1994,11 +1994,33 @@ const c=JSON.parse(JSON.stringify(S));
 delete c._uid; delete c._rev; delete c._at; delete c._dirty;
 return JSON.stringify(c,null,2);
 }
+ 
+function scrubRestored(o){
+const c=JSON.parse(JSON.stringify(o));
+ 
+if(c.mail && typeof c.mail==="object"){ delete c.mail.endpoint; delete c.mail.mode; delete c.mail.sent; }
+ 
+if(c.support && typeof c.support==="object") delete c.support.email;
+ 
+if(c.rules && typeof c.rules==="object"){ delete c.rules.confirmSend; delete c.rules.deviceWatch; }
+ 
+delete c._uid; delete c._rev; delete c._at; delete c._dirty;
+ 
+if(c.intake && typeof c.intake==="object") delete c.intake.sec;
+Object.keys(c.weeks||{}).forEach(k=>{ const w=c.weeks[k];
+if(w && typeof w==="object"){
+if(w.offer && typeof w.offer==="object") delete w.offer.sec;
+if(w.swapAsk && typeof w.swapAsk==="object") delete w.swapAsk.sec;
+}
+});
+return c;
+}
 function restoreBoard(text){
 let o=null;
 try{ o=JSON.parse(text); }catch(e){ toast("That doesn\u2019t look like a backup file"); return; }
 if(!o || typeof o!=="object" || Array.isArray(o) || !Array.isArray(o.employees) || !Array.isArray(o.shifts)){
 toast("That file is not a Weeksolved backup \u2014 it has no team or shifts in it"); return; }
+try{ o=scrubRestored(o); }catch(e){ toast("That backup could not be read \u2014 nothing has changed"); return; }
 let next=null;
 try{ next=migrate(o); }catch(e){ toast("That backup could not be read \u2014 nothing has changed"); return; }
 const n=(next.employees||[]).filter(e=>e.active).length, wk=Object.keys(next.weeks||{}).length;
@@ -2719,8 +2741,8 @@ FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "b6f6e85b";       
-const BUILD_AT = "2026-09-11 14:36 UTC";       
+const BUILD_ID = "036a4ea3";       
+const BUILD_AT = "2026-09-11 15:47 UTC";       
 const TERMS_VERSION = "2";                  
 const TERMS_HASH = "b00b43d10cea1a36";
 const TERMS_DATE = "";
@@ -4558,7 +4580,14 @@ if(s.setupDone) s.currentWeek = weekStartOf(ymd(new Date()), (s.org&&s.org.weekS
 }
 s.mail = Object.assign({mode:"client", endpoint:"", replyTo:"", lastErr:""}, s.mail||{});
  
-if(typeof MAILAPI==="string" && MAILAPI && !s.mail.endpoint){ s.mail.endpoint=MAILAPI; s.mail.mode="server"; }
+s.mail.endpoint = (typeof MAILAPI==="string")? MAILAPI : "";
+if(!s.mail.endpoint) s.mail.mode="client";
+ 
+if(s.intake && !s.intake.sec) s.intake.sec=formSecret();
+Object.keys(s.weeks||{}).forEach(k=>{ const w=s.weeks[k]; if(!w) return;
+if(w.offer && !w.offer.sec) w.offer.sec=formSecret();
+if(w.swapAsk && !w.swapAsk.sec) w.swapAsk.sec=formSecret();
+});
 s.employees.forEach(e=>{ if(e.clopenOk===undefined) e.clopenOk=null; });    
 if(typeof s.rules.remindH!=="number") s.rules.remindH=12;
 if(typeof s.rules.auditKeep!=="number") s.rules.auditKeep=730;
@@ -8734,6 +8763,17 @@ slots:g[k].sort((a,b)=> dateLoad(b.date,b.dow)-dateLoad(a.date,a.dow) || a.date.
  
 function slotKey(sl){ return sl.date+"|"+sl.shiftId+"|"+(sl.roleId||"")+(multiSite()? "|"+siteOf(sl) : ""); }
 function offerToken(){ return securePick("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6); }
+ 
+function formSecret(){ return securePick("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 24); }
+function seatToken(sec, who){
+const s=String(sec||""), k=String(who||"");
+if(!s) return "";
+ 
+return ck2(s+"|"+k)+ck2(k+"|"+s)+ck2(s+k+s)+ck2(k+s+k);
+}
+ 
+const SEAT_NEW="__new";
+function formSeat(form, who){ return (form && form.sec)? seatToken(form.sec, who||SEAT_NEW) : ""; }
 
 function openOffer(ws){ const wk=peekWeek(ws||curWeek()); return (wk&&wk.offer)||null; }
  
@@ -8743,6 +8783,12 @@ const keys=Object.keys(S.weeks||{});
 for(let i=0;i<keys.length;i++){
 const w=S.weeks[keys[i]];
 if(w && w.offer && w.offer.token===token) return {ws:keys[i], off:w.offer};
+}
+ 
+for(let i=0;i<keys.length;i++){
+const w=S.weeks[keys[i]];
+if(w && w.offer && w.offer.sec && (S.employees||[]).some(e=>formSeat(w.offer, e.id)===token))
+return {ws:keys[i], off:w.offer};
 }
 return null;
 }
@@ -8775,16 +8821,19 @@ return optionsFor(sl, ws)
 function makeOffer(ws, slots){
 const wk=getWeek(ws|| curWeek());
 const token=offerToken();
-wk.offer={token, at:Date.now(), slots:slots.map(sl=>({date:sl.date, dow:sl.dow, shiftId:sl.shiftId, roleId:sl.roleId||null})), claims:[]};
+wk.offer={token, sec:formSecret(), at:Date.now(), slots:slots.map(sl=>({date:sl.date, dow:sl.dow, shiftId:sl.shiftId, roleId:sl.roleId||null})), claims:[]};
 logIt("post","Offered "+slots.length+" open shift"+(slots.length===1?"":"s")+" for the week of "+prettyDate(ws)+" to the team");
 save();
 return wk.offer;
 }
 
-function buildOfferFile(ws){
+ 
+function buildOfferFile(ws, empId){
 const off=openOffer(ws); if(!off) return "";
+const me=empId? empById(empId) : null;
 const payload={
-org:S.org.name||"Our team", site:S.org.site||"", token:off.token,
+org:S.org.name||"Our team", site:S.org.site||"", token:me? formSeat(off, me.id) : "",
+me: me? {id:me.id, name:me.name} : null,
 week:prettyDate(ws),
  
 shifts: off.slots.filter(sl=>!!shiftById(sl.shiftId)).map((sl,i)=>{
@@ -8794,7 +8843,8 @@ return {i, day:DAYS[sl.dow], date:prettyFull(sl.date), ymd:sl.date,
 label:sh.label, role:roleName(sl.roleId)||"", time:m2disp(a)+" to "+m2disp(b),
 hours:Math.round((b-a)/6)/10};
 }),
-staff: S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name}))
+ 
+staff: me? [] : S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name}))
 };
 const data=b64e(JSON.stringify(payload));
 return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
@@ -8818,7 +8868,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<h1>Shifts going spare</h1><div class="sub" id="sub"></div>',
 '<div class="pnote"><b>Before you start.</b> Ticking a shift is telling your manager you would take it, not being given it. Nothing is agreed, guaranteed or owed until they confirm, and who gets a shift is their decision and your workplace\u2019s rules, not this form.</div>',
 '<div class="card"><div class="step">How this works</div><div class="hint">These shifts are open. Check any you\u2019d be happy to work, and you\u2019ll get a short code \u2014 send it back and your manager will confirm. If two people want the same shift only one can have it.</div></div>',
-'<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
+'<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><div id="whowrap"><select id="who"></select></div></div>',
 '<div class="card"><div class="step">Step 2 \u2014 which would you take?</div><div id="list"></div></div>',
 '<div class="card"><div class="step">Step 3</div><button class="go" id="mk">Get my reply code</button>',
 '<div id="out" class="hide"><div class="hint" style="margin-top:12px">Send this code back to your manager.</div>',
@@ -8829,14 +8879,16 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'function esc(t){return String(t==null?"":t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
 'document.getElementById("sub").textContent=D.org+(D.site?" \u00b7 "+D.site:"")+" \u00b7 week of "+D.week;',
 'var who=document.getElementById("who");',
-'who.innerHTML="<option value=\'\'>Pick your name\u2026</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("")+"<option value=\'__other\'>My name isn\u2019t listed</option>";',
+ 
+'if(D.me){document.getElementById("whowrap").innerHTML="<b>"+esc(D.me.name)+"</b><div class=hint>This copy was made out to you. If that is not your name, ask your manager for your own copy \u2014 a reply sent from this one would be refused.</div>";}',
+'else{who.innerHTML="<option value=\'\'>Pick your name\u2026</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("");}',
 'var L=document.getElementById("list");',
 'D.shifts.forEach(function(sh){var el=document.createElement("label");el.className="sh";',
 'el.innerHTML="<input type=checkbox value=\'"+sh.i+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" \u00b7 "+esc(sh.time)+" \u00b7 "+esc(String(sh.hours))+" hours"+(sh.role?" \u00b7 "+esc(sh.role):"")+"</span></span>";',
 'L.appendChild(el);});',
 'document.getElementById("mk").onclick=function(){',
-'var k=who.value;if(!k){alert("Pick your name first.");return;}',
-'if(k==="__other"){k=prompt("Type your full name exactly as your manager has it:");if(!k)return;k=String(k).replace(/[|;~]/g," ").trim().slice(0,60);if(!k)return;}',
+'if(!D.token||!D.me){alert("This copy of the form is not made out to anyone, so it cannot produce a reply code. Ask your manager for the copy with your name on it.");return;}',
+'var k=D.me.id;',
 'var picked=[];L.querySelectorAll("input:checked").forEach(function(c){picked.push(c.value);});',
 'if(!picked.length){alert("Check at least one shift, or just tell your manager you can\u2019t take any.");return;}',
 'var raw="OS1|"+D.token+"|"+k+"|"+picked.join(",");',
@@ -8855,7 +8907,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 function swapAsk(ws){ const wk=peekWeek(ws||curWeek()); return (wk&&wk.swapAsk)||null; }
 function makeSwapAsk(ws){
 const wk=getWeek(ws||curWeek());
-if(!wk.swapAsk) wk.swapAsk={token:offerToken(), at:Date.now(), asks:[]};
+if(!wk.swapAsk) wk.swapAsk={token:offerToken(), sec:formSecret(), at:Date.now(), asks:[]};
 save();
 return wk.swapAsk;
 }
@@ -8865,15 +8917,20 @@ let n=0; Object.keys(S.weeks||{}).forEach(ws=>{ n+=swapPending(ws).length; });
 return n;
 }
  
-function buildSwapFile(ws){
+ 
+function buildSwapFile(ws, empId){
 const sw=swapAsk(ws); if(!sw) return "";
+const me=empId? empById(empId) : null;
 const wk=peekWeek(ws);
  
 const payload={
-org:S.org.name||"Our team", site:S.org.site||"", token:sw.token, week:prettyDate(ws),
-staff: (typeof weekPeople==="function"? weekPeople(wk) : S.employees.filter(e=>e.active))
+org:S.org.name||"Our team", site:S.org.site||"", token:me? formSeat(sw, me.id) : "",
+me: me? {id:me.id, name:me.name} : null,
+week:prettyDate(ws),
+staff: me? [] : (typeof weekPeople==="function"? weekPeople(wk) : S.employees.filter(e=>e.active))
 .map(e=>({id:e.id, name:e.name})),
-shifts: wk.assignments.filter(a=>a.empId).map((a,i)=>{
+ 
+shifts: wk.assignments.filter(a=>a.empId && (!me || a.empId===me.id)).map((a,i)=>{
 const sh=aShift(a)||{label:"Shift"};
 return {i, aid:a.id, emp:a.empId, day:DAYS[parseYmd(a.date).getDay()], date:prettyFull(a.date), ymd:a.date,
 label:sh.label||"Shift", time:m2disp(a.startMin)+" to "+m2disp(a.endMin),
@@ -8902,7 +8959,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<h1>Hand a shift back</h1><div class="sub" id="sub"></div>',
 '<div class="pnote"><b>Before you start.</b> Asking to hand a shift back is not the same as being let off it. You are still on that shift until your manager tells you otherwise — turn up unless you hear back.</div>',
 '<div class="card"><div class="step">How this works</div><div class="hint">Pick your name, tick the shift you cannot work, say why if you want to, and you’ll get a short code. Send the code to your manager. They decide, and if they let it go it is offered to the rest of the team.</div></div>',
-'<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><select id="who"></select></div>',
+'<div class="card"><div class="step">Step 1</div><label class="f">Who are you?</label><div id="whowrap"><select id="who"></select></div></div>',
 '<div class="card"><div class="step">Step 2 — which shift?</div><div id="list"><div class="hint">Pick your name first.</div></div></div>',
 '<div class="card"><div class="step">Step 3 — why? (optional)</div><textarea id="why" rows="2" maxlength="140" placeholder="Family thing that morning · exam · car in the garage"></textarea></div>',
 '<div class="card"><div class="step">Step 4</div><button class="go" id="mk">Get my reply code</button>',
@@ -8914,8 +8971,9 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'function esc(t){return String(t==null?"":t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
 'document.getElementById("sub").textContent=D.org+(D.site?" · "+D.site:"")+" · week of "+D.week;',
 'var who=document.getElementById("who"), L=document.getElementById("list");',
-'who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("");',
-'function paint(){var k=who.value;L.innerHTML="";',
+'if(D.me){document.getElementById("whowrap").innerHTML="<b>"+esc(D.me.name)+"</b><div class=hint>This copy was made out to you. If that is not your name, ask your manager for your own copy — a reply sent from this one would be refused.</div>";}',
+'else{who.innerHTML="<option value=\'\'>Pick your name…</option>"+D.staff.map(function(s){return "<option value=\'"+s.id+"\'>"+esc(s.name)+"</option>";}).join("");}',
+'function paint(){var k=D.me? D.me.id : who.value;L.innerHTML="";',
 'var mine=D.shifts.filter(function(s){return s.emp===k;});',
 'if(!k){L.innerHTML="<div class=hint>Pick your name first.</div>";return;}',
 'if(!mine.length){L.innerHTML="<div class=hint>You are not on this week’s schedule.</div>";return;}',
@@ -8923,8 +8981,10 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 'el.innerHTML="<input type=checkbox value=\'"+(sh.aid||sh.i)+"\'><span><b>"+esc(sh.date)+"</b><span class=d>"+esc(sh.label)+" · "+esc(sh.time)+" · "+esc(String(sh.hours))+"h</span></span>";',
 'L.appendChild(el);});}',
 'who.onchange=paint;',
+'if(D.me) paint();',
 'document.getElementById("mk").onclick=function(){',
-'var k=who.value;if(!k){alert("Pick your name first.");return;}',
+'if(!D.token||!D.me){alert("This copy of the form is not made out to anyone, so it cannot produce a reply code. Ask your manager for the copy with your name on it.");return;}',
+'var k=D.me.id;',
 'var picked=[];L.querySelectorAll("input:checked").forEach(function(c){picked.push(c.value);});',
 'if(!picked.length){alert("Tick the shift you cannot work.");return;}',
 'var why=String(document.getElementById("why").value||"").replace(/[|;~]/g," ").trim().slice(0,140);',
@@ -8948,6 +9008,12 @@ for(let i=0;i<keys.length;i++){
 const w=S.weeks[keys[i]];
 if(w && w.swapAsk && w.swapAsk.token===token) return {ws:keys[i], sw:w.swapAsk};
 }
+ 
+for(let i=0;i<keys.length;i++){
+const w=S.weeks[keys[i]];
+if(w && w.swapAsk && w.swapAsk.sec && (S.employees||[]).some(e=>formSeat(w.swapAsk, e.id)===token))
+return {ws:keys[i], sw:w.swapAsk};
+}
 return null;
 }
 function readSwap(ws, code){
@@ -8958,12 +9024,13 @@ try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn’t look li
 const bits=raw.split("|");
 if(bits[0]!=="SW1") return {err:"That’s a code for something else, not a shift being handed back."};
 const sw=swapAsk(ws);
-if(!sw || bits[1]!==sw.token){
+ 
+if(!sw || !bits[1] || bits[1]!==formSeat(sw, bits[2]||"")){
  
 const other=swapAskByToken(bits[1]);
 if(other && other.ws!==ws) return {err:"That code is for the week of "+prettyDate(other.ws)+", not the one you are looking at. Switch to that week and paste it again.", week:other.ws};
 if(!sw) return {err:"You have not sent a hand-back form for this week yet."};
-return {err:"That code is from an earlier form. Ask them to open the newest one you sent."};
+return {err:CODE_NOTYOURS};
 }
 const emp=empById(bits[2]||"");
 if(!emp) return {err:"That code names somebody who is no longer on your roster."};
@@ -9190,10 +9257,12 @@ if(sv) sv.onclick=async()=>{ makeSwapAsk(ws); await saveFile("hand-a-shift-back-
 const ml=r.querySelector("#swmail");
  
  
-if(ml) ml.onclick=()=>{ makeSwapAsk(ws);
-const fn="hand-a-shift-back-"+ws+".html";
+if(ml) ml.onclick=()=>{ const who=swWho();
+if(!who){ toast("Pick whose copy this is first"); return; }
+makeSwapAsk(ws);
+const fn="hand-a-shift-back-"+ws+"-"+swName(who)+".html";
 copyText(handBackEmailText(ws)+"\n\n\u2014\nAttach the file saved alongside this: "+fn);
-Promise.resolve(saveFile(fn, buildSwapFile(ws))).then(ok=>{
+Promise.resolve(saveFile(fn, buildSwapFile(ws, who))).then(ok=>{
 toast(ok===false
 ? "Message copied, but "+fn+" was not saved \u2014 press Save the form and attach it yourself"
 : "Message copied and "+fn+" saved \u2014 attach it before you send"); }); };
@@ -9572,14 +9641,22 @@ modal("Send it out", `
       <div class="help">Two things go to your team: the file, and a message. Save the file, then attach it to an email or drop it in the group chat with the message below.</div>
       <div class="row"><button class="btn primary" id="ofsave">Save the file</button>
         <button class="btn" id="ofmail">Copy the message</button></div>
-      ${handOutRow("ofh")}
+      ${handOutRow("ofh", {per:S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name})),
+perAll:"Everyone \u2014 one copy each",
+perNote:"Every copy carries only that person\u2019s own reply code, so nobody can send a reply in a colleague\u2019s name. Saving or printing with this left on gives you the blank preview, which cannot be replied to."})}
       <div class="field"><label>The message</label><textarea id="oftxt" style="min-height:150px">${esc(offerEmailText(ws))}</textarea></div>
       <div class="help">When replies come back, open <b>Cover the gaps</b> and press <b>Enter a reply code</b>. Codes from this offer carry the tag <span class="mono">${esc(off.token)}</span> \u2014 an older offer\u2019s code won\u2019t be accepted.</div>
     </div>`,
 `<button class="btn" data-close>Done</button><button class="btn" id="ofclaim">Enter a reply code</button>`,
 r=>{
-r.querySelector("#ofsave").onclick=()=>saveFile("shifts-going-spare.html", buildOfferFile(ws));
-wireHandOut(r, "ofh", ()=>({ file: buildOfferFile(ws), title:"Shifts going spare",
+const ofWho=()=>{ const el=r.querySelector("#ofhfor"); return el? el.value : ""; };
+r.querySelector("#ofsave").onclick=()=>{
+const who=ofWho();
+if(!who){ toast("Pick whose copy this is first \u2014 a copy made out to nobody cannot be replied to"); return; }
+const e=empById(who)||{name:""};
+saveFile("shifts-going-spare-"+(String(e.name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"copy")+".html", buildOfferFile(ws, who));
+};
+wireHandOut(r, "ofh", who=>({ file: buildOfferFile(ws, who), title:"Shifts going spare",
 filename:"shifts-going-spare.html",
 what:"the open-shift form", subject:"Shifts going spare", msg:(r.querySelector("#oftxt")||{}).value||offerEmailText(ws) }));
 r.querySelector("#ofmail").onclick=()=>copyText(r.querySelector("#oftxt").value,"Message copied");
@@ -9601,12 +9678,13 @@ let raw="";
 try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn\u2019t look like a reply code \u2014 check it was copied whole."}; }
 const bits=raw.split("|");
 if(bits[0]!=="OS1") return {err:"That\u2019s a code for something else, not an open shift."};
-if(bits[1]!==off.token){
+const who=bits[2]||"";
+ 
+if(!bits[1] || bits[1]!==formSeat(off, who)){
 const other=offerByToken(bits[1]);
 if(other && other.ws!==ws) return {err:"That code is for the week of "+prettyDate(other.ws)+", not the one you are looking at. Switch to that week and paste it again.", week:other.ws};
-return {err:"That code is from an earlier offer. Ask them to open the newest file you sent."};
+return {err:CODE_NOTYOURS};
 }
-const who=bits[2]||"";
 const idx=(bits[3]||"").split(",")
 .filter(x=>/^\d+$/.test(x.trim()))           
 .map(Number);
@@ -10010,6 +10088,8 @@ const TM_PAGE_JS = [
 'var D=JSON.parse(decodeURIComponent(escape(atob("__DATA__"))));',
 'function esc(t){return String(t).replace(/[&<>"\']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;","\'":"&#39;"}[c];});}',
 'document.getElementById("sub").textContent=D.org+(D.site?" \\u00b7 "+D.site:"");',
+ 
+'if(D.me){var nm=document.getElementById("nm"); nm.value=D.me.name; nm.readOnly=true;}',
 'function opts(list,sel){return list.map(function(t,i){return "<option value=\'"+i+"\'"+(i===sel?" selected":"")+">"+esc(t)+"</option>";}).join("");}',
 'var TL=D.times.map(function(t){return t.l;});',
 '/* availability, one row a day */',
@@ -10036,14 +10116,16 @@ const TM_PAGE_JS = [
 ' document.getElementById("licj").innerHTML="<option value=\'\'>Not sure \\u2014 leave it</option>"+D.licJurs.map(function(j){return "<option value=\'"+j.k+"\'"+(j.k===D.licJurDefault?" selected":"")+">"+esc(j.t)+"</option>";}).join("")+"<option value=\'__fed\'>A federal employer \\u2014 VA, IHS, military</option><option value=\'__other\'>Somewhere else</option>";}',
 'document.getElementById("hrs").innerHTML="<option value=\'\'>No preference</option>"+D.hours.map(function(h){return "<option value=\'"+h+"\'>around "+h+" hours a week</option>";}).join("");',
 'document.getElementById("mk").onclick=function(){',
+' if(!D.token){alert("This copy of the form is not made out to anyone, so it cannot produce a reply code. Ask your manager for the copy meant for you.");return;}',
 ' var name=(document.getElementById("nm").value||"").trim();',
 ' if(!name){alert("Please put your name in \\u2014 your manager needs it to match you up.");document.getElementById("nm").focus();return;}',
 ' var av=[];',
 ' for(var i=0;i<7;i++){var ok=AV.querySelector(".dok[data-d=\'"+i+"\']").checked?1:0;',
 '  av.push(ok+"."+AV.querySelector(".df[data-d=\'"+i+"\']").value+"."+AV.querySelector(".dt[data-d=\'"+i+"\']").value);}',
 ' function picked(cls){var o=[];document.querySelectorAll("."+cls+":checked").forEach(function(c){o.push(c.value);});return o.join(".");}',
-' var clean=function(t){return String(t||"").replace(/[|~]/g," ").trim();};',
-' var raw=["TM1",D.token,clean(name),',
+ 
+' var clean=function(t){return String(t||"").replace(/[\\u0000-\\u001f\\u007f]/g," ").replace(/[|~]/g," ").replace(/\\s+/g," ").trim();};',
+' var raw=["TM1",D.token,clean(name).slice(0,60),',
 '   clean(document.getElementById("em").value).slice(0,60),',
 '   clean(document.getElementById("ph").value).slice(0,24),',
 '   picked("rk"), av.join(","), picked("ps"), picked("as"), picked("po"),',
@@ -10063,17 +10145,20 @@ const TM_PAGE_JS = [
  
 const TM_NOTGUARANTEED = "Everything below is a preference, not a promise. Your manager builds the schedule around what the business needs first, so nothing you pick here is agreed, guaranteed or owed to you — and how shifts, posts and rotations are shared out is set by your workplace, not by this form. It just saves your manager typing it all in, and means they know what you would like when there is room to allow it.";
 function makeIntake(){
-S.intake={ token:offerToken(), at:Date.now() };
+S.intake={ token:offerToken(), sec:formSecret(), at:Date.now() };
 logIt("post","Made a starter form for the team");
 save();
 return S.intake;
 }
 function intakeOpen(){ return S.intake||null; }
-function buildIntakeFile(){
+ 
+function buildIntakeFile(empId){
 const T=intakeOpen()||makeIntake();
+const me=empId? empById(empId) : null;
 const lic = !!(S.rules && S.rules.licenses) || S.employees.some(e=>e.licLabel);
 const payload={
-org:S.org.name||"Our team", site:S.org.site||"", token:T.token, lic:lic,
+org:S.org.name||"Our team", site:S.org.site||"", token:formSeat(T, me? me.id : SEAT_NEW),
+me: me? {id:me.id, name:me.name} : null, lic:lic,
 licKinds: LIC_TYPES.map(t=>({k:t.k, t:t.t})),
 licJurs: Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)).map(k=>({k:k, t:LIC_DIR[k].n})),
 licJurDefault: (LIC_DIR[S.org.jurisdiction||""]? S.org.jurisdiction : ""),
@@ -10115,7 +10200,7 @@ return ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
 '<h1>About you</h1><div class="sub" id="sub"></div>',
 '<div class="note"><b>Before you start.</b> '+esc(TM_NOTGUARANTEED)+'</div>',
 '<div class="card"><div class="step">Who you are</div>',
-'<label class="f">Your name</label><input type="text" id="nm" placeholder="First Last">',
+'<label class="f">Your name</label><input type="text" id="nm" maxlength="60" placeholder="First Last">',
 '<label class="f">Email (optional)</label><input type="email" id="em" placeholder="name@example.com">',
 '<label class="f">Mobile (optional)</label><input type="tel" inputmode="tel" id="ph" placeholder="(555) 010-0100">',
 '<div class="hint" style="margin-top:10px">Contact details are only used to send you your schedule. Leave them blank if you would rather your manager used what they already have.</div></div>',
@@ -10167,9 +10252,20 @@ let raw="";
 try{ raw=b64d((code||"").trim()); }catch(e){ return {err:"That doesn’t look like a reply code — check it was copied whole."}; }
 const f=raw.split("|");
 if(f[0]!=="TM1") return {err:"That’s a code for something else, not a starter form."};
-if(f[1]!==T.token) return {err:"That code is from an earlier form. Ask them to open the newest one you sent."};
-const name=(f[2]||"").trim();
+ 
+const name=String(f[2]||"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,60);
 if(!name) return {err:"That code has no name on it."};
+ 
+const named=S.employees.find(e=>e.name.trim().toLowerCase()===name.toLowerCase());
+let bound=null;
+if(f[1] && f[1]===formSeat(T, SEAT_NEW)) bound=null;
+else {
+ 
+const owner=f[1]? S.employees.find(e=>f[1]===formSeat(T, e.id)) : null;
+if(!owner) return {err:CODE_NOTYOURS};
+bound=owner;
+}
+if(!bound && named) return {err:"That reply came back on a blank starter form but names "+named.name+", who is already on your roster. Send "+named.name+" the copy made out to them and read that one instead — a blank form cannot change somebody’s details."};
 const times=askTimes();
 const idx=s=>(s||"").split(".").filter(x=>/^\d+$/.test(x)).map(Number);
  
@@ -10189,7 +10285,8 @@ const licAll=(f[12]||"").split(".");
 const licBits=(licAll.length>=4)
 ? [licAll.slice(0, licAll.length-3).join(" "), licAll[licAll.length-3], licAll[licAll.length-2], licAll[licAll.length-1]]
 : licAll;
-const existing=S.employees.find(e=>e.name.trim().toLowerCase()===name.toLowerCase());
+ 
+const existing=bound;
 return { name, existing:existing||null,
 email:(f[3]||"").trim(), phone:(f[4]||"").trim(),
 roles:pick(f[5], S.roles), avail:av.slice(0,7),
@@ -10212,7 +10309,10 @@ modal("Starter form", `
       <div class="field"><label>The message to go with it</label>
         <textarea id="tmmsg" style="min-height:150px">${esc(intakeMessageText())}</textarea>
         <span class="mini">Edit it however you like — it is only text.</span></div>
-      <div class="field"><label>Getting it to your team</label>${handOutRow("tmh")}</div>
+      <div class="field"><label>Getting it to your team</label>${handOutRow("tmh", {
+per:S.employees.filter(e=>e.active).map(e=>({id:e.id, name:e.name})),
+perAll:"Somebody new \u2014 not on the roster yet",
+perNote:"A copy made out to somebody may update that one person and nobody else. The copy for somebody new can only ADD a person \u2014 it cannot change the details of anyone already on your roster."})}</div>
     </div>`,
 `<button class="btn" data-close>Close</button>
      <button class="btn" id="tmread">Read a reply</button>
@@ -10220,12 +10320,14 @@ modal("Starter form", `
 r=>{
 r.querySelector("#tmmake").onclick=async ()=>{
 if(!intakeOpen()) makeIntake();
-await saveFile("about-you.html", buildIntakeFile());
+const who=(r.querySelector("#tmhfor")||{}).value||"";
+const e=who? empById(who) : null;
+await saveFile("about-you"+(e? "-"+(String(e.name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"copy") : "")+".html", buildIntakeFile(who));
 toast("Form downloaded — send it however your team already hears from you");
 render();
 };
  
-wireHandOut(r, "tmh", ()=>({ file: intakeOpen()? buildIntakeFile() : "", title:"About you",
+wireHandOut(r, "tmh", who=>({ file: intakeOpen()? buildIntakeFile(who) : "", title:"About you",
 filename:"about-you.html",
 make:()=>{ makeIntake(); },
 what:"the starter form", subject:"A few details for the schedule",
@@ -10522,8 +10624,16 @@ function withEmail(){ return S.employees.filter(e=>e.active && (e.email||"").tri
 function withPhone(){ return S.employees.filter(e=>e.active && (e.phone||"").trim()); }
  
 function handOutRow(id, opts){
+opts=opts||{};
 const em=withEmail().length, ph=withPhone().length;
-return `<div class="row" style="gap:6px;flex-wrap:wrap">
+const per = opts.per? `<div class="field"><label>Who this copy is for</label>
+      <select id="${id}for">
+        <option value="">${esc(opts.perAll||"Everyone \u2014 one copy each")}</option>
+        ${opts.per.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("")}
+      </select>
+      <span class="mini">${esc(opts.perNote||"Each copy carries only that person\u2019s own reply code, so a reply can only ever speak for the person it was sent to.")}</span>
+    </div>` : "";
+return per+`<div class="row" style="gap:6px;flex-wrap:wrap">
       <button class="btn sm" id="${id}open">See the form</button>
       <button class="btn sm" id="${id}print">Print it to hand out</button>
       <button class="btn sm" id="${id}copy">Copy the message</button>
@@ -10536,10 +10646,19 @@ return `<div class="row" style="gap:6px;flex-wrap:wrap">
 function wireHandOut(root, id, get){
 const q=x=>root.querySelector("#"+id+x);
  
-const need=()=>{ let g=get();
-if(!g.file && typeof g.make==="function"){ g.make(); g=get(); }
+const forId=()=>{ const el=q("for"); return el? el.value : ""; };
+ 
+const need=(who)=>{ const w=(who===undefined? forId() : who);
+let g=get(w);
+if(!g.file && typeof g.make==="function"){ g.make(); g=get(w); }
 if(!g.file){ toast("There is nothing to send yet"); return null; }
 return g; };
+ 
+const fileFor=(e, g)=>{
+const base=(g.filename||"weeksolved-form.html").replace(/\.html$/,"");
+const tag=String(e.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,24);
+return base+(tag? "-"+tag : "")+".html";
+};
 const O=q("open"); if(O) O.onclick=()=>{ const g=need(); if(!g) return; openDoc(g.file, g.title); };
 const P=q("print"); if(P) P.onclick=()=>{ const g=need(); if(!g) return;
  
@@ -10548,31 +10667,48 @@ const C=q("copy"); if(C) C.onclick=()=>{ const g=need(); if(!g) return;
 copyText(g.msg||"", "Copied \u2014 paste it wherever you like"); };
  
  
-const M=q("mail"); if(M) M.onclick=()=>{ const g=need(); if(!g) return;
-const fn=g.filename||"weeksolved-form.html";
-mailOutAndSay({to:withEmail().map(e=>e.email.trim()), subject:g.subject||"A form to fill in",
+ 
+const M=q("mail"); if(M) M.onclick=()=>{
+const who=forId();
+const list=who? withEmail().filter(e=>e.id===who) : withEmail();
+if(!list.length){ toast(who? "That person has no email address on file" : "No email addresses on file"); return; }
+if(!need(list[0].id)) return;
+let i=0;
+const next=()=>{
+if(i>=list.length) return;
+const e=list[i++];
+const g=get(e.id);
+if(g.file){
+const fn=fileFor(e, g);
+mailOutAndSay({to:[e.email.trim()], subject:g.subject||"A form to fill in",
 body:(g.msg||"")+"\n\n\u2014\nAttach the file your browser saves alongside this: "+fn,
 kind:"note"}, g.what||"A form");
 Promise.resolve(saveFile(fn, g.file)).then(ok=>{
 toast(ok===false
-? "The email is open, but "+fn+" was not saved \u2014 press \u201cSee the form\u201d and save it yourself, then attach it"
-: fn+" saved \u2014 attach it to the email that just opened");
+? "The email to "+e.name+" is open, but "+fn+" was not saved \u2014 press \u201cSee the form\u201d and save it yourself, then attach it"
+: fn+" saved \u2014 attach it to the email to "+e.name);
 });
+}
+if(i<list.length) setTimeout(next, 1200);
 };
-const T=q("text"); if(T) T.onclick=()=>{ const g=need(); const list=withPhone();
-if(!g) return;
-if(!list.length){ toast("No mobile numbers on file"); return; }
+next();
+};
+const T=q("text"); if(T) T.onclick=()=>{
+const who=forId();
+const list=who? withPhone().filter(e=>e.id===who) : withPhone();
+if(!list.length){ toast(who? "That person has no mobile number on file" : "No mobile numbers on file"); return; }
+if(!need(list[0].id)) return;
  
-const fn=g.filename||"weeksolved-form.html";
 let i=0; const next=()=>{ if(i>=list.length){ toast("That's everyone"); return; }
 const e=list[i++];
+const g=get(e.id);
 window.open("sms:"+e.phone.replace(/[^0-9+]/g,"")+"?&body="+encodeURIComponent(g.msg||""));
 toast("Opened "+e.name+" \u2014 "+(list.length-i)+" to go");
+ 
+if(g.file) Promise.resolve(saveFile(fileFor(e, g), g.file)).then(ok=>{
+if(ok===false) toast("That copy was not saved \u2014 press \u201cSee the form\u201d and save it yourself"); });
 if(i<list.length) setTimeout(next, 1200); };
 next();                        
- 
-Promise.resolve(saveFile(fn, g.file)).then(ok=>{
-if(ok===false) toast(fn+" was not saved \u2014 press \u201cSee the form\u201d and save it yourself"); });
 };
 }
 function licChaseText(e){
@@ -23463,6 +23599,18 @@ keys.map(k=>buildReport(k, from, to, O)).join("")+
  
  
 function mailServerReady(){ return !!(S.mail && S.mail.mode==="server" && (S.mail.endpoint||"").trim()); }
+ 
+function mailSendHost(){
+const u=(typeof MAILAPI==="string" && MAILAPI)? MAILAPI : ((S.mail&&S.mail.endpoint)||"");
+try{ return new URL(String(u)).host; }
+catch(e){ return String(u||"").replace(/^[a-z]+:\/\//i,"").split("/")[0]; }
+}
+ 
+function mailHostOk(url){
+if(typeof MAILAPI!=="string" || !MAILAPI) return false;
+try{ return new URL(String(url)).origin === new URL(MAILAPI).origin; }
+catch(e){ return false; }
+}
 function mailFromName(){ return (S.org.name||"Weeksolved").slice(0,60); }
 function mailReplyTo(){
 return ((S.mail&&S.mail.replyTo)||"").trim() || ((FB&&FB.user&&FB.user.email)||"").trim() || "";
@@ -23498,6 +23646,10 @@ const names=to.map(x=>{ const e=(S.employees||[]).find(p=>String(p.email||"").tr
 modal("Send this to "+to.length+" "+(to.length===1?"person":"people")+"?", `
         <div class="stack">
           <div class="help"><b>To:</b> ${esc(names.slice(0,12).join(", "))}${names.length>12? " and "+(names.length-12)+" more":""}</div>
+          <!-- Where it goes, not only who it goes to. The sending address is on
+               no other screen in the app, so until this line existed nothing the
+               manager could read would have contradicted a wrong one. -->
+          <div class="help"><b>Through:</b> ${esc(mailSendHost()||"your own mail app")}</div>
           <div class="field"><label>Subject</label><div class="mini" style="font-size:13px">${esc(msg.subject||"")}</div></div>
           <div class="field"><label>Message</label><pre class="mini" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:0;font:inherit">${esc(String(msg.body||"").slice(0,1200))}${String(msg.body||"").length>1200? "\u2026":""}</pre></div>
         </div>`,
@@ -23510,10 +23662,17 @@ obs.observe(r,{childList:true}); });
 });
 if(!ok) return {sent:0, failed:[], via:"cancelled", why:"you cancelled it"};
 }
+ 
+if(!mailHostOk((S.mail&&S.mail.endpoint)||"")){
+S.mail.lastErr="the sending address on this board is not Weeksolved\u2019s own, so nothing was sent";
+save();
+return {sent:0, failed:to, via:"server", why:S.mail.lastErr};
+}
 let token="";
 try{ token = FB && FB.user? await FB.user.getIdToken() : ""; }catch(e){}
 try{
-const res=await fetch(S.mail.endpoint.replace(/\/+$/,"")+"/send", {
+ 
+const res=await fetch(MAILAPI.replace(/\/+$/,"")+"/send", {
 method:"POST",
 headers:{"Content-Type":"application/json", "Authorization":"Bearer "+token},
 body:JSON.stringify({
@@ -27559,6 +27718,8 @@ if(i<1) return {body:t, checked:false, ok:true};
 const body=t.slice(0,i), got=t.slice(i+1).toLowerCase();
 return {body:body, checked:true, ok:(ck2(body)===got)};
 }
+ 
+const CODE_NOTYOURS="That code was not made on the copy of the form that person was sent. If the form has been remade since, ask them to fill in the newest copy \u2014 and if it has not, the reply did not come from the person it names.";
 const CODE_TYPO="There is a typo in that code \u2014 one character is wrong or missing. Ask them to send it again, and paste the whole thing rather than typing it.";
 function b64e(s){ return btoa(unescape(encodeURIComponent(s))).replace(/=+$/,""); }
 function b64d(s){ return decodeURIComponent(escape(atob(s.replace(/\s+/g,"")))); }
@@ -29170,7 +29331,8 @@ limit=74;
 }
 return parts.join("\r\n ");
 }
-function icsEsc(x){ return String(x||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+ 
+function icsEsc(x){ return String(x||"").replace(/\r\n?/g,"\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g," ").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
  
 const REMIND_KINDS = [
 {k:"lic",  t:"A license or certification running out",
