@@ -52,6 +52,8 @@ header.top{display:flex;align-items:center;gap:10px;padding:18px 0}
 nav.hn{margin-left:auto;display:flex;gap:18px;align-items:center}
 nav.hn a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:13.5px;display:inline-block;padding:11px 2px}
 nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:9px;padding:9px 16px}
+/* A phone header has room for the brand and one way in, and no more. */
+@media (max-width:760px){ nav.hn a.lg,nav.hn .sep{display:none} }
 .hero{text-align:center;padding:44px 0 10px}
 h1{font-size:clamp(28px,5.4vw,44px);letter-spacing:-.025em;line-height:1.12;margin:0 0 14px;text-wrap:balance}
 .hero p{color:var(--muted);font-size:17px;max-width:60ch;margin:0 auto 24px}
@@ -91,7 +93,7 @@ footer a{white-space:nowrap;display:inline-block;padding:6px 0}
   <header class="top">
     <div class="mark">WS</div><div class="brand">Weeksolved</div>
     <nav class="hn">
-      <a href="/pricing.html">Pricing</a>&nbsp;· <a href="/compare.html">How we compare</a>
+      <a class="lg" href="/pricing.html">Pricing</a><span class="sep">&nbsp;·&nbsp;</span><a class="lg" href="/compare.html">How we compare</a>
       <a class="go" href="/app.html">Open the app</a>
     </nav>
   </header>

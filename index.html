@@ -89,6 +89,7 @@ nav.hn a:hover{color:var(--accent)}
 nav.hn a.go{background:var(--accent);color:var(--on-accent);border-radius:10px;padding:10px 18px;transition:transform .12s}
 nav.hn a.go:hover{transform:translateY(-1px);color:var(--on-accent)}
 nav.hn a.go-invite{display:none}
+nav.hn .sm{display:none}
 
 /* hero */
 .hero{position:relative;padding:72px 0 30px;overflow:hidden}
@@ -188,13 +189,20 @@ footer a:hover{color:var(--accent)}
   .duo{grid-template-columns:1fr}
   .phone{max-width:230px}
   section{padding:46px 0}
-  nav.hn a:not(.go-invite){display:none}
+  nav.hn a:not(.go-invite):not(.go-app){display:none}
+  nav.hn .sep,nav.hn .the{display:none}
   nav.hn a.go-invite{display:inline-block}
+  nav.hn a.go-app{background:none;color:var(--ink2);padding:11px 2px;font-weight:600}
+  nav.hn a.go-app:hover{background:none;color:var(--accent);transform:none}
 }
 @media (max-width:420px){
   .brand{font-size:17px}
   nav.hn a.go{padding:9px 14px;font-size:13.5px}
-  .topin{gap:9px}
+  nav.hn a.go-app{padding:9px 2px}
+  nav.hn .lg{display:none}
+  nav.hn .sm{display:inline}
+  .topin{gap:9px;flex-wrap:wrap;row-gap:0}
+  .wrap{padding:0 16px}
 }
 footer a{white-space:nowrap;display:inline-block;padding:8px 0}
 </style>
@@ -205,9 +213,9 @@ footer a{white-space:nowrap;display:inline-block;padding:8px 0}
   <nav class="hn">
     <a href="#features">Features</a>
     <a href="#compliance">Compliance</a>
-    <a href="/pricing.html">Pricing</a>&nbsp;· <a href="/compare.html">How we compare</a>
-    <a class="go" href="/app.html">Open the app</a>
-    <a class="go go-invite" href="/contact.html">Ask for an invite</a>
+    <a href="/pricing.html">Pricing</a><span class="sep">&nbsp;·&nbsp;</span><a href="/compare.html">How we compare</a>
+    <a class="go go-app" href="/app.html">Open&nbsp;<span class="the">the&nbsp;</span>app</a>
+    <a class="go go-invite" href="/contact.html"><span class="lg">Ask for an&nbsp;</span><span class="sm">Get an&nbsp;</span>invite</a>
   </nav>
 </div></header>
 
