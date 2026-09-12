@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 36e4e310 2026-09-12 01:46 UTC -->
+<!-- build c32d5d48 2026-09-12 04:56 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1384,7 +1384,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   /* and anything else that leaves the page dead is caught by the clock */
   setTimeout(function(){ if(stuck()) window.bootFail(); }, 15000);
   function fatal(msg){
-    if(!/firebase is not defined|Can't find variable: firebase|firebase.*undefined/i.test(msg||"")) return;
+    if(!/firebase is not defined|Can't find variable: firebase|firebase.*undefined|supabase is not defined|Can't find variable: supabase|supabase.*undefined/i.test(msg||"")) return;
     window.bootFail("Weeksolved could not reach the sign-in service");
   }
   window.addEventListener("error", function(ev){ fatal((ev && ev.message)||""); });
@@ -2111,12 +2111,31 @@ toast("That backup would not open \u2014 your board has been left as it was");
 }
 
  
+ 
+let LEGACY_FROM="";
 function legacyBoard(){
+LEGACY_FROM="";
 try{
-const r=localStorage.getItem(LSKEY); if(!r) return null;
-const d=JSON.parse(r);
-return (d && !d._uid) ? d : null;
-}catch(e){ return null; }
+const r=localStorage.getItem(LSKEY);
+if(r){ const d=JSON.parse(r); if(d && !d._uid){ LEGACY_FROM=LSKEY; return d; } }
+}catch(e){}
+ 
+if(BACKEND==="supabase"){
+try{
+let best=null, bestKey="";
+for(let i=0;i<localStorage.length;i++){
+const k=localStorage.key(i)||"";
+if(k.indexOf(LSKEY+":")!==0) continue;
+if(LS_UID && k===LSKEY+":"+LS_UID) continue;      
+let d=null;
+try{ d=JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ continue; }
+if(!d || d.v!==3 || !Array.isArray(d.employees)) continue;
+if(!best || (+d._at||0) > (+best._at||0)){ best=d; bestKey=k; }
+}
+if(best){ LEGACY_FROM=bestKey; return best; }
+}catch(e){}
+}
+return null;
 }
 function dropLegacy(){ try{ localStorage.removeItem(LSKEY); localStorage.removeItem(LSKEY_OLD); }catch(e){} }
  
@@ -2741,6 +2760,16 @@ inp.focus();
  
 const CLOUD = {"apiKey":"AIzaSyD5BrMfKjRf0mzdjaj7tlohjYqqaTKGEao","authDomain":"weeksolved.com","projectId":"weeksolved-54472","storageBucket":"weeksolved-54472.firebasestorage.app","messagingSenderId":"332039926756","appId":"1:332039926756:web:f5a561eb23d2783eb78df1"};
  
+const BACKEND = "firebase";
+const SUPA_URL = "https://yduidkxzfsoiwehtqefc.supabase.co";
+ 
+const SUPA_KEY = "sb_publishable_pWE6-OHdeOAPSJvDu3J12w_buoRlvWQ";
+ 
+const FOUNDER_UID = "";
+let SB = null;             
+let SB_ACCESS = null;      
+
+ 
 const GOOGLE_SIGNIN = true;
  
 const APPCHECK_KEY = "";
@@ -2793,16 +2822,18 @@ const rec={ v:String(NDA_VERSION), hash:"nda", at:Date.now(),
 ua:String(navigator.userAgent||"").slice(0,200) };
 try{ localStorage.setItem(scopedKey(NDAKEY), JSON.stringify(rec)); }catch(e){}
 try{
-if(FB && FB.user && FB.db)
-FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+if(FB && FB.user && FB.db){
+if(BACKEND==="supabase") cloudTermsPut(FB.user.uid, rec);
+else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+}
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "36e4e310";       
-const BUILD_AT = "2026-09-12 01:46 UTC";       
-const TERMS_VERSION = "2";                  
-const TERMS_HASH = "39fc560cb6de5e34";
-const TERMS_DATE = "September 11, 2026";
+const BUILD_ID = "c32d5d48";       
+const BUILD_AT = "2026-09-12 04:56 UTC";       
+const TERMS_VERSION = "3";                  
+const TERMS_HASH = "61c8a68f59ff3c73";
+const TERMS_DATE = "September 12, 2026";
 const TERMSKEY = "ws.terms";
  
 const PWKEY = "ws.pwset";
@@ -2813,14 +2844,25 @@ function termsCurrent(){
 const a=termsAccepted();
 return !!(a && String(a.v)===String(TERMS_VERSION));
 }
+ 
+function cloudTermsPut(uid, rec){
+try{
+return SB.from("terms_acceptances")
+.insert({uid:uid, v:String(rec.v||""), hash:String(rec.hash||""),
+ua:String(rec.ua||"").slice(0,200), at:+rec.at||Date.now()})
+.then(()=>{}, ()=>{});
+}catch(e){ return Promise.resolve(); }
+}
 function recordTermsAccept(){
 const rec={ v:String(TERMS_VERSION), hash:String(TERMS_HASH||""), at:Date.now(),
 ua:String(navigator.userAgent||"").slice(0,200) };
 try{ localStorage.setItem(scopedKey(TERMSKEY), JSON.stringify(rec)); }catch(e){}
  
 try{
-if(FB && FB.user && FB.db)
-FB.db.doc("users/"+FB.user.uid+"/terms/"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+if(FB && FB.user && FB.db){
+if(BACKEND==="supabase") cloudTermsPut(FB.user.uid, rec);
+else FB.db.doc("users/"+FB.user.uid+"/terms/"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+}
 }catch(e){}
 return rec;
 }
@@ -2878,7 +2920,358 @@ try{ signOutClean(); }
 catch(e){ location.reload(); }
 };
 }
-function cloudOn(){ return !!(CLOUD && CLOUD.apiKey && window.firebase); }
+ 
+
+ 
+function sbReturnUrl(){
+try{ return location.origin + location.pathname; }catch(e){ return ""; }
+}
+ 
+function sbSaySafe(t){
+return String(t==null? "" : t)
+.replace(/[\u0000-\u001f\u007f]+/g," ")
+.replace(/\s+/g," ")
+.trim()
+.slice(0,300);
+}
+ 
+function sbAuthErr(e){
+const raw=sbSaySafe((e&&(e.message||e.error_description))||"");
+const m=raw.toLowerCase();
+let code="";
+if(/already registered|already been registered|user already exists/.test(m)) code="auth/email-already-in-use";
+else if(/invalid login|invalid credential|email or password/.test(m)) code="auth/invalid-credential";
+else if(/password should be|password is too short|weak password/.test(m)) code="auth/weak-password";
+else if(/unable to validate email|invalid email|valid email address/.test(m)) code="auth/invalid-email";
+else if(/rate limit|too many|for security purposes/.test(m)) code="auth/too-many-requests";
+else if(/failed to fetch|network|offline/.test(m)) code="auth/network-request-failed";
+else if(/not enabled|provider is not enabled/.test(m)) code="auth/operation-not-allowed";
+return {code:code, message:raw||"Something went wrong — try again."};
+}
+ 
+function sbUserShim(u){
+if(!u) return null;
+const email=String(u.email||"");
+const provs=[];
+try{
+(u.identities||[]).forEach(i=>{
+const p=String((i&&i.provider)||"");
+provs.push(p==="google"? "google.com" : p==="email"? "password" : p);
+});
+}catch(e){}
+if(!provs.length) provs.push((u.app_metadata && u.app_metadata.provider==="google")? "google.com" : "password");
+return {
+uid:String(u.id||""),
+email:email,
+emailVerified:!!(u.email_confirmed_at||u.confirmed_at),
+providerData:provs.map(p=>({providerId:p, email:email})),
+ 
+sendEmailVerification:async()=>{},
+linkWithPopup:async()=>{
+const {error}=await SB.auth.linkIdentity({provider:"google", options:{redirectTo:sbReturnUrl()}});
+if(error) throw sbAuthErr(error);
+},
+ 
+delete:async()=>{ throw {message:"The sign-in itself is removed by hand, within 24 hours."}; }
+};
+}
+function sbAuthShim(){
+return {
+currentUser:null,
+signOut:()=>SB.auth.signOut().catch(()=>{}),
+signInWithEmailAndPassword:async(email,pass)=>{
+const {data,error}=await SB.auth.signInWithPassword({email:String(email||"").trim(), password:pass});
+if(error) throw sbAuthErr(error);
+return {user:sbUserShim(data && data.user)};
+},
+createUserWithEmailAndPassword:async(email,pass)=>{
+const {data,error}=await SB.auth.signUp({email:String(email||"").trim(), password:pass,
+options:{emailRedirectTo:sbReturnUrl()}});
+if(error) throw sbAuthErr(error);
+ 
+if(!(data && data.session)) throw {message:"Check your email and confirm the address, then sign in and enter your code."};
+return {user:sbUserShim(data.user)};
+},
+sendPasswordResetEmail:async(email)=>{
+const {error}=await SB.auth.resetPasswordForEmail(String(email||"").trim(), {redirectTo:sbReturnUrl()});
+if(error) throw sbAuthErr(error);
+},
+ 
+isSignInWithEmailLink:(href)=>{
+const m=/[?&]wsdev=([^&#]*)/.exec(String(href||""));
+if(!m) return false;
+try{ return decodeURIComponent(m[1])===deviceId(); }catch(e){ return false; }
+},
+sendSignInLinkToEmail:async(email, opts)=>{
+const base=(opts && opts.url) || sbReturnUrl();
+const url=base+(base.indexOf("?")>=0? "&":"?")+"wsdev="+encodeURIComponent(deviceId());
+const {error}=await SB.auth.signInWithOtp({email:String(email||"").trim(),
+options:{emailRedirectTo:url, shouldCreateUser:false}});
+if(error) throw sbAuthErr(error);
+}
+};
+}
+
+ 
+function sbAccessRow(r){
+const num=v=>{ const n=+v; return isFinite(n)? n : 0; };
+const ms=v=>{
+if(v==null || v==="") return 0;
+if(typeof v==="number") return v<1e11? Math.round(v*1000) : Math.round(v);
+const t=Date.parse(v); return isFinite(t)? t : 0;
+};
+const plan=String(r.plan||"").toLowerCase();
+return {
+allowed: (r.allowed==null)? true : !!r.allowed,
+life: !!(r.life || r.lifetime || plan==="lifetime" || plan==="founder"),
+days: num(r.days || r.trial_days) || 30,
+extra: num(r.extra_days || r.extra),
+from: ms(r.activated || r.activated_at || r.started_at || r.created_at),
+until: ms(r.expires_at || r.expires || r.until),
+codeId: String(r.code_id || r.codeId || r.code || r.label || ""),
+email: String(r.email||"")
+};
+}
+async function sbAccess(){
+const {data,error}=await SB.rpc("my_access");
+if(error) throw error;
+const row=Array.isArray(data)? (data[0]||null) : (data||null);
+SB_ACCESS = row? sbAccessRow(row) : null;
+return SB_ACCESS;
+}
+ 
+function sbProfileFromAccess(a){
+const DAY=86400000;
+let days=a.days+a.extra;
+if(a.until && a.from) days=Math.max(1, Math.round((a.until-a.from)/DAY));
+return {codeId:a.codeId, days:days, life:a.life, activated:a.from, email:a.email};
+}
+
+ 
+async function sbRedeem(code){
+let tok="";
+try{ const {data}=await SB.auth.getSession(); tok=(data && data.session && data.session.access_token)||""; }catch(e){}
+if(!tok) throw {message:"You are no longer signed in. Sign in again and enter your code."};
+let res=null;
+try{
+res=await fetch(SUPA_URL+"/functions/v1/redeem", {
+method:"POST",
+headers:{"Content-Type":"application/json", "apikey":SUPA_KEY, "Authorization":"Bearer "+tok},
+body:JSON.stringify({code:codeCanon(code)})
+});
+}catch(e){ throw {message:"No connection. Try again when you’re back online."}; }
+let raw=""; try{ raw=await res.text(); }catch(e){}
+let body=null; try{ body=raw? JSON.parse(raw) : null; }catch(e){}
+if(!res.ok){
+const said=sbSaySafe((body && (body.error||body.message)) || raw);
+throw {message: said || "That code could not be used. Check it and try again."};
+}
+return body||{};
+}
+
+ 
+async function sbBoardGet(uid){
+const {data,error}=await SB.from("boards").select("doc,seq,at,by").eq("uid",uid).maybeSingle();
+if(error) throw error;
+return data||null;
+}
+async function sbBoardPut(uid, doc, seq, by){
+const {error}=await SB.from("boards")
+.upsert({uid:uid, doc:doc, seq:seq, at:Date.now(), by:by}, {onConflict:"uid"});
+if(error) throw error;
+}
+async function sbWeeksGet(uid){
+const {data,error}=await SB.from("weeks").select("ws,doc").eq("uid",uid);
+if(error) throw error;
+return data||[];
+}
+ 
+async function sbWeekPut(uid, ws, doc){
+const {error}=await SB.from("weeks")
+.upsert({uid:uid, ws:ws, doc:doc, at:Date.now()}, {onConflict:"uid,ws"});
+if(error) throw error;
+}
+async function sbWeekDel(uid, ws){
+const {error}=await SB.from("weeks").delete().eq("uid",uid).eq("ws",ws);
+if(error) throw error;
+}
+
+ 
+async function sbDeviceTouch(uid){
+const id=deviceId();
+let first=0;
+try{
+const {data}=await SB.from("devices").select("first_at").eq("uid",uid).eq("id",id).maybeSingle();
+first=(data && +data.first_at)||0;
+}catch(e){}
+const row={uid:uid, id:id, label:deviceLabel(), place:deviceWhere(), last_at:Date.now()};
+ 
+if(!first) row.first_at=Date.now();
+const {error}=await SB.from("devices").upsert(row, {onConflict:"uid,id"});
+if(error) throw error;
+}
+async function sbDeviceList(uid){
+const {data,error}=await SB.from("devices").select("id,label,place,first_at,last_at,ok").eq("uid",uid);
+if(error) throw error;
+return (data||[]).map(d=>({id:d.id, label:d.label||"", where:d.place||"",
+first:+d.first_at||0, last:+d.last_at||0, ok:!!d.ok}));
+}
+async function sbDeviceDel(uid, id){
+const {error}=await SB.from("devices").delete().eq("uid",uid).eq("id",id||deviceId());
+if(error) throw error;
+}
+async function sbKickGet(uid){
+const {data,error}=await SB.from("kicks").select("at,keep").eq("uid",uid).maybeSingle();
+if(error) throw error;
+return data||null;
+}
+ 
+function cloudKickSet(uid){
+if(BACKEND==="supabase")
+return SB.from("kicks").upsert({uid:uid, at:Date.now(), keep:deviceId()}, {onConflict:"uid"})
+.then(r=>{ if(r.error) throw r.error; });
+return FB.db.doc("users/"+uid+"/meta/kick").set({at:Date.now(), keep:deviceId()});
+}
+function cloudDeviceTrust(uid){
+if(BACKEND==="supabase")
+return SB.from("devices").upsert({uid:uid, id:deviceId(), label:deviceLabel(), place:deviceWhere(),
+last_at:Date.now(), ok:true, ok_at:Date.now()}, {onConflict:"uid,id"})
+.then(r=>{ if(r.error) throw r.error; }).catch(()=>{});
+return FB.db.doc("users/"+uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true});
+}
+
+ 
+function sbWatchRow(table, uid, fetchOne, onRow, everyMs){
+let live=null;
+try{
+live=SB.channel("ws:"+table+":"+uid)
+.on("postgres_changes", {event:"*", schema:"public", table:table, filter:"uid=eq."+uid},
+p=>{ try{ onRow((p && p.new) || null); }catch(e){} })
+.subscribe();
+}catch(e){ live=null; }
+const timer=setInterval(()=>{
+try{ fetchOne().then(r=>{ if(r) onRow(r); }).catch(()=>{}); }catch(e){}
+}, everyMs||60000);
+return ()=>{
+try{ if(live) SB.removeChannel(live); }catch(e){}
+try{ clearInterval(timer); }catch(e){}
+};
+}
+
+ 
+async function sbReportPut(uid, rec, rid){
+if(rid){
+const {error}=await SB.from("reports")
+.update({seen:rec.seen||1, note:rec.note, ctx:rec.ctx, at:rec.at})
+.eq("id",rid).eq("uid",uid);
+if(error) throw error;
+return rid;
+}
+const {data,error}=await SB.from("reports")
+.insert(Object.assign({uid:uid}, rec)).select("id").maybeSingle();
+if(error) throw error;
+return (data && data.id) || "";
+}
+ 
+function cloudReportsAll(){
+if(BACKEND==="supabase")
+return SB.from("reports").select("*").eq("uid", FB.user.uid)
+.then(r=>{ if(r.error) throw r.error; return r.data||[]; });
+return FB.db.collection("reports").get()
+.then(snap=>{ const reps=[]; (snap.docs||[]).forEach(d=>reps.push(d.data()||{})); return reps; });
+}
+ 
+async function cloudTermsRows(uid){
+if(BACKEND==="supabase"){
+try{
+const {data,error}=await SB.from("terms_acceptances").select("v,hash,ua,at").eq("uid",uid);
+if(error) throw error;
+return data||[];
+}catch(e){ return []; }
+}
+try{
+const t=await FB.db.collection("users/"+uid+"/terms").get();
+return (t.docs||[]).map(d=>d.data()||{});
+}catch(e){ return []; }
+}
+
+ 
+function bringAcrossAvailable(){
+return !!(BACKEND==="supabase" && typeof firebase!=="undefined" && firebase
+&& firebase.initializeApp && CLOUD && CLOUD.apiKey);
+}
+async function bringAcrossFetch(email, pass){
+if(!bringAcrossAvailable()) throw {message:"The previous sign-in is not part of this build."};
+let oa=null, od=null;
+try{
+if(!(firebase.apps && firebase.apps.length)) firebase.initializeApp(CLOUD);
+oa=firebase.auth(); od=firebase.firestore();
+}catch(e){ throw {message:"The previous sign-in could not be started."}; }
+const cred=await oa.signInWithEmailAndPassword(String(email||"").trim(), pass);
+const ouid=cred.user.uid;
+try{
+const b=await od.doc("users/"+ouid+"/board/current").get();
+if(!b.exists || !(b.data()||{}).json) throw {message:"There is nothing saved under that sign-in."};
+const d=b.data();
+const core=JSON.parse(d.json);
+if(d.split){
+core.weeks={};
+const ws=await od.collection("users/"+ouid+"/weeks").get();
+(ws.docs||[]).forEach(x=>{ try{ const j=(x.data()||{}).json; if(j) core.weeks[x.id]=JSON.parse(j); }catch(e){} });
+}
+return core;
+} finally { try{ await oa.signOut(); }catch(e){} }
+}
+function bringAcrossModal(done){
+modal("Bring your schedules across", `
+    <div class="stack">
+      <div class="banner info"><div>Weeksolved has moved to a new account service. If you were testing before the move,
+        sign in once with your <b>previous</b> email and password and everything you had comes across to this account.</div></div>
+      <div class="field"><label>Previous email</label><input type="email" id="bxmail" autocomplete="username"></div>
+      <div class="field"><label>Previous password</label><input type="password" id="bxpass" autocomplete="current-password"></div>
+      <div class="help">This reads your old schedules once and copies them here. Nothing is changed or deleted on the old
+        account, and you are not asked again — the move only happens in one direction.</div>
+      <div id="bxerr"></div>
+    </div>`,
+`<button class="btn" id="bxno">Not now</button>
+     <button class="btn primary" id="bxgo">Bring them across</button>`,
+r=>{
+const err=t=>{ const e=r.querySelector("#bxerr");
+if(e) e.innerHTML = t? '<div class="banner crit"><div>'+esc(t)+'</div></div>' : ""; };
+let settled=false;
+const finish=v=>{ if(settled) return; settled=true; if(done) done(v); };
+MODAL_GUARD=()=>{ closeModal(true); finish(false); };
+r.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{ closeModal(true); finish(false); });
+r.querySelector("#bxno").onclick=()=>{ closeModal(true); finish(false); };
+r.querySelector("#bxgo").onclick=async ()=>{
+const b=r.querySelector("#bxgo");
+const em=(r.querySelector("#bxmail")||{value:""}).value.trim();
+const pw=(r.querySelector("#bxpass")||{value:""}).value;
+if(!em || !pw){ err("Both boxes, please."); return; }
+b.disabled=true; b.textContent="Reading…"; err("");
+try{
+const core=await bringAcrossFetch(em, pw);
+S=migrate(scrubRestored(core));
+WKHASH={}; BOARD_READY=true; LOCAL_DIRTY=true;
+lsSave(); render(); cloudPushNow();
+closeModal(true); finish(true);
+toast("Brought across — your schedules are in this account now");
+}catch(e){
+b.disabled=false; b.textContent="Bring them across";
+err(authErrSay(e));
+}
+};
+});
+}
+
+ 
+function notifyFounderSupabase(kind, subject, text){   }
+
+function cloudOn(){
+if(BACKEND==="supabase")
+return !!(SUPA_URL && SUPA_KEY && window.supabase && window.supabase.createClient);
+return !!(CLOUD && CLOUD.apiKey && window.firebase);
+}
 
 function startApp(){
 if(SHELL && !document.querySelector(".app")) document.body.innerHTML=SHELL;
@@ -2899,6 +3292,7 @@ if(!S.setupDone && !S.employees.length) setTimeout(()=>wizard(true), 500);
 }
 
 function cloudBoot(){
+if(BACKEND==="supabase"){ sbBoot(); return; }
  
 if(typeof firebase==="undefined" || !firebase.initializeApp){
 if(window.bootFail) window.bootFail("Weeksolved could not reach the sign-in service");
@@ -2922,6 +3316,47 @@ catch(e){ authScreen("Couldn't reach your board. Check the connection and sign i
 }
 
  
+function sbBoot(){
+if(typeof window.supabase==="undefined" || !window.supabase.createClient){
+if(window.bootFail) window.bootFail("Weeksolved could not reach the sign-in service");
+return;
+}
+SHELL=document.body.innerHTML;           
+try{
+SB=window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:"pkce" }
+});
+}catch(e){
+if(window.bootFail) window.bootFail("Weeksolved could not reach the sign-in service");
+return;
+}
+ 
+FB={ auth:sbAuthShim(), db:{supabase:true}, user:null };
+let last="";
+SB.auth.onAuthStateChange((evt, session)=>{
+const u=(session && session.user) || null;
+ 
+if(evt==="TOKEN_REFRESHED" || evt==="USER_UPDATED"){
+if(u){ FB.user=sbUserShim(u); FB.auth.currentUser=FB.user; last=u.id; }
+return;
+}
+ 
+if(SIGNING_UP){ if(u) last=u.id; return; }
+if(!u){ last=""; FB.user=null; FB.auth.currentUser=null; authScreen(); return; }
+if(u.id===last) return;                    
+last=u.id;
+FB.user=sbUserShim(u); FB.auth.currentUser=FB.user;
+cloudEnter().catch(()=>{
+authScreen("Couldn't reach your board. Check the connection and sign in again.");
+});
+});
+ 
+SB.auth.getSession().then(({data})=>{
+if(!(data && data.session)) authScreen();
+}).catch(()=>{ authScreen(); });
+}
+
+ 
 var CLOUD_ENTERING=false;
  
 var LAST_SEEN_REV=0;
@@ -2929,8 +3364,19 @@ async function cloudEnter(){
 const uid=FB.user.uid;
 CLOUD_ENTERING=true;
 try{ clearTimeout(cloudPushTimer); cloudPushTimer=null; }catch(e){}
-let prof=await FB.db.doc("users/"+uid+"/meta/profile").get();
-if(!prof.exists){
+let prof=null, ACC=null;
+if(BACKEND==="supabase"){
+ 
+try{ ACC=await sbAccess(); }
+catch(e){
+authScreen("Couldn't reach your account just now. Check the connection and sign in again.");
+CLOUD_ENTERING=false; return;
+}
+prof={exists:!!ACC, data:()=>ACC? sbProfileFromAccess(ACC) : {}};
+} else {
+prof=await FB.db.doc("users/"+uid+"/meta/profile").get();
+}
+if(!prof.exists && BACKEND!=="supabase"){
  
 let row=null;
 try{
@@ -2950,7 +3396,8 @@ prof=await FB.db.doc("users/"+uid+"/meta/profile").get();
 }
 if(!prof.exists){
  
-if(googleOnlyUser(FB.user)){ codeScreen(); CLOUD_ENTERING=false; return; }
+ 
+if(BACKEND==="supabase" || googleOnlyUser(FB.user)){ codeScreen(); CLOUD_ENTERING=false; return; }
 await signOutQuiet();
 authScreen("That account isn't part of this test. Create one with the access code you were given.");
 CLOUD_ENTERING=false; return;
@@ -2960,7 +3407,13 @@ const p=prof.data()||{};
 LS_UID = uid;
  
 let extra=0;
+if(BACKEND==="supabase"){
+ 
+extra=0;
+if(ACC && ACC.allowed===false){ expiredScreen(); CLOUD_ENTERING=false; return; }
+} else {
 try{ const g=await FB.db.doc("grants/"+uid).get(); if(g.exists){ extra=+((g.data()||{}).extraDays||0)||0; } }catch(e){}
+}
 window.TESTER_EXTRA=extra;
 window.TESTER_ID=p.codeId||"";
 window.TESTER_LIFE=!!p.life;
@@ -2970,22 +3423,25 @@ const expMs=(p.activated||0)+((p.days||30)+extra)*86400000;
 const hardEnd=ACCESS.until? parseYmd(ACCESS.until).getTime()+86400000 : Infinity;
  
 const nowMs=trialNow(p);
-if(!p.life && (nowMs>expMs || nowMs>hardEnd)){ expiredScreen(); CLOUD_ENTERING=false; return; }
+ 
+if(BACKEND==="supabase"){
+if(!p.life && ACC && ACC.until && nowMs>ACC.until){ expiredScreen(); CLOUD_ENTERING=false; return; }
+if(!ACC || !ACC.until) window.TESTER_FROM=0;       
+}
+else if(!p.life && (nowMs>expMs || nowMs>hardEnd)){ expiredScreen(); CLOUD_ENTERING=false; return; }
 trialWatch();                  
  
 if(ndaNeeded() && !ndaCurrent()){
 let sawNda=null;
-try{ const t=await FB.db.collection("users/"+uid+"/terms").get();
-(t.docs||[]).forEach(d=>{ const x=d.data()||{};
-if(x.hash==="nda" && String(x.v)===String(NDA_VERSION)) sawNda=x; }); }catch(e){}
+(await cloudTermsRows(uid)).forEach(x=>{
+if(x && x.hash==="nda" && String(x.v)===String(NDA_VERSION)) sawNda=x; });
 if(sawNda){ try{ localStorage.setItem(scopedKey(NDAKEY), JSON.stringify(sawNda)); }catch(e){} }
 else { ndaScreen(); CLOUD_ENTERING=false; return; }
 }
 if(!termsCurrent()){
 let seen=null;
-try{ const t=await FB.db.collection("users/"+uid+"/terms").get();
-(t.docs||[]).forEach(d=>{ const x=d.data()||{};
-if(String(x.v)===String(TERMS_VERSION)) seen=x; }); }catch(e){}
+(await cloudTermsRows(uid)).forEach(x=>{
+if(x && x.hash!=="nda" && String(x.v)===String(TERMS_VERSION)) seen=x; });
 if(seen){ try{ localStorage.setItem(scopedKey(TERMSKEY), JSON.stringify(seen)); }catch(e){} }
 else { termsUpdateScreen(); CLOUD_ENTERING=false; return; }
 }
@@ -3052,12 +3508,21 @@ r.querySelector("#lgno").onclick =()=>{ closeModal(true); finish(false); };
 });
 });
 BOARD_READY=true;
-if(keep){ S=migrate(leg); dropLegacy(); }
+if(keep){
+ 
+S=migrate(BACKEND==="supabase"? scrubRestored(leg) : leg);
+if(LEGACY_FROM===LSKEY) dropLegacy();
+ 
+}
 else { S=firstRunState(); }
 } else {
 BOARD_READY=true; S=firstRunState();
 }
 cloudPushNow();
+ 
+if(bringAcrossAvailable() && !(S.employees||[]).length){
+setTimeout(()=>{ try{ bringAcrossModal(()=>{}); }catch(e){} }, 700);
+}
 }
 if(!(await newDeviceGate(uid))) return;
  
@@ -3076,9 +3541,9 @@ else pwGoneNotice();
 watchKick(uid);
 deviceCheck();
 if(cloudUnsub) cloudUnsub();
-cloudUnsub=FB.db.doc("users/"+uid+"/board/current").onSnapshot(async sn=>{
-if(!sn.exists || (sn.metadata&&sn.metadata.hasPendingWrites)) return;
-const d=sn.data()||{};
+ 
+const boardChanged=async d=>{
+if(!d) return;
  
 LAST_SEEN_REV=Math.max(LAST_SEEN_REV||0, d.rev||0);
  
@@ -3129,7 +3594,18 @@ return;
 CLOUD_REV=rev;
 S=migrate(r.state); rosterSwapCheck(before); lsSave(); render(); toast("Updated from your other device");
 }catch(e){}
+};
+if(BACKEND==="supabase"){
+cloudUnsub=sbWatchRow("boards", uid, ()=>sbBoardGet(uid), row=>{
+if(!row) return;
+boardChanged({rev:+(row.seq||0), at:+(row.at||0), by:String(row.by||"")});
+}, 60000);
+} else {
+cloudUnsub=FB.db.doc("users/"+uid+"/board/current").onSnapshot(async sn=>{
+if(!sn.exists || (sn.metadata&&sn.metadata.hasPendingWrites)) return;
+boardChanged(sn.data()||{});
 });
+}
 }
 
  
@@ -3174,6 +3650,12 @@ return z? z.split("/").pop().replace(/_/g," ") : "";
 function devRef(id){ return FB.db.doc("users/"+FB.user.uid+"/devices/"+(id||deviceId())); }
 async function deviceTouch(){
 if(!FB || !FB.user) return;
+if(BACKEND==="supabase"){
+try{ await sbDeviceTouch(FB.user.uid); }catch(e){}
+clearTimeout(DEVTIMER);
+DEVTIMER=setTimeout(deviceTouch, 600000);
+return;
+}
 try{
 const ref=devRef();
 const sn=await ref.get();
@@ -3186,6 +3668,11 @@ DEVTIMER=setTimeout(deviceTouch, 600000);
 }
 async function deviceFetch(){
 if(!FB || !FB.user) return [];
+if(BACKEND==="supabase"){
+try{ DEVLIST=(await sbDeviceList(FB.user.uid)).sort((a,b)=>(b.last||0)-(a.last||0)); }
+catch(e){ DEVLIST=[]; }
+return DEVLIST;
+}
 try{
 const sn=await FB.db.collection("users/"+FB.user.uid+"/devices").get();
 DEVLIST=(sn.docs||[]).map(d=>Object.assign({id:d.id}, d.data()||{}))
@@ -3222,16 +3709,17 @@ toast("Signed in from "+live.length+" places right now \u2014 Settings shows whe
 async function deviceForget(id){
  
 if(id!==deviceId() && FB && FB.user){
-try{ await FB.db.doc("users/"+FB.user.uid+"/meta/kick").set({at:Date.now(), keep:deviceId()}); }catch(e){}
+try{ await cloudKickSet(FB.user.uid); }catch(e){}
 }
-try{ const r=devRef(id); if(r.delete) await r.delete(); }catch(e){}
+if(BACKEND==="supabase"){ try{ await sbDeviceDel(FB.user.uid, id); }catch(e){} }
+else { try{ const r=devRef(id); if(r.delete) await r.delete(); }catch(e){} }
 await deviceFetch();
 }
  
 async function deviceSignOutOthers(){
 if(!FB || !FB.user) return;
 try{
-await FB.db.doc("users/"+FB.user.uid+"/meta/kick").set({at:Date.now(), keep:deviceId()});
+await cloudKickSet(FB.user.uid);
 const list=await deviceFetch();
 await Promise.all(list.filter(d=>d.id!==deviceId()).map(d=>deviceForget(d.id)));
 toast("Every other device is being signed out");
@@ -3239,11 +3727,19 @@ toast("Every other device is being signed out");
 }
 function watchKick(uid){
 if(kickUnsub) kickUnsub();
-kickUnsub=FB.db.doc("users/"+uid+"/meta/kick").onSnapshot(sn=>{
-const k=(sn.exists && sn.data())||null;
+ 
+const seen=k=>{
 if(!k || k.keep===deviceId()) return;
 if((k.at||0) < SESSION_AT) return;
 signOutClean();
+};
+if(BACKEND==="supabase"){
+kickUnsub=sbWatchRow("kicks", uid, ()=>sbKickGet(uid),
+row=>seen(row? {at:+row.at||0, keep:String(row.keep||"")} : null), 60000);
+return;
+}
+kickUnsub=FB.db.doc("users/"+uid+"/meta/kick").onSnapshot(sn=>{
+seen((sn.exists && sn.data())||null);
 }, ()=>{});
 }
 
@@ -3262,13 +3758,18 @@ async function newDeviceGate(uid){
 if(S.rules.newDeviceConfirm!==true) return true;
 let known=false;
 try{
+if(BACKEND==="supabase"){
+const {data}=await SB.from("devices").select("ok").eq("uid",uid).eq("id",deviceId()).maybeSingle();
+known = !!(data && data.ok===true);
+} else {
 const sn=await FB.db.doc("users/"+uid+"/devices/"+deviceId()).get();
 known = sn.exists && (sn.data()||{}).ok===true;
+}
 }catch(e){ return true; }
 if(known) return true;
 try{
 if(FB.auth.isSignInWithEmailLink && FB.auth.isSignInWithEmailLink(window.location.href)){
-await FB.db.doc("users/"+uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true});
+await cloudDeviceTrust(uid);
 try{ history.replaceState({}, "", window.location.pathname); }catch(e){}
 return true;
 }
@@ -3301,7 +3802,7 @@ err("");
 }catch(e){
  
 S.rules.newDeviceConfirm=false; save(); cloudPush();
-try{ await FB.db.doc("users/"+uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true}); }catch(x){}
+try{ await cloudDeviceTrust(uid); }catch(x){}
 err("Couldn't send that just now, so we've let you straight in and turned the check off. You can switch it back on in Settings.");
 setTimeout(()=>location.reload(), 2200);
 }
@@ -3365,26 +3866,43 @@ cloudPushNow._told=false;
  
 const uid=FB.user.uid;
  
+try{ clearTimeout(cloudPushTimer); }catch(e){}
+cloudPushTimer=null;
+ 
 const rev=Math.max(CLOUD_REV, LAST_SEEN_REV||0)+1;
  
 PUSHING_REV=Math.max(PUSHING_REV||0, rev);
 const jobs=[];
  
+if(BACKEND==="supabase"){
 Object.keys(S.weeks).forEach(ws=>{
+const j=JSON.stringify(S.weeks[ws]);
+const h=contentHash(j);
+if(WKHASH[ws]===h) return;
+jobs.push(sbWeekPut(uid, ws, S.weeks[ws]).then(()=>{ WKHASH[ws]=h; }));
+});
+Object.keys(WKHASH).forEach(ws=>{
+if(S.weeks[ws]) return;
+jobs.push(sbWeekDel(uid, ws).then(()=>{ delete WKHASH[ws]; }).catch(()=>{}));
+});
+}
+else Object.keys(S.weeks).forEach(ws=>{
 const j=JSON.stringify(S.weeks[ws]);
 const h=contentHash(j);
 if(WKHASH[ws]===h) return;
 jobs.push(FB.db.doc("users/"+uid+"/weeks/"+ws).set({json:j, at:Date.now()}).then(()=>{ WKHASH[ws]=h; }));
 });
  
-Object.keys(WKHASH).forEach(ws=>{
+if(BACKEND!=="supabase") Object.keys(WKHASH).forEach(ws=>{
 if(S.weeks[ws]) return;
 const ref=FB.db.doc("users/"+uid+"/weeks/"+ws);
 if(ref.delete) jobs.push(ref.delete().then(()=>{ delete WKHASH[ws]; }).catch(()=>{}));
 else delete WKHASH[ws];
 });
 Promise.all(jobs)
-.then(()=>FB.db.doc("users/"+uid+"/board/current").set({json:coreJson(), split:true, rev:rev, at:Date.now(),
+.then(()=> BACKEND==="supabase"
+? sbBoardPut(uid, JSON.parse(coreJson()), rev, (typeof deviceId==="function"? deviceId() : ""))
+: FB.db.doc("users/"+uid+"/board/current").set({json:coreJson(), split:true, rev:rev, at:Date.now(),
 by:(typeof deviceId==="function"? deviceId() : "")}))
 .then(()=>{ CLOUD_REV=rev; PUSHING_REV=0; LOCAL_DIRTY=false; cloudPushNow._toldErr=false; cloudRetryStop();
 lsSave();                        
@@ -3445,6 +3963,22 @@ return "";
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushEdits(); });
 }catch(e){}
 async function cloudFetchAll(uid){
+if(BACKEND==="supabase"){
+const b=await sbBoardGet(uid);
+if(!b || !b.doc) return null;
+ 
+let core=null;
+try{ core=(typeof b.doc==="string")? JSON.parse(b.doc) : JSON.parse(JSON.stringify(b.doc)); }
+catch(e){ return null; }
+core.weeks={};
+(await sbWeeksGet(uid)).forEach(r=>{
+try{
+const w=(typeof r.doc==="string")? JSON.parse(r.doc) : r.doc;
+if(w && r.ws){ const k=String(r.ws).slice(0,10); core.weeks[k]=w; WKHASH[k]=contentHash(JSON.stringify(w)); }
+}catch(e){}
+});
+return {state:core, rev:+(b.seq||0), at:+(b.at||0), legacy:false};
+}
 const board=await FB.db.doc("users/"+uid+"/board/current").get();
 if(!board.exists || !(board.data()||{}).json) return null;
 const d=board.data();
@@ -3480,10 +4014,13 @@ return raw.replace(/\s*\(auth\/[a-z-]+\)\.?/i,"").trim() || "Something went wron
  
  
 function sameOriginAuth(){
+ 
+if(BACKEND==="supabase") return true;
 try{ return !!(CLOUD && CLOUD.authDomain && String(CLOUD.authDomain).toLowerCase()===location.hostname.toLowerCase()); }catch(e){ return false; }
 }
 function googleAvailable(){
 if(!GOOGLE_SIGNIN) return false;
+if(BACKEND==="supabase") return !!SB;
 if(typeof firebase==="undefined" || !firebase.auth || !firebase.auth.GoogleAuthProvider) return false;
 try{
 const plat=a2hsPlatform();
@@ -3516,6 +4053,15 @@ return authErrSay(e);
 }
  
 async function googleSignIn(err){
+if(BACKEND==="supabase"){
+ 
+try{
+const {error}=await SB.auth.signInWithOAuth({provider:"google",
+options:{redirectTo:sbReturnUrl(), queryParams:{prompt:"select_account"}}});
+if(error) throw error;
+}catch(e){ const m=googleErrSay(sbAuthErr(e)); if(m && err) err(m); }
+return;
+}
 try{
 if(googleUsesRedirect()){ await FB.auth.signInWithRedirect(googleProvider()); return; }    
 await FB.auth.signInWithPopup(googleProvider());
@@ -3525,6 +4071,8 @@ catch(e){ const m=googleErrSay(e); if(m && err) err(m); }
  
 let GOOGLE_REDIRECT_ERR="";
 function collectRedirectResult(){
+ 
+if(BACKEND==="supabase") return;
 try{
 if(!FB || !FB.auth || !FB.auth.getRedirectResult) return;
 FB.auth.getRedirectResult().catch(e=>{ GOOGLE_REDIRECT_ERR=googleErrSay(e); if(document.getElementById("gerr") && GATE_ERR) GATE_ERR(GOOGLE_REDIRECT_ERR); });
@@ -3589,7 +4137,48 @@ try{ await cloudSignupGoogle(code); }
 catch(e){ err(authErrSay(e)); busy(false); }
 };
 }
+ 
+async function sbClaim(code){
+const user=FB.user;
+if(!user) throw {message:"You are no longer signed in. Go back and sign in again."};
+await sbRedeem(code);
+ 
+LS_UID = user.uid;
+recordTermsAccept();
+if(ndaNeeded()) recordNdaAccept();
+let a=null;
+try{ a=await sbAccess(); }catch(e){}
+if(a){
+WELCOME_WITH={id:a.codeId||"", life:!!a.life,
+days:sbProfileFromAccess(a).days, at:a.from||Date.now()};
+try{ localStorage.setItem(PASSKEY, JSON.stringify({id:a.codeId||"", life:!!a.life,
+exp:a.life? "9999-12-31" : ymd(new Date(a.until||Date.now())), at:Date.now()})); }catch(e){}
+}
+ 
+try{
+const tz=(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||""); }catch(e){ return ""; } })();
+await sbReportPut(user.uid, {
+tester:String((a&&a.codeId)||"").slice(0,16), at:Date.now(),
+kind:"redeem", auto:true, seen:1,
+note:("Code "+String((a&&a.codeId)||"")+" redeemed by "+String(user.email||"").trim()).slice(0,500),
+ctx:(tz+" · "+String((navigator.languages&&navigator.languages[0])||navigator.language||"")+
+" · "+String(navigator.userAgent||"")).slice(0,400)
+}, "");
+}catch(e){}
+notifyFounder("redeem", "new tester "+String((a&&a.codeId)||""),
+"A code was redeemed by "+String(user.email||"").trim()+".");
+}
+
 async function cloudSignupGoogle(code){
+if(BACKEND==="supabase"){
+const user=FB.user;
+if(!user) throw {message:"You are no longer signed in. Go back and press Continue with Google again."};
+SIGNING_UP=true;
+try{ await sbClaim(code); }
+finally{ SIGNING_UP=false; }
+await cloudEnter();
+return;
+}
 const h=codeHash((code||"").trim());
 const hit=ACCESS.codes.find(c=>c.h===h);
 if(!hit) throw {message:"That access code isn't recognized. Check it and try again."};
@@ -3671,6 +4260,25 @@ if(!user.emailVerified){ try{ await user.sendEmailVerification(); WELCOME_WITH.m
 }
 
 async function cloudSignup(code,email,pass){
+if(BACKEND==="supabase"){
+ 
+SIGNING_UP=true;
+try{
+let cred=null;
+try{ cred=await FB.auth.createUserWithEmailAndPassword(email.trim(), pass); }
+catch(e){
+ 
+if(e && e.code==="auth/email-already-in-use")
+cred=await FB.auth.signInWithEmailAndPassword(email.trim(), pass);
+else throw e;
+}
+FB.user=cred.user; FB.auth.currentUser=cred.user;
+await sbClaim(code);
+try{ localStorage.setItem(PWKEY, JSON.stringify({email:String(email||"").trim().toLowerCase(), at:Date.now()})); }catch(e){}
+} finally { SIGNING_UP=false; }
+await cloudEnter();
+return;
+}
 const h=codeHash((code||"").trim());
 const hit=ACCESS.codes.find(c=>c.h===h);
 if(!hit) throw {message:"That access code isn't recognized. Check it and try again."};
@@ -3695,7 +4303,10 @@ let store="yes";
 try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }
 catch(e){ store="NO \u2014 "+(e&&e.name||"blocked"); }
 L.push("Can save to this browser: "+store);
-L.push("Sign-in library loaded: "+((typeof firebase!=="undefined" && firebase && firebase.auth)? "yes":"NO \u2014 it was blocked or did not download"));
+L.push("Account service: "+BACKEND);
+L.push("Sign-in library loaded: "+(BACKEND==="supabase"
+? ((typeof window.supabase!=="undefined" && window.supabase && window.supabase.createClient)? "yes":"NO \u2014 it was blocked or did not download")
+: ((typeof firebase!=="undefined" && firebase && firebase.auth)? "yes":"NO \u2014 it was blocked or did not download")));
 if(APPCHECK_KEY) L.push("App Check: "+(window.APPCHECK_ON? "active" : "did not start"));
 L.push("Connected to the account service: "+((typeof FB!=="undefined" && FB && FB.auth)? "yes":"NO"));
 L.push("Online: "+(navigator.onLine? "yes":"NO"));
@@ -4009,6 +4620,25 @@ modal(F.title, `
 }
  
 async function wipeCloudData(uid){
+if(BACKEND==="supabase"){
+ 
+let failed=0;
+const drop=async t=>{
+try{ const {error}=await SB.from(t).delete().eq("uid",uid); if(error) failed++; }
+catch(e){ failed++; }
+};
+await drop("weeks");
+await drop("devices");
+await drop("kicks");
+await drop("reports");
+await drop("boards");
+ 
+if(!failed){
+try{ await sbReportPut(uid, {tester:(window.TESTER_ID||""), at:Date.now(), kind:"delete",
+auto:true, seen:1, note:"Account closed by the person who owns it", ctx:""}, ""); }catch(e){}
+}
+return failed;
+}
  
 let failed=0;
 const kill=[];
@@ -4026,7 +4656,12 @@ return failed;
  
  
 let OP_ACT=null, OP_ACT_AT=0, OP_ACT_BUSY=false;
-function isFounder(){ return window.TESTER_ID==="FOUNDER" && !!(typeof FB!=="undefined" && FB && FB.user && FB.db); }
+function isFounder(){
+if(BACKEND==="supabase")
+return !!(typeof FB!=="undefined" && FB && FB.user &&
+(FOUNDER_UID? FB.user.uid===FOUNDER_UID : window.TESTER_ID==="FOUNDER"));
+return window.TESTER_ID==="FOUNDER" && !!(typeof FB!=="undefined" && FB && FB.user && FB.db);
+}
  
  
 const MAIL_KINDS = ["redeem","extend","idea","contact","feedback"];
@@ -4078,6 +4713,7 @@ return b.rid;
 }
 const NOTIFY_TO = "weeksolved@gmail.com";
 function notifyFounder(kind, subject, text){
+if(BACKEND==="supabase"){ notifyFounderSupabase(kind, subject, text); return; }
 try{
 if(!FB || !FB.user || !FB.db || !NOTIFY_TO) return;
 const id = nextMailId(FB.user.uid, String(kind||""));
@@ -4095,8 +4731,7 @@ if(!isFounder()) return null;
 if(OP_ACT && Date.now()-OP_ACT_AT < 10*60000) return OP_ACT;
 if(OP_ACT_BUSY) return OP_ACT;
 OP_ACT_BUSY=true;
-FB.db.collection("reports").get().then(snap=>{
-const reps=[]; (snap.docs||[]).forEach(d=>reps.push(d.data()||{}));
+cloudReportsAll().then(reps=>{
 const seen=(S.ui&&S.ui.opSeen)||0;
 const fresh=reps.filter(r=>(r.at||0)>seen);
 OP_ACT={ total:reps.length, fresh:fresh.length,
@@ -4149,17 +4784,27 @@ modal("Who is testing", `<div class="stack"><div class="help">Reading…</div></
 `<button class="btn" data-close>Close</button>`);
  
 try{ document.querySelector("#modalroot .modal").classList.add("wide"); document.querySelector("#modalroot .scrim").classList.add("edge"); }catch(e){}
-let rows=[], reps=[], err=null, repErr=null, grants={};
+let rows=[], reps=[], err=null, repErr=null, grants={}, opNote="";
+if(BACKEND==="supabase"){
+ 
+opNote="the operator view moves to a proper admin page";
+try{
+const a=SB_ACCESS || await sbAccess();
+if(a) rows=[{id:a.codeId||"", uid:(FB.user&&FB.user.uid)||"", at:a.from||0,
+email:(FB.user&&FB.user.email)||"",
+ua:String(navigator.userAgent||"").slice(0,180),
+tz:(function(){ try{ return String(Intl.DateTimeFormat().resolvedOptions().timeZone||""); }catch(e){ return ""; } })(),
+loc:String((navigator.languages&&navigator.languages[0])||navigator.language||"")}];
+}catch(e){ err=readWhy(e, "codes"); }
+} else {
 try{
 const snap=await FB.db.collection("codes").get();
 (snap.docs||[]).forEach(d=>rows.push(d.data()||{}));
 }catch(e){ err=readWhy(e, "codes"); }
 try{ const gs=await FB.db.collection("grants").get(); (gs.docs||[]).forEach(d=>{ grants[d.id]=d.data()||{}; }); }catch(e){}
+}
  
-try{
-const snap=await FB.db.collection("reports").get();
-(snap.docs||[]).forEach(d=>reps.push(d.data()||{}));
-}catch(e){ repErr=readWhy(e, "reports"); }
+try{ reps=await cloudReportsAll(); }catch(e){ repErr=readWhy(e, "reports"); }
 
 rows.sort((a,b)=>(b.at||0)-(a.at||0));
 const known=(typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes : [];
@@ -4259,6 +4904,7 @@ const body = (err && repErr)
 ? `<div class="banner crit"><div><b>Could not read any of it.</b> ${esc(err)}</div>
         <div class="mini" style="margin-top:6px">${esc(codesFixHint())}</div></div>`
 : `<div class="stack">
+        ${opNote? `<div class="banner info"><div><b>Only your own account is shown here.</b> The database does not open one person's rows to another person's browser, so ${esc(opNote)}.</div></div>`:""}
         ${err? `<div class="banner warn"><div><b>The redemption list could not be read.</b> ${esc(err)}</div></div>`:""}
         ${repErr? `<div class="banner warn"><div><b>The reports could not be read, so nothing below shows what people have sent.</b> ${esc(repErr)}
           <div class="mini" style="margin-top:4px">${esc(codesFixHint())}</div></div></div>`:""}
@@ -4282,6 +4928,10 @@ if(b2) b2.innerHTML=body;
  
 if(b2) b2.querySelectorAll("[data-grant]").forEach(bt=>bt.onclick=async ()=>{
 const uid=bt.dataset.grant, n=+bt.dataset.days||0; if(!uid) return;
+if(BACKEND==="supabase"){
+toast("Extra time is granted from the admin page now \u2014 nothing a browser can write changes an entitlement.");
+return;
+}
 bt.disabled=true;
 try{
 const prev=+((grants[uid]||{}).extraDays||0)||0;
@@ -4370,7 +5020,7 @@ modal("Delete your account", `
       </div></div>
       <div class="card"><div class="body">
         <div class="lab">What stays, and why</div>
-        <div class="mini">${tester? "<b>The record that your access code was used.</b> That is the thing that stops one code making a second account, so it survives deletion by design. Deleting this account does <b>not</b> give the code back, and you cannot sign up again with it.<br><br>":""}<b>The note that you agreed to the terms.</b> One line saying which version you accepted and when. Nobody can edit or remove it, us included — a record that can be rewritten later is not a record.<br><br><b>Any problem reports you sent.</b> They are how things get fixed, and they are not deleted with the account.<br><br>Nothing else is kept. If you would rather those went too, write to us and ask.</div>
+        <div class="mini">${BACKEND==="supabase"? "<b>Your sign-in itself, for up to 24 hours.</b> Everything in the account \u2014 schedules, team, weeks, devices and the problem reports you sent \u2014 goes the moment you press the button. The sign-in that carries your email address is removed by hand after that, so the address is free to use again within a day rather than straight away.<br><br>":""}${tester? "<b>The record that your access code was used.</b> That is the thing that stops one code making a second account, so it survives deletion by design. Deleting this account does <b>not</b> give the code back, and you cannot sign up again with it.<br><br>":""}<b>The note that you agreed to the terms.</b> One line saying which version you accepted and when. Nobody can edit or remove it, us included — a record that can be rewritten later is not a record.<br><br>${BACKEND==="supabase"? "" : "<b>Any problem reports you sent.</b> They are how things get fixed, and they are not deleted with the account.<br><br>"}Nothing else is kept. If you would rather those went too, write to us and ask.</div>
       </div></div>
       <div class="field"><label>Take a backup first?</label>
         <button class="btn sm" id="dabak">Download a backup of this board</button>
@@ -4399,6 +5049,31 @@ if(!gOnly && !pass){ err("Your password is needed to confirm."); return; }
 const btn=r.querySelector("#dago"); btn.disabled=true; btn.textContent="Deleting…"; err("");
 try{
 const u=FB.auth.currentUser;
+if(BACKEND==="supabase"){
+ 
+if(!gOnly){
+const {error}=await SB.auth.signInWithPassword({email:String(u.email||""), password:pass});
+if(error) throw sbAuthErr(error);
+}
+const left=await wipeCloudData(u.uid);
+if(left){
+btn.disabled=false; btn.textContent="Delete it for good";
+err("Some of your data could not be removed just now, so the account has been left alone rather than half-deleted. "+
+"That is usually the connection. Try again in a moment, and if it keeps happening write to support@weeksolved.com and it will be done by hand.");
+return;
+}
+if(cloudUnsub){ try{ cloudUnsub(); }catch(e){} cloudUnsub=null; }
+try{ forgetSession(); }catch(e){ SIGNED_OUT=true; }
+BOARD_READY=false; LOCAL_DIRTY=false;
+try{ await SB.auth.signOut(); }catch(e){}
+dropAccountLocal(u.uid);
+document.body.innerHTML='<div class="gate"><div class="gatebox"><div class="gatemark">WS</div>'+
+'<h1>Weeksolved</h1><p class="gsub">Everything in your account is gone. Thank you for trying it.</p>'+
+'<p class="gfoot">Your schedules, your team, your devices and your problem reports were removed just now. '+
+'Your sign-in is removed within 24 hours, after which the email address is free to use again from scratch. '+
+'If you kept a backup you can restore it into a new account any time.</p></div></div>';
+return;
+}
  
 if(gOnly){
 const prov=new firebase.auth.GoogleAuthProvider();
@@ -4493,10 +5168,10 @@ return;
 fg.disabled=true; fg.textContent="Sending\u2026";
 try{
 const at=Date.now();
-const rid=nextReportId(FB.user.uid);
-if(rid) await FB.db.doc("reports/"+rid).set({
-uid:FB.user.uid, tester:(window.TESTER_ID||""), at, kind:"feedback", auto:false,
-note:(note||"(no note)"), ctx:String((FB.user.email||"")).slice(0,120), seen:1 });
+const rec={ uid:FB.user.uid, tester:(window.TESTER_ID||""), at, kind:"feedback", auto:false,
+note:(note||"(no note)"), ctx:String((FB.user.email||"")).slice(0,120), seen:1 };
+if(BACKEND==="supabase") await sbReportPut(FB.user.uid, rec, "");
+else { const rid=nextReportId(FB.user.uid); if(rid) await FB.db.doc("reports/"+rid).set(rec); }
 try{ localStorage.setItem(scopedKey("ws.feedbackSent"), String(at)); }catch(e){}
 notifyFounder("feedback", "tester "+(window.TESTER_ID||"")+" left feedback at the end of their window",
 (FB.user.email||"")+" ("+(window.TESTER_ID||"")+")\n\n"+(note||"(no note)"));
@@ -4513,10 +5188,10 @@ go.disabled=true; go.textContent="Sending\u2026";
 const note=String((document.getElementById("gext")||{}).value||"").trim().slice(0,400);
 try{
 const at=Date.now();
-const rid=nextReportId(FB.user.uid);
-if(rid) await FB.db.doc("reports/"+rid).set({
-uid:FB.user.uid, tester:(window.TESTER_ID||""), at, kind:"extend", auto:false,
-note:(note||"(no note)"), ctx:String((FB.user.email||"")).slice(0,120), seen:1 });
+const rec={ uid:FB.user.uid, tester:(window.TESTER_ID||""), at, kind:"extend", auto:false,
+note:(note||"(no note)"), ctx:String((FB.user.email||"")).slice(0,120), seen:1 };
+if(BACKEND==="supabase") await sbReportPut(FB.user.uid, rec, "");
+else { const rid=nextReportId(FB.user.uid); if(rid) await FB.db.doc("reports/"+rid).set(rec); }
 try{ localStorage.setItem(scopedKey("ws.extendAsked"), String(at)); }catch(e){}
 notifyFounder("extend", "tester "+(window.TESTER_ID||"")+" asked for more time", (FB.user.email||"")+" ("+(window.TESTER_ID||"")+") asked for more time.\n\n"+(note? "\u201c"+note+"\u201d" : "(no note)")+"\n\nApprove or decline under Home \u2192 Who is testing. Nothing happens until you do.");
 expiredScreen();
@@ -4576,7 +5251,12 @@ async function boot(){
 if(FRAMED){ paintFrameRefusal(); return; }     
 watchDates(); watchPhones();                   
  
-if(CLOUD && CLOUD.apiKey && !window.firebase){
+if(BACKEND==="supabase"){
+if(!window.supabase || !window.supabase.createClient){
+if(window.bootFail) window.bootFail("Weeksolved could not reach the sign-in service");
+return;
+}
+} else if(CLOUD && CLOUD.apiKey && !window.firebase){
 if(window.bootFail) window.bootFail("Weeksolved could not reach the sign-in service");
 return;
 }
@@ -14372,12 +15052,19 @@ notifyFounder(rec.kind, (rec.kind==="idea"? "feature idea from " : "message from
 try{
 if(typeof FB!=="undefined" && FB && FB.user){
 const b=twin||rec;
-const rid=bugReportId(FB.user.uid, b);
-if(rid) FB.db.doc("reports/"+rid).set({
+const row={
 uid:FB.user.uid, tester:(window.TESTER_ID||""), at:b.at, kind:b.kind||"", auto:!!b.auto,
 note:String(b.note||"").slice(0,500),
 ctx:String(typeof b.ctx==="string"? b.ctx : JSON.stringify(b.ctx||"")).slice(0,300), seen:b.seen||1
-}).catch(()=>{});
+};
+if(BACKEND==="supabase"){
+ 
+if(b.rid || nextReportId(FB.user.uid))
+sbReportPut(FB.user.uid, row, b.rid||"").then(id=>{ if(id && !b.rid){ b.rid=id; lsSave(); } }).catch(()=>{});
+} else {
+const rid=bugReportId(FB.user.uid, b);
+if(rid) FB.db.doc("reports/"+rid).set(row).catch(()=>{});
+}
 }
 }catch(e){}
 }
@@ -17470,7 +18157,7 @@ toast("Off \u2014 nothing from your agreement is checked or recorded now");
 }
  
 if(path==="rules.newDeviceConfirm" && v===true && FB && FB.user){
-try{ FB.db.doc("users/"+FB.user.uid+"/devices/"+deviceId()).set({ok:true, okAt:Date.now()},{merge:true}); }catch(e){}
+try{ cloudDeviceTrust(FB.user.uid); }catch(e){}
 toast("On \u2014 this device stays trusted; any new one confirms by email");
 }
 if(path==="org.jurisdiction") otFollowState(v);
