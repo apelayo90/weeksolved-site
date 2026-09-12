@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 230960d0 2026-09-12 06:03 UTC -->
+<!-- build fa590238 2026-09-12 15:30 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -17,7 +17,7 @@
 <meta name="author" content="Weeksolved">
 <meta name="robots" content="index,follow">
 
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' blob: https://www.gstatic.com; connect-src 'self' blob: data: https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' blob: https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data: https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; frame-src 'self'; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#1c6a66">
 <meta property="og:type" content="website">
@@ -2120,21 +2120,6 @@ const r=localStorage.getItem(LSKEY);
 if(r){ const d=JSON.parse(r); if(d && !d._uid){ LEGACY_FROM=LSKEY; return d; } }
 }catch(e){}
  
-if(BACKEND==="supabase"){
-try{
-let best=null, bestKey="";
-for(let i=0;i<localStorage.length;i++){
-const k=localStorage.key(i)||"";
-if(k.indexOf(LSKEY+":")!==0) continue;
-if(LS_UID && k===LSKEY+":"+LS_UID) continue;      
-let d=null;
-try{ d=JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ continue; }
-if(!d || d.v!==3 || !Array.isArray(d.employees)) continue;
-if(!best || (+d._at||0) > (+best._at||0)){ best=d; bestKey=k; }
-}
-if(best){ LEGACY_FROM=bestKey; return best; }
-}catch(e){}
-}
 return null;
 }
 function dropLegacy(){ try{ localStorage.removeItem(LSKEY); localStorage.removeItem(LSKEY_OLD); }catch(e){} }
@@ -2765,7 +2750,7 @@ const SUPA_URL = "https://yduidkxzfsoiwehtqefc.supabase.co";
  
 const SUPA_KEY = "sb_publishable_pWE6-OHdeOAPSJvDu3J12w_buoRlvWQ";
  
-const FOUNDER_UID = "";
+const FOUNDER_UID = "21ffa90b-99b8-4097-93c4-b82edc32ab43";
 let SB = null;             
 let SB_ACCESS = null;      
 
@@ -2829,8 +2814,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "230960d0";       
-const BUILD_AT = "2026-09-12 06:03 UTC";       
+const BUILD_ID = "fa590238";       
+const BUILD_AT = "2026-09-12 15:30 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -3126,9 +3111,24 @@ if(error) throw error;
 return data||null;
 }
  
+async function sbKickOthers(){
+let tok="";
+try{ const {data}=await SB.auth.getSession(); tok=(data && data.session && data.session.access_token)||""; }catch(e){}
+if(!tok) return false;
+try{
+const res=await fetch(SUPA_URL+"/functions/v1/kick-others", {
+method:"POST",
+headers:{"Content-Type":"application/json", "apikey":SUPA_KEY, "Authorization":"Bearer "+tok},
+body:"{}"
+});
+return !!(res && res.ok);
+}catch(e){ return false; }
+}
+ 
 function cloudKickSet(uid){
 if(BACKEND==="supabase")
-return SB.from("kicks").upsert({uid:uid, at:Date.now(), keep:deviceId()}, {onConflict:"uid"})
+return sbKickOthers()
+.then(()=>SB.from("kicks").upsert({uid:uid, at:Date.now(), keep:deviceId()}, {onConflict:"uid"}))
 .then(r=>{ if(r.error) throw r.error; });
 return FB.db.doc("users/"+uid+"/meta/kick").set({at:Date.now(), keep:deviceId()});
 }
