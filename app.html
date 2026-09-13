@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 6392e8a1 2026-09-13 14:24 UTC -->
+<!-- build d647b652 2026-09-13 17:05 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -193,11 +193,27 @@ details.btnmore{min-width:0;max-width:100%}
   details.btnmore .btnmenu{position:static;margin-top:6px;box-shadow:none;min-width:0;width:100%;max-width:100%}
 }
 details.morefold{border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;background:var(--surface2)}
-details.morefold>summary{cursor:pointer;font-weight:600;font-size:13px;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
-details.morefold>summary::before{content:"\25B8";font-size:11px;color:var(--muted)}
+details.morefold>summary{cursor:pointer;font-weight:600;font-size:13px;list-style:none;display:flex;gap:9px;align-items:center;flex-wrap:wrap;color:var(--accent);min-height:34px;-webkit-tap-highlight-color:transparent}
+details.morefold>summary::-webkit-details-marker{display:none}
+/* A 11px muted triangle on a grey panel reads as a bullet, not a button. The
+   chevron gets a box of its own so the eye finds a control, and the label takes
+   the accent colour so it reads as something you can press. */
+details.morefold>summary::before{content:"\25B8";font-size:12px;line-height:1;color:var(--accent);
+  border:1px solid var(--line);border-radius:6px;background:var(--surface);
+  width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  transition:transform .12s ease}
 details.morefold[open]>summary::before{content:"\25BE"}
+details.morefold>summary:hover::before{border-color:var(--accent)}
+details.morefold>summary:active::before{transform:scale(.92)}
+details.morefold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+/* the words do the work the icon cannot do on a small screen */
+details.morefold>summary .tapopen{margin-left:auto;font-weight:600;font-size:11px;color:var(--accent);flex:none}
+details.morefold[open]>summary .tapopen{display:none}
 details.morefold[open]>summary{margin-bottom:10px}
 .rbresult .scroll{max-height:60vh;overflow:auto}
+a.jlink{color:var(--accent);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-weight:600}
+a.jlink:hover{text-decoration-thickness:2px}
+a.jlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 .rowopen{cursor:pointer}
 tr.rowopen:hover td, .tcard.rowopen:hover{background:var(--surface2)}
 .rowopen:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
@@ -2825,8 +2841,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "6392e8a1";       
-const BUILD_AT = "2026-09-13 14:24 UTC";       
+const BUILD_ID = "d647b652";       
+const BUILD_AT = "2026-09-13 17:05 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -11651,7 +11667,15 @@ NY:{n:"New York",p:[
 NC:{n:"North Carolina",p:[
 {l:"NC Board of Nursing verification",u:"https://portal.ncbon.com/licenseverification/search.aspx",c:["rn","lpn","np"]},
 {l:"NC Medical Board licensee search",u:"https://portal.ncmedboard.org/verification/search.aspx",c:["physician"]},
-{l:"NC Board of Pharmacy verification",u:"https://portal.ncbop.org/verification/search.aspx",c:["pharmacist","pharmtech"]}]},
+{l:"NC Board of Pharmacy verification",u:"https://portal.ncbop.org/verification/search.aspx",c:["pharmacist","pharmtech"]},
+{l:"NC State Board of Dental Examiners licensee search",u:"https://portal.ncdentalboard.org/Verification/search.aspx",c:["dentist","dentalhyg"]},
+{l:"NC Veterinary Medical Board verification",u:"https://portal.ncvmb.org/verification/search.aspx",c:["vet","vettech"]},
+{l:"NC Board of Physical Therapy Examiners lookup",u:"https://www2.ncptboard.org/app/OnlineServices/VerifyTherapist/VerifyTherapist.php",c:["pt"],note:"Covers physical therapists and physical therapist assistants."},
+{l:"NC Respiratory Care Board licensee look-up",u:"https://ncrcb.org/licensee-look-up/",c:["rt"]},
+{l:"NC Board of Cosmetic Art Examiners verification",u:"https://www.nccosmeticarts.com/onlineservices/Verification.aspx",c:["cosmo"],note:"Cosmetologists, estheticians and manicurists. Barbers are a separate board \u2014 see the next link."},
+{l:"NC Board of Barber and Electrolysis Examiners verification",u:"https://www.bbee.nc.gov/barbers/license-verification",c:["cosmo"],note:"North Carolina licenses barbering separately from cosmetology."},
+{l:"NC Private Protective Services licensee search",u:"https://ppsapplication.permitium.com/publicapp/actives/home",c:["security"]}],
+none:["radtech","labsci"]},
 ND:{n:"North Dakota",p:[
 {l:"North Dakota Board of Medicine verification",u:"https://www.ndbom.org/public/find_verify/verify.asp",c:["physician"]},
 {l:"North Dakota Board of Pharmacy verification",u:"https://www.nodakpharmacy.com/verify.asp",c:["pharmacist","pharmtech"]}]},
@@ -11683,7 +11707,11 @@ TX:{n:"Texas",p:[
 {l:"Texas State Board of Pharmacy database search",u:"https://www.pharmacy.texas.gov/dbsearch/default.asp",c:["pharmacist","pharmtech"]},
 {l:"Texas State Board of Dental Examiners search",u:"https://tsbde.texas.gov/resources/public-license-search",c:["dentist","dentalhyg"]},
 {l:"Texas Board of Veterinary Medical Examiners lookup",u:"https://veterinary.texas.gov/enforcement/licensee-look-up/",c:["vet","vettech"]},
-{l:"Texas Online Private Security public search",u:"https://tops.portal.texas.gov/psp-self-service/search/index",c:["security"],note:"Asks you to pass a robot check before it will search."}]},
+{l:"Texas Online Private Security public search",u:"https://tops.portal.texas.gov/psp-self-service/search/index",c:["security"],note:"Asks you to pass a robot check before it will search."},
+{l:"Texas Board of Nursing license verification",u:"https://www.bon.texas.gov/licensure_verification.asp",c:["rn","lpn","np"],note:"One board and one search covers RN, LVN and APRN."},
+{l:"Texas Health Professions Council verification",u:"https://vo.licensing.hpc.texas.gov/datamart/selSearchType.do",c:["pt"],note:"A shared portal for several Texas boards \u2014 pick the profession once you are there."},
+{l:"TDLR active license search",u:"https://www.tdlr.texas.gov/LicenseSearch/",c:["cosmo"],note:"One search covers barbers and cosmetologists, plus shops and schools."}],
+none:["labsci"]},
 UT:{n:"Utah",p:[
 {l:"Utah DOPL license lookup",u:"https://secure.utah.gov/llv/search/index.html",c:"*",note:"One search for health professions, trades, cosmetology, security and veterinary."}]},
 VT:{n:"Vermont",p:[
@@ -11881,6 +11909,12 @@ const away = home && LIC_DIR[home] && jur!==home;
 const hasLink = hits.length>0;
 const awayNote = away? `<div class="banner info" style="margin-bottom:8px"><div><b>Issued in ${esc(J.n)}, and you are in ${esc(LIC_DIR[home].n)}.</b>
       That is common and often perfectly fine \u2014 a compact license, a federal employer, or simply a license they hold from elsewhere. Whether it lets them work for you here is a question for you and your own advisers; Weeksolved has no view on it and records no answer. ${hasLink? "Anything below goes to "+esc(J.n)+", which is the board that actually holds the record." : "It is "+esc(J.n)+" that holds the record, so that is where to check."}</div></div>` : "";
+ 
+if(!hits.length && Array.isArray(J.none) && J.none.includes(type))
+return awayNote + `<div class="help"><b>${esc(J.n)} does not license ${esc(licTypeName(type).toLowerCase())}s.</b>
+      There is no state board to check, so there is nothing to link to \u2014 that is the answer, not a gap.
+      A national certification may still exist and may still matter to you; the expiry date above records it either way,
+      and the drafter will not schedule them past it.</div>`;
 if(!hits.length) return awayNote + `<div class="help">Weeksolved does not have a page on file for ${esc(licTypeName(type).toLowerCase())} in ${esc(J.n)} \u2014 rather than send you somewhere that might be wrong, it sends you nowhere. Check it however you normally would; the expiry date above still works.</div>`
 + (comp.length? `<div class="card" style="margin-top:4px"><div class="body">
         <div class="mini" style="margin-bottom:6px">There is a compact page for this profession, which is a different thing from the state board:</div>
@@ -14395,7 +14429,8 @@ return "Past its date the drafter will not schedule them, because "+
 return "Dates here still warn you, and each certificate below can be set to stop them or only notify. "+
 (anyRole
 ? "A lapse does not automatically stop the drafter for this person, because none of their groups is marked as needing a licence."
-: "No group is marked as needing a licence yet \u2014 tick that on a group under Roles &amp; shifts if a lapse should stop the drafter outright.");
+: "No group is marked as needing a licence yet \u2014 tick that on a group under "+
+jumpLink("Shifts &amp; roles","go:shifts")+" if a lapse should stop the drafter outright.");
 }
  
 function allLicenses(e){
@@ -15731,6 +15766,42 @@ if(inp){ inp.value=entry.label; inp.dispatchEvent(new Event("input",{bubbles:tru
 }
 }
  
+ 
+function jumpLink(label, target, row){
+return '<a class="jlink" href="#" data-goto="'+esc(target)+'"'+(row? ' data-gotorow="'+esc(row)+'"':'')+
+' role="link">'+esc(label)+'</a>';
+}
+function jumpGo(target, row){
+if(!target) return;
+const i=String(target).indexOf(":");
+const kind=i<0? "" : target.slice(0,i), rest=i<0? target : target.slice(i+1);
+try{
+if(kind==="setcard"){
+settingsJump(rest);
+ 
+if(row) setTimeout(()=>{ try{
+FIND_Q.settings=String(row).toLowerCase();
+const inp=document.querySelector('[data-findbar="settings"] input');
+if(inp){ inp.value=row; inp.dispatchEvent(new Event("input",{bubbles:true})); }
+}catch(e){} }, 140);
+return;
+}
+if(typeof runAct==="function") return runAct(target);
+}catch(e){ try{ logBug&&logBug({kind:"jump", note:String(e&&e.message||e)}); }catch(_){} }
+}
+if(!window.__JUMPWIRED){
+window.__JUMPWIRED=1;
+document.addEventListener("click", ev=>{
+const a=ev.target && ev.target.closest && ev.target.closest("[data-goto]");
+if(!a) return;
+ev.preventDefault(); ev.stopPropagation();
+ 
+try{ if(a.closest(".scrim,.sheet,dialog")) closeModal(true); }catch(e){}
+setTimeout(()=>jumpGo(a.dataset.goto, a.dataset.gotorow||""), 30);
+}, true);
+}
+
+ 
 function appFindBar(id, placeholder){
 return '<div class="field" data-appfind="'+esc(id)+'">'+
 '<input type="search" id="'+esc(id)+'" placeholder="'+esc(placeholder||"Search \u2014 any page, setting, shift or person")+'" '+
@@ -15789,6 +15860,9 @@ sheetRoot().innerHTML =
 '<div class="sheet'+(drawer? " drawer"+(navSide()==="right"? " right":""):"")+'"><div class="sheetbox" role="dialog" aria-modal="true" aria-label="'+(drawer? "Menu":"More")+'">'+
 (drawer? '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-family:Archivo,sans-serif">Weeksolved</b><button type="button" class="btn sm ghost" data-sheetclose="1" aria-label="Close the menu">\u2715</button></div>' : '<div class="grab"></div>')+
  
+ 
+(bugDue()? '<div class="hnotice" style="margin-bottom:10px"><span>'+pending+' problem report'+(pending===1?'':'s')+
+' ready to go out as one note.</span><button class="btn sm" data-sheetbugsend="1" style="flex:none">Send</button></div>' : '')+
 '<div class="field" style="margin-bottom:10px">'+
 '<input type="search" id="sheetfind" placeholder="Search everything \u2014 pages, settings, how do I\u2026" '+
 'aria-label="Search the app" autocomplete="off" autocapitalize="none" spellcheck="false">'+
@@ -17161,6 +17235,15 @@ const rows=card.querySelectorAll('[data-find][data-findin="'+key+'"]');
 if(!rows.length) { card.style.display = q? "none" : ""; return; }
 const any=[...rows].some(r=>r.style.display!=="none");
 card.style.display = any? "" : "none";
+ 
+if(any && q && card.classList.contains("folded")){
+card.classList.remove("folded"); card.dataset.findopened="1";
+const m=card.querySelector(".foldc"); if(m) m.textContent="\u2013";
+}else if(!q && card.dataset.findopened){
+delete card.dataset.findopened;
+try{ if(typeof applyCardFolds==="function"){
+const pane=document.querySelector("#setcards"); if(pane) applyCardFolds(pane); } }catch(e){}
+}
 });
 if(none) none.style.display = (q && !shown && total)? "" : "none";
 bar.classList.toggle("has", !!q);
@@ -17619,6 +17702,21 @@ save(); render();
 });
 }
 const m=head.querySelector(".foldc"); if(m) m.textContent = shut? "+" : "\u2013";
+ 
+{ let peek=head.parentNode.querySelector(":scope > .foldpeek");
+if(shut){
+const names=[...card.querySelectorAll(".setbody [data-find] label, .setbody [data-find] .setq")]
+.map(x=>String(x.textContent||"").replace(/\s+/g," ").trim())
+.filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i);
+const say=names.length? names.slice(0,6).join(" \u00b7 ")+(names.length>6? " \u00b7 and "+(names.length-6)+" more":"") : "";
+if(say){
+if(!peek){ peek=document.createElement("div"); peek.className="mini foldpeek";
+peek.style.cssText="padding:0 0 10px;color:var(--muted)";
+head.parentNode.insertBefore(peek, head.nextSibling); }
+peek.textContent=say;
+}else if(peek){ peek.remove(); }
+}else if(peek){ peek.remove(); }
+}
 });
 }
 function applySetGroup(root){
@@ -20192,7 +20290,7 @@ modal(id?"Edit "+e.name:"Add someone", `
       <div class="field"><label>Started</label><input type="date" id="esen" value="${esc(e.seniority||"")}"></div>
       ${costOn()? `<div class="field"><label>Hourly rate</label><input type="number" inputmode="decimal" id="erate" min="0" step="0.25" value="${e.rate||0}"><span class="mini">optional — drives labor cost. Stays in your account; never shared.</span></div>`:""}
     </div>
-    <details class="morefold" ${(e.licExp||e.holidayPay===false||(e.licenses||[]).length||e.noStations&&e.noStations.length||e.apart&&e.apart.length)?"open":""}><summary>More about this person <span class="mini">— holiday pay, licences, PTO, training, keep-apart. All optional.</span></summary>
+    <details class="morefold" ${(e.licExp||e.holidayPay===false||(e.licenses||[]).length||e.noStations&&e.noStations.length||e.apart&&e.apart.length)?"open":""}><summary>More about this person <span class="mini">— holiday pay, licences, PTO, training, keep-apart. All optional.</span><span class="tapopen">Tap to open</span></summary>
     <div class="grid2">
       <div class="field"><label>Holiday pay</label><select id="ehp">
         <option value="1" ${e.holidayPay!==false?"selected":""}>Paid for holidays</option>
@@ -20332,7 +20430,7 @@ return Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)
         <button type="button" class="btn sm" id="eladd" style="margin-top:6px">Add another</button>
         <span class="mini">Each is either a hard stop \u2014 past its date the drafter will not schedule them \u2014 or a notice that only shows in the checks. A post can ask for one of these by name.</span></div>
     </div>` : `<div class="field"><label>Licences and certificates</label>
-      <span class="mini">Not being kept. Turn on <b>Licence and certificate dates</b> under Settings \u2192 Scheduling rules and the fields appear here, on every profile.</span></div>`}
+      <span class="mini">Not being kept. Turn on ${jumpLink("Licence and certificate dates","setcard:Who can work what","Licences and certificates")} in Settings and the fields appear here, on every profile.</span></div>`}
     ${(S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).length? `
     <div class="field"><label>Never on these posts</label>
       <div class="row" style="flex-wrap:wrap;gap:6px">${(S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).map(st=>`
@@ -26222,12 +26320,14 @@ if(wk.length){ const [o,c]=wk[0].split("|"); W.open=o; W.close=c; }
 if(h[6]){ W.satClosed=!!h[6].closed; W.satOpen=h[6].open; W.satClose=h[6].close; }
 if(h[0]){ W.sunClosed=!!h[0].closed; W.sunOpen=h[0].open; W.sunClose=h[0].close; }
  
-const roles=(s.roles||[]).slice(0,4);
+ 
+const roles=(s.roles||[]).slice(0, WIZ_MAX_ROLES);
 if(roles.length){
+const NB=Math.max(4, roles.length);
 W.bucketCount=roles.length;
-W.buckets=roles.map(r=>r.name).concat(["","","",""]).slice(0,4);
-W.bucketLic=roles.map(r=>!!r.licensed).concat([false,false,false,false]).slice(0,4);
-const names=["","","",""], people={}, dayOff={}, seen={};
+W.buckets=roles.map(r=>r.name).concat(Array(NB).fill("")).slice(0, NB);
+W.bucketLic=roles.map(r=>!!r.licensed).concat(Array(NB).fill(false)).slice(0, NB);
+const names=Array(NB).fill(""), people={}, dayOff={}, seen={};
 (s.employees||[]).filter(e=>e.active).forEach(e=>{
 let b=roles.findIndex(r=>(e.roleIds||[])[0]===r.id); if(b<0) b=0;
 const nk=String(e.name).trim().toLowerCase(); seen[b+"|"+nk]=(seen[b+"|"+nk]||0)+1;
@@ -26402,6 +26502,8 @@ if(sug) return sug;
 return (W.bucketCount===1? "Staff" : "Role "+(i+1));
 }
 function bucketSuggested(W, i){ return !((W.buckets||[])[i]||"").trim(); }
+ 
+const WIZ_MAX_ROLES = 12;
 function wizard(firstRun, resume){
 const W = {
 step:0, biz:"other",
@@ -26669,8 +26771,15 @@ if(k==="buckets") return `
       <div class="stack">
         <p class="whead">Server, cook, host. A shift can ask for one, and only people who do that job will be put on it.</p>
         <div class="help">The grey words are examples — ${esc(bizEx(W.biz).roleProse)}. Type over them, or leave one blank to use the example. One job each. If everybody does the same, pick <b>Everyone’s the same</b>.</div>
-        <div class="wopts wcols">${[1,2,3,4].map(n=>opt("bucketCount",n,W.bucketCount,
-n===1?"Everyone's the same":n+" roles", n===1?"No qualifications to track":"")).join("")}</div>
+        <div class="wopts wcols">${[1,2,3,4,5,6].map(n=>opt("bucketCount",n,W.bucketCount,
+n===1?"Everyone's the same":n+" roles", n===1?"No qualifications to track":"")).join("")}${
+W.bucketCount>6? opt("bucketCount",W.bucketCount,W.bucketCount,W.bucketCount+" roles","") : ""}</div>
+        <div class="row" style="gap:8px;align-items:center;margin:2px 0 4px">
+          <button type="button" class="btn sm" id="wroleadd" ${W.bucketCount>=WIZ_MAX_ROLES?"disabled":""}>Add another role</button>
+          <span class="mini">${W.bucketCount>=WIZ_MAX_ROLES
+? "That is as many as this screen will take \u2014 finish setup and add the rest under Shifts &amp; roles, which has no limit."
+: "A kitchen with a GM, two manager grades, crew and trainees is five or six \u2014 add as many as you actually schedule by."}</span>
+        </div>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,i)=>`
           <div class="field"><label>Role ${i+1}</label><input type="text" class="wrole" data-i="${i}"
             value="${esc(W.buckets[i]||"")}" placeholder="${esc(bizEx(W.biz).roles[i]||"Role name")}">
@@ -27300,6 +27409,13 @@ paint();
 const el=r.querySelector(id);
 if(el) el.addEventListener("change", ()=>{ W.shifts=[]; W.perShift={}; W.perShiftMax={}; W.custom=null; });
 });
+{ const ab=r.querySelector("#wroleadd");
+if(ab) ab.onclick=()=>{ collect();
+W.bucketCount=Math.min(WIZ_MAX_ROLES,(+W.bucketCount||1)+1);
+W.buckets=W.buckets||[];         while(W.buckets.length<W.bucketCount)     W.buckets.push("");
+W.bucketLic=W.bucketLic||[];     while(W.bucketLic.length<W.bucketCount)   W.bucketLic.push(false);
+W.bucketNames=W.bucketNames||[]; while(W.bucketNames.length<W.bucketCount) W.bucketNames.push("");
+paint(); }; }
 { const wsa=r.querySelector("#wsadd");
 if(wsa) wsa.onclick=()=>{ collect();
 const list=bakeShifts();
