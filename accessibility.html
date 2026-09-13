@@ -8,7 +8,12 @@
 <meta property="og:title" content="Accessibility at Weeksolved — what we build for and test">
 <meta property="og:description" content="How Weeksolved is built to be usable with a keyboard, a screen reader and at any text size, what we test on every release, and how to tell us where it falls short.">
 <meta property="og:url" content="https://weeksolved.com/accessibility.html">
-<meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://weeksolved.com/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Weeksolved — your week, solved. Staff scheduling that drafts the week from your coverage rules and places every meal and rest break inside your state's law.">
+  <meta name="twitter:image" content="https://weeksolved.com/og-cover.png">
+  <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Accessibility at Weeksolved — what we build for and test">
 <meta name="twitter:description" content="How Weeksolved is built to be usable with a keyboard, a screen reader and at any text size, what we test on every release, and how to tell us where it falls short.">
 <meta name="theme-color" content="#1c6a66">
@@ -58,6 +63,30 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
   strong{font-size:inherit}
 }
 @media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
+
+/* ---- footer: one component, every page (13 Sep 2026) -----------------------
+   Centred, because it is a flat list of peers with no columns to anchor a left
+   edge and because on a phone it always wraps — a left-aligned wrap leaves a
+   short orphan row that reads as an accident. The separators are ::after on the
+   link itself, so a middot travels with the word before it and can never begin
+   a line. The whole thing sits inside .wrap so it keeps the page gutter. */
+footer.wsfoot{margin-top:48px;padding:26px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer.wsfoot .wrap{padding-bottom:0}
+footer.wsfoot .fgrid{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 22px;margin:0}
+footer.wsfoot a{color:var(--ink2);text-decoration:none;font-weight:600;white-space:nowrap;display:inline-block;padding:7px 0;margin:0}
+footer.wsfoot a:hover,footer.wsfoot a:focus-visible{color:var(--accent)}
+footer.wsfoot .fnote{text-align:center;margin-top:8px}
+footer.wsfoot .fnote a{color:var(--accent)}
+/* No middots down here either. The row above reads cleanly on spacing alone,
+   and a separator between wrapped items always strands one at the end of a line
+   or the start of the next — which is what he spotted. */
+footer.wsfoot .fverticals{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 18px;margin-top:2px}
+footer.wsfoot .fverticals .flabel{color:var(--muted);padding:7px 0}
+footer.wsfoot .fverticals a{color:var(--accent)}
+@media (max-width:520px){
+  footer.wsfoot{margin-top:36px;padding:22px 0 32px}
+  footer.wsfoot .fgrid{gap:0 16px}
+}
 </style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
 <h1>Accessibility</h1>
 <nav class="toc"><h4>On this page</h4><a href="#the-standard-we-build-to">The standard we build to</a><a href="#what-has-actually-been-done">What has actually been done</a><a href="#what-has-not-been-done-and-we-would-rather-say-so">What has not been done, and we would rather say so</a><a href="#if-something-does-not-work">If something does not work</a></nav>
@@ -109,8 +138,8 @@ it does not affect what prints.</p>
 <ul>
 <li><strong>No independent audit.</strong> Everything above was tested by us. An outside expert has
   not reviewed this product.</li>
-<li><strong>No Accessibility Conformance Report (VPAT).</strong> If you need one for procurement, ask
-  us. We will commission an independent audit and produce one; we will not write one
+<li><strong>No independent accessibility audit.</strong> If you need one, ask us. We will
+  commission an independent audit and publish what it finds; we will not write one
   ourselves and call it independent.</li>
 <li><strong>No screen-reader testing by a person who uses one daily.</strong> Behavior has been
   verified programmatically and by keyboard. That catches a great deal, and it does not
@@ -130,9 +159,24 @@ ticket queue between you and the person who can change the code.</p>
 you were using — the browser, and any assistive technology. We will acknowledge quickly,
 tell you honestly whether it is a quick fix or a long one, and come back to you when it
 is done.</p>
-<p>If you are evaluating Weeksolved for a public agency, a university, or anywhere with a
-procurement accessibility requirement, say so in that email. It moves the question to
-the front of the queue rather than into it.</p>
-<footer><a href="/">Home</a> <a href="/app.html">Open the app</a> <a href="/pricing.html">Pricing</a>&nbsp;· <a href="/compare.html">How we compare</a><a href="/faq.html">FAQ</a> <a href="/updates.html">What's new</a> <a href="/about.html">About</a> <a href="/security.html">Security</a><a href="/contact.html">Contact</a> <a href="/terms.html">Terms</a> <a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a> <a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a> <a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
-  <div style="margin-top:6px">Scheduling for: <a href="/restaurant-scheduling.html">Restaurants</a> &nbsp;·&nbsp; <a href="/retail-scheduling.html">Shops</a> &nbsp;·&nbsp; <a href="/salon-scheduling.html">Salons</a> &nbsp;·&nbsp; <a href="/clinic-scheduling.html">Clinics</a> &nbsp;·&nbsp; <a href="/pharmacy-scheduling.html">Pharmacies</a> &nbsp;·&nbsp; <a href="/warehouse-scheduling.html">Warehouses</a></div>
-  </footer></div></body></html>
+<footer class="wsfoot"><div class="wrap">
+  <nav class="fgrid" aria-label="Footer">
+    <a href="/">Home</a>
+    <a href="/app.html">Open the app</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/compare.html">How we compare</a>
+    <a href="/faq.html">FAQ</a>
+    <a href="/updates.html">What's new</a>
+    <a href="/about.html">About</a>
+    <a href="/security.html">Security</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/dpa.html">Data processing</a>
+    <a href="/accessibility.html">Accessibility</a>
+    <a href="/tester-agreement.html">Tester agreement</a>
+    <a href="/refunds.html">Refunds</a>
+  </nav>
+  <div class="fnote">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
+  <div class="fverticals"><span class="flabel">Scheduling for:</span><a href="/restaurant-scheduling.html">Restaurants</a><a href="/retail-scheduling.html">Shops</a><a href="/salon-scheduling.html">Salons</a><a href="/clinic-scheduling.html">Clinics</a><a href="/pharmacy-scheduling.html">Pharmacies</a><a href="/warehouse-scheduling.html">Warehouses</a></div>
+</div></footer></div></body></html>

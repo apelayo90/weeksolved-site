@@ -8,7 +8,12 @@
 <meta property="og:title" content="Weeksolved Terms of Service — plain and readable">
 <meta property="og:description" content="The agreement for using Weeksolved: what we owe you, what you agree to, what may never be entered, and the promise that your staff's data is never sold or shared.">
 <meta property="og:url" content="https://weeksolved.com/terms.html">
-<meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://weeksolved.com/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Weeksolved — your week, solved. Staff scheduling that drafts the week from your coverage rules and places every meal and rest break inside your state's law.">
+  <meta name="twitter:image" content="https://weeksolved.com/og-cover.png">
+  <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Weeksolved Terms of Service — plain and readable">
 <meta name="twitter:description" content="The agreement for using Weeksolved: what we owe you, what you agree to, what may never be entered, and the promise that your staff's data is never sold or shared.">
 <meta name="theme-color" content="#1c6a66">
@@ -58,6 +63,30 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
   strong{font-size:inherit}
 }
 @media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
+
+/* ---- footer: one component, every page (13 Sep 2026) -----------------------
+   Centred, because it is a flat list of peers with no columns to anchor a left
+   edge and because on a phone it always wraps — a left-aligned wrap leaves a
+   short orphan row that reads as an accident. The separators are ::after on the
+   link itself, so a middot travels with the word before it and can never begin
+   a line. The whole thing sits inside .wrap so it keeps the page gutter. */
+footer.wsfoot{margin-top:48px;padding:26px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer.wsfoot .wrap{padding-bottom:0}
+footer.wsfoot .fgrid{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 22px;margin:0}
+footer.wsfoot a{color:var(--ink2);text-decoration:none;font-weight:600;white-space:nowrap;display:inline-block;padding:7px 0;margin:0}
+footer.wsfoot a:hover,footer.wsfoot a:focus-visible{color:var(--accent)}
+footer.wsfoot .fnote{text-align:center;margin-top:8px}
+footer.wsfoot .fnote a{color:var(--accent)}
+/* No middots down here either. The row above reads cleanly on spacing alone,
+   and a separator between wrapped items always strands one at the end of a line
+   or the start of the next — which is what he spotted. */
+footer.wsfoot .fverticals{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 18px;margin-top:2px}
+footer.wsfoot .fverticals .flabel{color:var(--muted);padding:7px 0}
+footer.wsfoot .fverticals a{color:var(--accent)}
+@media (max-width:520px){
+  footer.wsfoot{margin-top:36px;padding:22px 0 32px}
+  footer.wsfoot .fgrid{gap:0 16px}
+}
 </style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
 <h1>Terms of Service</h1>
 <nav class="toc"><h4>On this page</h4><a href="#1-what-the-service-is">1. What the service is</a><a href="#2-who-can-use-it-and-accounts">2. Who can use it, and accounts</a><a href="#3-your-data-is-yours">3. Your data is yours</a><a href="#4-your-responsibilities-for-employee-information">4. Your responsibilities for employee information</a><a href="#5-minors">5. Minors</a><a href="#6-acceptable-use">6. Acceptable use</a><a href="#7-intellectual-property">7. Intellectual property</a><a href="#8-feedback">8. Feedback</a><a href="#9-tester-program">9. Tester program</a><a href="#10-payment">10. Payment and automatic renewal</a><a href="#11-warranty-disclaimer">11. WARRANTY DISCLAIMER</a><a href="#12-limitation-of-liability">12. LIMITATION OF LIABILITY</a><a href="#13-indemnity">13. Indemnity</a><a href="#14-term-termination-and-suspension">14. Term, termination, and suspension</a><a href="#15-notices">15. Notices</a><a href="#16-dispute-resolution">16. DISPUTE RESOLUTION AND ARBITRATION</a><a href="#17-governing-law">17. Governing law</a><a href="#18-assignment">18. Assignment</a><a href="#19-force-majeure">19. Force majeure</a><a href="#20-changes-to-these-terms">20. Changes to these terms</a><a href="#21-survival">21. Survival</a><a href="#22-severability">22. Severability</a><a href="#23-no-waiver">23. No waiver</a><a href="#24-relationship-of-the-parties">24. Relationship of the parties</a><a href="#25-entire-agreement">25. Entire agreement</a><a href="#26-contact">26. Contact</a></nav>
@@ -71,6 +100,7 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 <p>Weeksolved helps managers build staff schedules from rules they set. It runs as a single-page application inside your web browser. It produces draft schedules, warnings, and information for a person to review.</p>
 <p>Weeksolved encodes published state meal-and-rest-break rules and warns you when a draft appears to conflict with them.</p>
 <p><strong>Weeksolved is not legal advice, and it does not produce a compliant schedule.</strong></p>
+<p><strong>Eligibility.</strong> Weeksolved is offered to private businesses. By accepting these terms you represent that you are not a government agency or other public entity, and are not purchasing on behalf of one.</p>
 <p>To be direct about what that means:</p>
 <ul>
 <li>We are not a law firm and we are not your lawyer. Using Weeksolved does not create an attorney-client relationship.</li>
@@ -276,8 +306,7 @@ export and a way of writing the schedule without us.</p>
 <li>your use of the service in violation of law.</li>
 </ul>
 <p><strong>(b) We indemnify you for intellectual property.</strong> We will defend, indemnify, and hold you harmless from any third-party claim that the service, as we provided it and as you used it in accordance with this agreement, infringes a United States patent, copyright, trademark, or trade secret. This does not apply to claims arising from your data, from your combining the service with anything we did not supply, or from your use of the service in a way this agreement does not permit. If the service becomes, or we think it may become, the subject of such a claim, we may modify it, replace it, or terminate your access and refund any prepaid unused fees. <strong>This paragraph (b) is our entire liability and your exclusive remedy for intellectual property infringement, and it is subject to the cap in section 12(b).</strong></p>
-<p><strong>(c) Public entities.</strong> If you are a government agency or other public entity whose governing law limits its ability to indemnify, paragraph (a) applies only to the extent that law permits. Nothing in this agreement requires you to exceed your legal authority.</p>
-<p><strong>(d) Process.</strong> The party seeking indemnity will notify the other promptly in writing, give the indemnifying party sole control of the defense (except that no settlement admitting fault or imposing a non-monetary obligation may be made without the other party's consent, which will not be unreasonably withheld), and cooperate reasonably at the indemnifying party's expense.</p>
+<p><strong>(c) Process.</strong> The party seeking indemnity will notify the other promptly in writing, give the indemnifying party sole control of the defense (except that no settlement admitting fault or imposing a non-monetary obligation may be made without the other party's consent, which will not be unreasonably withheld), and cooperate reasonably at the indemnifying party's expense.</p>
 <h2 id="14-term-termination-and-suspension">14. Term, termination, and suspension</h2>
 <p><strong>(a) Term.</strong> This agreement starts when you first accept it and continues until terminated.</p>
 <p><strong>(b) You can leave.</strong> You can stop using the service and delete your account at any time, for any reason. If you are on a paid plan, cancel in the billing portal inside your account as described in section 10.3; cancellation takes effect at the end of your current paid period unless our Refund Policy says otherwise.</p>
@@ -328,10 +357,9 @@ export and a way of writing the schedule without us.</p>
 <p><strong>(j) Changes to this section.</strong> If we change this section 16, the change does not apply to any dispute we already had notice of. You may reject a change to this section by emailing support@weeksolved.com within 30 days of the notice, in which case the version you accepted continues to govern between us.</p>
 <p><strong>(k) If a dispute goes to court.</strong> Any dispute that is not arbitrated — because you opted out, because (c), (d) or (e) applies, or because a court holds this section unenforceable as to that claim — is brought exclusively in the state or federal courts located in <strong>Sacramento County, California</strong>. We each consent to their personal jurisdiction and venue and give up any objection that the forum is inconvenient. Each party bears its own legal fees unless a statute or another part of this agreement says otherwise.</p>
 <p><strong>(l) Survival and severability.</strong> This section survives termination of this agreement and the closure of your account. Except as (f) says, if any part of this section is held unenforceable, that part is severed and the rest continues to apply.</p>
-<p><strong>Public entities.</strong> If you are a government agency whose governing law prohibits you from agreeing to arbitration, requires disputes to be heard in a different venue, or prohibits you from consenting to venue elsewhere, that law controls over this section, and the parties will follow it. Nothing here requires you to exceed your legal authority.</p>
 <h2 id="17-governing-law">17. Governing law</h2>
 <p>This agreement is governed by the laws of the State of California, without regard to its conflict-of-laws rules. The United Nations Convention on Contracts for the International Sale of Goods does not apply.</p>
-<p>If you are a government agency whose governing law requires the application of a different state's law, that law controls.</p>
+
 <h2 id="18-assignment">18. Assignment</h2>
 <p>You may not assign or transfer this agreement, or any of your rights under it, without our prior written consent. Any attempt to do so without consent is void.</p>
 <p><strong>We may assign this agreement, in whole or in part, without your consent</strong>, to:</p>
@@ -374,6 +402,24 @@ decisions with the help of software does not make the software&rsquo;s author a 
 <p>Weeksolved, a California sole proprietorship
 2108 N Street, Suite 17551, Sacramento, CA 95816
 support@weeksolved.com</p>
-<footer><a href="/">Home</a> <a href="/app.html">Open the app</a> <a href="/pricing.html">Pricing</a>&nbsp;· <a href="/compare.html">How we compare</a><a href="/faq.html">FAQ</a> <a href="/updates.html">What's new</a> <a href="/about.html">About</a> <a href="/security.html">Security</a><a href="/contact.html">Contact</a> <a href="/terms.html">Terms</a> <a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a> <a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a> <a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
-  <div style="margin-top:6px">Scheduling for: <a href="/restaurant-scheduling.html">Restaurants</a> &nbsp;·&nbsp; <a href="/retail-scheduling.html">Shops</a> &nbsp;·&nbsp; <a href="/salon-scheduling.html">Salons</a> &nbsp;·&nbsp; <a href="/clinic-scheduling.html">Clinics</a> &nbsp;·&nbsp; <a href="/pharmacy-scheduling.html">Pharmacies</a> &nbsp;·&nbsp; <a href="/warehouse-scheduling.html">Warehouses</a></div>
-  </footer></div></body></html>
+<footer class="wsfoot"><div class="wrap">
+  <nav class="fgrid" aria-label="Footer">
+    <a href="/">Home</a>
+    <a href="/app.html">Open the app</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/compare.html">How we compare</a>
+    <a href="/faq.html">FAQ</a>
+    <a href="/updates.html">What's new</a>
+    <a href="/about.html">About</a>
+    <a href="/security.html">Security</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/dpa.html">Data processing</a>
+    <a href="/accessibility.html">Accessibility</a>
+    <a href="/tester-agreement.html">Tester agreement</a>
+    <a href="/refunds.html">Refunds</a>
+  </nav>
+  <div class="fnote">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
+  <div class="fverticals"><span class="flabel">Scheduling for:</span><a href="/restaurant-scheduling.html">Restaurants</a><a href="/retail-scheduling.html">Shops</a><a href="/salon-scheduling.html">Salons</a><a href="/clinic-scheduling.html">Clinics</a><a href="/pharmacy-scheduling.html">Pharmacies</a><a href="/warehouse-scheduling.html">Warehouses</a></div>
+</div></footer></div></body></html>

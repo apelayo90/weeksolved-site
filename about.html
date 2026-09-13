@@ -3,16 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>How Weeksolved started — built on the job it schedules</title>
+<title>How Weeksolved started</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%231c6a66%27/%3E%3Ctext x=%2732%27 y=%2743%27 font-family=%27Arial,Helvetica,sans-serif%27 font-size=%2728%27 font-weight=%27800%27 fill=%27%23fff%27 text-anchor=%27middle%27%3EWS%3C/text%3E%3C/svg%3E">
-<meta name="description" content="Weeksolved began behind one counter, where the weekly schedule ate an evening. Now it drafts the week for any team that works shifts, breaks placed lawfully.">
+<meta name="description" content="Weeksolved began with a weekly schedule that ate an evening. Now it drafts the week for any team that works shifts, breaks placed lawfully.">
 <link rel="canonical" href="https://weeksolved.com/about.html">
 <meta property="og:site_name" content="Weeksolved">
 <meta property="og:title" content="About — Weeksolved">
-<meta property="og:description" content="Weeksolved began behind one counter, where the weekly schedule ate an evening. Now it drafts the week for any team that works shifts, breaks placed lawfully.">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="How Weeksolved started — built on the job it schedules">
-<meta name="twitter:description" content="Weeksolved began behind one counter, where the weekly schedule ate an evening. Now it drafts the week for any team that works shifts, breaks placed lawfully.">
+<meta property="og:description" content="Weeksolved began with a weekly schedule that ate an evening. Now it drafts the week for any team that works shifts, breaks placed lawfully.">
+  <meta property="og:image" content="https://weeksolved.com/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Weeksolved — your week, solved. Staff scheduling that drafts the week from your coverage rules and places every meal and rest break inside your state's law.">
+  <meta name="twitter:image" content="https://weeksolved.com/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How Weeksolved started">
+<meta name="twitter:description" content="Weeksolved began with a weekly schedule that ate an evening. Now it drafts the week for any team that works shifts, breaks placed lawfully.">
 <meta property="og:url" content="https://weeksolved.com/about.html">
 <meta name="theme-color" content="#1c6a66">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -65,6 +70,30 @@ footer nav{display:flex;gap:8px 18px;flex-wrap:wrap;justify-content:center;margi
 footer a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:13px}
 footer a:hover{color:var(--accent)}
 footer a{white-space:nowrap;display:inline-block;padding:8px 0}
+
+/* ---- footer: one component, every page (13 Sep 2026) -----------------------
+   Centred, because it is a flat list of peers with no columns to anchor a left
+   edge and because on a phone it always wraps — a left-aligned wrap leaves a
+   short orphan row that reads as an accident. The separators are ::after on the
+   link itself, so a middot travels with the word before it and can never begin
+   a line. The whole thing sits inside .wrap so it keeps the page gutter. */
+footer.wsfoot{margin-top:48px;padding:26px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer.wsfoot .wrap{padding-bottom:0}
+footer.wsfoot .fgrid{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 22px;margin:0}
+footer.wsfoot a{color:var(--ink2);text-decoration:none;font-weight:600;white-space:nowrap;display:inline-block;padding:7px 0;margin:0}
+footer.wsfoot a:hover,footer.wsfoot a:focus-visible{color:var(--accent)}
+footer.wsfoot .fnote{text-align:center;margin-top:8px}
+footer.wsfoot .fnote a{color:var(--accent)}
+/* No middots down here either. The row above reads cleanly on spacing alone,
+   and a separator between wrapped items always strands one at the end of a line
+   or the start of the next — which is what he spotted. */
+footer.wsfoot .fverticals{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 18px;margin-top:2px}
+footer.wsfoot .fverticals .flabel{color:var(--muted);padding:7px 0}
+footer.wsfoot .fverticals a{color:var(--accent)}
+@media (max-width:520px){
+  footer.wsfoot{margin-top:36px;padding:22px 0 32px}
+  footer.wsfoot .fgrid{gap:0 16px}
+}
 </style>
 </head>
 <body>
@@ -78,10 +107,10 @@ footer a{white-space:nowrap;display:inline-block;padding:8px 0}
     </nav>
   </div></header>
 
-  <h1>Built on the counter it schedules</h1>
-  <p class="sub">Weeksolved started in a working California pharmacy, where the week's schedule was a pile of requests, a grid of constraints, and an evening lost to fitting one into the other.</p>
+  <h1>Built out of the problem it solves</h1>
+  <p class="sub">Weeksolved started with a week's schedule that was a pile of requests, a grid of constraints, and an evening lost to fitting one into the other.</p>
 
-  <p>It started behind one counter. It now drafts the week for kitchens and dining rooms, clinics and front desks, salons, shops, warehouses, support desks and security posts &mdash; anywhere a week has to be worked out person by person, shift by shift.</p>
+  <p>It started with one small team. It now drafts the week for kitchens and dining rooms, clinics and front desks, salons, shops, warehouses, support desks and security posts &mdash; anywhere a week has to be worked out person by person, shift by shift.</p>
 
   <p>Every scheduling tool we tried had the same shape: a pretty empty grid, and good luck. The rules that actually make scheduling hard — licensed coverage that can never lapse, meal breaks that have to land inside a legal window, ratios between roles, the person who can't close Tuesdays, the fairness argument about who gets stuck with Sunday — all of that stayed in the manager's head. The software just held the boxes.</p>
 
@@ -94,21 +123,33 @@ footer a{white-space:nowrap;display:inline-block;padding:8px 0}
   <div class="card"><p style="margin:0"><b>Your data is yours.</b> Private to your account, exportable any time, never sold, never mined for ads. Leaving is allowed to be easy — that's what makes staying a choice.</p></div>
 
   <h2>Who's behind it</h2>
-  <p>Weeksolved is deliberately small — which means the person reading your message is the person who can fix your problem, usually the same day. Email <a href="mailto:support@weeksolved.com">support@weeksolved.com</a> or use Contact us in the app; every message gets a human reply.</p>
+  <p>Weeksolved is built and run by Alberto Pelayo, in California.</p>
+  <p>It is deliberately small — which means the person reading your message is the person who can fix your problem, usually the same day. Email <a href="mailto:support@weeksolved.com">support@weeksolved.com</a> or use Contact us in the app; every message gets a human reply.</p>
 
 <h2>The one-person question</h2>
   <p>It's the fair thing to ask a company this size, so here is the answer rather than a reassurance. Weeksolved runs in your browser against Google's infrastructure — there is no Weeksolved server sitting between you and your data. Every schedule, every roster and every record exports to a spreadsheet or a PDF from inside the app, at any time, without asking us. If Weeksolved stopped tomorrow you would still have the week you're running, the weeks behind it, and the sheets already printed and on the wall. The business is a California sole proprietorship converting to an LLC before general release on 11 January 2027, and your agreement transfers with it unchanged.</p>
 
-<footer>
-  <nav>
-    <a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a>&nbsp;· <a href="/compare.html">How we compare</a><a href="/faq.html">FAQ</a> <a href="/updates.html">What's new</a>
-    <a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a>
-    <a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a><a href="/refunds.html">Refunds</a>
+<footer class="wsfoot"><div class="wrap">
+  <nav class="fgrid" aria-label="Footer">
+    <a href="/">Home</a>
+    <a href="/app.html">Open the app</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/compare.html">How we compare</a>
+    <a href="/faq.html">FAQ</a>
+    <a href="/updates.html">What's new</a>
+    <a href="/about.html">About</a>
+    <a href="/security.html">Security</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/dpa.html">Data processing</a>
+    <a href="/accessibility.html">Accessibility</a>
+    <a href="/tester-agreement.html">Tester agreement</a>
+    <a href="/refunds.html">Refunds</a>
   </nav>
-  <div>Weeksolved · support@weeksolved.com</div>
-
-  <div style="margin-top:6px">Scheduling for: <a href="/restaurant-scheduling.html">Restaurants</a> &nbsp;·&nbsp; <a href="/retail-scheduling.html">Shops</a> &nbsp;·&nbsp; <a href="/salon-scheduling.html">Salons</a> &nbsp;·&nbsp; <a href="/clinic-scheduling.html">Clinics</a> &nbsp;·&nbsp; <a href="/pharmacy-scheduling.html">Pharmacies</a> &nbsp;·&nbsp; <a href="/warehouse-scheduling.html">Warehouses</a></div>
-  </footer>
+  <div class="fnote">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
+  <div class="fverticals"><span class="flabel">Scheduling for:</span><a href="/restaurant-scheduling.html">Restaurants</a><a href="/retail-scheduling.html">Shops</a><a href="/salon-scheduling.html">Salons</a><a href="/clinic-scheduling.html">Clinics</a><a href="/pharmacy-scheduling.html">Pharmacies</a><a href="/warehouse-scheduling.html">Warehouses</a></div>
+</div></footer>
 </div>
 </body>
 </html>

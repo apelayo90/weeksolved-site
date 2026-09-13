@@ -8,7 +8,12 @@
 <meta property="og:title" content="Data Processing Addendum — Weeksolved">
 <meta property="og:description" content="The data processing terms for Weeksolved: what we process on your behalf, the sub-processors involved, where data is stored, and the security measures behind it.">
 <meta property="og:url" content="https://weeksolved.com/dpa.html">
-<meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://weeksolved.com/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Weeksolved — your week, solved. Staff scheduling that drafts the week from your coverage rules and places every meal and rest break inside your state's law.">
+  <meta name="twitter:image" content="https://weeksolved.com/og-cover.png">
+  <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Data Processing Addendum — Weeksolved">
 <meta name="twitter:description" content="The data processing terms for Weeksolved: what we process on your behalf, the sub-processors involved, where data is stored, and the security measures behind it.">
 <meta name="theme-color" content="#1c6a66">
@@ -58,6 +63,30 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
   strong{font-size:inherit}
 }
 @media print{ body{background:#fff} header.top a,footer,.toc{display:none} }
+
+/* ---- footer: one component, every page (13 Sep 2026) -----------------------
+   Centred, because it is a flat list of peers with no columns to anchor a left
+   edge and because on a phone it always wraps — a left-aligned wrap leaves a
+   short orphan row that reads as an accident. The separators are ::after on the
+   link itself, so a middot travels with the word before it and can never begin
+   a line. The whole thing sits inside .wrap so it keeps the page gutter. */
+footer.wsfoot{margin-top:48px;padding:26px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer.wsfoot .wrap{padding-bottom:0}
+footer.wsfoot .fgrid{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 22px;margin:0}
+footer.wsfoot a{color:var(--ink2);text-decoration:none;font-weight:600;white-space:nowrap;display:inline-block;padding:7px 0;margin:0}
+footer.wsfoot a:hover,footer.wsfoot a:focus-visible{color:var(--accent)}
+footer.wsfoot .fnote{text-align:center;margin-top:8px}
+footer.wsfoot .fnote a{color:var(--accent)}
+/* No middots down here either. The row above reads cleanly on spacing alone,
+   and a separator between wrapped items always strands one at the end of a line
+   or the start of the next — which is what he spotted. */
+footer.wsfoot .fverticals{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 18px;margin-top:2px}
+footer.wsfoot .fverticals .flabel{color:var(--muted);padding:7px 0}
+footer.wsfoot .fverticals a{color:var(--accent)}
+@media (max-width:520px){
+  footer.wsfoot{margin-top:36px;padding:22px 0 32px}
+  footer.wsfoot .fgrid{gap:0 16px}
+}
 </style></head><body><div class="wrap"><header class="top"><div class="mark">WS</div><div class="brand">Weeksolved</div><a href="/app.html">Open the app →</a></header>
 <h1>Data Processing Addendum</h1>
 <nav class="toc"><h4>On this page</h4><a href="#1-definitions">1. Definitions</a><a href="#2-roles-of-the-parties">2. Roles of the parties</a><a href="#3-scope-of-processing">3. Scope of processing</a><a href="#4-our-obligations-as-a-service-provider-the-ccpa-contractual">4. Our obligations as a Service Provider — the CCPA contractual terms</a><a href="#5-subprocessors">5. Subprocessors</a><a href="#6-security">6. Security</a><a href="#7-security-incidents">7. Security Incidents</a><a href="#8-audit-and-assurance">8. Audit and assurance</a><a href="#9-assisting-you">9. Assisting you</a><a href="#10-return-and-deletion">10. Return and deletion</a><a href="#11-international-transfers">11. International transfers</a><a href="#12-general">12. General</a><a href="#annex-a-technical-and-organizational-measures">Annex A — Technical and organizational measures</a><a href="#signature">Signature</a></nav>
@@ -221,10 +250,9 @@ footer a{color:var(--accent);text-decoration:none;margin-right:14px;display:inli
 <p><strong>12.3 Changes in law.</strong> If Data Protection Law changes so that this DPA no longer satisfies it, the parties will negotiate an amendment in good faith. We may update this DPA to reflect a legal change or a new legally required term on 30 days' notice; if an update materially reduces your protections, you may terminate the Agreement without penalty within that period.</p>
 <p><strong>12.4 Order of precedence.</strong> This DPA controls over the Agreement on data protection matters. A signed order form controls over this DPA where it expressly says so.</p>
 <p><strong>12.5 Assignment.</strong> This DPA is assigned together with the Agreement, on the same terms as the Agreement's assignment clause, including assignment to a successor entity on conversion of the business from a sole proprietorship to a limited liability company. <strong>Your protections under this DPA transfer with it and are not reduced by the assignment.</strong> The successor is bound by every commitment in this DPA.</p>
-<p><strong>12.6 Governing law.</strong> As stated in the Agreement, except where Data Protection Law or your governing law as a public entity requires otherwise.</p>
-<p><strong>12.7 Public entities.</strong> If you are a government agency, and your governing law requires specific terms — venue, records retention, public records access, non-indemnification, audit rights, or accessibility — tell us before signing. We will negotiate in good faith. Where a provision of this DPA exceeds your legal authority to agree, that provision applies only to the extent your law permits, and the rest stays in effect.</p>
-<p><strong>12.8 Severability.</strong> If a provision is unenforceable, it is modified to the minimum extent needed, or severed, and the rest continues.</p>
-<p><strong>12.9 Counterparts and signature.</strong> This DPA may be signed in counterparts, including electronically, each of which is an original.</p>
+<p><strong>12.6 Governing law.</strong> As stated in the Agreement, except where Data Protection Law requires otherwise.</p>
+<p><strong>12.7 Severability.</strong> If a provision is unenforceable, it is modified to the minimum extent needed, or severed, and the rest continues.</p>
+<p><strong>12.8 Counterparts and signature.</strong> This DPA may be signed in counterparts, including electronically, each of which is an original.</p>
 <hr />
 <h2 id="annex-a-technical-and-organizational-measures">Annex A — Technical and organizational measures</h2>
 <p>Accurate as of September 12, 2026. We will not materially reduce these during the term.</p>
@@ -319,6 +347,24 @@ Email: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em><
 Name: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
 Title: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>
 Date: <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong></p>
-<footer><a href="/">Home</a> <a href="/app.html">Open the app</a> <a href="/pricing.html">Pricing</a>&nbsp;· <a href="/compare.html">How we compare</a><a href="/faq.html">FAQ</a> <a href="/updates.html">What's new</a> <a href="/about.html">About</a> <a href="/security.html">Security</a><a href="/contact.html">Contact</a> <a href="/terms.html">Terms</a> <a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a> <a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a> <a href="/refunds.html">Refunds</a><div style="margin-top:8px">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
-  <div style="margin-top:6px">Scheduling for: <a href="/restaurant-scheduling.html">Restaurants</a> &nbsp;·&nbsp; <a href="/retail-scheduling.html">Shops</a> &nbsp;·&nbsp; <a href="/salon-scheduling.html">Salons</a> &nbsp;·&nbsp; <a href="/clinic-scheduling.html">Clinics</a> &nbsp;·&nbsp; <a href="/pharmacy-scheduling.html">Pharmacies</a> &nbsp;·&nbsp; <a href="/warehouse-scheduling.html">Warehouses</a></div>
-  </footer></div></body></html>
+<footer class="wsfoot"><div class="wrap">
+  <nav class="fgrid" aria-label="Footer">
+    <a href="/">Home</a>
+    <a href="/app.html">Open the app</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/compare.html">How we compare</a>
+    <a href="/faq.html">FAQ</a>
+    <a href="/updates.html">What's new</a>
+    <a href="/about.html">About</a>
+    <a href="/security.html">Security</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/dpa.html">Data processing</a>
+    <a href="/accessibility.html">Accessibility</a>
+    <a href="/tester-agreement.html">Tester agreement</a>
+    <a href="/refunds.html">Refunds</a>
+  </nav>
+  <div class="fnote">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
+  <div class="fverticals"><span class="flabel">Scheduling for:</span><a href="/restaurant-scheduling.html">Restaurants</a><a href="/retail-scheduling.html">Shops</a><a href="/salon-scheduling.html">Salons</a><a href="/clinic-scheduling.html">Clinics</a><a href="/pharmacy-scheduling.html">Pharmacies</a><a href="/warehouse-scheduling.html">Warehouses</a></div>
+</div></footer></div></body></html>

@@ -10,7 +10,12 @@
 <meta property="og:site_name" content="Weeksolved">
 <meta property="og:title" content="Contact — Weeksolved">
 <meta property="og:description" content="Questions about scheduling, break law, pricing or your account. Every message goes to a person and gets a reply to the address on your account, usually the same day.">
-<meta name="twitter:card" content="summary_large_image">
+  <meta property="og:image" content="https://weeksolved.com/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Weeksolved — your week, solved. Staff scheduling that drafts the week from your coverage rules and places every meal and rest break inside your state's law.">
+  <meta name="twitter:image" content="https://weeksolved.com/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Contact Weeksolved — a real person reads every message">
 <meta name="twitter:description" content="Questions about scheduling, break law, pricing or your account. Every message goes to a person and gets a reply to the address on your account, usually the same day.">
 <meta property="og:url" content="https://weeksolved.com/contact.html">
@@ -65,6 +70,30 @@ footer nav{display:flex;gap:8px 18px;flex-wrap:wrap;justify-content:center;margi
 footer a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:13px}
 footer a:hover{color:var(--accent)}
 footer a{white-space:nowrap;display:inline-block;padding:8px 0}
+
+/* ---- footer: one component, every page (13 Sep 2026) -----------------------
+   Centred, because it is a flat list of peers with no columns to anchor a left
+   edge and because on a phone it always wraps — a left-aligned wrap leaves a
+   short orphan row that reads as an accident. The separators are ::after on the
+   link itself, so a middot travels with the word before it and can never begin
+   a line. The whole thing sits inside .wrap so it keeps the page gutter. */
+footer.wsfoot{margin-top:48px;padding:26px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer.wsfoot .wrap{padding-bottom:0}
+footer.wsfoot .fgrid{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 22px;margin:0}
+footer.wsfoot a{color:var(--ink2);text-decoration:none;font-weight:600;white-space:nowrap;display:inline-block;padding:7px 0;margin:0}
+footer.wsfoot a:hover,footer.wsfoot a:focus-visible{color:var(--accent)}
+footer.wsfoot .fnote{text-align:center;margin-top:8px}
+footer.wsfoot .fnote a{color:var(--accent)}
+/* No middots down here either. The row above reads cleanly on spacing alone,
+   and a separator between wrapped items always strands one at the end of a line
+   or the start of the next — which is what he spotted. */
+footer.wsfoot .fverticals{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 18px;margin-top:2px}
+footer.wsfoot .fverticals .flabel{color:var(--muted);padding:7px 0}
+footer.wsfoot .fverticals a{color:var(--accent)}
+@media (max-width:520px){
+  footer.wsfoot{margin-top:36px;padding:22px 0 32px}
+  footer.wsfoot .fgrid{gap:0 16px}
+}
 </style>
 </head>
 <body>
@@ -101,16 +130,27 @@ footer a{white-space:nowrap;display:inline-block;padding:8px 0}
     <p style="margin:0">Pricing is on the <a href="/pricing.html">pricing page</a>&nbsp;· <a href="/compare.html">How we compare</a>, common questions on the <a href="/faq.html">FAQ</a>, what changed recently under <a href="/updates.html">What's new</a>, and how your data is protected on the <a href="/security.html">security page</a>.</p>
   </div>
 
-<footer>
-  <nav>
-    <a href="/app.html">Open the app</a><a href="/pricing.html">Pricing</a><a href="/faq.html">FAQ</a>
-    <a href="/about.html">About</a><a href="/security.html">Security</a><a href="/contact.html">Contact</a>
-    <a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/dpa.html">Data processing</a><a href="/accessibility.html">Accessibility</a><a href="/tester-agreement.html">Tester agreement</a><a href="/refunds.html">Refunds</a>
+<footer class="wsfoot"><div class="wrap">
+  <nav class="fgrid" aria-label="Footer">
+    <a href="/">Home</a>
+    <a href="/app.html">Open the app</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/compare.html">How we compare</a>
+    <a href="/faq.html">FAQ</a>
+    <a href="/updates.html">What's new</a>
+    <a href="/about.html">About</a>
+    <a href="/security.html">Security</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/dpa.html">Data processing</a>
+    <a href="/accessibility.html">Accessibility</a>
+    <a href="/tester-agreement.html">Tester agreement</a>
+    <a href="/refunds.html">Refunds</a>
   </nav>
-  <div>Weeksolved · support@weeksolved.com</div>
-
-  <div style="margin-top:6px">Scheduling for: <a href="/restaurant-scheduling.html">Restaurants</a> &nbsp;·&nbsp; <a href="/retail-scheduling.html">Shops</a> &nbsp;·&nbsp; <a href="/salon-scheduling.html">Salons</a> &nbsp;·&nbsp; <a href="/clinic-scheduling.html">Clinics</a> &nbsp;·&nbsp; <a href="/pharmacy-scheduling.html">Pharmacies</a> &nbsp;·&nbsp; <a href="/warehouse-scheduling.html">Warehouses</a></div>
-  </footer>
+  <div class="fnote">Questions: <a href="mailto:support@weeksolved.com">support@weeksolved.com</a></div>
+  <div class="fverticals"><span class="flabel">Scheduling for:</span><a href="/restaurant-scheduling.html">Restaurants</a><a href="/retail-scheduling.html">Shops</a><a href="/salon-scheduling.html">Salons</a><a href="/clinic-scheduling.html">Clinics</a><a href="/pharmacy-scheduling.html">Pharmacies</a><a href="/warehouse-scheduling.html">Warehouses</a></div>
+</div></footer>
 </div>
 </body>
 </html>
