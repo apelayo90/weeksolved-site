@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 9e9824e8 2026-09-14 01:27 UTC -->
+<!-- build 6ec66e88 2026-09-14 03:42 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1757,8 +1757,10 @@ function siteOf(x){ return (x && x.siteId) || mainSiteId(); }
 function siteById(id){ return sitesList().find(z=>z.id===id) || sitesList()[0]; }
 function siteName(id){
 const z=siteById(id);
-if(z.id===mainSiteId()) return (S.org && S.org.site) || z.name || "Main site";
-return z.name || "Site";
+ 
+if(z.name) return z.name;
+if(z.id===mainSiteId()) return (S.org && S.org.site) || "Main site";
+return "Site";
 }
  
 function siteHours(id){ const z=siteById(id); return (z && Array.isArray(z.hours) && z.hours.length===7)? z.hours : S.hours; }
@@ -2841,8 +2843,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "9e9824e8";       
-const BUILD_AT = "2026-09-14 01:27 UTC";       
+const BUILD_ID = "6ec66e88";       
+const BUILD_AT = "2026-09-14 03:42 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -14603,7 +14605,8 @@ if(s.roleId && noRoleIds.has(s.roleId)) return;
 const u = (wk.unfilled||[]).find(x=>x.date===date&&x.shiftId===s.shiftId&&(x.roleId||null)===(s.roleId||null));
 push("crit","Open shift — "+(shiftById(s.shiftId)||{label:"Shift"}).label+", "+DSHORT[dow],
 roleName(s.roleId)+" · "+(u?u.reason:"no one assigned yet")+(pat? " · asked for by the pattern \u201c"+pat.name+"\u201d" : ""),
-{date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||""), code:"open", shiftId:s.shiftId, roleId:s.roleId||null});
+{date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||"")+"|"+(s.siteId||""),
+code:"open", shiftId:s.shiftId, roleId:s.roleId||null, siteId:s.siteId||null});
 });
 });
 
@@ -17126,7 +17129,8 @@ DAYVIEW=+b.dataset.day; go("day"); });
 root.querySelectorAll("[data-week]").forEach(b=>b.onclick=()=>{ S.currentWeek=b.dataset.week; save(); render(); });
 root.querySelectorAll("[data-jump]").forEach(b=>b.onclick=()=>{ DAYVIEW=+b.dataset.jump; go("day"); });
 root.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{
-const [date,shiftId,roleId]=b.dataset.fill.split("|"); fillOpenModal(date,shiftId,roleId||null); });
+const [date,shiftId,roleId,siteId]=b.dataset.fill.split("|");
+fillOpenModal(date,shiftId,roleId||null,siteId||null); });
 root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.currentWeek));
 root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(curWeek()));
 root.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>inboxModal(""));
@@ -21965,8 +21969,8 @@ const sl=root.querySelector("#wsendlater"); if(sl) sl.onclick=()=>scheduleModal(
 const wu=root.querySelector("#wunpost");
 if(wu) wu.onclick=()=>unpostWeek(S.currentWeek, "Unposted — edits are open again");
 root.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{
-const [date,shiftId,roleId]=b.dataset.fill.split("|");
-fillOpenModal(date, shiftId, roleId||null);
+const [date,shiftId,roleId,siteId]=b.dataset.fill.split("|");
+fillOpenModal(date, shiftId, roleId||null, siteId||null);
 });
 root.querySelectorAll("[data-fixall]").forEach(b=>b.onclick=()=>fixModal(S.currentWeek));
 root.querySelectorAll("[data-handback]").forEach(b=>b.onclick=()=>handBackModal(curWeek()));
@@ -22181,7 +22185,7 @@ toast("Shift removed \u2014 "+c.added.length+" new thing"+(c.added.length===1?""
 }, 120);
 };
 r.querySelector("#acands").onclick=()=>{
-const list=candidatesFor(a.shiftId,a.date,a.dow,a.roleId,a.empId);
+const list=candidatesFor(a.shiftId,a.date,a.dow,a.roleId,a.empId, siteOf(a));
 const free=list.filter(c=>!c.blocks.length), blocked=list.filter(c=>c.blocks.length);
 r.querySelector("#candbox").innerHTML =
 (free.length? `<div class="lab" style="margin:8px 0 6px">Clear to take it</div>`+candidateHTML(free,"data-swap") : `<div class="banner warn" style="margin-top:8px"><div>Nobody else clears every limit for this shift.</div></div>`)+
@@ -23498,7 +23502,7 @@ now("Change the length of "+who+"\u2019s "+day+" shift yourself", "Any start or 
 
 switch(v.code){
 case "open": {
-now("Who could work it?", "Everyone who clears every limit, best fit first.", ()=>fillOpenModal(v.date, v.shiftId, v.roleId||null), true);
+now("Who could work it?", "Everyone who clears every limit, best fit first.", ()=>fillOpenModal(v.date, v.shiftId, v.roleId||null, v.siteId||null), true);
 now("All open shifts and the best ways out", "Per diem, an hour of overtime, a request to decline — ranked, least disruptive first.", ()=>fixModal(ws));
 now("Offer it to the team", "One page they can reply to with a code. Nobody needs an account.", ()=>offerModal(ws));
 bringIn(v.date);
@@ -32254,7 +32258,8 @@ render(); toast("Undone");
 }
 
  
-function candidatesFor(shiftId, date, dow, roleId, excludeEmpId){
+function candidatesFor(shiftId, date, dow, roleId, excludeEmpId, siteId){
+ 
 const sh = shiftById(shiftId); if(!sh) return [];
 const [aMin,bMin] = shiftMinutes(sh);
 const ws = weekStartOf(date, S.org.weekStart);
@@ -32306,6 +32311,7 @@ blocks.push("only "+fmtHrs(gap)+" off after the night before"
 {list:wk.assignments, ignore:excludeEmpId? wk.assignments
 .filter(a=>a.empId===excludeEmpId && a.date===date && a.shiftId===shiftId)
 .map(a=>a.id) : null,
+siteId: siteId||null,
 allowOnCall:true, allowTrainee:true});
 if(why && !blocks.length) blocks.push(why);
 }
@@ -32746,11 +32752,11 @@ r.querySelectorAll("[data-deltpl]").forEach(b=>b.onclick=()=>{ S.templates=(S.te
 });
 }
 
-function fillOpenModal(date, shiftId, roleId){
+function fillOpenModal(date, shiftId, roleId, siteId){
 const dow=parseYmd(date).getDay();
 const sh=shiftById(shiftId)||{label:"Shift"};
 const [aMin,bMin]=shiftMinutes(sh);
-const cands=candidatesFor(shiftId,date,dow,roleId,null);
+const cands=candidatesFor(shiftId,date,dow,roleId,null, siteId||null);
 const free=cands.filter(c=>!c.blocks.length), blocked=cands.filter(c=>c.blocks.length);
 modal("Who could work "+sh.label+"?", `
     <div class="stack">
