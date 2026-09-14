@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build d647b652 2026-09-13 17:05 UTC -->
+<!-- build 9e9824e8 2026-09-14 01:27 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1280,7 +1280,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
       <span class="dot" id="syncdot"></span>
       <small id="syncmsg">Saved on this device</small>
       <button class="btn ghost sm" id="railset" title="Settings" style="padding:3px 8px;font-size:11.5px">Settings</button>
-      <button class="btn ghost sm" id="railbug" title="Report a problem or suggest a feature" style="padding:3px 8px;font-size:11.5px">Report or suggest</button>
+      <button class="btn ghost sm" id="railbug" title="Report a problem or suggest a feature" style="padding:3px 8px;font-size:11.5px">Report a problem</button>
       <div class="themetog" id="themetog" role="group" aria-label="Color theme">
         <button data-t="light" title="Light">☀</button>
         <button data-t="system" title="Match my system">◐</button>
@@ -1293,7 +1293,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
       <h2 id="ttl">Overview</h2>
       <div class="desc" id="tdesc"></div>
       <div id="tacts" class="row"></div>
-      <button class="btn sm" id="reportbtn" aria-label="Report a problem or suggest a feature" title="Report a problem or suggest a feature" style="flex:none"><span class="repico">⚑</span><span class="replbl"> Report</span></button>
+      <button class="btn sm" id="reportbtn" aria-label="Report a problem or suggest a feature" title="Report a problem or suggest a feature" style="flex:none"><span class="repico">⚑</span><span class="replbl"> Report a problem</span></button>
       <button class="btn ghost sm" id="helpbtn" aria-label="Help and frequently asked questions" title="Help" style="flex:none;border-radius:99px;width:28px;height:28px;padding:0;font-weight:700;line-height:1">?</button>
     </div>
     <main class="pane" id="pane" tabindex="-1"></main>
@@ -2553,7 +2553,7 @@ toast("That's all "+queue.length+" — check your sent folder to be sure");
 }
 
  
-const ACCESS = {"on":true,"until":"","codes":[{"id":"FOUNDER","h":"0i5etkf1gu2m0u12cako50eq52mz","days":36500,"life":true},{"id":"GIFT","h":"0ua80ad1xs959l1rsl7jh02ol8nd","days":36500,"life":true},{"id":"T01","h":"0m0fvkz0tkdanb0jef3g8103ca1l","days":30},{"id":"T02","h":"08p5qqr07js6421py7lxq12805kr","days":30},{"id":"T03","h":"16cv7r215rlb7y0tl29rp1iswqs3","days":30},{"id":"T04","h":"0eh6isu0e5ggf607jzn7910d5a70","days":30},{"id":"T05","h":"1pimatr0p52oop03diri60z08lcp","days":30},{"id":"T06","h":"0m0mnx413tcg4w0zgqwry0ipitvg","days":30},{"id":"T07","h":"0stotoj1kaz05d08uvjk90chc2lk","days":30},{"id":"T08","h":"00vazw00xbc65d04sabe51dpaqez","days":30},{"id":"T09","h":"1xm4nt11nbb6tr00clw8l1im7vsp","days":30},{"id":"T10","h":"0n92n4b18znbme0ete67c02xtwwx","days":30},{"id":"T11","h":"1ko6sqp01iaxg31dkdh3z12q9qxb","days":30},{"id":"T12","h":"1btxlvq0a1mqqr1r4680u04nlmot","days":30}]};    
+const ACCESS = {"on":true,"until":"","codes":[{"id":"FOUNDER","h":"0i5etkf1gu2m0u12cako50eq52mz","days":36500,"life":true},{"id":"T01","h":"0m0fvkz0tkdanb0jef3g8103ca1l","days":30},{"id":"T02","h":"08p5qqr07js6421py7lxq12805kr","days":30},{"id":"T03","h":"16cv7r215rlb7y0tl29rp1iswqs3","days":30},{"id":"T04","h":"0eh6isu0e5ggf607jzn7910d5a70","days":30},{"id":"T05","h":"1pimatr0p52oop03diri60z08lcp","days":30},{"id":"T06","h":"0m0mnx413tcg4w0zgqwry0ipitvg","days":30},{"id":"T07","h":"0stotoj1kaz05d08uvjk90chc2lk","days":30},{"id":"T08","h":"00vazw00xbc65d04sabe51dpaqez","days":30},{"id":"T09","h":"1xm4nt11nbb6tr00clw8l1im7vsp","days":30},{"id":"T10","h":"0n92n4b18znbme0ete67c02xtwwx","days":30},{"id":"T11","h":"1ko6sqp01iaxg31dkdh3z12q9qxb","days":30},{"id":"T12","h":"1btxlvq0a1mqqr1r4680u04nlmot","days":30}]};    
 const PASSKEY = "dowel.pass";
  
  
@@ -2594,7 +2594,7 @@ h[k]=(h[k]<<13|h[k]>>>19)>>>0;
 return h.map(x=>(x>>>0).toString(36).padStart(7,"0")).join("");
 }
  
-const UPDREV=9;
+const UPDREV=10;
 function updDue(){ return S.setupDone && !S.sample && ((S.ui&&S.ui.updSeen)||0) < UPDREV; }
 function updDone(){ S.ui=S.ui||{}; S.ui.updSeen=UPDREV; save(); render(); }
 function updModal(){
@@ -2841,8 +2841,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "d647b652";       
-const BUILD_AT = "2026-09-13 17:05 UTC";       
+const BUILD_ID = "9e9824e8";       
+const BUILD_AT = "2026-09-14 01:27 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -6483,7 +6483,8 @@ return !!(h && S.holidays.result && (S.holidays.result.result||[]).some(r=>r.hol
  
 function minHFactor(empId, ws){
  
-const ds=weekDates(ws).filter(d=>!S.hours[d.dow].closed);
+ 
+const ds=weekDates(ws).filter(d=>!((S.hours||[])[d.dow]||{}).closed);
 if(!ds.length) return 1;
 const here=ds.filter(d=>!onTimeOff(empId,d.date)).length;
 return here/ds.length;
@@ -8075,7 +8076,7 @@ function twoTrainings(){
 return `<div class="banner info"><div>
     <b>Two different things, both called training. Here is the difference in one line each.</b>
     <div style="margin-top:6px"><b>In training</b> \u2014 about the <b>person</b>. Are they counted as one of your staff yet, or an extra pair of hands on top of your cover? Set on their profile, under employment type.</div>
-    <div style="margin-top:4px"><b>Post training</b> \u2014 about <b>one post</b>. Who could use more time on the checking bench, who is comfortable there alone. Only steers which post someone is handed on the day. Never changes anyone\u2019s hours.</div>
+    <div style="margin-top:4px"><b>Training on each post</b> \u2014 about <b>one post</b>. Who could use more time on the checking bench, who is comfortable there alone. Only steers which post someone is handed on the day. Never changes anyone\u2019s hours.</div>
     <div class="mini" style="margin-top:6px">A brand-new hire is usually both: <i>In training</i> so they don\u2019t count as cover, and \u201ccould use more time here\u201d on the posts they haven\u2019t learned. A ten-year veteran who has never worked the drive-through is only the second.</div>
   </div></div>`;
 }
@@ -15300,7 +15301,9 @@ notifyFounder(rec.kind, (rec.kind==="idea"? "feature idea from " : "message from
 }
 }catch(e){}
 try{
-if(typeof FB!=="undefined" && FB && FB.user){
+ 
+const autoOff = !!(rec.auto && S.rules && S.rules.crashSend===false);
+if(typeof FB!=="undefined" && FB && FB.user && !autoOff){
 const b=twin||rec;
 const row={
 uid:FB.user.uid, tester:(window.TESTER_ID||""), at:b.at, kind:b.kind||"", auto:!!b.auto,
@@ -15488,10 +15491,10 @@ sent();
  
 const NAV=[
 {id:"home", label:"Home", simple:true},
-{id:"week", label:"This week", simple:true},
+{id:"week", label:"Week", simple:true},
 {id:"weeks", label:"All schedules", simple:true, n:()=>Object.keys(S.weeks).filter(k=>S.weeks[k].assignments.length&&!S.weeks[k].published).length||null},
 {id:"requests", label:"Requests", simple:true, n:()=>reqActive(reqPeriod(S.currentWeek,S.horizon||1)).filter(r=>r.status!=="declined").length||null},
-{id:"away", label:"Time away", simple:true, sub:"requests", n:()=>awayRows("upcoming").length||null},
+{id:"away", label:"Time off", simple:true, sub:"requests", n:()=>awayRows("upcoming").length||null},
 {id:"team", label:"Team", simple:true, n:()=>S.employees.length||null},
 {id:"holidays", label:"Holidays", simple:true, n:()=>S.holidays.list.length||null},
 {id:"vacation", label:"Vacations", simple:true, when:()=>!!(S.vacations&&S.vacations.on), n:()=>(S.vacations&&S.vacations.responses.length)||null},
@@ -15524,22 +15527,23 @@ const advanced = ()=> !!(S.ui&&S.ui.advanced);
 const TITLES={
 home:["Home","Everything you need, on one screen."],
 settings:["Settings","Every answer the setup questions asked — change any of them here."],
-week:["This week","Every shift for the week — change one, lock one, then post."],
+ 
+week:["Week","Every shift for the week — change one, lock one, then post."],
 weeks:["All schedules","Every week you've worked on, and what state it's in."],
 day:["Day sheet","Hour-by-hour with meals and rest breaks placed."],
 requests:["Requests","Everything people have asked for, in one place, before you draft."],
-away:["Time away","Who is away or asking for what, coming up and gone by \u2014 with when it was entered and what happened."],
-stations:["Stations","Where people stand each day, and whose turn it is for the good ones."],
+away:["Time off","Who is away or asking for what, coming up and gone by \u2014 with when it was entered and what happened."],
+stations:["Posts on the floor","Where people stand each day, and whose turn it is for the good ones."],
 org:["Business & law","Location, hours, and the break rules that follow from them."],
 setup:["Schedule setup","The shifts, the roles, how many of each you need, who gets first pick, and the posts on the floor."],
 shifts:["Shifts & roles","Job roles, and the named shifts you schedule with."],
 team:["Team","Profiles, availability, hour targets, and preferences."],
 demand:["Coverage needs","How many of each shift you need, and the minimums that must hold."],
 rules:["Scheduling rules","Rest between shifts, consecutive days, overtime, break handling."],
-priority:["Shift priority","Who gets first claim on the good shifts, and who gets first refusal on the bad ones."],
+priority:["Who gets first pick","Who gets first claim on the good shifts, and who gets first refusal on the bad ones."],
 analytics:["Analytics","What you scheduled, what people asked for, and what you had to turn down."],
-holidays:["Holiday poll","Rank-order poll so the least-wanted days land fairly."],
-vacation:["Vacation calendar","Everyone asks at once; the fairest possible set gets granted."],
+holidays:["Holidays","Rank-order poll so the least-wanted days land fairly."],
+vacation:["Vacations","Everyone asks at once; the fairest possible set gets granted."],
 export:["Export & share","Excel, PDF, and printable sheets."],
 help:["Help & FAQ","Ask anything about how it works — answers are instant."]
 };
@@ -15660,6 +15664,15 @@ SHEET_OPENER=null;
  
  
 var SHEET_INDEX=null, SHEET_INDEX_AT=0;
+ 
+const PAGE_ALIASES = {
+priority: "shift priority standing ladder seniority who gets first pick",
+stations: "stations station posts on the floor duties rotation",
+holidays: "holiday poll holidays rank order christmas thanksgiving",
+vacation: "vacation calendar vacations draw annual leave pto time off",
+away:     "time away time off leave absence pto requests",
+week:     "this week the week current week",
+};
 function sheetIndex(){
 if(SHEET_INDEX && Date.now()-SHEET_INDEX_AT < 4000) return SHEET_INDEX;
 const out=[], seen=new Set();
@@ -15672,7 +15685,7 @@ key:(label+" "+(hint||"")+" "+(keys||"")).toLowerCase()});
  
 NAV.filter(x=>x.id).filter(x=>!x.when || x.when()).forEach(x=>{
 const t=TITLES[x.id]||[];
-add(x.label, t[1]||"", x.id, (t[0]||"")+" "+(t[1]||""));
+add(x.label, t[1]||"", x.id, (t[0]||"")+" "+(t[1]||"")+" "+(PAGE_ALIASES[x.id]||""));
 });
  
 try{
@@ -15724,7 +15737,8 @@ add(q.t, "in Help", q.go||"help", q.k||"");
 }catch(e){}
  
 const FOLD=[["licence","license"],["labour","labor"],["colour","color"],
-["vacation","holiday","annual leave","time off","pto"],
+ 
+["vacation","vacations","holiday","holidays","annual leave","time off","pto"],
 ["rota","roster"],["staff","employee","people"],
 ["break","meal","rest","lunch"],["overtime","premium pay"],
 ["password","sign in","login"],["print","pdf","export"],
@@ -15900,6 +15914,8 @@ r.querySelectorAll("[data-sheetgo]").forEach(b=>b.onclick=()=>{ closeSheet();
 if(!advanced() && NAV.some(x=>x.id===b.dataset.sheetgo && !x.simple)){ S.ui=S.ui||{}; S.ui.advanced=true; save(); }
 go(b.dataset.sheetgo); });
 r.querySelectorAll("[data-sheetbug]").forEach(b=>b.onclick=()=>{ closeSheet(); bugModal(); });
+ 
+r.querySelectorAll("[data-sheetbugsend]").forEach(b=>b.onclick=()=>{ closeSheet(); digestModal(); });
  
 { const box=r.querySelector("#sheetfind"), found=r.querySelector("#sheetfound"),
 none=r.querySelector("#sheetnone"), body=r.querySelector("#sheetbody");
@@ -16079,18 +16095,18 @@ else WAS_PHONE=now;
 let LAST_VIEW=null;
  
 const SITE_LINKS=[
-["/pricing.html","Pricing"],
+["/pricing.html","What it costs"],
 ["/faq.html","Questions and answers"],
 ["/updates.html","What\u2019s new"],
 ["/compare.html","How we compare"],
 ["/about.html","About us"],
 ["/security.html","Security"],
 ["/accessibility.html","Accessibility"],
-["/terms.html","Terms"],
-["/privacy.html","Privacy"],
-["/dpa.html","Data processing"],
+["/terms.html","Terms of service"],
+["/privacy.html","Privacy policy"],
+["/dpa.html","Data processing terms"],
 ["/refunds.html","Refunds"],
-["/contact.html","Contact"]
+["/contact.html","Contact us"]
 ];
  
 const FOOT_LINKS=["/pricing.html","/faq.html","/updates.html","/security.html",
@@ -16411,7 +16427,7 @@ return ' data-why="'+esc(why)+'"'+(act? ' data-act="'+esc(act)+'"':'')+' role="b
 function actLabel(act){
 const [k,v]=String(act||"").split(":");
 if(k==="day") return "Open the day sheet";
-if(k==="go") return ({requests:"Open Requests", team:"Open Team", week:"Open this week", demand:"Open Coverage needs", rules:"Open Scheduling rules", org:"Open Business & law", holidays:"Open the holiday poll", stations:"Open Stations", settings:"Open Settings"})[v] || "Go there";
+if(k==="go") return ({requests:"Open Requests", team:"Open Team", week:"Open this week", demand:"Open Coverage needs", rules:"Open Scheduling rules", org:"Open Business & law", holidays:"Open Holidays", stations:"Open Posts on the floor", settings:"Open Settings"})[v] || "Go there";
 if(k==="emp") return "Open their profile";
 if(k==="lic") return "Put the new date in";
 if(k==="fix") return "See the fixes";
@@ -16966,7 +16982,7 @@ wk.assignments.length>wantSlots? " — "+(wk.assignments.length-wantSlots)+" mor
       </button>
       <button class="tile ${crit.length?"bad":"good"}" id="hlook">
         <span class="tn">${crit.length}</span>
-        <span class="tlab">${crit.length===1?"thing to fix":"things to fix"}</span>
+        <span class="tlab">to fix</span>
         <span class="td">${warn.length? warn.length+" more worth a look" : crit.length? "listed below":"all clear"}</span>
       </button>
       <button class="tile" data-go="team">
@@ -17038,7 +17054,7 @@ return `<button class="wkcard ${state}${payShade(w)}" data-week="${w}" ${payOn()
         <button class="btn" id="hpdf">Schedule as a PDF</button>
         <button class="btn" id="hxls">Open it in Excel</button>
         <button class="btn" id="hcards">One card per person</button>
-        <button class="btn ghost" data-go="holidays">Holiday poll</button>
+        <button class="btn ghost" data-go="holidays">Holidays</button>
       </div></div>
     `:""}
 
@@ -17304,20 +17320,20 @@ const EXPLAIN = {
 
  
 "rules.stationSpan": "How long somebody holds a post before the floor rotates. “All day” gives one post per person per day; anything else splits the open hours into blocks and moves people around. Example: at two hours, four people and four posts means everybody has worked all four by closing.",
-"rules.stationRotation": "How the next turn is chosen — evenly by who has had what, or by the order on your priority ladder. Example: “fair” gives the least-wanted post to whoever has had it least often; “by the ladder” gives seniority first refusal.",
+"rules.stationRotation": "How the next turn is chosen — evenly by who has had what, or by the order on your priority ladder. Example: “fair” gives the least-wanted post to whoever has had it least often; “by the order” gives seniority first refusal.",
 "rules.stationFamilies": "Groups posts that are really the same job, so fairness counts them together. Example: three checkout lanes marked as one family means somebody who did lane 2 yesterday is not handed lane 3 today just because it is technically a different post.",
 "rules.traineeCover": "Whether somebody still in training counts towards the number of people you asked for. Example: off means a trainee is an extra pair of hands on top of the three you asked for, not one of them.",
 "priority.ledgerFrom": "Which weeks count as history when working out whose turn it is. Example: “posted weeks only” ignores drafts you are still playing with, so redrafting Thursday six times does not make somebody look overworked.",
 
  
 "priority.mode": "How first claim on the good shifts and first refusal on the bad ones is decided. Example: “by seniority” ranks by start date; “my own order” lets you drag people into the order you actually use.",
-"priority.strength": "How much the ladder outweighs everything else. Low means it only breaks ties; high means it is nearly the whole answer. Example: at the top, the most senior available person gets the good shift even if somebody else is a slightly better fit for the day.",
-"priority.applyTo": "Which shifts the ladder applies to — the ones people want, the ones they do not, or both. Example: apply it only to the good ones and the unpopular shifts stay evenly shared.",
+"priority.strength": "How much the order outweighs everything else. Low means it only breaks ties; high means it is nearly the whole answer. Example: at the top, the most senior available person gets the good shift even if somebody else is a slightly better fit for the day.",
+"priority.applyTo": "Which shifts the order applies to — the ones people want, the ones they do not, or both. Example: apply it only to the good ones and the unpopular shifts stay evenly shared.",
 
  
 "rules.holidayRush": "Whether the days beside a holiday count as busier than usual. Example: with “the day before and after”, the day before Thanksgiving is treated as one step busier, so extra people land there first.",
 "rules.holidayRushScope": "Whether “the day before” means the calendar day or the nearest working weekday. Example: for a Monday holiday, “nearest weekday” makes the Friday before busy and leaves your weekend cover exactly as you set it.",
-"vacations.rule": "How competing vacation requests are settled when more people want the same days than you can spare. Example: “draw” gives everyone the same chance from a seeded lottery you can reproduce; “seniority” works down the ladder.",
+"vacations.rule": "How competing vacation requests are settled when more people want the same days than you can spare. Example: “draw” gives everyone the same chance from a seeded lottery you can reproduce; “seniority” works down the order.",
 "vacations.maxOff": "The most people who may be away at once. Example: 2 means a third request for the same week is held back even if everybody has the days.",
 "vacations.maxPicks": "How many separate stretches each person may ask for. Example: 3 lets somebody put in for a week in July, a long weekend in September and Christmas.",
 "vacations.minDays": "The shortest stretch that counts as a vacation request rather than a day off. Example: 3 means single days go through Requests instead.",
@@ -17343,7 +17359,7 @@ const EXPLAIN = {
 "rules.extraMode": "What the drafter does with hours above somebody's guarantee by default — schedule them freely up to the cap, or ask you first. Each profile can override it. Example: “ask me first” suits a team of part-timers whose extra hours you approve week by week.",
 "horizon": "How many weeks ahead one press of Draft builds. Example: 4 drafts a month at a time, and the printing screen then offers all four in one go.",
 "ui.anWeeks": "How far back the Analytics figures reach. Example: “this fiscal year” matches the numbers to whatever your accountant will ask about.",
-"ui.advanced": "Shows every page and setting rather than the everyday ones. Example: Stations, Shift priority and Coverage needs only appear in the menu once this is on.",
+"ui.advanced": "Shows every page and setting rather than the everyday ones. Example: Posts on the floor, Who gets first pick and Coverage needs only appear in the menu once this is on.",
 "ui.navSide": "Which side the menu sits on — and the Settings index with it. Example: left-handed on a wide monitor, some people prefer both on the right.",
 "ui.recurOff": "Stops the app pointing out that the same problem keeps happening week after week. Example: leave it on and a shift nobody can ever cover is named as a pattern rather than as a fresh surprise each week.",
 "mail.mode": "How outgoing mail actually leaves — through your own mail app, or through the account's own sender. Example: “my mail app” opens a message ready to send from your address, so replies come back to you.",
@@ -17520,7 +17536,7 @@ add("Rotating patterns", cyclesOn(), "team",
 add("Sending schedules out", sendOn(), "settings|Ground rules",
 "A Send button on the week and on Export \u2014 each person gets their own shifts",
 "You hand the schedule out however you do now");
-add("Time-off balances", ptoOn(), "team",
+add("Time off balances", ptoOn(), "team",
 "Hours accrue and draw down; balances show on each profile",
 "Time off is tracked as dates only, with no balance");
 add("Labor cost", costOn(), "settings|Money",
@@ -17529,7 +17545,7 @@ add("Labor cost", costOn(), "settings|Money",
 add("License expiry", licenseOn(), "team",
 "Warns before somebody\u2019s license lapses, and won\u2019t schedule them after",
 "No license dates are tracked");
-add("Stations on the floor", skillsOn(), "stations",
+add("Posts on the floor", skillsOn(), "stations",
 "People are placed on named posts, with cover for each other\u2019s meals",
 "Shifts only \u2014 no named posts within a shift");
 add("Under-18 rules", minorsOn(), "settings|Ground rules",
@@ -17600,7 +17616,7 @@ return head+`<div class="body"><div class="banner info"><div><b>You switched thi
 `<input type="text" data-bind="union.name" value="${esc(u.name||"")}" data-rerender="no" placeholder="e.g. Local 5 agreement" style="min-width:200px">`)}
       ${setRow("Seniority decides, rather than counts for something", u.seniorityRules
 ? "On \u2014 the longest-serving person who fits gets the shift, and shift priority is locked to start dates"
-: "Off \u2014 seniority still counts, at the strength you set under Shift priority",
+: "Off \u2014 seniority still counts, at the strength you set under Who gets first pick",
 sel("union.seniorityRules", [[1,"On"],[0,"Off"]], u.seniorityRules?1:0))}
       ${setRow("Post the schedule this far ahead", "Weeksolved warns before a week goes up later than this",
 sel("union.postDays", [[0,"No requirement"],[7,"7 days"],[10,"10 days"],[14,"14 days"],[21,"21 days"],[28,"28 days"]], u.postDays))}
@@ -18341,12 +18357,12 @@ sel("rules.mealPlan", [["auto","Work them out for me"],["slots","Use the times I
     <div class="card" data-findcard="settings"><header><h3>Where your schedule lives, and who can see it</h3></header>
       <div class="body stack">
         <div class="help" style="font-size:12.5px;line-height:1.6">
-          <p style="margin:0 0 8px"><b>On this device \u2014 and in your account, if you signed in.</b> That is the whole list.
-            If you never sign in, nothing leaves this browser at all. If you do, it is held so you can open the same board on
-            your phone, and it is not looked at in the ordinary running of Weeksolved. It is never sold, never used to train
-            anything, and never shown to another customer. There are no adverts in here. Like any hosted service, the people
-            who run it could technically reach the database in an emergency \u2014 we would rather say that plainly than pretend
-            otherwise \u2014 and if that is not good enough for your business, staying signed out keeps everything local to you.</p>
+          <p style="margin:0 0 8px"><b>On this device, and in your account.</b> That is the whole list.
+            Weeksolved needs an account \u2014 there is no way to use it signed out, and we would rather say so here than let
+            you find out at the sign-in screen. Your board is held so you can open the same week on your phone, and it is not
+            looked at in the ordinary running of Weeksolved. It is never sold, never used to train anything, and never shown
+            to another customer. There are no adverts in here. Like any hosted service, the people who run it could
+            technically reach the database in an emergency \u2014 we would rather say that plainly than pretend otherwise.</p>
           <p style="margin:0 0 8px"><b>Your staff have no logins.</b> They cannot see this, they cannot see each other\u2019s
             hours, and nothing you try here is visible to anybody until you press Post or send it yourself.</p>
           <p style="margin:0 0 8px"><b>Nothing you do in a draft counts.</b> Draft it, redraft it, throw it away, drag people
@@ -18371,8 +18387,8 @@ sel("support.remind", [[1,"On"],[0,"Off"]], (S.support||{}).remind!==false?1:0))
     </div></div>
 
     <div class="card" data-findcard="settings"><header><h3>Who gets first pick</h3></header><div class="setbody">
-      ${(unionOn() && union().seniorityRules)? `<div class="banner info"><div>Your agreement says seniority governs, so the ladder below is <b>start dates</b> and it decides rather than nudges, whatever is picked here. Your own setting is kept and applies again the moment the agreement is switched off.</div></div>`:""}
-      ${setRow("How standing is decided", esc((PRI_MODES.find(m=>m[0]===P.mode)||PRI_MODES[4])[2]), sel("priority.mode", PRI_MODES.map(m=>[m[0],m[1]]), P.mode))}
+      ${(unionOn() && union().seniorityRules)? `<div class="banner info"><div>Your agreement says seniority governs, so the order below is <b>start dates</b> and it decides rather than nudges, whatever is picked here. Your own setting is kept and applies again the moment the agreement is switched off.</div></div>`:""}
+      ${setRow("How first pick is decided", esc((PRI_MODES.find(m=>m[0]===P.mode)||PRI_MODES[4])[2]), sel("priority.mode", PRI_MODES.map(m=>[m[0],m[1]]), P.mode))}
       ${P.mode!=="off"? setRow("How much it counts", "", sel("priority.strength", PRI_STRENGTH.map(x=>[x[0],x[1]]), P.strength)) : ""}
       ${P.mode!=="off"? setRow("Apply it to", "", sel("priority.applyTo", [["desirable","Wanted and unwanted shifts only"],["all","Every shift"]], P.applyTo)) : ""}
       ${setRow("Which shifts people actually want", "", "", "priority")}
@@ -18382,8 +18398,8 @@ sel("support.remind", [[1,"On"],[0,"Off"]], (S.support||{}).remind!==false?1:0))
       ${setRow("Track what the schedule costs", S.org.trackCost? "Rates live on each profile and never appear on a printed schedule" : "Nothing about cost appears anywhere",
 sel("org.trackCost", [[0,"Just hours, no money"],[1,"Show me what it costs"]], S.org.trackCost?1:0))}
       ${S.org.trackCost? setRow("Weekly labor budget", "", `<input type="number" inputmode="decimal" step="50" min="0" data-bind="org.budget" value="${S.org.budget||0}" style="width:130px">`) : ""}
-      ${setRow("Track PTO balances", S.org.trackPto? "Each profile carries a balance and an accrual rule; approved time off draws it down" : "No balances anywhere — time off is just dates",
-sel("org.trackPto", [[0,"Don't track balances"],[1,"Track PTO balances"]], S.org.trackPto?1:0))}
+      ${setRow("Track Time off balances", S.org.trackPto? "Each profile carries a balance and an accrual rule; approved time off draws it down" : "No balances anywhere — time off is just dates",
+sel("org.trackPto", [[0,"Don't track balances"],[1,"Track Time off balances"]], S.org.trackPto?1:0))}
       ${setRow("Who gets paid for holidays", S.employees.filter(e=>e.active&&e.holidayPay).length+" of "+S.employees.filter(e=>e.active).length+" — set per person on their profile", "", "holidays")}
       ${setRow("Anyone on a fixed-hours contract", (()=>{const f=S.employees.filter(e=>effLimits(e).exactH);
 return f.length? esc(f.map(e=>e.name.split(" ")[0]+" "+effLimits(e).exactH+"h").join(", ")) : "nobody — everyone works to a range";})(), "", "team")}
@@ -18444,22 +18460,38 @@ return (a? "Agreed "+new Date(a.at).toLocaleDateString()+". " : "Not recorded on
  
 const fontsTag = !!document.querySelector('link[href*="fonts.googleapis.com"]');
 const pdfTag   = !!document.querySelector('script[src*="cdnjs"]');
+ 
+const sdkTag   = !!document.querySelector('script[src*="gstatic.com"]');
 const cloud    = (typeof cloudOn==="function") && cloudOn();
 const out=[];
+if(sdkTag)  out.push("www.gstatic.com, which serves the sign-in code itself");
 if(cloud)   out.push("Google Firebase, which holds your account and your board");
 if(fontsTag) out.push("Google Fonts, for the typefaces");
 if(pdfTag)   out.push("cdnjs, for the library that writes PDFs");
 const where = cloud
 ? "Your board goes to your own account and nowhere else."
-: "This copy has no account service, so your board never leaves this browser at all \u2014 it is stored on this device and nothing sends it anywhere.";
+ 
+: "The account service cannot be reached right now, so nothing is being saved to your account \u2014 this device is holding the only copy. It will catch up on its own when the connection comes back.";
 const who = out.length
 ? " Loading this page contacts "+out.length+" outside server"+(out.length===1?"":"s")+": "+out.join("; ")+
 ". Each of those sees that a browser asked for a file, and nothing about your schedule, your team or your account."
 : " Loading this page contacts nobody at all \u2014 everything it needs is inside the file.";
+const crash = (S.rules && S.rules.crashSend===false)
+? " Automatic crash reports are switched OFF on this device, so nothing is sent when something goes wrong."
+: " One thing does get sent without asking, and you should know what it is: when the app hits an error it files a"
++ " crash report \u2014 the error text, which screen you were on, your browser and screen size, your state, and how"
++ " many people, roles and shifts are on the board. Never a name, never a phone number or an address, never any"
++ " part of a schedule. It is how a fault in your browser reaches us before you give up on it. Switch it off"
++ " under Automatic crash reports, just below, and nothing is sent at all.";
 return where + who +
-" There is no analytics of any kind, no tracking pixel, no session recording and no advertising code anywhere in this app \u2014 not switched off, not present.";
+" There is no tracking pixel, no session recording, no advertising code and no product analytics anywhere in"
++ " this app \u2014 not switched off, not present." + crash;
 })(),
 "", "help")}
+      ${setRow("Automatic crash reports",
+"On \u2014 when the app breaks, the error and a few numbers about the shape of your board are sent so it can be fixed. "
++ "No names, no contact details, nothing from a schedule. Off means nothing is sent, and you can still report a problem by hand.",
+`<label class="switch"><input type="checkbox" data-bind="rules.crashSend" ${(S.rules&&S.rules.crashSend===false)?"":"checked"}> Send them</label>`)}
       ${setRow("Payment details", "Weeksolved has never asked you for a card and there is no payment form anywhere in this app. When paid plans arrive, card details will go straight to the payment company and never touch your board \u2014 and you will be told before anything changes.", "", null)}
       ${setRow("Your data", "A backup restores this whole board on any device",
 `<button class="btn sm" id="setbak">Download a backup</button><button class="btn sm" id="setrestore">Restore</button>`)}
@@ -18936,7 +18968,7 @@ return `
   <div class="stack">
     <div class="card">
       <header><h3>Roles</h3><span class="hint">What someone must be qualified to do. Only people holding a role can fill a shift that requires it.</span>
-        <button class="btn primary sm" id="addrole">Add role</button></header>
+        <button class="btn primary sm" id="addrole">Add a role</button></header>
       <div class="scroll">${S.roles.length? `<table>
         <thead><tr><th>Role</th><th style="width:90px">Short</th><th>Requirement / note</th><th style="width:110px">Who has it</th><th style="width:90px"></th></tr></thead>
         <tbody>${S.roles.map(r=>`<tr>
@@ -18951,7 +18983,7 @@ return `
 
     <div class="card">
       <header><h3>Named shifts</h3><span class="hint">Give the times you use over and over a name, the way your staff already says them.</span>
-        <button class="btn primary sm" id="addshift">Add shift</button></header>
+        <button class="btn primary sm" id="addshift">Add a shift</button></header>
       <div class="scroll">${S.shifts.length? `<table>
         <thead><tr><th>Name</th><th style="width:150px">Times</th><th style="width:90px">Length</th><th style="width:110px">Unpaid meal</th><th style="width:130px">Wanted?</th><th>Note</th><th style="width:150px"></th></tr></thead>
         <tbody>${S.shifts.map(s=>{
@@ -19171,7 +19203,7 @@ modal(id? ("Edit "+((s&&s.label)||"shift")) : "New shift", `
       <div class="field"><label>Note on the schedule</label><input type="text" id="snote" value="${esc(s.note||"")}" placeholder="${esc(bizEx().shiftNote)}"></div>
       <div class="field"><label>How people feel about this shift</label>
         <div class="seg" id="sdes">${[-2,-1,0,1,2].map(v=>`<button type="button" data-v="${v}" aria-pressed="${(s.desire||0)===v}">${DESIRE_LABEL[v]}</button>`).join("")}</div>
-        <span class="mini">Used by Shift priority to decide who gets first claim and who gets first refusal.</span></div>
+        <span class="mini">Used by Who gets first pick to decide who gets first claim and who gets first refusal.</span></div>
       </details>
       <div id="brkprev" class="banner info"></div>
       <div id="shiftobj" class="banner warn" style="display:none"></div>
@@ -19514,7 +19546,7 @@ const worst = rows.some(r=>r.sev==="crit")? "crit" : rows.some(r=>r.sev==="warn"
 return `<div class="card ${folded("paperwork")?"folded":""}">
     <header data-fold="paperwork" style="cursor:pointer">
       <h3>The paperwork (${rows.length})</h3>
-      <span class="chip ${worst==="info"?"":worst}">${worst==="crit"? "needs doing":"worth a look"}</span>
+      <span class="chip ${worst==="info"?"":worst}">${worst==="crit"? "to fix":"worth a look"}</span>
       <span class="hint">Everything that isn’t the schedule — licences, details, forms and balances, in one place</span>
       <span class="mini foldc" style="flex:none;font-size:15px">${folded("paperwork")?"+":"–"}</span></header>
     <div class="body"><div class="stack" style="gap:8px">
@@ -19546,7 +19578,7 @@ staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places u
           ${S.employees.length>1? `<button class="btn sm" id="bulkpat">Put several on a layout</button>`:""}
           <button class="btn sm" id="addtoff">Take someone off for a stretch</button>
         </div></details>` : `<button class="btn sm" id="tmform">Starter form</button>`}
-        <button class="btn primary sm" id="addemp">Add person</button></header>
+        <button class="btn primary sm" id="addemp">Add a person</button></header>
       ${S.employees.length? `<div class="body" style="padding:8px 16px 0"><div class="legend" style="gap:14px;font-size:12px">
           <span><span class="dpill on" style="width:22px;height:19px;font-size:10px">Mo</span> can work that day</span>
           <span><span class="dpill off" style="width:22px;height:19px;font-size:10px">Sa</span> never scheduled that day</span>
@@ -19568,15 +19600,24 @@ staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places u
         <span class="hint">Kept in full, never scheduled \u2014 one press puts anyone back</span>
         <span class="mini foldc" style="flex:none;font-size:15px">${folded("teamaside")?"+":"\u2013"}</span></header>
       <div class="body">
+        ${asideList().length>2? `<div class="row" style="justify-content:flex-end;margin-bottom:8px">
+          <button class="btn sm danger ghost" id="rmasideall">Remove all ${asideList().length}\u2026</button></div>`:""}
         <div class="stack" style="gap:8px">
           ${asideList().map(e=>`<div class="setrow${asideDue(e)?" warn":""}">
             <div class="sq"><strong>${esc(e.name)}</strong>
               <div class="mini">${esc(asideSay(e))}${asideOf(e).note? " \u00b7 "+esc(asideOf(e).note):""}</div>
               ${asideDue(e)? `<div class="mini" style="color:var(--warn)">The date they were expected back has passed. Nothing has changed on its own \u2014 put them back when it is right.</div>`:""}
             </div>
-            <div class="sc" style="display:flex;gap:6px;flex-wrap:wrap">
+            <div class="sc" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
               <button class="btn sm" data-editemp="${e.id}">Open</button>
               <button class="btn primary sm" data-backemp="${e.id}">Back on the roster</button>
+              <!-- Ellipsis because it opens the same three-way choice rather than
+                   deleting; outline rather than solid, and pushed right, because a
+                   solid red beside a solid green twelve times over is a mis-tap
+                   waiting to happen; the name is in aria-label so a screen reader
+                   does not announce twelve controls all called "Remove". -->
+              <button class="btn sm danger ghost" data-rmaside="${e.id}" style="margin-left:auto"
+                aria-label="Remove ${esc(e.name)} from the roster">Remove\u2026</button>
             </div></div>`).join("")}
         </div>
         <div class="help" style="margin-top:10px">Nobody here is scheduled, counted for coverage, or sent anything. Their
@@ -19587,7 +19628,7 @@ staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places u
     <div class="card ${folded("teamgroups")?"folded":""}">
       ${(function(){const n=(S.groups||[]).length; return `<header data-fold="teamgroups" style="cursor:pointer"><h3>Staff groups${n?` (${n})`:""}</h3>
         <span class="hint">One set of limits for a whole group of people</span>
-        <button class="btn primary sm" id="addgrp">Add group</button><span class="mini foldc" style="flex:none;font-size:15px">${folded("teamgroups")?"+":"–"}</span></header>`;})()}
+        <button class="btn primary sm" id="addgrp">Add a group</button><span class="mini foldc" style="flex:none;font-size:15px">${folded("teamgroups")?"+":"–"}</span></header>`;})()}
       <div class="scroll">${(S.groups||[]).length? `<table>
         <thead><tr><th>Group</th><th style="width:230px">Who's in it</th><th>What it enforces</th><th style="width:80px">People</th><th style="width:80px"></th></tr></thead>
         <tbody>${S.groups.map(g=>{
@@ -19669,6 +19710,10 @@ empModal(null);
 root.querySelector("#addgrp").onclick=()=>groupModal(null);
 root.querySelectorAll("[data-editgrp]").forEach(b=>b.onclick=()=>groupModal(b.dataset.editgrp));
 root.querySelectorAll("[data-editemp]").forEach(b=>b.onclick=()=>empModal(b.dataset.editemp));
+ 
+root.querySelectorAll("[data-rmaside]").forEach(b=>b.onclick=()=>removeEmpModal(b.dataset.rmaside));
+{ const all=root.querySelector("#rmasideall");
+if(all) all.onclick=()=>removeAsideAllModal(); }
 root.querySelectorAll("[data-backemp]").forEach(b=>b.onclick=()=>{
 const e=empById(b.dataset.backemp); if(!e) return;
 modal("Put "+esc(e.name.split(" ")[0])+" back on the roster?",
@@ -20436,7 +20481,7 @@ return Object.keys(LIC_DIR).sort((a,b)=>LIC_DIR[a].n.localeCompare(LIC_DIR[b].n)
       <div class="row" style="flex-wrap:wrap;gap:6px">${(S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).map(st=>`
         <label class="switch" style="border:1px solid var(--line);border-radius:7px;padding:4px 9px"><input type="checkbox" class="enost" value="${esc(st.id)}" ${(e.noStations||[]).includes(st.id)?"checked":""}> ${esc(st.name)}</label>`).join("")}</div>
       <span class="mini">A hard wall, whatever their role or licences say \u2014 pay arrangements, a past incident, your call and no reason recorded.</span></div>`:""}
-    ${skillsOn()? `<div class="field"><label>Post training \u2014 how each post is going for them</label>
+    ${skillsOn()? `<div class="field"><label>Training on each post \u2014 how each post is going for them</label>
       <div class="stack" style="gap:5px">${(S.stations||[]).filter(x=>x.kind!=="admin"&&!x.off).map(st=>`
         <div class="desrow"><strong style="font-size:12.5px;min-width:0;flex:1">${esc(st.name)}</strong>
           <select class="eskill" data-st="${esc(st.id)}" style="margin-left:auto;max-width:210px">
@@ -20936,7 +20981,7 @@ return `<div style="border:1px solid var(--line);border-radius:var(--r);overflow
               ${dayLoad(i)>0?'<span class="busy">'+esc(LOAD_LABEL[dayLoad(i)].toLowerCase())+'</span>':dayLoad(i)<0?'<span class="quiet">'+esc(LOAD_LABEL[dayLoad(i)].toLowerCase())+'</span>':""}</div>
             <div class="row" style="gap:6px"><span class="chip">${total} shift${total===1?"":"s"}</span>
               ${peakOf(i).length? `<span class="chip acc" title="Busy stretch">${esc(peakWords(i))}</span>`:""}
-              <button class="btn sm" data-adddem="${i}">Add shift</button>
+              <button class="btn sm" data-adddem="${i}">Add a shift</button>
               <button class="btn sm ghost" data-peak="${i}">${peakOf(i).length?"Busy stretch":"Set a busy stretch"}</button>
               ${i>0?`<button class="btn sm ghost" data-copydem="${i}">Copy from ${DSHORT[i-1]}</button>`:""}</div>
           </div>
@@ -20968,7 +21013,7 @@ return `<div style="border:1px solid var(--line);border-radius:var(--r);overflow
               ${U.on? `<span class="chip acc">used by ${U.on} of ${U.total}</span>` : '<span class="chip warn">same as that weekday</span>'}
               ${U.overrides? `<span class="mini">${U.overrides} holiday${U.overrides===1?" sets":"s set"} its own on the Holidays page</span>`:""}</div>
             <div class="row" style="gap:6px"><span class="chip">${total} shift${total===1?"":"s"}</span>
-              <button class="btn sm" data-adddem="${DOW_HOL}">Add shift</button>
+              <button class="btn sm" data-adddem="${DOW_HOL}">Add a shift</button>
               <button class="btn sm ghost" data-holmodeswap="1">${own? "Use the weekday instead" : "Use its own cover"}</button></div>
           </div>
           ${!U.on? `<div class="help" style="padding:11px 14px">Every holiday on your list is currently drafted <b>exactly like that weekday</b> \u2014 a Thursday holiday gets your ordinary Thursday, whole roster and all. If you want one person in on Thanksgiving rather than ten, press <b>Use its own cover</b> and say what should run.</div>`
@@ -21302,7 +21347,7 @@ modal("Coverage rule",`
         <option value="0">No — I only care who's on the premises</option></select>
         <span class="mini">Say yes for anything about being legally covered. Say no for rules where stepping away for lunch shouldn't count against you.</span></div>
     </div>`,
-`<button class="btn" data-close>Cancel</button><button class="btn primary" id="savecov">Add rule</button>`,
+`<button class="btn" data-close>Cancel</button><button class="btn primary" id="savecov">Add a rule</button>`,
 r=>{
 paint(r);
 r.querySelectorAll("#ckind .wopt").forEach(b=>b.onclick=()=>{
@@ -21739,8 +21784,8 @@ return `
         <span class="chip" title="You asked for ${wantSlots}. Anything over that is there to reach people’s guaranteed hours.">${wk.assignments.filter(siteOK).length} shift${wk.assignments.filter(siteOK).length===1?"":"s"}${
 wk.assignments.filter(siteOK).length>wantSlots? " · "+(wk.assignments.filter(siteOK).length-wantSlots)+" over" : ""}</span>
         <span class="chip">${fmtHrs(totalMin)}</span>
-        ${crit.length? `<span class="chip crit"${whyAttrs(crit.length+" thing"+(crit.length===1?"":"s")+" on this week break"+(crit.length===1?"s":"")+" a rule or leave"+(crit.length===1?"s":"")+" a gap — each one is listed under Conflicts and compliance with a Fix button.", "checks")}>${crit.length} must fix</span>`:wk.assignments.length?`<span class="chip ok">compliant</span>`:""}
-        ${warn.length? `<span class="chip warn"${whyAttrs(warn.length+" warning"+(warn.length===1?"":"s")+" — things worth a look before the week goes up, none of them a rule broken. Listed under Conflicts and compliance, each with a Fix button.", "checks")}>${warn.length} warnings</span>`:""}
+        ${crit.length? `<span class="chip crit"${whyAttrs(crit.length+" thing"+(crit.length===1?"":"s")+" on this week break"+(crit.length===1?"s":"")+" a rule or leave"+(crit.length===1?"s":"")+" a gap — each one is listed under Conflicts and compliance with a Fix button.", "checks")}>${crit.length} to fix</span>`:wk.assignments.length?`<span class="chip ok">compliant</span>`:""}
+        ${warn.length? `<span class="chip warn"${whyAttrs(warn.length+" worth a look"+" — things worth a look before the week goes up, none of them a rule broken. Listed under Conflicts and compliance, each with a Fix button.", "checks")}>${warn.length} worth a look</span>`:""}
         ${haveRates()? `<span class="chip ${S.org.budget && weekCost(ws)>S.org.budget?"warn":""}">${money(weekCost(ws))}${S.org.budget?" of "+money(S.org.budget):""}</span>`:""}
         <button class="btn" id="wmore">More ▾</button>
         <button class="btn primary" id="wgen">Draft${(S.horizon||1)>1? " "+S.horizon+" weeks":""}…</button>
@@ -21878,7 +21923,7 @@ return `<div class="card"><header><h3>Labor cost</h3>
 
     <div class="card">
       <header><h3>Conflicts and compliance</h3>
-        <span class="hint">${crit.length} must fix · ${warn.length} warnings · ${info.length} notes</span></header>
+        <span class="hint">${crit.length} to fix · ${warn.length} worth a look · ${info.length} notes</span></header>
       <div class="viollist" style="max-height:420px;overflow-y:auto">
         ${V.length? V.map((v,vi)=>{ const rr=v.code? RK.get(problemKey(v)) : null; return `<div class="viol-i"><span class="sv ${v.sev}"></span>
           <div class="tx"><strong>${esc(v.title)}</strong>${termHint(v.code)}<span>${esc(v.detail)}</span></div>
@@ -21984,7 +22029,7 @@ return `<option value="${s.id}">${esc(s.label)} · ${m2disp(a)}–${m2disp(b)}${
       <label class="switch"><input type="checkbox" id="nl"> Lock it — keep this when I rebuild the week</label>
       <div class="mini" id="nimpact"></div>
     </div>`,
-`<button class="btn" data-close>Cancel</button><button class="btn primary" id="savena">Add shift</button>`,
+`<button class="btn" data-close>Cancel</button><button class="btn primary" id="savena">Add a shift</button>`,
 r=>{
 const nimp=()=>{ const sh=shiftById(r.querySelector("#ns").value); if(!sh) return;
 const [x,y]=shiftMinutes(sh); const im=weekImpact(empId, null, null, x, y, date, shiftGap(sh));
@@ -22488,6 +22533,45 @@ g.match.empIds=g.match.empIds.filter(x=>x!==id); });
 S.gone=(S.gone||[]).filter(g=>g.id!==id);
 save();
 }
+ 
+function removeAsideAllModal(){
+const list=asideList().slice();
+if(!list.length) return;
+const tally=list.reduce((t,e)=>{ const x=removeTally(e.id);
+t.shifts+=x.shifts||0; t.posted+=x.posted||0; return t; }, {shifts:0, posted:0});
+modal("Remove all "+list.length+" set aside?", `
+    <div class="stack">
+      <div class="banner warn"><div><b>${list.length} ${list.length===1?"person":"people"}</b>, with
+        ${tally.shifts} shift${tally.shifts===1?"":"s"} between them on file${tally.posted? ", "+tally.posted+" of them inside weeks you have already posted":""}.
+        Nobody here is being scheduled today \u2014 this is about whether their files stay.</div></div>
+      <div class="mini" style="margin-bottom:2px">${esc(list.map(e=>e.name).join(" \u00b7 "))}</div>
+      <div class="wopts">
+        <button type="button" class="wopt on" data-rmaw="keep"><span class="wt">Remove them, keep the record</span>
+          <span class="wd">Their files go and they cannot be scheduled again \u2014 but every shift they have already worked stays on its week, with their name on it. The schedules you printed still match.</span></button>
+        <button type="button" class="wopt" data-rmaw="leave"><span class="wt">Leave them set aside</span>
+          <span class="wd">Nothing changes. They stay off every schedule, keep everything on file, and one press puts any of them back.</span></button>
+      </div>
+      <div class="mini">To delete somebody and every shift they ever worked, do that one at a time from their own file \u2014 it rewrites posted weeks, and it is not a thing to do to twelve people at once.</div>
+    </div>`,
+`<button class="btn" data-close>Cancel</button><button class="btn danger" id="rmago">Remove ${list.length}, keep the record</button>`,
+r=>{
+let pick="keep";
+const go=r.querySelector("#rmago");
+const paint=()=>{
+r.querySelectorAll("[data-rmaw]").forEach(b=>b.classList.toggle("on", b.dataset.rmaw===pick));
+go.className="btn "+(pick==="keep"? "danger":"primary");
+go.textContent = pick==="keep"? "Remove "+list.length+", keep the record" : "Leave them as they are";
+};
+r.querySelectorAll("[data-rmaw]").forEach(b=>b.onclick=()=>{ pick=b.dataset.rmaw; paint(); });
+paint();
+go.onclick=()=>{
+if(pick==="leave"){ closeModal(true); return; }
+list.forEach(e=>{ try{ removeKeepingHistory(e.id); }catch(err){} });
+closeModal(true); save(); render();
+toast(list.length+" removed from the roster \u2014 past shifts kept");
+};
+});
+}
 function removeEmpModal(id, after){
 const e=empById(id); if(!e) return;
 const t=removeTally(id);
@@ -22881,7 +22965,7 @@ return `
 esc(spanTxt(gapPts.length*STEP))} ${gapPts.every(p=>!p.staff)? "with nobody on":"short-handed"}</button>`
 :`<span class="chip ok">coverage holds all day</span>`}
         ${(()=>{const c=lunchClosure(dow, date); return c? `<span class="chip">doors shut ${m2disp(c.from)}–${m2disp(c.to)}</span>`:"";})()}
-        ${(S.stations||[]).length? `<button class="btn" id="dayrot">Rotate stations</button>`:`<button class="btn ghost" data-go="stations">Set up stations</button>`}
+        ${(S.stations||[]).length? `<button class="btn" id="dayrot">Rotate the posts</button>`:`<button class="btn ghost" data-go="stations">Set up the posts</button>`}
         <button class="btn" id="dayredo" title="Lay out posts, meals and rest breaks again for this day only. Who works stays exactly as it is.">Redo the day sheet</button>
         <button class="btn" id="dayprint">Print\u2026</button>
         <button class="btn" id="daypdf">PDF</button>
@@ -22974,7 +23058,7 @@ return `<tr>
             <td><strong>${empNameLink(e)}</strong> <span class="mini">${esc(roleAbbr(a.roleId))}</span>
               ${a.topUp? `<div class="mini"><span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span></div>`:""}
               ${a.cover? `<div class="mini"><span class="chip">Added to keep the floor covered</span> Nothing under Coverage needs asked for this shift that day; without it the floor was empty ${(()=>{ const c=((peekWeek(S.currentWeek).covered)||[]).find(x=>x.date===a.date && x.empId===a.empId && x.shiftId===a.shiftId); return c? m2disp(c.from)+"\u2013"+m2disp(c.to) : "for part of the day"; })()}.</div>`:""}
-              ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn"${whyAttrs("An extra duty on top of their post today: "+d.name+". Duties rotate fairly across the team; press Rotate stations to hand them out again, or change them under Stations.", "go:stations")}>${esc(d.name)}</span></div>`).join(""):""}
+              ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn"${whyAttrs("An extra duty on top of their post today: "+d.name+". Duties rotate fairly across the team; press Rotate the posts to hand them out again, or change them under Stations.", "go:stations")}>${esc(d.name)}</span></div>`).join(""):""}
               ${myRelief.map(x=>`<div class="mini"><span class="chip acc">Covers ${esc(x.station.name)} ${m2disp(x.start)}–${m2disp(x.end)}</span>${
 x.alsoHolding? ` <span class="mini">holding ${esc(x.alsoHolding)} at the same time</span>`:""}</div>`).join("")}
               ${a.mentor? `<div class="mini"><span class="chip acc">Learning \u2014 with ${esc((empById(a.mentor)||{name:"?"}).name)}</span></div>`
@@ -23100,7 +23184,7 @@ return `${tellBanner(ws)}<div class="card review">
         <div class="row" style="flex:none;max-width:100%;flex-wrap:wrap;gap:6px">
           <details class="btnmore"><summary class="btn">More…</summary><div class="btnmenu">
             <button class="btn" id="wshape">Shape: ${esc(patternName(ws))}</button>
-            ${wk.assignments.length && !wk.published && !queueFor(ws).some(q=>q.kind==="post")? `<button class="btn" id="wlater">Put it up later…</button>`:""}
+            ${wk.assignments.length && !wk.published && !queueFor(ws).some(q=>q.kind==="post")? `<button class="btn" id="wlater">Post it later…</button>`:""}
             ${sendOn() && wk.published && !postPending(wk) && !queueFor(ws).some(q=>q.kind==="send")? `<button class="btn" id="wsendlater">Send it later…</button>`:""}
           </div></details>
           ${wk.published? (postPending(wk)
@@ -25043,7 +25127,7 @@ const REPORTS = [
 {k:"requests",n:"Time-off requests",      d:"Every request in the period: granted, missed or declined, and who has asked most."},
 {k:"fair",    n:"Who got what",           d:"Weekends, the sought-after shifts and the unpopular ones, spread across the team."},
 {k:"posts",   n:"Time on each post",      d:"How the posts were shared out. Only useful once you have posts set up."},
-{k:"pto",     n:"Time-off balances",      d:"What each person has banked today, and when their next lot lands."},
+{k:"pto",     n:"Time off balances",      d:"What each person has banked today, and when their next lot lands."},
 {k:"callouts",n:"Callouts and no-shows",  d:"Who called out, when, and how often over the period."},
 {k:"changes", n:"Changes after posting",  d:"Every change made to a schedule once it was up, and whether people were told."},
 {k:"minors",  n:"Under-18 hours",         d:"Every shift worked by anyone under 18, against the limit that applied that day."},
@@ -25064,7 +25148,7 @@ const ROSTER_COLS = [
 {k:"started", n:"Start date",                   safe:false},
 {k:"rate",    n:"Hourly rate",                  safe:false},
 {k:"pto",     n:"Time-off balance",             safe:false},
-{k:"skills",  n:"Post training \u2014 who needs more time", safe:false},
+{k:"skills",  n:"Training on each post \u2014 who needs more time", safe:false},
 {k:"dob",     n:"Date of birth",                safe:false}
 ];
 function reportAvailable(k){
@@ -26433,6 +26517,17 @@ const M=JSON.parse(JSON.stringify(prev));
 .forEach(k=>{ if(N.org[k]!==undefined) M.org[k]=N.org[k]; });
 M.hours=N.hours;
  
+if((N.sites||[]).length>1){
+M.sites=(M.sites||[]).slice();
+N.sites.forEach((ns,i)=>{
+const nm=norm(ns.name);
+const old=M.sites.find(x=>norm(x.name)===nm) || (i===0? M.sites.find(x=>x.id==="site_main") : null);
+if(old){ if(!norm(old.name) && nm) old.name=ns.name; }
+else M.sites.push({id:ns.id==="site_main"? uid("site") : ns.id, name:ns.name, hours:null});
+});
+if(!M.sites.length) M.sites=N.sites.slice();
+}
+ 
 const roleMap={};
 N.roles.forEach(r=>{ const old=(M.roles||[]).find(x=>norm(x.name)===norm(r.name)); if(old){ roleMap[r.id]=old.id; old.licensed=!!r.licensed; } });
 const mapRole=id=>id? (roleMap[id]||id) : id;
@@ -26504,6 +26599,8 @@ return (W.bucketCount===1? "Staff" : "Role "+(i+1));
 function bucketSuggested(W, i){ return !((W.buckets||[])[i]||"").trim(); }
  
 const WIZ_MAX_ROLES = 12;
+ 
+const WIZ_MAX_SITES = 12;
 function wizard(firstRun, resume){
 const W = {
 step:0, biz:"other",
@@ -26517,7 +26614,9 @@ xPto:false, xCycles:false, xNotice:false, xWaiver:false, waiverAuto:false, xLic:
 satOpen:"10:00", satClose:"16:00", satClosed:false,
 sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
 dayOff:{},                       
+siteCount:1, siteNames:["","","",""],    
 headcount:0,
+startFresh:false,                
 bucketCount:2, buckets:["Staff","Lead","",""], bucketNames:["","","",""], bucketLic:[false,false,false,false],
 people:{},                      
 shiftPreset:"openclose", shifts:[], custom:null,
@@ -26533,12 +26632,16 @@ reqs:[],
 weeks:1
 };
  
+const WFRESH = JSON.parse(JSON.stringify(W));
+ 
 if(!resume && wizRealBoard(S)) Object.assign(W, wizSeedFrom(S));
  
 if(resume){ const d=wizDraft(); if(d) Object.assign(W, d.W); }
  
 const POSTY=["pharmacy","clinic","warehouse","security","hotel","food"];
 const ALL_STEPS=[
+ 
+{k:"fresh",   t:"Is this the same business?",      core:true, when:()=>wizRealBoard(S)},
 {k:"biz",     t:"What kind of place is this?",     core:true},
 {k:"where",   t:"Where do you operate?",           core:true},
 {k:"hours",   t:"When do you need people in?",     core:true},
@@ -26568,7 +26671,7 @@ const phaseLabel=()=>{
 const i=W.step, n=STEPS.length;
 if(i<CORE) return "Step "+(i+1)+" of "+CORE+" \u2014 the questions it needs";
 if(i===n-1) return "Step "+(i+1)+" of "+n+" \u2014 ready";
-return "Step "+(i+1)+" of "+n+" \u2014 optional, all have sensible defaults";
+return "Step "+(i+1)+" of "+n+" \u2014 optional, all have defaults";
 };
 const wizHolDefault=(h)=>{
 const b=W.biz;
@@ -26687,18 +26790,37 @@ if(k==="biz") return `
           <div class="field"><label>What should this schedule be called?</label>
             <input type="text" id="wn" value="${esc(W.name)}" placeholder="${esc(bizEx(W.biz).name)}">
             <span class="mini">Whatever people will recognize at the top of the printed schedule.</span></div>
-          <div class="field"><label>Site or location (optional)</label><input type="text" id="ws" value="${esc(W.site)}" placeholder="e.g. North Branch"></div>
         </div>
       </div>`;
-if(k==="where") return `
+if(k==="where"){
+const NS=Math.max(1, Math.min(WIZ_MAX_SITES, +W.siteCount||1));
+const EG=["Boyle Heights","East LA","Downtown","Harbor","Westside","Northgate"];
+return `
       <div class="stack">
-        <p class="whead">Your state sets the meal and rest breaks. Not on the list? Leave it on the federal minimum — changing it later re-checks every schedule you have made.</p>
+        <p class="whead">Your state sets the meal and rest breaks. Not listed? Leave the federal minimum — changing it later re-checks every schedule you have made.</p>
         <div class="field"><label>State or jurisdiction</label><select id="wj">
           ${Object.keys(LAW).map(x=>`<option value="${x}" ${W.juris===x?"selected":""}>${esc(LAW[x].name)}</option>`).join("")}</select></div>
         <div class="banner info"><div><b>${esc((LAW[W.juris]||LAW.NONE).name)}.</b> ${esc((LAW[W.juris]||LAW.NONE).note||"")}
           ${(LAW[W.juris]||{}).premium? " <b>If you get it wrong:</b> "+esc(LAW[W.juris].premium):""}</div></div>
         <div class="help">City rules and union contracts go under Scheduling rules later.</div>
+        <div class="sep"></div>
+        <div class="field"><label>How many places do you schedule?</label>
+          <div class="wopts wcols">${[1,2,3,4,5,6].map(x=>opt("siteCount",x,NS,
+x===1?"Just the one":x+" places","")).join("")}${
+NS>6? opt("siteCount",NS,NS,NS+" places","") : ""}</div></div>
+        <div class="grid2">${Array.from({length:NS},(_,i)=>`
+          <div class="field"><label>${NS===1? "Name of this place (optional)" : "Place "+(i+1)}</label>
+            <input type="text" class="wsite" data-i="${i}" value="${esc((W.siteNames||[])[i]|| (i===0? (W.site||"") : ""))}"
+              placeholder="${esc(i===0? "e.g. Main Campus, Suite 120" : "e.g. "+EG[(i-1)%EG.length])}"></div>`).join("")}</div>
+        ${NS>1
+? `<div class="row" style="gap:8px;align-items:center">
+              <button type="button" class="btn sm" id="wsiteadd" ${NS>=WIZ_MAX_SITES?"disabled":""}>Add another place</button>
+              <span class="mini">${NS>=WIZ_MAX_SITES
+? "That is as many as this screen will take \u2014 add the rest under Locations, which has no limit."
+: "Each place gets its own hours and its own coverage. Who can work where is set on each profile, so somebody shared across sites stays shared."}</span></div>`
+: `<div class="help">Separate rooms or counters inside one building are <b>posts</b>, not places.</div>`}
       </div>`;
+}
 if(k==="hours") return `
       <div class="stack">
         <p class="whead">The window people can be <b>scheduled to work</b> — not your door hours. Include prep and close-down.</p>
@@ -26733,7 +26855,7 @@ if(k==="hours") return `
       </div>`;
 if(k==="busy") return `
       <div class="stack">
-        <p class="whead">Tell it your rhythm and spare hands land where they are useful. Defaults — adjust any of them.</p>
+        <p class="whead">Tell it your rhythm and spare hands land where they are useful. Defaults — adjust any.</p>
         <div class="stack" style="gap:6px">${DAYS.map((d,i)=>`
           <div class="desrow">
             <strong style="width:110px;font-family:Archivo,sans-serif;font-size:13px">${d}</strong>
@@ -26767,10 +26889,27 @@ if(k==="busy") return `
 
         
       </div>`;
+if(k==="fresh"){
+const c={people:(S.employees||[]).filter(e=>e.active!==false).length,
+roles:(S.roles||[]).length, shifts:(S.shifts||[]).length};
+return `
+      <div class="stack">
+        <p class="whead">You already have a board here. These questions can change it, or replace it.</p>
+        <div class="wopts">
+          <button type="button" class="wopt ${W.startFresh?"":"on"}" data-g="startFresh" data-v="false">
+            <span class="wt">Changing this one</span>
+            <span class="wd">Keep the ${c.people} ${c.people===1?"person":"people"} on the roster, and everything they carry \u2014 hours, availability, licences, balances, time off. Answers that name somebody update them; anybody the answers do not mention is left exactly as they are. This is the usual one.</span></button>
+          <button type="button" class="wopt ${W.startFresh?"on":""}" data-g="startFresh" data-v="true">
+            <span class="wt">A different business \u2014 clear what is here</span>
+            <span class="wd">Empties the roster, the roles, the shifts and the coverage before it writes the new answers, so nothing from the old business is left behind. Your account, your sign-in and how the app looks are untouched.</span></button>
+        </div>
+        <div class="help">Roles, shifts and coverage are written by these same answers, so they clear together \u2014 clearing only the people would leave coverage asking for roles that no longer exist. You will see exactly what goes on the last screen before anything happens.</div>
+      </div>`;
+}
 if(k==="buckets") return `
       <div class="stack">
         <p class="whead">Server, cook, host. A shift can ask for one, and only people who do that job will be put on it.</p>
-        <div class="help">The grey words are examples — ${esc(bizEx(W.biz).roleProse)}. Type over them, or leave one blank to use the example. One job each. If everybody does the same, pick <b>Everyone’s the same</b>.</div>
+        <div class="help">Grey words are examples — ${esc(bizEx(W.biz).roleProse)}. Type over them, or leave one blank to keep it. One job each; if everybody does the same, pick <b>Everyone’s the same</b>.</div>
         <div class="wopts wcols">${[1,2,3,4,5,6].map(n=>opt("bucketCount",n,W.bucketCount,
 n===1?"Everyone's the same":n+" roles", n===1?"No qualifications to track":"")).join("")}${
 W.bucketCount>6? opt("bucketCount",W.bucketCount,W.bucketCount,W.bucketCount+" roles","") : ""}</div>
@@ -26778,13 +26917,14 @@ W.bucketCount>6? opt("bucketCount",W.bucketCount,W.bucketCount,W.bucketCount+" r
           <button type="button" class="btn sm" id="wroleadd" ${W.bucketCount>=WIZ_MAX_ROLES?"disabled":""}>Add another role</button>
           <span class="mini">${W.bucketCount>=WIZ_MAX_ROLES
 ? "That is as many as this screen will take \u2014 finish setup and add the rest under Shifts &amp; roles, which has no limit."
-: "A kitchen with a GM, two manager grades, crew and trainees is five or six \u2014 add as many as you actually schedule by."}</span>
+: "Add as many as you schedule by \u2014 a GM, two manager grades, crew and trainees is five."}</span>
         </div>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,i)=>`
           <div class="field"><label>Role ${i+1}</label><input type="text" class="wrole" data-i="${i}"
             value="${esc(W.buckets[i]||"")}" placeholder="${esc(bizEx(W.biz).roles[i]||"Role name")}">
             <label class="switch" style="margin-top:6px;font-size:12.5px"><input type="checkbox" class="wlic" data-i="${i}" ${W.bucketLic&&W.bucketLic[i]?"checked":""}> Needs an active license or certification</label></div>`).join("")}</div>
-        <div class="help">Mark a job as licensed to track each person's expiry date — nobody is ever scheduled past a lapsed license.</div>
+        <div class="help">Mark a job as licensed to track expiry dates — nobody is scheduled past a lapsed license.</div>
+        <div class="help"><b>Departments are roles here</b> — make each department's jobs a role.</div>
       </div>`;
 if(k==="count") return `
       <div class="stack">
@@ -26796,7 +26936,7 @@ if(k==="count") return `
       </div>`;
 if(k==="team") return `
       <div class="stack">
-        <p class="whead">One name per line, under the job they do — type them or paste a list. The order becomes the seniority order; the Team page changes any of it later.</p>
+        <p class="whead">One name per line, under the job they do — type or paste a list. The order becomes the seniority order; the Team page changes it later.</p>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,b)=>`
           <div class="field"><label>${esc(bucketLabel(W,b))}${bucketSuggested(W,b)? ` <span class="mini" style="font-weight:400;color:var(--muted)">(our suggestion — rename it on the last screen)</span>`:""} <span style="color:var(--faint)">· <span class="wcnt" data-b="${b}">${namesIn(b).length}</span></span></label>
             <textarea class="wbn" data-b="${b}" style="min-height:130px" spellcheck="false"
@@ -26821,8 +26961,8 @@ return `<tr><td><strong>${esc(pn.name)}</strong><div class="mini">${esc(bucketLa
         <div class="banner info" id="wdaysum"><div>${anyOff
 ? "<b>Standing days off recorded.</b> "+esc(people.filter(pn=>(doffOf(pn)||[]).length)
 .map(pn=>pn.name.split(" ")[0]+" (no "+((W.dayOff||{})[pn.b+":"+pn.i]||[]).map(i=>DSHORT[i]).join("/")+")").join(", "))
-: "<b>Everyone's free every day so far.</b> That's fine — switch off any day someone genuinely can't do, and skip the rest."}</div></div>
-        <div class="help">A one-week holiday or a single Tuesday off goes in as a request instead, two screens on.</div>
+: "<b>Everyone's free every day so far.</b> Switch off any day someone can never do, and skip the rest."}</div></div>
+        <div class="help">A one-week holiday or a single Tuesday off goes in as a request, two screens on.</div>
       </div>`;
 }
 if(k==="shifts"){
@@ -26857,7 +26997,7 @@ W.custom.length+" shift"+(W.custom.length===1?"":"s")+" you built by hand.") : "
             <input type="number" inputmode="decimal" step="0.25" min="1" max="16" class="wsfhi" data-i="${i}"
               value="${esc(String((W.shifts[i]&&W.shifts[i].lenMaxH)||sh.lenMaxH||""))}" placeholder="9" style="width:90px" aria-label="Longest">
             <span class="mini">hours</span></div>`:""}`).join("")}
-          <div class="help">Wanted / unwanted is a first guess from the shape, and decides who gets first claim — change it under Shift priority. An <b>open end</b> has one fixed end; the other moves inside your hours.</div>
+          <div class="help">Wanted / unwanted is guessed from the shape and decides who claims first — change it under Who gets first pick. An <b>open end</b> fixes one end; the other moves inside your hours.</div>
         </div>`:""}
         <div class="row" style="gap:8px;flex-wrap:wrap">
           <button type="button" class="btn sm" id="wsadd">+ Add another shift</button>
@@ -26880,7 +27020,7 @@ u + (W.perShift[i+":"+ri]!=null? +W.perShift[i+":"+ri] : (def[i+":"+ri]||0)),0),
 const tight = perDay > capacity;
 return `
       <div class="stack">
-        <p class="whead">On a normal open day, how many does each shift need? First box is the <b>floor</b> — never fewer. Second is a <b>ceiling</b>; leave it blank for none. One pair per job, per shift.</p>
+        <p class="whead">On a normal open day, how many does each shift need? First box is the <b>floor</b> — never fewer. Second a <b>ceiling</b> — blank for none. One pair per job, per shift.</p>
         ${cur.shifts.map((sh,i)=>`<div class="stack" style="gap:6px;border:1px solid var(--line);border-radius:7px;padding:10px 12px">
           <div class="row"><strong style="font-family:Archivo,sans-serif">${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}</strong>
             <span class="mini mono">${m2disp(t2m((W.shifts[i]&&W.shifts[i].start)||sh.start))}–${m2disp(t2m((W.shifts[i]&&W.shifts[i].end)||sh.end))}</span></div>
@@ -26900,7 +27040,7 @@ return `
         <div class="field"><label>And what should it do with anyone left over?</label>
           <div class="wopts">${
 opt("fillMode","demand",W.fillMode,"Stop at the floor","It fills those numbers and stops.")+
-opt("fillMode","full",W.fillMode,"Keep going until everyone has their contracted hours","For agreements where full-timers must be fully scheduled. The extra time goes down as project time.")}</div></div>
+opt("fillMode","full",W.fillMode,"Keep going until everyone has their contracted hours","Where full-timers must be fully scheduled. The extra goes down as project time.")}</div></div>
         ${W.fillMode==="full"? `
         <div class="field"><label>What do you call that extra time?</label>
           <input type="text" data-w="topUpLabel" value="${esc(W.topUpLabel)}" placeholder="Project time"></div>
@@ -27016,7 +27156,7 @@ opt("breakMode","self",W.breakMode,"Staff sort it out themselves","The sheet jus
         <div class="field"><label>And how should those times be picked?</label>
           <div class="wopts">${
 opt("mealPlan","auto",W.mealPlan,"Work them out for me","Staggered, inside the legal window. Most places want this.")+
-opt("mealPlan","slots",W.mealPlan,"We have set lunch times","You name the times and everyone goes on one of them.")+
+opt("mealPlan","slots",W.mealPlan,"We have set lunch times","You name the times; everyone goes on one.")+
 opt("mealPlan","closed",W.mealPlan,"We close for lunch","The doors shut and the whole team eats.")}</div>
           ${W.mealPlan==="slots"? `<div class="row" style="margin-top:8px">
             <span class="mini" style="width:100%">The times you use — change or add any of them:</span>
@@ -27041,7 +27181,7 @@ if(k==="pri") return `
       <div class="stack">
         <p class="whead">Two people both fit a shift everybody wants. Who decides?</p>
         <div class="wopts">${PRI_MODES.map(m=>opt("priority",m[0],W.priority,m[1],m[2])).join("")}</div>
-        ${W.priority==="seniority"? `<div class="banner info"><div>Start dates aren't in yet, so until they are the ladder is the order you listed people in.</div></div>`:""}
+        ${W.priority==="seniority"? `<div class="banner info"><div>Start dates aren't in yet, so for now the order is the order you listed people in.</div></div>`:""}
         ${W.priority==="custom"? `<div class="help">The order you typed the names in is the starting ladder.</div>`:""}
         ${W.priority==="lottery"? `<div class="help">Reshuffled weekly from a seed you can re-roll — the same seed always gives the same order.</div>`:""}
         ${W.hoursPreset==="wkday"? "" : `<div class="desrow" style="margin-top:6px">
@@ -27052,7 +27192,7 @@ if(k==="pri") return `
             <option value="neutral" ${W.weekendDesire==="neutral"?"selected":""}>No different</option>
           </select>
         </div>
-        <div class="help">Weekend shifts are then spread by the same order instead of landing on the same people every week.</div>`}
+        <div class="help">Weekend shifts then spread by that order instead of landing on the same people every week.</div>`}
       </div>`;
 if(k==="cost") return `
       <div class="stack">
@@ -27073,11 +27213,11 @@ return `
       <div class="stack">
         <p class="whead">All optional, all switchable later — anything left off stays out of your way.</p>
         <div class="help" style="margin-bottom:10px"><b>Already on:</b> the day sheet, hour by hour.</div>
-        ${X("xPto", W.xPto, "Time-off balances", "They grow as people work.")}
+        ${X("xPto", W.xPto, "Time off balances", "They grow as people work.")}
         ${X("xLic", W.xLic, "License and certification expiry", "Nobody is scheduled past a lapsed license.")}
         ${X("xCycles", W.xCycles, "Work patterns like 7 on, 7 off", "Or averaged over a period.")}
-        ${X("xNotice", W.xNotice, "Advance-notice warnings", "If a week goes up under two weeks ahead.")}
-        ${X("xSkills", W.xSkills, "Post training — who needs more time on what", "Only you see it.")}
+        ${X("xNotice", W.xNotice, "Advance-notice alerts", "If a week goes up under two weeks ahead.")}
+        ${X("xSkills", W.xSkills, "Training on each post — who needs more time on what", "Only you see it.")}
         ${X("xPay", W.xPay, "Pay period markers on the schedule", "")}
         ${X("xFww", W.xFww, "Scheduling-law help (Fair Workweek)", "It says first whether any of it applies to you.")}
         ${X("xNoComms", W.xNoComms, "No messages to staff, of any kind", "Printing and PDFs still work.")}
@@ -27104,7 +27244,7 @@ return `
 opt("vacations",false,W.vacations,"I\u2019ll handle longer time off myself",
 "Approve each request as it comes, on the Team page.")+
 opt("vacations",true,W.vacations,"Run one fair draw for the season",
-"Everybody submits ranked choices by a deadline; one draw grants the largest set that still covers the floor. Ties go by seniority, fairness or a seeded lottery — your pick.")}</div>
+"Everybody ranks their choices by a deadline; one draw grants the largest set that still covers the floor. Ties go by seniority, fairness or a seeded lottery.")}</div>
 
         ${people.length? `<div class="lab" style="margin-top:6px">Already promised or already booked</div>
         <div class="help" style="margin-bottom:8px">Put it in now and the first schedule works around it.</div>
@@ -27191,6 +27331,16 @@ const cur=curShifts();
 const people=allNames();
 return `
       <div class="stack">
+        ${(W.startFresh && wizRealBoard(S))? `<div class="banner warn"><div><b>This clears the board before it writes the new one.</b>
+          Going: ${(S.employees||[]).length} ${(S.employees||[]).length===1?"person":"people"},
+          ${(S.roles||[]).length} role${(S.roles||[]).length===1?"":"s"},
+          ${(S.shifts||[]).length} shift${(S.shifts||[]).length===1?"":"s"},
+          ${(S.coverage||[]).length} coverage rule${(S.coverage||[]).length===1?"":"s"},
+          ${(S.stations||[]).length} post${(S.stations||[]).length===1?"":"s"},
+          ${(S.groups||[]).length} staff group${(S.groups||[]).length===1?"":"s"},
+          ${(S.sites||[]).length} location${(S.sites||[]).length===1?"":"s"}
+          and every week already drafted. Staying: your account, your sign-in, and how the app looks.
+          If that is not what you wanted, go back to the first question.</div></div>` : ""}
         <p class="whead">That's everything. Here's what gets built — then it drafts your first schedule straight away.</p>
         <div class="grid2">
           <div class="personcard"><h4>${esc(W.name||"Your business")}</h4>
@@ -27316,7 +27466,7 @@ r.innerHTML=`<div class="scrim"><div class="modal" style="max-width:760px">
         <button class="btn ghost sm" data-close>Close</button></header>
       <div class="wbar">${STEPS.map((x,i)=>`<i class="${i<W.step?"done":i===W.step?"now":""}"></i>`).join("")}</div>
       ${(W.step===CORE)
-? `<div class="wenough">Enough to build a schedule — everything from here has a default.</div>` : ""}
+? `<div class="wenough">Enough to build a schedule — the rest has defaults.</div>` : ""}
       <div class="body">${body()}</div>
       <footer>
         ${W.step>0? `<button class="btn" id="wback">Back</button>`
@@ -27324,7 +27474,7 @@ r.innerHTML=`<div class="scrim"><div class="modal" style="max-width:760px">
 : `<span style="flex:1"></span>`}
         ${last? "" : (W.step>=CORE
 ? `<button class="btn" id="wskip" title="Everything left has a sensible default">Build it now</button>`
-: `<button class="btn ghost" id="wskip">Use the defaults for the rest</button>`)}
+: `<button class="btn ghost" id="wskip">Use defaults for the rest</button>`)}
         <button class="btn primary" id="wnext">${last?"Build it":"Next"}</button>
       </footer></div></div>`;
 { const nb=r.querySelector(".modal .body"); if(nb && sameStep && keep) nb.scrollTop=keep; }
@@ -27376,6 +27526,15 @@ r.querySelectorAll(".wopt").forEach(b=>b.onclick=()=>{
 const g=b.dataset.g; let v=b.dataset.v;
 if(v==="true") v=true; else if(v==="false") v=false; else if(/^-?\d+$/.test(v)) v=+v;
 collect(); W[g]=v;
+ 
+if(g==="startFresh"){
+const at=W.step;
+Object.keys(WFRESH).forEach(k=>{ W[k]=JSON.parse(JSON.stringify(WFRESH[k])); });
+ 
+if(v){ W.name=""; W.site=""; }
+if(!v && wizRealBoard(S)) Object.assign(W, wizSeedFrom(S));
+W.startFresh=v; W.step=at;
+}
 if(g==="biz"){ rebuildSteps(); const bt=BIZ_TYPES.find(x=>x.id===v);
 if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=bt.shifts;
  
@@ -27409,6 +27568,11 @@ paint();
 const el=r.querySelector(id);
 if(el) el.addEventListener("change", ()=>{ W.shifts=[]; W.perShift={}; W.perShiftMax={}; W.custom=null; });
 });
+{ const sa=r.querySelector("#wsiteadd");
+if(sa) sa.onclick=()=>{ collect();
+W.siteCount=Math.min(WIZ_MAX_SITES,(+W.siteCount||1)+1);
+W.siteNames=W.siteNames||[]; while(W.siteNames.length<W.siteCount) W.siteNames.push("");
+paint(); }; }
 { const ab=r.querySelector("#wroleadd");
 if(ab) ab.onclick=()=>{ collect();
 W.bucketCount=Math.min(WIZ_MAX_ROLES,(+W.bucketCount||1)+1);
@@ -27534,7 +27698,7 @@ const named=allNames().filter(pn=>(doffOf(pn)||[]).length);
 box.innerHTML = named.length
 ? `<div><b>Standing days off recorded.</b> ${esc(named.map(pn=>pn.name.split(" ")[0]+" (no "+
 ((W.dayOff||{})[pn.b+":"+pn.i]||[]).sort().map(i=>DSHORT[i]).join("/")+")").join(", "))}</div>`
-: `<div><b>Everyone's free every day so far.</b> That's fine — switch off any day someone genuinely can't do, and skip the rest.</div>`;
+: `<div><b>Everyone's free every day so far.</b> Switch off any day someone can never do, and skip the rest.</div>`;
 }
 });
 const j=r.querySelector("#wj"); if(j) j.onchange=()=>{ collect(); paint(); };
@@ -27593,6 +27757,11 @@ r.querySelectorAll("[data-wqdel]").forEach(b=>b.onclick=()=>{ W.reqs.splice(+b.d
 function collect(){
 const r=modalRoot(); const g=sel=>r.querySelector(sel);
 if(g("#wn")) W.name=g("#wn").value.trim();
+{ const boxes=r.querySelectorAll(".wsite");
+if(boxes.length){ W.siteNames=W.siteNames||[];
+boxes.forEach(i=>{ W.siteNames[+i.dataset.i]=i.value.trim(); });
+ 
+W.site=W.siteNames[0]||""; } }
 if(g("#ws")) W.site=g("#ws").value.trim();
 if(g("#wj")) W.juris=g("#wj").value;
 if(g("#wo")) W.open=g("#wo").value;
@@ -27636,6 +27805,17 @@ N.org.name=W.name; N.org.site=W.site; N.org.jurisdiction=W.juris; N.org.weekStar
 Object.assign(N.org, otDefaults(W.juris));
 N.org.trackCost=!!W.trackCost; N.org.budget=W.trackCost?(W.budget||0):0;
 N.org.bizType=W.biz;
+ 
+{ const cnt=Math.max(1, Math.min(WIZ_MAX_SITES, +W.siteCount||1));
+const nm=W.siteNames||[];
+if(cnt>1){
+N.sites=Array.from({length:cnt},(_,i)=>({
+id: i===0? "site_main" : uid("site"),
+name: (nm[i]||"").trim() || (i===0? (W.name||"Main site") : "Place "+(i+1)),
+hours: null }));
+N.org.site="";
+}
+}
 for(let d=0;d<7;d++){
 const wknd=(d===0||d===6);
 if(W.hoursPreset==="always") N.hours[d]={closed:false,open:"00:00",close:"23:59"};
@@ -27827,7 +28007,22 @@ wizClearDraft();
 N.setupDone=true; N.sample=false; N.templates=[]; N.horizon=W.weeks||1; N.ui={advanced:false, updSeen:UPDREV};
 N.currentWeek = addDays(weekStartOf(ymd(new Date()), N.org.weekStart), 7);
 const wasReal=wizRealBoard(S);
-S=wizMerge(S, N, W); priorityRefresh(); save(); closeModal(true);
+ 
+const keepUI = (W.startFresh && wasReal)? JSON.parse(JSON.stringify(S.ui||{})) : null;
+ 
+if(W.startFresh && wasReal){
+ 
+S.employees=[]; S.roles=[]; S.shifts=[]; S.stations=[];
+S.demand={}; S.coverage=[]; S.patterns=[]; S.groups=[]; S.coverGroups=[];
+S.timeoff=[]; S.requests=[]; S.weeks={}; S.templates=[]; S.apart=[];
+S.sites=[{id:"site_main", name:"", hours:null}];
+S.priority=Object.assign({}, S.priority||{}, {order:[]});
+if(S.holidays) S.holidays.priorTurns={};
+}
+S=wizMerge(S, N, W);
+if(keepUI) S.ui=Object.assign({}, keepUI, {updSeen:UPDREV});
+priorityRefresh(); save(); closeModal(true);
+if(W.startFresh && wasReal) toast("Board cleared and set up again for "+(S.org.name||"the new business"));
 if(wasReal && S._wizMerge){ const m=S._wizMerge; delete S._wizMerge;
 toast("Setup updated \u2014 "+m.kept+" on the roster matched by name"+(m.added? ", "+m.added+" added":"")+(m.untouched? ", "+m.untouched+" not mentioned and kept":"")+". Nothing you'd drafted was touched.");
 }
@@ -27981,7 +28176,7 @@ const cur=reqTab();
 const lab=id=>(NAV.find(x=>x.id===id)||{}).label||id;
 const cnt=id=>{ const it=NAV.find(x=>x.id===id); const c=it&&it.n? it.n():null; return c!=null? '<span class="n">'+c+'</span>':""; };
 return `<div class="stack">
-    <div class="schips" role="tablist" aria-label="Requests and time away">
+    <div class="schips" role="tablist" aria-label="Requests and time off">
       ${REQ_TABS.map(k=>`<button class="btn sm ${k===cur?"primary":""}" role="tab" aria-selected="${k===cur}" data-reqtab="${k}">${esc(lab(k))}${cnt(k)}</button>`).join("")}
     </div>
     ${cur==="away"? vAway() : vRequests()}
@@ -28328,8 +28523,8 @@ const PRI_MODES = [
 const PRI_STRENGTH = [
 [0,"Off","Standing is ignored."],
 [1,"A nudge","Breaks ties. Hours balance and stated preferences still lead."],
-[2,"Meaningful","Standing usually decides between two people who both fit."],
-[3,"Standing decides","Whoever is highest on the ladder gets the shift unless a hard limit stops them."]
+[2,"Meaningful","The order usually decides between two people who both fit."],
+[3,"The order decides","Whoever is highest in the order gets the shift unless a hard limit stops them."]
 ];
 
 function vPriority(){
@@ -28343,9 +28538,9 @@ const good = S.shifts.filter(x=>(x.desire||0)>0), bad = S.shifts.filter(x=>(x.de
 
 return `
   <div class="stack">
-    <div class="banner info"><div><b>Two different questions.</b> Which shifts people actually want is one thing — you set that below. Who gets them when more than one person fits is the other, and that's the ladder. Hard limits never bend for standing: availability, time off, hour caps, rest between shifts and coverage minimums still win every time.</div></div>
+    <div class="banner info"><div><b>Two different questions.</b> Which shifts people actually want is one thing — you set that below. Who gets them when more than one person fits is the other, and that's the order. Hard limits never bend for the order: availability, time off, hour caps, rest between shifts and coverage minimums still win every time.</div></div>
 
-    <div class="card"><header><h3>How standing is decided</h3></header>
+    <div class="card"><header><h3>How first pick is decided</h3></header>
       <div class="body stack">
         <div class="seg" id="pmode" style="flex-wrap:wrap">
           ${PRI_MODES.map(m=>`<button data-v="${m[0]}" aria-pressed="${P.mode===m[0]}">${esc(m[1])}</button>`).join("")}
@@ -28376,7 +28571,7 @@ return `
     </div>
 
     <div class="card">
-      <header><h3>The ladder</h3>
+      <header><h3>The order</h3>
         <span class="hint">${dragable? (isPhone()? "Use the arrows to move a name up or down." : "Drag to reorder, or use the arrows.") : "Computed from "+esc(mode[1].toLowerCase())+" — switch to “My own order” to arrange it by hand."}</span>
         ${dragable? `<button class="btn sm" id="pfromsen">Start from seniority</button>`:""}
         ${P.mode!=="custom"? `<button class="btn sm" id="pfreeze">Freeze this order and edit it</button>`:""}</header>
@@ -28447,7 +28642,7 @@ return `<div class="rung" data-id="${id}" ${dragable?'draggable="true"':""}>
     <div class="card">
       <header><h3>What it did this week</h3><span class="hint">Week of ${esc(prettyDate(ws))}</span></header>
       ${wk.assignments.length? `<div class="scroll"><table>
-        <thead><tr><th>Person</th><th style="width:90px">Standing</th><th style="width:100px">Tenure</th><th style="width:110px">Wanted</th><th style="width:110px">Unwanted</th><th>What they got</th></tr></thead>
+        <thead><tr><th>Person</th><th style="width:90px">Order</th><th style="width:100px">Tenure</th><th style="width:110px">Wanted</th><th style="width:110px">Unwanted</th><th>What they got</th></tr></thead>
         <tbody>${order.map((id,i)=>{ const e=empById(id); if(!e) return "";
 const mine=wk.assignments.filter(a=>a.empId===id);
 const g=mine.filter(a=>desireOf(a.shiftId,a.dow)>0), b2=mine.filter(a=>desireOf(a.shiftId,a.dow)<0);
@@ -28536,14 +28731,14 @@ const admin=(S.stations||[]).filter(x=>x.kind==="admin");
 const roster=S.employees.filter(e=>e.active);
 return `
   <div class="stack">
-    <div class="banner info"><div><b>Stations are where people stand, not when they work.</b> They never appear on the weekly schedule — only on the day sheet. Every time you draft a week, each day's staff are handed posts automatically: fairly, with a coin-flip between equal claims, so nobody draws the same post day after day.</div></div>
+    <div class="banner info"><div><b>Posts are where people stand, not when they work.</b> They never appear on the weekly schedule — only on the day sheet. Every time you draft a week, each day's staff are handed posts automatically: fairly, with a coin-flip between equal claims, so nobody draws the same post day after day.</div></div>
 
     <div class="card"><div class="body spread" style="padding:12px 14px">
       <div class="row">
         <span class="lab" style="margin:0">Whose turn it is</span>
         <select data-bind="rules.stationRotation" style="min-width:230px" data-rot="1">
           <option value="fair" ${S.rules.stationRotation==="fair"?"selected":""}>Take turns — whoever's had fewest good ones</option>
-          <option value="seniority" ${S.rules.stationRotation==="seniority"?"selected":""}>Follow the shift-priority ladder</option>
+          <option value="seniority" ${S.rules.stationRotation==="seniority"?"selected":""}>Follow who gets first pick</option>
           <option value="none" ${S.rules.stationRotation==="none"?"selected":""}>Don't rotate — first on, first assigned</option>
         </select>
       </div>
@@ -28571,7 +28766,7 @@ return `
 ? "A turn on Typist 1 counts as a turn on Typist, so that person is less likely to draw Typist 2 tomorrow. Posts group by their name — anything ending in a number joins its family automatically."
 : "Every post is counted on its own. A turn on Typist 1 says nothing about Typist 2, so someone can be typing two days running on different numbers."}</div>
       <div class="row">
-        <span class="lab" style="margin:0">Post training \u2014 who needs more time on what <span class="chip">optional</span></span>
+        <span class="lab" style="margin:0">Training on each post \u2014 who needs more time on what <span class="chip">optional</span></span>
         ${skillsOn()? twoTrainings() : ""}
         <select data-bind="rules.skillsOn" style="min-width:230px">
           <option value="0" ${S.rules.skillsOn?"":"selected"}>Off — everyone is treated the same</option>
@@ -28610,12 +28805,12 @@ S.rules.skillsStrength==="light"? "Fair rotation still comes first — training 
 : "Training and taking turns carry about the same weight."}</div>`:""}
       <div class="row">
         <button class="btn sm" id="stashuffle">Reassign this week</button>
-        <button class="btn primary sm" id="stanew">Add a station</button>
+        <button class="btn primary sm" id="stanew">Add a post</button>
       </div>
     </div></div>
 
     <div class="card">
-      <header><h3>Stations</h3><span class="hint">Mark the ones nobody wants and the rotation does the rest</span></header>
+      <header><h3>Posts on the floor</h3><span class="hint">Mark the ones nobody wants and the rotation does the rest</span></header>
       ${posts.length>8? findBar("posts","Find a post") : ""}
       <div class="scroll">${posts.length? `<table>
         <thead><tr><th>Station</th><th style="width:140px">Wanted?</th><th style="width:170px">Who can take it</th>
@@ -28632,7 +28827,7 @@ return fam.length>1? `<span class="chip acc">${esc(f)} rotation</span><div class
             ${st.double? '<div class="mini">takes a second person when someone is spare</div>':""}</td>
           <td class="mono" style="font-size:11px">${(!st.days||!st.days.length)? "every day" : DSHORT.map((d,i)=>st.days.includes(i)?d[0]:"·").join("")}</td>
           <td><button class="btn sm" data-editsta="${st.id}">Edit</button></td></tr>`).join("")}
-        </tbody></table>`: `<div class="empty"><strong>No stations yet</strong>Add the posts people actually work — Room 1, the booth, the front counter, the drive-through.</div>`}
+        </tbody></table>`: `<div class="empty"><strong>No posts yet</strong>Add the posts people actually work — Room 1, the booth, the front counter, the drive-through.</div>`}
       </div>
     </div>
 
@@ -29052,11 +29247,11 @@ return `
       ${setRow("Vacations never land on assigned holidays", "Those days are staffed by the holiday poll — handle holidays first, vacations second, day-to-day requests after", "")}
     </div></div>
 
-    <div class="card"><header><h3>The survey</h3><span class="hint">${resp.length} of ${S.employees.filter(e=>e.active).length} in</span></header>
+    <div class="card"><header><h3>The form</h3><span class="hint">${resp.length} of ${S.employees.filter(e=>e.active).length} in</span></header>
       <div class="body stack">
         <div class="row" style="gap:8px;flex-wrap:wrap">
-          <button class="btn primary" id="vacdl">Download the survey</button>
-          <button class="btn" id="vaccodes">Paste reply codes</button>
+          <button class="btn primary" id="vacdl">Download the form</button>
+          <button class="btn" id="vaccodes">Paste a reply</button>
           <button class="btn" id="vachand">Enter one by hand</button>
         </div>
         ${handOutRow("vach")}
@@ -29067,7 +29262,7 @@ return `<tr><td><strong>${esc(e.name)}</strong></td>
               <td class="mini">${r.picks.map((p,i)=>(i+1)+". "+prettyDate(p.from)+" – "+prettyDate(p.to)).join("  ·  ")}</td>
               <td class="mini">${new Date(r.at).toLocaleDateString()}</td>
               <td><button class="btn sm" data-vacdel="${esc(r.empId)}">Remove</button></td></tr>`; }).join("")}</tbody></table></div>`
-: `<div class="empty"><strong>No responses yet</strong>Download the survey and send it round.</div>`}
+: `<div class="empty"><strong>No responses yet</strong>Download the form and send it round.</div>`}
       </div>
     </div>
 
@@ -29356,7 +29551,7 @@ return `<div class="banner warn"><div><b>${past.length} holiday${past.length===1
     <div class="card">
       <header><h3>Holidays you need covered</h3><span class="hint">${slots.length} shift${slots.length===1?"":"s"} to fill across ${H.length} day${H.length===1?"":"s"}</span>
         <button class="btn sm" id="addstd">Add the usual holidays</button>
-        <button class="btn primary sm" id="addhol">Add holiday</button></header>
+        <button class="btn primary sm" id="addhol">Add a holiday</button></header>
       ${H.length>8? findBar("hols","Find a holiday") : ""}
       <div class="scroll">${H.length? `<table>
         <thead><tr><th>Holiday</th><th style="width:120px">Date</th><th style="width:130px">How you run it</th><th>Coverage needed</th><th style="width:80px"></th></tr></thead>
@@ -29449,10 +29644,10 @@ return `<b>${paid} of ${tot} are paid for holidays</b>, ${fmtHrs(hrs*60)} in tot
     </div>
 
     <div class="card">
-      <header><h3>Send the poll</h3><span class="hint">${answered} of ${roster} have answered</span></header>
+      <header><h3>Send the form</h3><span class="hint">${answered} of ${roster} have answered</span></header>
       <div class="body stack">
         <div class="row">
-          <button class="btn primary" id="polldl" ${H.length?"":"disabled"}>Download the poll form</button>
+          <button class="btn primary" id="polldl" ${H.length?"":"disabled"}>Download the form</button>
           <button class="btn" id="pollsms" ${H.length?"":"disabled"}>Copy the text-message version</button>
         </div>
         ${H.length? handOutRow("polh") : ""}
@@ -29463,8 +29658,8 @@ return `<b>${paid} of ${tot} are paid for holidays</b>, ${fmtHrs(hrs*60)} in tot
 
     <div class="card">
       <header><h3>Responses</h3><span class="hint">Paste a reply code, or fill one in by hand</span>
-        <button class="btn sm" id="pastecode">Paste a code</button>
-        <button class="btn sm" id="manualresp">Enter by hand</button></header>
+        <button class="btn sm" id="pastecode">Paste a reply</button>
+        <button class="btn sm" id="manualresp">Enter one by hand</button></header>
       <div class="scroll">${R.length? `<table>
         <thead><tr><th style="width:170px">Who</th><th>Ranked most willing → least willing</th><th style="width:150px">Can't work</th><th style="width:70px"></th></tr></thead>
         <tbody>${R.map(r=>`<tr>
@@ -29472,7 +29667,7 @@ return `<b>${paid} of ${tot} are paid for holidays</b>, ${fmtHrs(hrs*60)} in tot
           <td>${(r.rank||[]).map((hid,i)=>{const h=H.find(x=>x.id===hid);return h?`<span class="chip">${i+1}. ${esc(h.name)}</span> `:"";}).join("")}</td>
           <td>${(r.cant||[]).map(hid=>{const h=H.find(x=>x.id===hid);return h?`<span class="chip crit" title="They said they cannot work ${esc(h.name)} \u2014 the draw never places them on it">${esc(h.name)}</span> `:"";}).join("")||'<span class="mini">—</span>'}</td>
           <td><button class="btn sm danger" data-delresp="${r.empId}">Clear</button></td></tr>`).join("")}
-        </tbody></table>`:`<div class="empty"><strong>No answers yet</strong>Send the poll, then paste the codes people send back.</div>`}
+        </tbody></table>`:`<div class="empty"><strong>No answers yet</strong>Send the form, then paste the codes people send back.</div>`}
       </div>
       ${answered<roster && H.length? `<div class="body" style="border-top:1px solid var(--line)"><div class="mini">Still waiting on: ${esc(S.employees.filter(e=>e.active&&!respFor(e.id)).map(e=>e.name).join(", "))||"—"}. You can run the split without them — anyone who didn't answer is treated as neutral, never as a volunteer.</div></div>`:""}
     </div>
@@ -29506,7 +29701,7 @@ return `<button class="chip ${cls}" data-holtweak="${r.empId}|${h.id}" style="cu
           <tbody>${S.employees.filter(e=>e.active).map(e=>{
 const mine=alloc.result.filter(r=>r.empId===e.id);
 const r=respFor(e.id);
-return `<tr><td><strong>${esc(e.name)}</strong>${r?"":' <span class="chip warn"'+whyAttrs(e.name.split(" ")[0]+" has not sent a reply code back for the holiday poll yet, so they are placed as if every holiday were equal to them. Send the poll again, or enter their ranking by hand.", "go:holidays")+'>no answer</span>'}</td>
+return `<tr><td><strong>${esc(e.name)}</strong>${r?"":' <span class="chip warn"'+whyAttrs(e.name.split(" ")[0]+" has not sent a reply code back for the holiday poll yet, so they are placed as if every holiday were equal to them. Send the form again, or enter their ranking by hand.", "go:holidays")+'>no answer</span>'}</td>
               <td><span class="chip ${mine.length>alloc.cap?"warn":""}">${mine.length}</span></td>
               <td class="mini">${mine.map(m=>esc((H.find(h=>h.id===m.holidayId)||{name:""}).name)).join(", ")||"—"}</td>
               <td class="mini">${mine.map(m=>"#"+(m.rank+1)).join(", ")||"—"}</td></tr>`;
@@ -30011,7 +30206,7 @@ return {empId:e? e.id:null, name:e? e.name:key, picks, outside:all.length-picks.
 }
 
 function pasteCodeModal(prefill){
-modal("Paste reply codes", `
+modal("Paste a reply", `
     <div class="stack">
       <div class="help">Paste as many as came back — one per line, or all of them in one lump. Codes look like a jumble of letters; that's the whole ranking packed small enough to text. If a mail app has broken one across two lines, paste it exactly as it came and it is put back together.</div>
       <textarea id="cin" style="min-height:150px;font-family:'IBM Plex Mono',monospace;font-size:var(--codefs,11.5px)" placeholder="Q0QxfGVfYWJjfDIuMC4z...">${esc(prefill||"")}</textarea>
@@ -30869,7 +31064,7 @@ return `
           <td class="mono">${x.hol||"—"}</td>
           <td>${(x.granted||x.denied)? `<span class="chip ok">${x.granted} met</span> ${x.denied? `<span class="chip crit">${x.denied} not</span>`:""}` : '<span class="mini">none on file</span>'}</td></tr>`).join("")}
         </tbody></table></div>
-      <div class="body" style="border-top:1px solid var(--line)"><div class="help">If one name is carrying the unwanted column, Shift priority is where you even it out — “take turns” moves whoever's had fewest good shifts to the front.</div></div>
+      <div class="body" style="border-top:1px solid var(--line)"><div class="help">If one name is carrying the unwanted column, Who gets first pick is where you even it out — “take turns” moves whoever's had fewest good shifts to the front.</div></div>
     </div>
 
     ${(S.stations||[]).length? `<div class="card"><header><h3>Station load</h3><span class="hint">Across the weeks you've posted</span></header>
@@ -30966,7 +31161,7 @@ a:"Not yet. Sign-in today is your email and password, or your Google account —
 {t:"What time zone does Weeksolved use?", k:"time zone timezone clock utc daylight saving travel different city times wrong hour", go:null,
 a:"Whatever your device says. Every time in Weeksolved is a plain wall-clock time for the place you are scheduling — an 8:00 shift is 8:00 at that location, and it stays 8:00 whether you open the board in the shop, at home, or on a plane. Nothing is converted, so nothing shifts by an hour when the clocks change. If you run locations in different time zones, each location's times are read as local to that location."},
 {t:"Can I use Weeksolved in another language?", k:"language spanish translate translation english only localisation localization other languages", go:null,
-a:"English only for now. Nothing in the app is machine-translated, which is deliberate — a scheduling rule that reads slightly wrong is worse than one you have to read in a second language. If you need another language, say so through Report or suggest and it goes on the list with a count beside it."},
+a:"English only for now. Nothing in the app is machine-translated, which is deliberate — a scheduling rule that reads slightly wrong is worse than one you have to read in a second language. If you need another language, say so through Report a problem and it goes on the list with a count beside it."},
 {t:"Can I say WHEN a day is busy, not just that it is?", k:"peak hours busy stretch rush lunch time of day busiest hours specific hours friday evening school run", go:"demand",
 a:"Yes. Open Coverage needs, find the day, and press \u201cSet a busy stretch\u201d. Say the hours \u2014 11:00 to 14:00, for instance \u2014 and the day carries that stretch every week.\n\nWhat it does: anybody still owed hours is put on a shift that COVERS the rush rather than one that misses it, and the week's checks tell you when the rush has fewer people on the floor than the quiet part of the same day.\n\nWhat it does NOT do, and this is the important part: it never adds anybody. How many people a day gets comes from one place only \u2014 the shifts you ask for under Coverage needs. A busy stretch, like a busy day label, only decides where the people you already have are put. If the checks tell you the rush is thin and you want another body on it, add a shift covering those hours for that day; the stretch will then pull people onto it first."},
 {t:"What is the little ? beside a setting?", k:"question mark help explain what does this mean example tooltip dot circle setting confusing jargon plain english", go:"settings",
@@ -30978,7 +31173,7 @@ a:"The busy/quiet label never adds anybody. It decides where spare people go FIR
 {t:"I set people aside but the schedule still asks me to give them their guaranteed hours", k:"set aside inactive off roster guaranteed hours still flagged under hours techs off leave on call per diem", go:"team",
 a:"That is fixed. Somebody set aside is off the roster \u2014 the drafter will not schedule them and cannot top them up \u2014 so their guaranteed hours are no longer checked at all while they have no shifts. The one thing still reported is the opposite case: a set-aside person who somehow still holds a shift, with one press to put them back or hand the shift over. The same applies to anyone marked on call: they are only called in when the week is short, so a guarantee on their profile is named once as information rather than flagged every week."},
 {t:"Where do I see everyone\u2019s upcoming time off and requests, and what happened to old ones?", k:"time away upcoming requests vacations leave past outcome entered when history who is off", go:"away",
-a:"Time away, in the menu next to Requests. Coming up lists every request and every piece of leave from today onward, whether or not those weeks are drafted \u2014 the people side, not the schedule. Gone by lists what was asked, when it was entered (date and time), and what happened to it on the schedule those dates fell in. Filter by person or by requests-only / leave-only, jump to the week, edit a request, or download either list as a spreadsheet."},
+a:"Time off, in the menu next to Requests. Coming up lists every request and every piece of leave from today onward, whether or not those weeks are drafted \u2014 the people side, not the schedule. Gone by lists what was asked, when it was entered (date and time), and what happened to it on the schedule those dates fell in. Filter by person or by requests-only / leave-only, jump to the week, edit a request, or download either list as a spreadsheet."},
 {t:"Can I build my own report?", k:"custom report builder analytics filter sort group columns csv print save favourite star fiscal year pay period time stamp", go:"analytics",
 a:"Yes \u2014 Analytics \u2192 Your reports \u2192 Build a report. Pick what it is about (shifts, hours by person and week, requests, leave, or the record of changes), the period (this week, pay period, fiscal year, custom dates\u2026), which people, roles, shifts or locations to include, the columns, a grouping (with subtotals) and the sort. Run it on screen, download it as a spreadsheet or print it \u2014 every run is stamped with the date and time. Save it for later and star it: starred reports sit on Home and come up in search."},
 {t:"Where is the side menu on my phone?", k:"side menu phone mobile drawer hamburger collapsible menu button", go:"home",
@@ -31060,7 +31255,7 @@ a:"So a schedule or a message never goes out by accident from a phone in a pocke
 {t:"What is Worth a look?", k:"worth a look advice suggestions recommendations rules second opinion hide turn off advisor tips why", go:"rules",
 a:"A short list on Home and at the top of Scheduling rules where the rules, the roster and the coverage do not quite add up — a turnaround that no shift pair can meet, a role with nobody in it, a cap that makes a person unschedulable, a rule that is stricter than the law requires. Each line says why in a sentence and offers the change; nothing is ever applied on its own and a suggestion you disagree with can be dismissed. Turn the whole card off under Settings → Suggest improvements to the rules."},
 {t:"Suggest a feature or ask for a change", k:"feature request idea suggest wish improvement feedback want it to would be nice", go:null,
-a:"Press Report or suggest (the ⚑ button on the rail, or Help → Still stuck) and switch it to I have an idea. It goes straight to the people who build Weeksolved, with a copy of nothing but what you typed and the screen you were on. Problems and ideas both stay open for every account, testing or not, and good ideas find their way into the app and the release notes."},
+a:"Press Report a problem (the ⚑ button on the rail, or Help → Still stuck) and switch it to I have an idea. It goes straight to the people who build Weeksolved, with a copy of nothing but what you typed and the screen you were on. Problems and ideas both stay open for every account, testing or not, and good ideas find their way into the app and the release notes."},
 {t:"What does the free trial hold back?", k:"trial limit horizon weeks ahead messages per month sends allowance held draft far ahead free trial limits", go:"home", when:()=>trialLimited(),
 a:"Almost nothing. Every rule, every check, the drafter, breaks, hand-outs and exports are all on. Two things are sized for a trial: you can draft up to "+TRIAL_HORIZON_WEEKS+" weeks ahead (a full trial is plenty of weeks to judge it), and sending from Weeksolved’s own server is capped at "+TRIAL_SENDS_PER_MONTH+" messages a month — past that, your own mail or messaging app opens with the message ready instead, so nobody is left without a schedule. A paid plan lifts both."},
 {t:"Tips for rules that draft well", k:"tips advice best rules how to set rules good schedule fewer open shifts caps turnaround pool slack", go:"rules",
@@ -31097,16 +31292,16 @@ a:"Pick your state under Business & law and every drafted shift gets its meal pl
 a:"Scheduling rules → meal handling. Three modes: staggered automatically so the floor never empties; your own fixed lunch slots; or close the business for a stretch — while closed, coverage isn't counted against you."},
 {t:"Coverage rules and minimums", k:"coverage minimum ratio never alone floor pharmacist supervisor", go:"demand",
 a:"Coverage needs sets how many of each shift you want. Coverage rules add hard floors: at least N people, a role ratio (one pharmacist per three techs), or never-below rules. Floors hold even during meals. A role with no real minimum simply doesn't get a rule — the shift counts do the work."},
-{t:"Stations and rotation", k:"station post position rotate assign fair drive through window", go:"stations",
+{t:"Posts and rotation", k:"station post position rotate assign fair drive through window", go:"stations",
 a:"Add stations and each drafted day hands them out with fair rotation — nobody draws the worst post every day. Stations can require a role, link as swap-at-midday pairs, take a second person when someone's spare, and be marked as needing cover during meal breaks — the break sheet then names who steps in."},
 {t:"Requests and time off", k:"request day off vacation sick ask cant work timeoff pto approve deny", go:"requests",
 a:"Punch requests in as they arrive — day off, specific shift, hour caps — marked must or if-possible. The drafter honors what it can and tells you what it couldn't and why. Longer stretches (vacations, leave) go under Team → time off, and if PTO tracking is on, approved time off draws down their balance."},
-{t:"PTO balances", k:"pto balance accrue accrual vacation hours bank earn", go:"team",
-a:"Turn on 'Track PTO balances' in Settings. On each profile enter today's balance once, plus how it accrues (per week, or per 30/40 hours worked). From then on it maintains itself and shows on the Team page; booking PTO shows exactly what it draws and what's left."},
+{t:"Time off balances", k:"pto balance accrue accrual vacation hours bank earn", go:"team",
+a:"Turn on 'Track Time off balances' in Settings. On each profile enter today's balance once, plus how it accrues (per week, or per 30/40 hours worked). From then on it maintains itself and shows on the Team page; booking PTO shows exactly what it draws and what's left."},
 {t:"Licenses and certifications", k:"license certification expire lapse pharmacist rph cpr credential", go:"team",
 a:"Mark a role as licensed (asked in setup, or under Roles & shifts). Each person in it can carry an expiry date — the drafter will never schedule anyone past a lapsed license, warns you 30 days out, and shows expiry chips on the Team page."},
 {t:"Fairness and who gets good shifts", k:"fair seniority priority lottery rotate good shifts weekend spread", go:"priority",
-a:"Shift priority decides who gets first claim on the sought-after shifts: seniority, your own order, take-turns, or an auditable lottery. A ledger tracks who's had what so the same people don't draw the short straw week after week."},
+a:"Who gets first pick decides who gets first claim on the sought-after shifts: seniority, your own order, take-turns, or an auditable lottery. A ledger tracks who's had what so the same people don't draw the short straw week after week."},
 {t:"Overtime and hour caps", k:"overtime cap hours limit 40 ot cost time and a half", go:"team",
 a:"Each person has a guarantee and a cap; the drafter aims for the guarantee and never passes the cap. Editing a shift shows live where it takes their week — including the overtime cost if you track rates. The week header flags anyone past the overtime line."},
 {t:"Trade two shifts safely", k:"swap trade switch exchange cover swap shifts", go:"week",
@@ -31148,13 +31343,13 @@ a:"Settings \u2192 Rules and drafting \u2192 'Union agreement or public-sector r
 {t:"How tester codes work", k:"tester testers testing code codes invite invitation redeem redeemed redemption expired expires trial founder gift lifetime program beta earlyaccess", go:"settings",
 a:"A code turns into an account once, and only once. Redeeming it ties it to the email you sign up with; it cannot be moved, shared or used again, including after deleting the account. Most codes run for a set number of days from the day they are first used \u2014 Settings \u2192 Your account \u2192 'Your access' says which kind you hold and how long is left. Nothing is charged and no card is asked for. When a code runs out the account stays; scheduling pauses until it is renewed."},
 {t:"What does this app send anywhere, and who else can see my schedule?", k:"privacy data tracking analytics who sees my data third party google fonts cdn cookies telemetry spy sell share advertising pixel", go:"settings",
-a:"Your board goes to your own account and nowhere else. No other account can read it \u2014 that is enforced by the database, not just by this app \u2014 and nothing about it is sent anywhere unless you send it.\n\nLoading the page itself contacts a small number of outside servers. Rather than list them here, where the list could go stale, Settings \u2192 What leaves this device names them by reading the page you are actually running. Today there is exactly one: Google Firebase, which holds your account and your board. It sees that a browser asked for a file, and nothing else \u2014 no names, no schedule, no account. The typefaces and the library that writes PDFs used to be fetched from Google Fonts and cdnjs; both are now carried inside the page itself, so neither is contacted at all, and PDF export keeps working on a network that blocks them.\n\nWhat is NOT here: there is no analytics of any kind, no tracking pixel, no session recording, no advertising code and no third-party script that watches what you do. Not switched off \u2014 not present. You can check this yourself: open the page source and search it.\n\nWeeksolved has never asked you for a card, and there is no payment form anywhere in the app. When paid plans arrive, card details will go straight to the payment company and never touch your board, and you will be told before anything changes."},
+a:"Your board goes to your own account and nowhere else. No other account can read it \u2014 that is enforced by the database, not just by this app.\n\nLoading the page itself contacts a small number of outside servers. Rather than list them here, where the list could go stale, Settings \u2192 What leaves this device names them by reading the page you are actually running. Today there are two, both Google: www.gstatic.com, which serves the sign-in code, and Firebase, which holds your account and your board. They see that a browser asked for a file, and nothing else \u2014 no names, no schedule. The typefaces and the library that writes PDFs used to be fetched from Google Fonts and cdnjs; both are now carried inside the page itself, so neither is contacted at all, and PDF export keeps working on a network that blocks them.\n\nOne thing is sent without you pressing anything, and it is the only one: when the app hits an error it files a crash report \u2014 the error, the screen you were on, your browser and screen size, your state, and how many people, roles and shifts are on the board. Never a name, never a phone number, never any part of a schedule. Settings \u2192 Automatic crash reports switches it off, and off means nothing is sent.\n\nWhat is NOT here: no tracking pixel, no session recording, no advertising code, no product analytics and no third-party script that watches what you do. Not switched off \u2014 not present. You can check this yourself: open the page source and search it.\n\nWeeksolved has never asked you for a card, and there is no payment form anywhere in the app. When paid plans arrive, card details will go straight to the payment company and never touch your board, and you will be told before anything changes."},
 {t:"How many people can one board hold?", k:"how many people maximum limit size roster headcount employees cap large big team hundreds scale slow performance account hold staff limit", go:"team",
 a:"One board is comfortable up to about 150 people and will run to roughly 250.\n\nThose numbers come from measurement, not a guess. Everything you look at \u2014 the week, the day sheet, the roster, the checks \u2014 stays quick well past 250. What slows down is drafting: working out a week is the part that grows fastest with headcount, because every person has to be weighed against every rule and against everybody already placed. Around 150 a draft takes a few seconds; by 300 it is closer to half a minute on a computer, and longer on a phone.\n\nThere is a hard ceiling too. Your board is saved as a single record, and the service it is saved in has a size limit on one record. That works out at somewhere near a thousand people before saving would fail \u2014 far past the point where drafting has already become unpleasant, so it is not the limit you will meet.\n\nInactive people count towards the 250, because their history is still stored \u2014 so if somebody has gone for good, remove them rather than setting them aside.\n\nIf you are past 250, the answer is usually more than one board rather than a bigger one: separate sites, or separate departments, each with its own roster and its own week. Weeksolved will tell you when your roster crosses these numbers rather than letting you find out during a draft."},
 {t:"Contact us", k:"contact email reach message business inquiry suggestion idea talk human person support", go:"help",
 a:"Scroll to Contact us at the bottom of this Help page — write your message and press send; it goes straight to the team, no email app needed. A person reads every one, and replies come back to the email on your account."},
-{t:"Vacation calendar", k:"vacation calendar survey draw ranked longer time off season annual pto request weeks", go:"vacation",
-a:"Turn it on in Settings (or in setup) and a Vacations page appears. Download the survey, send it to everyone; each person ranks up to a few stretches of time off and sends back a short code by your deadline. The draw grants the largest set it can — first choices first, ties settled by fairness, seniority, or an auditable lottery — never more away at once than your cap (or than keeps the floor covered), and never on an assigned holiday. Granted vacations flow straight into the drafter and the calendar."},
+{t:"Vacations \u2014 the draw", k:"vacation vacations vacation calendar survey draw ranked longer time off season annual pto request weeks", go:"vacation",
+a:"Turn it on in Settings (or in setup) and a Vacations page appears. Download the form, send it to everyone; each person ranks up to a few stretches of time off and sends back a short code by your deadline. The draw grants the largest set it can — first choices first, ties settled by fairness, seniority, or an auditable lottery — never more away at once than your cap (or than keeps the floor covered), and never on an assigned holiday. Granted vacations flow straight into the drafter and the calendar."},
 {t:"Why can't vacations land on holidays?", k:"vacation holiday overlap blocked assigned staffed conflict", go:"vacation",
 a:"Assigned holidays are staffed by the holiday poll, so a vacation can't swallow one. The usual order: assign holidays first, run the vacation draw second, and handle day-to-day requests after. A request that touches a holiday is skipped with a note, and the person's next choice is tried instead."},
 {t:"Holiday rush days", k:"holiday rush before after busier eve thanksgiving christmas adjacent spike", go:"holidays",
@@ -31172,10 +31367,10 @@ a:"Switch it on and the first thing Weeksolved does is tell you whether any of i
 {t:"In training \u2014 a new hire who isn\u2019t cover yet (optional)", k:"trainee new hire in training probation learner extra pair of hands transition graduate mentor", go:"team",
 a:"Set someone\u2019s employment type to \u201cIn training\u201d and you choose one thing: are they an extra pair of hands, or one of the team? As an extra, they are scheduled on top of the cover you need \u2014 a gap is never filled by someone still learning, they land on your busiest days, and they are never on the floor alone. The day sheet names who they are with, so they know who to report to. Give them a finish date and their profile moves itself on that day, to whatever type and group you picked \u2014 a technician training as a pharmacist becomes a pharmacist, on the date, with nothing for you to remember. Each trainee can also have their own plan for posts: one post until they have it, a rotation of a few for a set number of shifts each, or no preference.",
 },
-{t:"Post training \u2014 who needs more time on what (optional)", k:"skill training learning comfortable signed off strong weak level qualified competency bias posts stations", go:"stations",
+{t:"Training on each post \u2014 who needs more time on what (optional)", k:"skill training learning comfortable signed off strong weak level qualified competency bias posts stations", go:"stations",
 a:"Optional and off unless you switch it on under Stations. It records what each person is trained on, post by post — still learning, can work it, or signed off to train others — and nothing else. It only ever affects which post someone is handed on the day sheet; it never changes anyone's hours or pay, and staff never see it. You choose when it applies (every day, only busy days, only when the floor is thin, or busy days for the trained and quiet days for learners to practice) and how strongly it leans (gentle nudge, balanced, strong). A post can also be marked so a learner is never left there alone. Deliberately a training record and not a rating of people — that keeps it useful and fair."},
-{t:"Stations and how the rotation works", k:"station post typist checker rotation family bucket daily sheet where people stand rotate two hours", go:"stations",
-a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Typist 1, Typist 2) share one rotation by default, so a turn on either counts as a turn on Typist and that person is less likely to draw it again; you can switch to counting every post separately under Stations. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
+{t:"Posts and how the rotation works", k:"station post typist checker rotation family bucket daily sheet where people stand rotate two hours", go:"stations",
+a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Typist 1, Typist 2) share one rotation by default, so a turn on either counts as a turn on Typist and that person is less likely to draw it again; you can switch to counting every post separately under Posts on the floor. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
 {t:"Which holidays we close for", k:"holiday closed open christmas eve thanksgiving new year observe list closures skeleton", go:"holidays",
 a:"Setup asks about every common US holiday and you answer each one: Doesn't apply, Closed, Open with fewer people, or Open normal hours. Closed days are never scheduled and never appear in the holiday poll. 'Fewer people' days draft from a lighter holiday pattern (about half your usual cover, editable on the Holidays page). 'Normal hours' days draft like the weekday they land on. Change any of it any time on the Holidays page, and 'Add the usual holidays' fills the standard list in one tap."},
 {t:"Different cover on holidays", k:"holiday coverage different closed cover staffing skeleton crew reduced hours draft", go:"holidays",
@@ -31188,7 +31383,7 @@ a:"Use 'Report a problem' (bottom of the menu). Say what you expected and what h
 a:"Optional: turn on cost tracking in Settings, put rates on profiles, and the week shows live labor cost against your budget. Money never appears on anything you print or send to staff."},
 {t:"Rotating patterns", k:"rotation 7 on 7 off alternating weeks averaged pay period cycle", go:"team",
 a:"Turn on work cycles under Scheduling rules, then set a pattern on a profile: seven-on-seven-off, alternating weeks, or hours averaged over a pay period. The drafter schedules only their on-days and paces hours to the cycle."},
-{t:"Holiday poll", k:"holiday christmas thanksgiving poll rank fair who works", go:"holidays",
+{t:"Holidays \u2014 the poll", k:"holiday holidays holiday poll christmas thanksgiving poll rank fair who works", go:"holidays",
 a:"List your holidays, send the ranked-choice poll (it opens in your own mail or messages app), enter the answers, and the split lands so the least-wanted days are shared fairly — with an auditable result you can show anyone who grumbles."},
 {t:"Prefer longer shifts", k:"short shifts long 8 hour 4 hour fewer prefer minimize", go:"rules",
 a:"Scheduling rules → 'Prefer fewer, longer shifts'. When hours can be made up either way, one 8-hour shift beats two 4-hour ones — fewer handoffs and commutes. Leave it off if you cover rushes with short overlap shifts."},
