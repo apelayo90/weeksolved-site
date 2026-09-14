@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 6ec66e88 2026-09-14 03:42 UTC -->
+<!-- build 33df640f 2026-09-14 05:05 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1763,6 +1763,14 @@ if(z.id===mainSiteId()) return (S.org && S.org.site) || "Main site";
 return "Site";
 }
  
+function docSite(list){
+if(!multiSite()) return (S.org && S.org.site) || "";
+const ids=[...new Set((list||[]).map(x=>siteOf(x)))];
+if(ids.length===1) return siteName(ids[0]);
+if(!ids.length)    return "All locations";
+return "All "+ids.length+" locations";
+}
+ 
 function siteHours(id){ const z=siteById(id); return (z && Array.isArray(z.hours) && z.hours.length===7)? z.hours : S.hours; }
  
 function siteClosedOn(siteId, dow){
@@ -2075,6 +2083,9 @@ toast("Loaded your account\u2019s copy");
 function backupJson(){
 const c=JSON.parse(JSON.stringify(S));
 delete c._uid; delete c._rev; delete c._at; delete c._dirty;
+ 
+c.complete = true;
+c.holds = {sites: sitesList().length, people: (S.employees||[]).length};
 return JSON.stringify(c,null,2);
 }
  
@@ -2103,6 +2114,8 @@ let o=null;
 try{ o=JSON.parse(text); }catch(e){ toast("That doesn\u2019t look like a backup file"); return; }
 if(!o || typeof o!=="object" || Array.isArray(o) || !Array.isArray(o.employees) || !Array.isArray(o.shifts)){
 toast("That file is not a Weeksolved backup \u2014 it has no team or shifts in it"); return; }
+if(o.complete===false){
+toast("That backup is only part of a board, so restoring it would delete the rest"); return; }
 try{ o=scrubRestored(o); }catch(e){ toast("That backup could not be read \u2014 nothing has changed"); return; }
 let next=null;
 try{ next=migrate(o); }catch(e){ toast("That backup could not be read \u2014 nothing has changed"); return; }
@@ -2113,11 +2126,11 @@ modal("Restore this backup?", `
       <div class="banner warn"><div><b>This replaces everything on this device</b> with what is in the file. Whatever is here now goes.</div></div>
       <div class="card"><div class="body">
         <div class="lab">What is in the file</div>
-        <div class="mini">${esc(name)} \u00b7 ${n} on the roster \u00b7 ${wk} week${wk===1?"":"s"} saved</div>
+        <div class="mini">${esc(name)} \u00b7 ${((next.sites||[]).length||1)} location${((next.sites||[]).length||1)===1?"":"s"} \u00b7 ${n} on the roster \u00b7 ${wk} week${wk===1?"":"s"} saved</div>
       </div></div>
       <div class="card"><div class="body">
         <div class="lab">What is here now</div>
-        <div class="mini">${esc((S.org&&S.org.name)||"an unnamed business")} \u00b7 ${(S.employees||[]).filter(e=>e.active).length} on the roster \u00b7 ${Object.keys(S.weeks||{}).length} week${Object.keys(S.weeks||{}).length===1?"":"s"} saved</div>
+        <div class="mini">${esc((S.org&&S.org.name)||"an unnamed business")} \u00b7 ${sitesList().length} location${sitesList().length===1?"":"s"} \u00b7 ${(S.employees||[]).filter(e=>e.active).length} on the roster \u00b7 ${Object.keys(S.weeks||{}).length} week${Object.keys(S.weeks||{}).length===1?"":"s"} saved</div>
       </div></div>
     </div>`,
 `<button class="btn" data-close>Cancel</button>
@@ -2843,8 +2856,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "6ec66e88";       
-const BUILD_AT = "2026-09-14 03:42 UTC";       
+const BUILD_ID = "33df640f";       
+const BUILD_AT = "2026-09-14 05:05 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -24416,7 +24429,7 @@ function outDisp(a){ return m2disp(a.endMin)+(a.endMin>=1440? " +1d" : ""); }
 function weekGridRows(){
 const ws=S.currentWeek, wk=getWeek(ws), dates=weekDates(ws);
 const rows=[];
-rows.push([S.org.name||"Schedule", S.org.site||""]);
+rows.push([S.org.name||"Schedule", docSite(wk.assignments||[])]);
 rows.push(["Week of", prettyFull(ws), "Jurisdiction", law().name]);
 rows.push([]);
 rows.push(["Staff","Role","Type"].concat(dates.map(d=>DSHORT[d.dow]+" "+prettyDate(d.date))).concat(["Paid hours"]));
@@ -24792,7 +24805,8 @@ return await saveFile(n>1? "schedule-"+n+"-weeks-from-"+first+".pdf" : "schedule
 }
 function pdfWeekPage(doc, ws){
 const wk=getWeek(ws), dates=weekDates(ws);
-pdfHeader(doc, (S.org.name||"Weekly schedule"), (S.org.site?S.org.site+"  ·  ":"")+"Week of "+prettyFull(ws));
+{ const ds=docSite((getWeek(ws).assignments)||[]);
+pdfHeader(doc, (S.org.name||"Weekly schedule"), (ds? ds+"  ·  ":"")+"Week of "+prettyFull(ws)); }
 const head=[["Staff","Role"].concat(dates.map(d=>DSHORT[d.dow]+" "+prettyDate(d.date)+(holidayTag(d.date)? "\n"+holidayTag(d.date):""))).concat(["Hrs"])];
 const body=exportPeople(wk).map(e=>{
 const cells=dates.map(d=>{
@@ -25610,7 +25624,9 @@ const css=[
 ].join("\n");
 const head='<div class="sheet"><h1>'+esc(S.org.name||"Reports")+'</h1>'+
 '<div class="sub">'+esc(prettyFull(from))+' to '+esc(prettyFull(to))+
-(S.org.site? " \u00b7 "+esc(S.org.site):"")+' \u00b7 prepared '+esc(prettyFull(ymd(new Date())))+'</div>'+
+(function(){ const rows=[]; Object.keys(S.weeks||{}).forEach(k=>{ if(k>=from && k<=to)
+(S.weeks[k].assignments||[]).forEach(a=>rows.push(a)); });
+const ds=docSite(rows); return ds? " \u00b7 "+esc(ds) : ""; })()+' \u00b7 prepared '+esc(prettyFull(ymd(new Date())))+'</div>'+
 '<p class="packnote">'+esc(PLANNOTE)+'</p></div>';
 return '<!doctype html><html><head><meta charset="utf-8"><title>'+esc(S.org.name||"Reports")+' reports</title>'+
 '<style>'+css+'</style></head><body>'+head+
@@ -26267,7 +26283,7 @@ const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(S.org.
   .pad .rule{height:19px;border-bottom:1px solid #e4e9e7}
   .pen{color:#a8701a}@media print{body{margin:14mm}}</style></head><body>
   <h1>${esc(S.org.name||"Day sheet")}</h1>
-  <div class="sub">${esc(prettyFull(entry.date))} · ${S.hours[entry.dow].closed?"Closed":esc(m2disp(t2m(S.hours[entry.dow].open))+"–"+m2disp(t2m(S.hours[entry.dow].close)))}${S.org.site?" · "+esc(S.org.site):""}</div>
+  <div class="sub">${esc(prettyFull(entry.date))} · ${S.hours[entry.dow].closed?"Closed":esc(m2disp(t2m(S.hours[entry.dow].open))+"–"+m2disp(t2m(S.hours[entry.dow].close)))}${(function(){ const ds=docSite(list||[]); return ds? " · "+esc(ds) : ""; })()}</div>
   ${(wk.dayNotes||{})[entry.date]? `<div style="border:1px solid #d2d8d6;border-left:3px solid #1c6a66;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:12.5px"><b>Today:</b> ${esc(wk.dayNotes[entry.date])}</div>`:""}
   <table><thead><tr><th>Employee</th>${(S.stations||[]).length?"<th>Station</th>":""}<th>Role</th><th>In</th><th>Out</th><th>Meal</th><th>Rest breaks</th><th>Paid</th>${(S.rules.sheetNotes||"lines")!=="off"?'<th style="width:'+((S.rules.sheetNotes==="wide")?"230":"150")+'px">Notes</th>':""}</tr></thead><tbody>
   ${list.map(a=>{const e=empById(a.empId)||{name:"—"},b=a.breaks||{meals:[],rests:[],owed:{meals:0,rests:0}};
@@ -30450,7 +30466,7 @@ return "Subject: Approved vacations\n\nHi all,\n\nHere are the approved vacation
 function buildPollFile(){
 const payload = {
 org: S.org.name||"Our team",
-site: S.org.site||"",
+site: docSite([]),
 holidays: holStaffed().map(h=>({id:h.id, name:h.name, date:h.date, hours:h.hours||""})),
 staff: S.employees.filter(e=>e.active).map(e=>({id:e.id,name:e.name}))
 };
