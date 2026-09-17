@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 9b0fc8f1 2026-09-17 03:11 UTC -->
+<!-- build ae7970bf 2026-09-17 04:10 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2625,6 +2625,8 @@ modal("A few new questions from the latest update", `
           <option value="before" ${holRush()==="before"?"selected":""}>The day before</option>
           <option value="after" ${holRush()==="after"?"selected":""}>The day after</option>
           <option value="both" ${holRush()==="both"?"selected":""}>Both</option>
+          <option value="day" ${holRush()==="day"?"selected":""}>The holiday itself</option>
+          <option value="all" ${holRush()==="all"?"selected":""}>The holiday and the days either side</option>
         </select></div>
       <div class="field"><label>What runs on the holiday itself?</label>
         <select id="u_hmode">
@@ -2856,8 +2858,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "9b0fc8f1";       
-const BUILD_AT = "2026-09-17 03:11 UTC";       
+const BUILD_ID = "ae7970bf";       
+const BUILD_AT = "2026-09-17 04:10 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -5392,6 +5394,7 @@ if(!Array.isArray(s.rules.mealClose.days)) s.rules.mealClose.days=[0,6];
 if(typeof s.rules.mealClose.mins!=="number") s.rules.mealClose.mins=0;
 if(typeof s.rules.maxSpanH!=="number") s.rules.maxSpanH=0;
 if(typeof s.rules.mealEarliestMin!=="number") s.rules.mealEarliestMin=0;
+if(typeof s.rules.mealLengthMin!=="number") s.rules.mealLengthMin=0;
 s.shifts.forEach(x=>{ if(x.gapFrom===undefined) x.gapFrom=""; if(x.gapTo===undefined) x.gapTo="";
  
 if(x.flex!=="none"){ x.flex="none"; x.lenMinH=0; x.lenMaxH=0; }
@@ -5874,7 +5877,7 @@ const restMode = S.rules.restMode;
 const M = mealRow(L.meal, worked, startMin);
 if(M && worked >= M.firstAfterMin){
 out.owed.meals = 1;
-const len = M.lengthMin;
+const len = Math.max(M.lengthMin, (S.rules && S.rules.mealLengthMin)||0);
  
 const byWorked = M.mustEndByMin!=null? M.mustEndByMin - len : M.mustStartByMin;
 const deadline = W2C(byWorked);
@@ -12816,18 +12819,27 @@ return out;
 function holAdj(dateStr){
 const r=holRush(); if(r==="none"||!dateStr) return null;
 const L=(S.holidays&&S.holidays.list)||[];
-if(L.some(h=>h.date===dateStr)) return null;               
+const self=L.find(h=>h.date===dateStr);
+if(self){
+ 
+if((r==="day"||r==="all") && holMode(self)!=="closed") return {side:"day", name:self.name};
+return null;
+}
 for(const h of L){
 if(Math.abs((parseYmd(h.date)-parseYmd(dateStr))/86400000)>8) continue;
 const R=rushDaysFor(h);
-if((r==="before"||r==="both") && R.before===dateStr) return {side:"before", name:h.name};
-if((r==="after" ||r==="both") && R.after===dateStr)  return {side:"after",  name:h.name};
+if((r==="before"||r==="both"||r==="all") && R.before===dateStr) return {side:"before", name:h.name};
+if((r==="after" ||r==="both"||r==="all") && R.after===dateStr)  return {side:"after",  name:h.name};
 }
 return null;
 }
  
 function isHolidayDate(dateStr){ return !!dateStr && ((S.holidays&&S.holidays.list)||[]).some(h=>h.date===dateStr); }
-function dateLoad(dateStr,dow){ if(isHolidayDate(dateStr)) return 0; const a=holAdj(dateStr); return Math.max(-2, Math.min(2, dayLoad(dow)+(a?1:0))); }
+function dateLoad(dateStr,dow){
+const a=holAdj(dateStr);
+if(isHolidayDate(dateStr)) return a? Math.max(-2, Math.min(2, dayLoad(dow)+1)) : 0;
+return Math.max(-2, Math.min(2, dayLoad(dow)+(a?1:0)));
+}
  
  
 function holidayTag(dateStr){
@@ -12913,7 +12925,7 @@ detail:(x.same
 ? DAYS[x.busy.d]+" and "+DAYS[x.quiet.d]+" are both marked "+(LOAD_LABEL[dayLoad(x.busy.d)]||"").toLowerCase()+
 ", but "+DAYS[x.busy.d]+" asks for "+x.busy.cover+" shift"+(x.busy.cover===1?"":"s")+" and "+DAYS[x.quiet.d]+" asks for "+x.quiet.cover+". "+
 "A busy label never adds anybody on its own \u2014 the number on a day comes from Coverage needs. "
-: DAYS[x.busy.d]+" is "+((holAdj(x.busy.date)? "the day "+holAdj(x.busy.date).side+" "+holAdj(x.busy.date).name : (LOAD_LABEL[dayLoad(x.busy.d)]||"").toLowerCase()))+
+: DAYS[x.busy.d]+" is "+((holAdj(x.busy.date)? (holAdj(x.busy.date).side==="day"? holAdj(x.busy.date).name+" itself" : "the day "+holAdj(x.busy.date).side+" "+holAdj(x.busy.date).name) : (LOAD_LABEL[dayLoad(x.busy.d)]||"").toLowerCase()))+
 " and asks for "+x.busy.cover+" shift"+(x.busy.cover===1?"":"s")+"; "+DAYS[x.quiet.d]+" is "+
 (LOAD_LABEL[dayLoad(x.quiet.d)]||"").toLowerCase()+" and asks for "+x.quiet.cover+". ")+
 "This takes one "+best.sh.label+" off "+DAYS[x.quiet.d]+" and puts it on "+DAYS[x.busy.d]+
@@ -17492,6 +17504,7 @@ const EXPLAIN = {
 "rules.restMode": "The same choice for paid rest breaks. Example: “placed” puts a 10-minute rest at a named time; “owed” says two are due and lets the floor take them when it is quiet.",
 "rules.mealPlan": "How meals are handled across the day — staggered so the floor is never empty, at fixed times, at random inside the legal window, or by closing the doors. Example: with one person on duty, “close the doors” shuts you for 30 minutes and stops that half-hour counting as a coverage gap.",
 "rules.mealEarliestMin": "The earliest a meal may start, in minutes after the shift begins. It stops the software putting lunch at half past nine. Example: 120 means somebody starting at 09:00 gets nothing before 11:00.",
+"rules.mealLengthMin": "How long the one unpaid meal on a shift runs. An employer may give a LONGER unpaid meal than the law\u2019s minimum, but never a shorter one, so this can only ever add time \u2014 paid hours and the second meal\u2019s own deadline both follow the length you set here. Where the law\u2019s own minimum for THIS shift is longer than your setting, the law still wins. Example: a jurisdiction whose meal grows to 45 minutes on a long shift still gives 45, even with this left at \u201cas the law requires\u201d or set to 30.",
 "rules.staggerMeals": "Keeps two people from going to lunch at the same time. Example: with three on the floor and this on, meals go at 11:30, 12:00 and 12:30 rather than all at noon.",
 "rules.mealWaiverMode": "Whether a meal may be waived on a shift short enough for the law to allow it, and who decides. A waiver always needs the person's written agreement, so even “automatic” only waives for people whose profile records one — anybody you have not asked keeps their meal. Example: on California, a six-hour shift may be worked straight through by agreement; “ask me” means the drafter never assumes it.",
 "rules.mealClose.when": "Whether the doors shut for lunch every day, or only on days when one person is on duty. Example: “only when one person is on” keeps you open on busy days and shuts for half an hour on the quiet ones.",
@@ -17509,7 +17522,7 @@ const EXPLAIN = {
 "priority.applyTo": "Which shifts the order applies to — the ones people want, the ones they do not, or both. Example: apply it only to the good ones and the unpopular shifts stay evenly shared.",
 
  
-"rules.holidayRush": "Whether the days beside a holiday count as busier than usual. Example: with “the day before and after”, the day before Thanksgiving is treated as one step busier, so extra people land there first.",
+"rules.holidayRush": "Whether the days beside a holiday count as busier than usual. Example: with “the day before and after”, the day before Thanksgiving is treated as one step busier, so extra people land there first. “The holiday itself” makes the holiday’s own date one step busier instead (unless it is marked closed); “the holiday and the days either side” does both.",
 "rules.holidayRushScope": "Whether “the day before” means the calendar day or the nearest working weekday. Example: for a Monday holiday, “nearest weekday” makes the Friday before busy and leaves your weekend cover exactly as you set it.",
 "vacations.rule": "How competing vacation requests are settled when more people want the same days than you can spare. Example: “draw” gives everyone the same chance from a seeded lottery you can reproduce; “seniority” works down the order.",
 "vacations.maxOff": "The most people who may be away at once. Example: 2 means a third request for the same week is held back even if everybody has the days.",
@@ -18452,8 +18465,10 @@ const r=holRush();
 return r==="none"? "No change \u2014 the days either side of a holiday are staffed like any other day"
 : r==="before"? "The day before a holiday is treated as a busy day"
 : r==="after"? "The day after a holiday is treated as a busy day"
-: "Both the day before and the day after are treated as busy days";})(),
-sel("rules.holidayRush", [["none","No change"],["before","The day before"],["after","The day after"],["both","Both"]], holRush()),
+: r==="both"? "Both the day before and the day after are treated as busy days"
+: r==="day"? "The holiday\u2019s own date is treated as a busy day (unless it is marked closed)"
+: "The holiday\u2019s own date, and both the day before and after, are treated as busy days";})(),
+sel("rules.holidayRush", [["none","No change"],["before","The day before"],["after","The day after"],["both","Both"],["day","The holiday itself"],["all","The holiday and the days either side"]], holRush()),
 "holidays")}
       ${setRow("Which day counts as \u201cbefore\u201d or \u201cafter\u201d",
 holRushScope()==="weekday"
@@ -18516,6 +18531,11 @@ sel("rules.sheetNotes", [["lines","A column to write in, plus lines at the foot"
     <div class="card" data-findcard="settings"><header><h3>Meals and rest breaks</h3><span class="chip acc">${esc(L.short)}</span></header><div class="setbody">
       ${setRow("Earliest a meal may be scheduled", "",
 sel("rules.mealEarliestMin", [[0,"No opinion \u2014 whenever it fits"],[120,"Not before 2 hours in"],[180,"Not before 3 hours in"],[240,"Not before 4 hours in"]], +S.rules.mealEarliestMin||0))}
+      ${setRow("How long is an unpaid meal period?",
+(+S.rules.mealLengthMin||0)
+? "Set to "+(+S.rules.mealLengthMin)+" minutes \u2014 "+esc(L.name)+"\u2019s own "+(L.meal?L.meal.lengthMin:30)+"-minute minimum still applies on a shift where that minimum is longer."
+: "As "+esc(L.name)+" requires \u2014 "+(L.meal?L.meal.lengthMin:30)+" minutes on a typical shift.",
+sel("rules.mealLengthMin", [[0,"As the law requires (usually 30 minutes)"],[45,"45 minutes"],[60,"60 minutes"]], +S.rules.mealLengthMin||0))}
       ${setRow("Meal periods (the unpaid one)", "", sel("rules.breakMode", [["assigned","Put a time on the schedule"],["lengths","Say how long, staff pick when"],["self","Staff sort it out themselves"]], S.rules.breakMode))}
       ${S.rules.breakMode==="assigned"? setRow("How those meal times get decided",
 mealPlan()==="slotsrandom" ? "Only the times you named, shared out at random so the same person doesn\u2019t always get the same one: "+esc((S.rules.mealSlots||[]).map(x=>m2disp(t2m(x))).join(", "))
@@ -18751,7 +18771,7 @@ root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=
 const path=el.dataset.set;
 let v=el.value;
 const boolPaths=["rules.trackLic","rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","ui.advanced","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","rules.familyBiz","rules.familyHazard","ui.recurOff","ui.adviceOff","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger","rules.holCounts"];
-const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.maxSpanH","org.weekStart","org.fiscalStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.dtDailyH","union.maxConsecH"];
+const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.mealLengthMin","rules.maxSpanH","org.weekStart","org.fiscalStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.dtDailyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
  
@@ -19287,6 +19307,7 @@ function defaultShiftSpanMin(){
  
 let meal=0;
 try{ const L=law(); if(L && L.meal && L.meal.lengthMin) meal=L.meal.lengthMin; }catch(e){}
+meal = Math.max(meal, (S.rules && S.rules.mealLengthMin)||0);
 return 8*60 + meal;
 }
  
@@ -21958,7 +21979,7 @@ const _sp=payOn()? paySplit(ws) : null;
 const _cut=_sp && _sp.date===d.date;
 return `<div class="hcell ${h.closed?"closed":""}${_cut?" paycut":""}${payShade(d.date)}">
             ${_cut? `<div class="mini" style="color:var(--accent);font-weight:700">new pay period</div>`:""}
-            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${isHolidayDate(d.date)? "" : holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
+            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':isHolidayDate(d.date)? "" : dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
             <div class="dd">${dayHoursLabel(d.date, d.dow)}</div>
             ${covStrip(d)}
             <div style="margin-top:4px"><button class="btn sm ghost" data-openday="${d.dow}" style="padding:2px 6px;font-size:11px">Day sheet →</button></div>
@@ -26741,6 +26762,10 @@ return M;
 function bucketLabel(W, i){
 const typed=((W.buckets||[])[i]||"").trim();
 if(typed) return typed;
+return bucketSuggestionName(W, i);
+}
+ 
+function bucketSuggestionName(W, i){
 const bt=BIZ_TYPES.find(x=>x.id===W.biz);
 const sug=bt && bt.roles && bt.roles[i];
 if(sug) return sug;
@@ -27088,7 +27113,9 @@ if(k==="team") return `
       <div class="stack">
         <p class="whead">One name per line, under the job they do — type or paste a list. The order becomes the seniority order; the Team page changes it later.</p>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,b)=>`
-          <div class="field"><label>${esc(bucketLabel(W,b))}${bucketSuggested(W,b)? ` <span class="mini" style="font-weight:400;color:var(--muted)">(our suggestion — rename it on the last screen)</span>`:""} <span style="color:var(--faint)">· <span class="wcnt" data-b="${b}">${namesIn(b).length}</span></span></label>
+          <div class="field">
+            <input type="text" class="wbn-name" data-b="${b}" value="${esc(W.buckets[b]||"")}" placeholder="${esc(bucketSuggestionName(W,b))}">
+            <label>Names <span style="color:var(--faint)">· <span class="wcnt" data-b="${b}">${namesIn(b).length}</span></span></label>
             <textarea class="wbn" data-b="${b}" style="min-height:130px" spellcheck="false"
               placeholder="One name per line&#10;…and the next&#10;…and so on">${esc(W.bucketNames[b]||"")}</textarea></div>`).join("")}</div>
         <div id="wteamsum"></div>
@@ -27789,6 +27816,13 @@ clearTimeout(deb); deb=setTimeout(teamSummary, 500);
 });
 t.addEventListener("blur",()=>{ W.bucketNames[+t.dataset.b]=t.value; teamSummary(); });
 });
+r.querySelectorAll(".wbn-name").forEach(t=>{
+t.addEventListener("input",()=>{
+W.buckets[+t.dataset.b]=t.value.trim();
+clearTimeout(deb); deb=setTimeout(teamSummary, 500);    
+});
+t.addEventListener("blur",()=>{ W.buckets[+t.dataset.b]=t.value.trim(); teamSummary(); });
+});
 if(STEPS[W.step].k==="team") teamSummary();
 r.querySelectorAll("[data-busy]").forEach(g=>{
 const i=+g.dataset.busy;
@@ -27900,6 +27934,7 @@ r.querySelectorAll("[data-wmslot]").forEach(i=>{ W.mealSlots[+i.dataset.wmslot]=
 r.querySelectorAll("[data-w]").forEach(i=>{ W[i.dataset.w]=i.value; });
 r.querySelectorAll(".wrole").forEach(i=>{ W.buckets[+i.dataset.i]=i.value.trim(); });
 r.querySelectorAll(".wlic").forEach(i=>{ W.bucketLic[+i.dataset.i]=i.checked; });
+r.querySelectorAll(".wbn-name").forEach(i=>{ W.buckets[+i.dataset.b]=i.value.trim(); });
 r.querySelectorAll(".wbn").forEach(t=>{ W.bucketNames[+t.dataset.b]=t.value; });
 r.querySelectorAll(".wsl").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.dataset.i]||{}; W.shifts[+i.dataset.i].label=i.value.trim(); });
 r.querySelectorAll(".wss").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.dataset.i]||{}; W.shifts[+i.dataset.i].start=i.value; });
@@ -29691,6 +29726,8 @@ return `<div class="banner warn"><div><b>${past.length} holiday${past.length===1
             <option value="before" ${holRush()==="before"?"selected":""}>The day before</option>
             <option value="after" ${holRush()==="after"?"selected":""}>The day after</option>
             <option value="both" ${holRush()==="both"?"selected":""}>Both</option>
+            <option value="day" ${holRush()==="day"?"selected":""}>The holiday itself</option>
+            <option value="all" ${holRush()==="all"?"selected":""}>The holiday and the days either side</option>
           </select>
         </div>
         <div class="row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">
