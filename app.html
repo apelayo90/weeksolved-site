@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 33df640f 2026-09-14 05:05 UTC -->
+<!-- build 9b0fc8f1 2026-09-17 03:11 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -11,9 +11,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Weeksolved">
 <!-- Weeksolved. Copyright (c) 2026 Weeksolved. All rights reserved. -->
-<title>Weeksolved — Staff Scheduling Software with Break Compliance</title>
+<title>Weeksolved — Staff Scheduling Software with Built-In Break Rules</title>
 <meta name="description" content="Weeksolved builds your staff schedule from your own rules: required coverage, role ratios, availability, hour caps and state meal and rest break law. Weekly and daily schedules, station sheets, holiday polls, Excel and PDF export.">
-<meta name="keywords" content="employee scheduling software, staff scheduling, shift scheduler, work schedule maker, shift planner, staff rota software, employee rota, break compliance, meal break law, rest break scheduling, California meal break, labor law scheduling, coverage planning, shift rotation, seniority scheduling, healthcare staff scheduling, pharmacy staff scheduling, clinic scheduling software, small business scheduling">
+<meta name="keywords" content="employee scheduling software, staff scheduling, shift scheduler, work schedule maker, shift planner, staff rota software, employee rota, break rules, meal break law, rest break scheduling, California meal break, labor law scheduling, coverage planning, shift rotation, seniority scheduling, healthcare staff scheduling, pharmacy staff scheduling, clinic scheduling software, small business scheduling">
 <meta name="author" content="Weeksolved">
 <meta name="robots" content="index,follow">
 
@@ -24,10 +24,10 @@
 <meta property="og:site_name" content="Weeksolved">
 <link rel="canonical" href="https://weeksolved.com/app.html">
 <meta property="og:url" content="https://weeksolved.com/app.html">
-<meta property="og:title" content="Weeksolved — Staff Scheduling Software with Break Compliance">
+<meta property="og:title" content="Weeksolved — Staff Scheduling Software with Built-In Break Rules">
 <meta property="og:description" content="Give it your coverage rules once. Weeksolved drafts your week from your own coverage rules, places every meal and rest break inside the window your state's rules set, and tells you exactly what blocked any shift it could not fill.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Weeksolved — Staff Scheduling Software with Break Compliance">
+<meta name="twitter:title" content="Weeksolved — Staff Scheduling Software with Built-In Break Rules">
 <meta name="twitter:description" content="Staff scheduling that follows your rules and your state's break law. Weekly and daily schedules, station sheets, fair rotation, Excel and PDF export.">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication",
@@ -2856,8 +2856,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "33df640f";       
-const BUILD_AT = "2026-09-14 05:05 UTC";       
+const BUILD_ID = "9b0fc8f1";       
+const BUILD_AT = "2026-09-17 03:11 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -5393,7 +5393,9 @@ if(typeof s.rules.mealClose.mins!=="number") s.rules.mealClose.mins=0;
 if(typeof s.rules.maxSpanH!=="number") s.rules.maxSpanH=0;
 if(typeof s.rules.mealEarliestMin!=="number") s.rules.mealEarliestMin=0;
 s.shifts.forEach(x=>{ if(x.gapFrom===undefined) x.gapFrom=""; if(x.gapTo===undefined) x.gapTo="";
-if(!x.flex) x.flex="none"; if(typeof x.lenMinH!=="number") x.lenMinH=0; if(typeof x.lenMaxH!=="number") x.lenMaxH=0;
+ 
+if(x.flex!=="none"){ x.flex="none"; x.lenMinH=0; x.lenMaxH=0; }
+if(typeof x.lenMinH!=="number") x.lenMinH=0; if(typeof x.lenMaxH!=="number") x.lenMaxH=0;
 if(x.extra!=="no" && x.extra!=="first") x.extra="yes"; });
 if(!s.rules.topUpLabel) s.rules.topUpLabel="Project time";
 if(!s.rules.stationRotation) s.rules.stationRotation="fair";
@@ -7091,9 +7093,12 @@ if(h && holCapped(h)) return; }
 const pool=S.shifts.filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(dow));
  
 const asked=new Set(demandRowsFor(dow, ws, date).map(r=>r.shiftId));
+ 
+const sitesForCover = sitesAskedOn(dow, ws, date);
+sitesForCover.forEach(site=>{
 let guard=0, lastSig=null;
 while(guard++ < 40){
-const G=floorGaps(date, dow, onFloorFrom(assignments, date, peekWeek(addDays(ws,-7)).assignments));
+const G=floorGaps(date, dow, onFloorFrom(assignments, date, peekWeek(addDays(ws,-7)).assignments), site);
  
 const holes=[].concat(
 G.empty.map(g=>({from:g.from, to:g.to, roleId:null, why:"nobody on the floor"})),
@@ -7114,8 +7119,8 @@ const ov = g? seg(a,g.from)+seg(g.to,b) : seg(a,b);
 return {sh, ov, len:b-a}; })
 .filter(x=>x.ov>0).sort((x,y)=>y.ov-x.ov || (asked.has(x.sh.id)?0:1)-(asked.has(y.sh.id)?0:1) || x.len-y.len);
 for(const {sh} of fits){
-if(!shiftRoom(sh.id, hole.roleId, date, dow, ws, assignments)) continue;
-const slot={shiftId:sh.id, roleId:hole.roleId, sh, _cover:true};
+if(!shiftRoom(sh.id, hole.roleId, date, dow, ws, assignments, false, site)) continue;
+const slot={shiftId:sh.id, roleId:hole.roleId, sh, _cover:true, siteId: site||undefined};
 const cands=S.employees.filter(e=>hardOk(e,slot,date,dow,state,assignments));
 if(!cands.length) continue;
 let best=null, bestScore=-1e9;
@@ -7123,17 +7128,20 @@ cands.forEach(e=>{ const sc=score(e,slot,date,dow,state,target); if(sc>bestScore
 const [aMin,bMin]=shiftMinutes(sh);
 const a={id:uid("a"), empId:best.id, date, dow, shiftId:sh.id, startMin:aMin, endMin:bMin,
 gap:shiftGap(sh), roleId:hole.roleId||best.roleIds[0]||null, locked:false, cover:true};
+ 
+if(multiSite() && site && site!==mainSiteId()) a.siteId=site;
 applyBreaks(a); assignments.push(a);
 const st=state[best.id];
 st.min += paidMinutes(a); st.days.add(date); (st.byDate[date]=st.byDate[date]||[]).push(a);
 st.lastEnd[date]=bMin; if(dow===0||dow===6) st.weekend++;
-covered.push({date, dow, shiftId:sh.id, empId:best.id, from:hole.from, to:hole.to, why:hole.why});
+covered.push({date, dow, shiftId:sh.id, empId:best.id, from:hole.from, to:hole.to, why:hole.why, siteId: site||undefined});
 placedOne=true; break;
 }
 if(placedOne) break;
 }
-if(!placedOne) break;                      
+if(!placedOne) break;                    
 }
+});
 });
 
  
@@ -13138,12 +13146,13 @@ if(!prof) return 0;
 return prof.pts.reduce((t,p)=>
 t + (p.detail||[]).reduce((u,d)=>u+Math.max(0, d.need-d.have), 0), 0);
 }
-function dayHarm(date, dow, ws, after){
+function dayHarm(date, dow, ws, after, siteId){
 if(!dayOpen(date, dow)) return null;           
 const before = dayList(date, ws);
 if(coverageShortMin(date, dow, ws, after) > coverageShortMin(date, dow, ws, before))
 return "it would drop "+DSHORT[dow]+" below the cover you require";
-const fgA=floorGaps(date, dow, after), fgB=floorGaps(date, dow, before);
+ 
+const fgA=floorGaps(date, dow, after, siteId), fgB=floorGaps(date, dow, before, siteId);
 const mins=g=>(g||[]).reduce((t,x)=>t+(x.to-x.from), 0);
  
 if(mins(fgA.empty) > mins(fgB.empty))
@@ -13165,14 +13174,14 @@ function liftHarm(a, ws){
 if(!a) return null;
 const dow = (a.dow!=null? a.dow : parseYmd(a.date).getDay());
 const after = dayList(a.date, ws).filter(x=>x!==a && x.id!==a.id);
-const own = dayHarm(a.date, dow, ws, after);
+const own = dayHarm(a.date, dow, ws, after, siteOf(a));
 if(own) return own;
  
 if(a.endMin>1440){
 const nd=addDays(a.date,1);
 const nws=weekStartOf(nd, (S.org&&S.org.weekStart)||0);
 return dayHarm(nd, parseYmd(nd).getDay(), nws,
-dayList(nd, nws).filter(x=>x!==a && x.id!==a.id));
+dayList(nd, nws).filter(x=>x!==a && x.id!==a.id), siteOf(a));
 }
 return null;
 }
@@ -13181,13 +13190,13 @@ function swapHarm(a, e, slot, ws){
 if(!a || !e || !slot) return null;
 const sim=chainRowFor(e, slot);
 const after=dayList(slot.date, ws).filter(x=>x!==a && x.id!==a.id).concat(sim? [sim] : []);
-const own=dayHarm(slot.date, slot.dow, ws, after);
+const own=dayHarm(slot.date, slot.dow, ws, after, slot.siteId||siteOf(a));
 if(own) return own;
 if(a.endMin>1440 || (sim && sim.endMin>1440)){
 const nd=addDays(slot.date,1);
 const nws=weekStartOf(nd, (S.org&&S.org.weekStart)||0);
 const base=(peekWeek(nws).assignments||[]).filter(x=>x!==a && x.id!==a.id);
-return dayHarm(nd, parseYmd(nd).getDay(), nws, onFloorFrom(base, nd, after));
+return dayHarm(nd, parseYmd(nd).getDay(), nws, onFloorFrom(base, nd, after), slot.siteId||siteOf(a));
 }
 return null;
 }
@@ -13202,10 +13211,22 @@ if(m){ let a=(+m[1])*60+(+m[2]), b=(+m[3])*60+(+m[4]); if(b<=a) b+=1440; win=[a,
 }
 return win;
 }
-function floorGaps(date, dow, list){
+ 
+function sitesAskedOn(dow, ws, date){
+if(!multiSite()) return [null];
+const asked=new Set();
+demandRowsFor(dow, ws, date).forEach(r=>asked.add(siteOf(r)));
+(S.stations||[]).filter(st=>st.critical && !st.off && st.kind!=="admin"
+&& (!(st.days||[]).length || st.days.includes(dow))).forEach(st=>asked.add(siteOf(st)));
+return sitesList().map(z=>z.id).filter(id=>asked.has(id));
+}
+function floorGaps(date, dow, list, siteId){
 if(!dayOpen(date, dow)) return {empty:[], stations:[]};     
 const win=dayWindowOn(date, dow);
 if(!win) return {empty:[], stations:[]};
+ 
+const site = siteId || mainSiteId();
+const scoped = (multiSite() && siteId) ? list.filter(a=>siteOf(a)===site) : list;
 const STEPM=15;
 const runs=(from, to, failsAt)=>{
 const out=[]; let cur=null;
@@ -13217,9 +13238,11 @@ else if(cur){ out.push(cur); cur=null; }
 if(cur) out.push(cur);
 return out;
 };
-const empty = runs(win[0], win[1], t=>onDutyAt(list, t, null, {ignoreMeals:true})===0);
+const empty = runs(win[0], win[1], t=>onDutyAt(scoped, t, null, {ignoreMeals:true})===0);
 const stations=[];
-(S.stations||[]).filter(st=>st.critical && !st.off && st.kind!=="admin").forEach(st=>{
+ 
+(S.stations||[]).filter(st=>st.critical && !st.off && st.kind!=="admin"
+&& (!multiSite() || !siteId || siteOf(st)===site)).forEach(st=>{
 if((st.days||[]).length && !st.days.includes(dow)) return;
 let a = st.from? t2m(st.from) : win[0];
 let b = st.to?   t2m(st.to)   : win[1];
@@ -13228,7 +13251,7 @@ if(a<win[0] && b<=win[0]) { a+=1440; b+=1440; }
 const from=Math.max(a,win[0]), to=Math.min(b,win[1]);
 if(to<=from) return;
  
-const eligible = t=>list.filter(x=>{
+const eligible = t=>scoped.filter(x=>{
 let s0=x.startMin, e0=x.endMin;
 if(e0<=from && e0<s0+1) { s0+=1440; e0+=1440; }
 if(!(t>=s0 && t<e0)) return false;
@@ -13404,25 +13427,137 @@ why:"the longest shift "+e.name.split(" ")[0]+" can be given is "+fmtHrs(best)+
 }
 function exactHoursFeasible(e, ws){
 const L=effLimits(e, ws);
-if(!L.exactH) return {ok:true};
+ 
+if(!L.exactH && !(L.minH>0)) return {ok:true};
  
 const goal=owedFloorMin(e, ws);
 const maxD=L.maxD||7;
 const list=shiftLensFor(e, ws, L);
 if(!list.length) return {ok:false, why:"there is nothing in the week "+e.name.split(" ")[0]+" can be given — no shift the week asks for is one they can fill, and they are not on anything already", lens:[]};
  
+const cap = L.exactH ? goal+240 : ((L.maxH||0) ? L.maxH*60 : goal+240);
+ 
 let reach=new Set([0]);
 for(let k=0;k<maxD;k++){
 const next=new Set(reach);
-reach.forEach(v=>list.forEach(l=>{ if(v+l<=goal+240) next.add(v+l); }));
+reach.forEach(v=>list.forEach(l=>{ if(v+l<=cap) next.add(v+l); }));
 reach=next;
-if(reach.has(goal)) return {ok:true, lens:list};
+if(L.exactH ? reach.has(goal) : [...reach].some(v=>v>=goal)) return {ok:true, lens:list};
 }
 const all=[...reach].filter(v=>v>0).sort((a,b)=>Math.abs(a-goal)-Math.abs(b-goal));
 const near=all.slice(0,2).sort((a,b)=>a-b);
+ 
 return {ok:false, lens:list, near,
 why:"no combination of your "+list.map(x=>fmtHrs(x)).join(", ")+" shift"+(list.length===1?"":"s")+
-" adds up to "+fmtHrs(goal)+(near.length? " — the closest you can get is "+near.map(x=>fmtHrs(x)).join(" or ") : "")};
+(L.exactH? " adds up to " : " reaches ")+fmtHrs(goal)+
+(near.length? " — the closest you can get is "+near.map(x=>fmtHrs(x)).join(" or ") : "")};
+}
+
+ 
+function shiftPayParts(e, ws, L){
+L = L || effLimits(e, ws);
+const out={};
+const note=(aMin, bMin, paid)=>{
+if(!(paid>0)) return;
+const clock=bMin-aMin;
+if(out[paid] && out[paid].clock>=clock) return;
+let meals=0;
+try{ meals=computeBreaks(aMin, bMin, {}).meals.filter(m=>!m.waived).length; }catch(err){}
+out[paid]={paid:paid, clock:clock, unpaid:Math.max(0, clock-paid), meals:meals};
+};
+const D=demandOf(ws);
+Object.keys(D).forEach(dow=>{
+(D[dow]||[]).forEach(row=>{
+if(row.roleId && !e.roleIds.includes(row.roleId)) return;
+const sh=shiftById(row.shiftId); if(!sh) return;
+const [a,b]=shiftMinutes(sh);
+if(L.maxShiftH && paidSpan(a, b, shiftGap(sh), null, e) > L.maxShiftH*60) return;
+note(a, b, paidEstimate(a,b));
+});
+});
+(peekWeek(ws).assignments||[]).forEach(a=>{
+if(a.empId!==e.id) return;
+const len=paidMinutes(a);
+if(L.maxShiftH && len > L.maxShiftH*60) return;
+note(a.startMin, a.endMin, len);
+});
+return out;
+}
+ 
+function guarReachFacts(e, ws, lim, gf, mine, owe){
+const tops=(mine||[]).filter(a=>a.guarantee);
+return {
+owe: owe,
+minH: lim.minH||0,
+maxH: lim.maxH||0,
+lens: (gf.lens||[]).slice().sort((a,b)=>a-b),
+parts: shiftPayParts(e, ws, lim),
+why: gf.why||"",
+shifts: (mine||[]).length - tops.length,
+top: tops.reduce((t,a)=>t+paidMinutes(a), 0)
+};
+}
+ 
+function guarShapeKey(g){
+return [g.minH, g.maxH, g.owe, g.lens.join(",")].join("|");
+}
+ 
+function anHrs(m){ const t=fmtHrs(m); return (/^(8|11|18)/.test(t)? "an " : "a ")+t; }
+function guarReachTitle(who){
+return "Guaranteed hours: no whole number of shifts lands in range \u2014 "+who;
+}
+ 
+function guarReachDrafted(rows){
+const n=rows.length;
+const sh=rows.map(r=>r.gr.shifts), tp=rows.map(r=>r.gr.top);
+const lo=a=>Math.min.apply(null,a), hi=a=>Math.max.apply(null,a);
+const shSay=x=>x+" shift"+(x===1?"":"s");
+const topSay=x=>x>0? "carried "+fmtHrs(x)+" as hours owed" : "carried no hours owed on top";
+if(n===1) return "Weeksolved has scheduled "+shSay(sh[0])+" and "+topSay(tp[0])+".";
+if(lo(sh)===hi(sh) && lo(tp)===hi(tp))
+return "Weeksolved has scheduled "+shSay(sh[0])+" and "+topSay(tp[0])+" for each of the "+n+".";
+return "Across the "+n+", Weeksolved has scheduled "+
+(lo(sh)===hi(sh)? shSay(sh[0]) : lo(sh)+" to "+shSay(hi(sh)))+" and "+
+(lo(tp)===hi(tp)? topSay(tp[0])
+: "carried between "+fmtHrs(lo(tp))+" and "+fmtHrs(hi(tp))+" as hours owed")+".";
+}
+ 
+function guarReachSay(g, drafted){
+const L=[];
+L.push(fmtHrs(g.owe)+" guaranteed this week"+(g.maxH? ", against a cap of "+g.maxH+"h" : "")+".");
+const only = g.lens.length===1? g.lens[0] : null;
+const part = only!=null? g.parts[only] : null;
+const k = part? Math.floor(g.owe/part.paid) : 0;
+const arith = !!(part && g.maxH && k>=1 && (k+1)*part.paid > g.maxH*60);
+if(arith){
+const one=anHrs(part.clock);
+L.push(one.charAt(0).toUpperCase()+one.slice(1)+" shift pays "+fmtHrs(part.paid)+
+(part.unpaid? " once "+fmtHrs(part.unpaid)+" of unpaid meal period"+
+(part.meals===1? "" : "s")+" comes out" : "")+".");
+L.push(k+" shift"+(k===1?"":"s")+" is "+fmtHrs(k*part.paid)+", "+fmtHrs(g.owe-k*part.paid)+
+" under the guarantee; "+(k+1)+" is "+fmtHrs((k+1)*part.paid)+", "+
+fmtHrs((k+1)*part.paid-g.maxH*60)+" over the cap.");
+ 
+L.push(g.owe===g.maxH*60
+? "No whole number of "+fmtHrs(part.clock)+" shifts comes to "+fmtHrs(g.owe)+"."
+: "No whole number of "+fmtHrs(part.clock)+" shifts lands between "+
+fmtHrs(g.owe)+" and "+g.maxH+"h.");
+} else if(g.why){
+L.push(g.why.charAt(0).toUpperCase()+g.why.slice(1)+".");
+}
+L.push(drafted);
+let where = "Paid hours per shift rest on how many unpaid meal periods a shift carries, "+
+"which comes from Ground rules \u2192 Meals and rest breaks together with the state named "+
+"under Where you operate.";
+if(arith && part.meals>1){
+const each=Math.round(part.unpaid/part.meals);
+where += " At "+(part.meals-1)+" unpaid meal period"+(part.meals-1===1? "" : "s")+
+" "+anHrs(part.clock)+" shift would pay "+fmtHrs(part.paid+each)+
+" and "+k+" of them would come to "+fmtHrs(k*(part.paid+each))+".";
+}
+L.push(where);
+L.push("Weeksolved is scheduling software. It is not a law firm and does not give legal advice.");
+return L.join(" ");
 }
 
 function ruleSentence(r){
@@ -14691,27 +14826,34 @@ push(lastNight? "info" : "crit",
 if(wk.assignments.length) dates.forEach(({date,dow})=>{
  
 { const h=(S.holidays.list||[]).find(x=>x.date===date); if(h && holPolled(h)) return; }
-const G=floorGaps(date, dow, dayList(date, ws));
-const win=G.win; if(!win) return;                           
+ 
+const dayAssignments = dayList(date, ws);
+const sitesForGaps = sitesAskedOn(dow, ws, date);
+sitesForGaps.forEach(site=>{
+const G=floorGaps(date, dow, dayAssignments, site);
+const win=G.win; if(!win) return;                         
+ 
+const siteTag = (multiSite() && site)? " \u2014 "+siteName(site) : "";
  
 G.empty.forEach(r=>{
 const lastNight = gapIsLastNight(date, dow, r.from, ws);
 push(lastNight? "info" : "crit",
-(lastNight? "Nobody on the floor yet — " : "Nobody on the floor — ")+DSHORT[dow],
-prettyDate(date)+": open from "+m2disp(win[0])+" to "+m2disp(win[1])+
+(lastNight? "Nobody on the floor yet — " : "Nobody on the floor — ")+DSHORT[dow]+siteTag,
+prettyDate(date)+siteTag+": open from "+m2disp(win[0])+" to "+m2disp(win[1])+
 ", but nobody is scheduled between "+m2disp(r.from)+" and "+m2disp(r.to)+
 (lastNight? ". "+LAST_NIGHT_SAY
 : ". Either the shifts you've defined don't reach that far, or the numbers under Coverage needs stop short of it."),
-{date, dow, code:lastNight? "emptyfirst" : "empty", from:r.from, to:r.to});
+{date, dow, siteId: site||undefined, code:lastNight? "emptyfirst" : "empty", from:r.from, to:r.to});
 });
  
 G.stations.forEach(({st, from, to, gaps})=>{
 gaps.forEach(g=>{
-push("crit","Nobody can cover "+st.name+" — "+DSHORT[dow],
-prettyDate(date)+": this post is marked must-cover from "+m2disp(from)+" to "+m2disp(to)+
+push("crit","Nobody can cover "+st.name+" — "+DSHORT[dow]+siteTag,
+prettyDate(date)+siteTag+": this post is marked must-cover from "+m2disp(from)+" to "+m2disp(to)+
 ", and there is nobody"+(st.roleId? " qualified as "+roleName(st.roleId):"")+
 " on the floor between "+m2disp(g.from)+" and "+m2disp(g.to)+".",
-{date, dow, code:"stationgap", stationId:st.id, from:g.from, to:g.to});
+{date, dow, siteId: site||undefined, code:"stationgap", stationId:st.id, from:g.from, to:g.to});
+});
 });
 });
 });
@@ -14850,13 +14992,13 @@ const sh=(wk.short||[]).find(x=>x.empId===e.id && !x.held) || null;
  
  
  
-const gf = guaranteeFeasible(e, ws, owe);
+ 
+const gf = exactHoursFeasible(e, ws);
 if(!gf.ok && !(hasCap(lim) && lim.minH && (lim.maxH||0) && lim.minH > lim.maxH)){
-push("warn","Guaranteed hours can't be reached from your shifts \u2014 "+e.name,
-lim.minH+"h a week is guaranteed, but "+gf.why+
-". This will not clear by redrafting. Add a longer shift under Roles & shifts, "+
-"raise their day limit, tick more days they can work, or lower the guarantee.",
-{empId:e.id, code:"guarreach"});
+const gr = guarReachFacts(e, ws, lim, gf, mine, owe);
+push("warn", guarReachTitle(e.name),
+guarReachSay(gr, guarReachDrafted([{gr:gr}])),
+{empId:e.id, code:"guarreach", shape:guarShapeKey(gr), gr:gr});
 } else if(hasCap(lim) && lim.minH && (lim.maxH||0) && lim.minH > lim.maxH){
 const why = lim.cycleCap!=null && lim.cycleCap===lim.maxH
 ? ", because their work pattern only comes to "+lim.maxH+"h that week"
@@ -15231,7 +15373,7 @@ push("info","Eating outside the lunch closure",
 who.map(x=>x.name.split(" ")[0]+" ("+x.at.slice(0,3).join(", ")+")").join("; ")+
 ". Their shift starts too early or too late for a meal at "+
 [...shut].sort((a,b)=>a-b).map(m2disp).join(" or ")+
-" to be legal, so each keeps a compliant time of its own.", {code:"closure"});
+" to be legal, so each keeps its own meal time that meets the rule.", {code:"closure"});
 }
 
  
@@ -15258,6 +15400,25 @@ kinds.map(k=>k+": "+bent[k].join(", ")).join("; ")+
 ". Each of these was put on by hand with the limit named at the time, so the checks above may repeat it. Nothing to fix \u2014 this is the record that it was a decision.",
 {code:"bent"});
 }
+}
+
+ 
+{
+const heads=new Map(), kept=[];
+V.forEach(v=>{
+if(v.code!=="guarreach" || !v.shape || !v.gr){ kept.push(v); return; }
+const head=heads.get(v.shape);
+if(head){ head.also.push(v); return; }
+v.also=[]; heads.set(v.shape, v); kept.push(v);
+});
+heads.forEach(head=>{
+const rows=[head].concat(head.also), n=rows.length;
+head.people = n;
+head.empIds = rows.map(v=>v.empId);
+if(n>1) head.title = guarReachTitle(n+" people on this contract");
+head.detail = guarReachSay(head.gr, guarReachDrafted(rows));
+});
+if(kept.length!==V.length){ V.length=0; kept.forEach(v=>V.push(v)); }
 }
 
 const order={crit:0,warn:1,info:2};
@@ -16462,7 +16623,7 @@ if(k==="lic"){ licRenewModal(v); return; }
 if(k==="fixall"){ fixModal(S.currentWeek); return; }
 if(k==="wkopen"){ S.currentWeek=v; save(); fixModal(v); return; }
 if(k==="wkchecks"){ S.currentWeek=v; save(); runAct("checks"); return; }
-if(k==="checks"){ if(VIEW!=="week") go("week"); setTimeout(()=>{ const c=[...document.querySelectorAll(".card h3")].find(h=>/Conflicts and compliance/.test(h.textContent)); if(c) c.closest(".card").scrollIntoView({behavior:"smooth",block:"start"}); }, 80); return; }
+if(k==="checks"){ if(VIEW!=="week") go("week"); setTimeout(()=>{ const c=[...document.querySelectorAll(".card h3")].find(h=>/Conflicts and checks/.test(h.textContent)); if(c) c.closest(".card").scrollIntoView({behavior:"smooth",block:"start"}); }, 80); return; }
 if(k==="fix"){ const code=v, empId=parts[2]||null, extra=parts[3]||null;
 const e=empId? empById(empId):null;
 const v2={code, sev:"warn", empId, title:(e? e.name+" — ":"")+({cap:"Over hour cap", under:"Under guaranteed hours", wot:"Weekly overtime", lic:"License"}[code]||"Fix"), detail:""};
@@ -17396,9 +17557,6 @@ ehp: "Whether this person is paid for a holiday they do not work. It changes the
 et: "Employment type. It is used for grouping, printing and defaults — it does not itself set any hours. Example: marking somebody PRN stops the under-hours check chasing them for a guarantee they do not have.",
 emaxd: "The most days a week this person may work. Example: 4 means a full-timer on ten-hour days is never given a fifth.",
 esen: "The date they started. Used only where seniority decides something — the priority ladder, and vacation draws set to seniority. Example: two people want the same Saturday off; this is what breaks the tie.",
-sflex: "Whether both ends of this shift are fixed, or one of them moves. Example: “they leave when the work is done” fixes the start and lets the finish move inside the range you set, so it can be shortened to fit somebody's hours or stretched when the day needs it.",
-sflo: "The shortest this shift may ever be. Example: with a usual length of 8 and a shortest of 6, the drafter may trim it to six hours to keep somebody inside their cap, and no further.",
-sfhi: "The longest this shift may ever run — an absolute ceiling, only reached when the day is short of cover or somebody is still owed hours after everything else has been tried. Example: usual 8, longest 10, and it only goes past 8 as a last resort.",
 sextra: "Whether the drafter may put EXTRA people on this shift beyond what Coverage needs asks for, to meet somebody's guaranteed hours. Example: set your 8:00–16:30 to “prefer this shift” and hours owed land there rather than scattering across openings and closings.",
 sdes: "How your team feels about this shift. It drives first claim and first refusal, and nothing else. Example: mark the closing shift as disliked and the drafter shares it around rather than giving it to the same person every week.",
 ssplit: "A shift where they go home in the middle and come back. The gap is unpaid and does not count towards their hours. Example: 08:00–12:00 and 17:00–21:00 is eight paid hours across a thirteen-hour span — which is why the longest-span rule exists.",
@@ -19191,18 +19349,6 @@ modal(id? ("Edit "+((s&&s.label)||"shift")) : "New shift", `
         <div class="field"><label>Starts</label><input type="time" id="ss" value="${esc(s.start)}"></div>
         <div class="field"><label>Ends</label><input type="time" id="se" value="${esc(s.end)}"></div>
       </div>
-      <div class="field"><label>Are both ends fixed?</label>
-        <select id="sflex">
-          <option value="none" ${(!s.flex||s.flex==="none")?"selected":""}>Yes &mdash; the same times every time</option>
-          <option value="end"  ${s.flex==="end"?"selected":""}>Only the start &mdash; they leave when the work is done</option>
-          <option value="start" ${s.flex==="start"?"selected":""}>Only the end &mdash; they come in whenever suits, and stay to close</option>
-        </select>
-        <span class="mini" id="sflexnote"></span></div>
-      <div class="grid2" id="sflexwrap" style="display:${(s.flex&&s.flex!=="none")?"":"none"}">
-        <div class="mini" style="grid-column:1/-1">The start and end above are how long it <b>usually</b> runs. It only runs shorter or longer when someone's hours or the day's cover call for it, and it goes past the usual length only as a last resort.</div>
-        <div class="field"><label>Shortest it can be</label><input type="number" inputmode="decimal" step="0.25" min="1" max="16" id="sflo" value="${esc(String(s.lenMinH||""))}" placeholder="6"></div>
-        <div class="field"><label>Longest it can be</label><input type="number" inputmode="decimal" step="0.25" min="1" max="16" id="sfhi" value="${esc(String(s.lenMaxH||""))}" placeholder="9"></div>
-      </div>
       <label class="switch"><input type="checkbox" id="ssplit" ${(s.gapFrom&&s.gapTo)?"checked":""}> Split shift &mdash; they go home in the middle and come back <span class="chip">optional</span></label>
       <div class="grid2" id="ssplitwrap" style="display:${(s.gapFrom&&s.gapTo)?"":"none"}">
         <div class="field"><label>Off at</label><input type="time" id="sgf" value="${esc(s.gapFrom||"14:00")}"></div>
@@ -19256,13 +19402,6 @@ root.querySelector("#brkprev").innerHTML = `<div>
           ${br.meals.length>1? "Second meal around "+m2disp(br.meals[1].start)+", latest "+m2disp(br.meals[1].deadline)+"." : ""}
           ${(()=>{const c=breakCliffs(a,b); return c? `<div style="margin-top:6px"><b>Close to a line:</b> ${esc(c)}</div>`:"";})()}
           ${mealEdgeHtml(mealEdge(a,b,gg), "se")}
-          ${(()=>{ const fx=(root.querySelector("#sflex")||{}).value;
-const lo=parseFloat((root.querySelector("#sflo")||{}).value)||0, hi=parseFloat((root.querySelector("#sfhi")||{}).value)||0;
-if(fx==="none"||!lo||!hi||hi<lo) return "";
-return `<div style="margin-top:6px"><b>One end pinned.</b> ${fx==="end"
-? "Everyone on this starts at "+esc(m2disp(a))+"; the finish lands somewhere between "+esc(fmtHrs(lo*60))+" and "+esc(fmtHrs(hi*60))+" later."
-: "Everyone on this finishes at "+esc(m2disp(b))+"; they come in between "+esc(fmtHrs(lo*60))+" and "+esc(fmtHrs(hi*60))+" before that."}
-              The times above are the norm it starts from, and what you see below is worked out for that norm.</div>`; })()}
           ${gg? `<div style="margin-top:6px"><b>Split shift.</b> ${esc(m2disp(a))}\u2013${esc(m2disp(gg.from))}, then ${esc(m2disp(gg.to))}\u2013${esc(m2disp(b))}
             \u2014 ${esc(fmtHrs(gg.to-gg.from))} off the clock in between, so the day has them tied up for ${esc(fmtHrs(b-a))}.
             ${(S.org.jurisdiction||"")==="CA" && (gg.to-gg.from)>((L.meal&&L.meal.lengthMin)||30)
@@ -19272,19 +19411,6 @@ return `<div style="margin-top:6px"><b>One end pinned.</b> ${fx==="end"
 };
 root.querySelectorAll("#scol button").forEach(b=>b.onclick=()=>{ color=b.dataset.c;
 root.querySelectorAll("#scol button").forEach(x=>x.style.outline=""); b.style.outline="2px solid var(--ink)"; b.style.outlineOffset="2px"; });
-{ const fx=root.querySelector("#sflex"), fw=root.querySelector("#sflexwrap"), fn=root.querySelector("#sflexnote");
-const paintFlex=()=>{
-const v=fx.value;
-fw.style.display = v==="none"? "none":"";
-fn.textContent = v==="end"
-? "The start is the promise. Weeksolved picks the finish inside the range you give \u2014 longer where the day needs it or the person is short of hours, shorter where it doesn't."
-: v==="start"
-? "The finish is the promise \u2014 somebody is there at close. The start moves to suit the day and their hours."
-: "Both ends the same every time. Most shifts are this.";
-};
-fx.onchange=()=>{ paintFlex(); prev(); };
-root.querySelector("#sflo").oninput=prev; root.querySelector("#sfhi").oninput=prev;
-paintFlex(); }
 { const sp=root.querySelector("#ssplit"), wrap=root.querySelector("#ssplitwrap");
 sp.onchange=()=>{ wrap.style.display=sp.checked?"":"none"; prev(); };
 root.querySelector("#sgf").oninput=prev; root.querySelector("#sgt").oninput=prev; }
@@ -19313,13 +19439,8 @@ s.gapFrom = spOn? root.querySelector("#sgf").value : "";
 s.gapTo   = spOn? root.querySelector("#sgt").value : "";
 const label=root.querySelector("#sl").value.trim();
 if(!label){ toast("Give the shift a name"); return; }
-const fxv=root.querySelector("#sflex").value;
-const flo=parseFloat(root.querySelector("#sflo").value)||0;
-const fhi=parseFloat(root.querySelector("#sfhi").value)||0;
-if(fxv!=="none" && (!flo || !fhi)){ toast("Give the shortest and longest it can run"); return; }
-if(fxv!=="none" && fhi<flo){ toast("The longest has to be at least the shortest"); return; }
 const rec={id:s.id,label,start:root.querySelector("#ss").value,end:root.querySelector("#se").value,
-flex:fxv, lenMinH:fxv==="none"?0:flo, lenMaxH:fxv==="none"?0:fhi,
+flex:"none", lenMinH:0, lenMaxH:0,
 gapFrom:s.gapFrom||"", gapTo:s.gapTo||"",
 roleId:null,color,note:root.querySelector("#snote").value.trim(),unpaidBreakMin:30,desire:des,
 extra:(root.querySelector("#sextra")||{}).value||"yes"};
@@ -19585,7 +19706,7 @@ return `
       <header><h3>Team</h3>${(()=>{const n=prefsBlankCount();
 return n? `<span class="chip" title="They can still be scheduled \u2014 nothing on file means available whenever you are open.">${n} with nothing on file</span>` : "";})()}<span class="hint">Hours, availability, and what each person would rather work.${
 staffCount()>=STAFF_WARN_AT? " \u00b7 "+staffCount()+" of "+MAX_STAFF+" places used":""}</span>
-        ${staffCount()>SMOOTH_STAFF? `<span class="chip"${whyAttrs("One board is comfortable up to about "+SMOOTH_STAFF+" people and runs to "+MAX_STAFF+". Past "+SMOOTH_STAFF+" a draft takes noticeably longer, most of all on a phone \u2014 everything else stays quick. If you are well past it, separate boards for separate sites or departments usually work better than one large one.", "go:help")}>${staffCount()} people \u00b7 drafting will be slower</span>`:""}
+        ${staffCount()>SMOOTH_STAFF? `<span class="chip"${whyAttrs("One board is comfortable up to about "+SMOOTH_STAFF+" people and runs to "+MAX_STAFF+". Past "+SMOOTH_STAFF+" a draft takes noticeably longer, most of all on a phone \u2014 everything else stays quick. You can use more than one board, but only where nobody appears on both: each board works out overtime, rest and guaranteed hours from the hours it can see, so a person on two boards is priced twice from half a week. Splitting by department usually passes that test. Splitting by location usually does not, because people cover for each other across locations.", "go:help")}>${staffCount()} people \u00b7 drafting will be slower</span>`:""}
         ${apartOn()? `<span class="chip" title="Set on each person\u2019s file. Private to you \u2014 never printed, sent or exported.">${(S.apart||[]).length} pair${(S.apart||[]).length===1?"":"s"} kept apart</span>`:""}
         ${waiverPossible() && S.employees.length? `<span class="chip ${waiverMode()==="auto"?"acc":""} chipbtn"${whyAttrs("Meal waivers: "+waiverSummary()+". The board setting lives under Scheduling rules, but it never waives a meal for somebody whose profile does not say they have signed — a waiver is an agreement, not a default. Set each person to always (a signed waiver is on file) or never (not signed). A waived meal keeps a short shift short; the signature stays on paper with you.", "go:rules")}>meal waivers: ${waiverMode()==="auto"?"automatic":waiverMode()==="manual"?"as needed":"off"}${(()=>{const c=waiverCounts(); return (c.yes||c.no)? " \u00b7 "+[c.yes? c.yes+" always":"", c.no? c.no+" never":""].filter(Boolean).join(", ") : "";})()}</span>`:""}
         ${S.employees.length? `<details class="btnmore"><summary class="btn sm">More…</summary><div class="btnmenu">
@@ -21170,7 +21291,7 @@ const twins = (cur && dow!==DOW_HOL)? [0,1,2,3,4,5,6].filter(d=>d!==dow && (edit
 modal((cur? "Edit the "+DAY_LABEL(dow)+" row" : "Add a shift to "+DAY_LABEL(dow)),`
     <div class="stack"><div class="grid2">
       <div class="field"><label>Shift</label><select id="ds">${S.shifts.map(s=>{const[a,b]=shiftMinutes(s);return `<option value="${s.id}" ${cur&&cur.shiftId===s.id?"selected":""}>${esc(s.label)} · ${m2disp(a)}–${m2disp(b)}</option>`;}).join("")}</select>
-        ${cur? `<span class="mini"><a href="#" id="dshiftedit">Edit the shift itself</a> — times, open-ended range, extra people.</span>` : ""}</div>
+        ${cur? `<span class="mini"><a href="#" id="dshiftedit">Edit the shift itself</a> — times, extra people.</span>` : ""}</div>
       <div class="field"><label>Filled by</label><select id="dr"><option value="">Anyone on the roster</option>${S.roles.map(r=>`<option value="${r.id}" ${cur&&cur.roleId===r.id?"selected":""}>${esc(r.name)}</option>`).join("")}</select></div>
       <div class="field"><label>Can the drafter add more than that?</label>
         <select id="dmode">
@@ -21619,7 +21740,7 @@ return `
         ${((R.mealClose||{}).when||"all")==="days"? `<div class="field"><label>Closing days</label>
           <div class="row" id="mcdays">${DAYS.map((d,i)=>`<label class="switch" style="border:1px solid var(--line);padding:4px 9px;border-radius:6px;font-size:12px">
             <input type="checkbox" data-mcd="${i}" ${((R.mealClose||{}).days||[]).includes(i)?"checked":""}> ${DSHORT[i]}</label>`).join("")}</div></div>`:""}
-        <div class="help">While the doors are shut nothing is owed on the floor, so those minutes never show up as a coverage gap. Anyone whose shift can't legally take its meal in that window keeps a compliant time of its own — the day sheet flags them so you can see who.</div>`:""}
+        <div class="help">While the doors are shut nothing is owed on the floor, so those minutes never show up as a coverage gap. Anyone whose shift can't legally take its meal in that window keeps its own meal time that meets the rule — the day sheet flags them so you can see who.</div>`:""}
         `:""}
         ${mode("Rest breaks","restMode",[
 ["assigned","Schedule exact times","Each paid rest break is placed near the middle of its work segment."],
@@ -21801,8 +21922,8 @@ return `
         <span class="chip" title="You asked for ${wantSlots}. Anything over that is there to reach people’s guaranteed hours.">${wk.assignments.filter(siteOK).length} shift${wk.assignments.filter(siteOK).length===1?"":"s"}${
 wk.assignments.filter(siteOK).length>wantSlots? " · "+(wk.assignments.filter(siteOK).length-wantSlots)+" over" : ""}</span>
         <span class="chip">${fmtHrs(totalMin)}</span>
-        ${crit.length? `<span class="chip crit"${whyAttrs(crit.length+" thing"+(crit.length===1?"":"s")+" on this week break"+(crit.length===1?"s":"")+" a rule or leave"+(crit.length===1?"s":"")+" a gap — each one is listed under Conflicts and compliance with a Fix button.", "checks")}>${crit.length} to fix</span>`:wk.assignments.length?`<span class="chip ok">compliant</span>`:""}
-        ${warn.length? `<span class="chip warn"${whyAttrs(warn.length+" worth a look"+" — things worth a look before the week goes up, none of them a rule broken. Listed under Conflicts and compliance, each with a Fix button.", "checks")}>${warn.length} worth a look</span>`:""}
+        ${crit.length? `<span class="chip crit"${whyAttrs(crit.length+" thing"+(crit.length===1?"":"s")+" on this week break"+(crit.length===1?"s":"")+" a rule or leave"+(crit.length===1?"s":"")+" a gap — each one is listed under Conflicts and checks with a Fix button.", "checks")}>${crit.length} to fix</span>`:wk.assignments.length?`<span class="chip ok">hours checked</span>`:""}
+        ${warn.length? `<span class="chip warn"${whyAttrs(warn.length+" worth a look"+" — things worth a look before the week goes up, none of them a rule broken. Listed under Conflicts and checks, each with a Fix button.", "checks")}>${warn.length} worth a look</span>`:""}
         ${haveRates()? `<span class="chip ${S.org.budget && weekCost(ws)>S.org.budget?"warn":""}">${money(weekCost(ws))}${S.org.budget?" of "+money(S.org.budget):""}</span>`:""}
         <button class="btn" id="wmore">More ▾</button>
         <button class="btn primary" id="wgen">Draft${(S.horizon||1)>1? " "+S.horizon+" weeks":""}…</button>
@@ -21939,7 +22060,7 @@ return `<div class="card"><header><h3>Labor cost</h3>
     </div>
 
     <div class="card">
-      <header><h3>Conflicts and compliance</h3>
+      <header><h3>Conflicts and checks</h3>
         <span class="hint">${crit.length} to fix · ${warn.length} worth a look · ${info.length} notes</span></header>
       <div class="viollist" style="max-height:420px;overflow-y:auto">
         ${V.length? V.map((v,vi)=>{ const rr=v.code? RK.get(problemKey(v)) : null; return `<div class="viol-i"><span class="sv ${v.sev}"></span>
@@ -23099,7 +23220,7 @@ return `<div class="stblk"><span class="mono">${m2disp(b2.from)}–${m2disp(b2.t
             <td class="mono">${fmtHrs(paidMinutes(a))}</td>
             <td>${missing?`<button class="chip crit chipbtn" data-fixmeal="${a.id}:missing:0">meal missing \u2192 fix</button>`
 :late?`<button class="chip crit chipbtn" data-fixmeal="${a.id}:late:${Math.max(0,b.meals.findIndex(m=>!m.waived && m.start>m.deadline))}">meal late \u2192 fix</button>`
-:'<span class="chip ok">compliant</span>'}</td></tr>`;
+:'<span class="chip ok">hours checked</span>'}</td></tr>`;
 }).join(""); })()}</tbody></table></div>
       ${reliefNote()}
       ${L.premium? `<div class="body" style="border-top:1px solid var(--line)"><div class="help"><b>${esc(L.name)}:</b> ${esc(L.premium)}</div></div>`:""}
@@ -23161,14 +23282,16 @@ if(openShifts.length) looks.push({sev:"crit",
 t:openShifts.length+" shift"+(openShifts.length===1?"":"s")+" nobody could take",
 d:openShifts[0].detail, act:"fill", ref:openShifts[0].openSlot});
 if(gaps.length) looks.push({sev:"crit",
-t:gaps.length+" coverage or compliance problem"+(gaps.length===1?"":"s"),
+t:gaps.length+" coverage or rule problem"+(gaps.length===1?"":"s"),
 d:gaps[0].title.replace(/ — .*/,"")+": "+gaps[0].detail,
 act:gaps[0].date?"day":null, ref:gaps[0].date? parseYmd(gaps[0].date).getDay():null, fixv:V.indexOf(gaps[0])});
 if(under.length) looks.push({sev:"warn",
 t:under.length===1? under[0].name+" is short of guaranteed hours" : under.length+" people are short of guaranteed hours",
 d:under.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekPaidMinutes(e.id,ws))+" of "+effLimits(e).minH+"h").join(", "), act:"team",
  
-fixv:V.indexOf(V.find(v=>(v.code==="under"||v.code==="contract"||v.code==="guarreach") && v.empId===under[0].id))});
+ 
+fixv:V.indexOf(V.find(v=>(v.code==="under"||v.code==="contract"||v.code==="guarreach")
+&& (v.empId===under[0].id || (v.empIds||[]).indexOf(under[0].id)>=0)))});
 if(overtime.length) looks.push({sev:"warn",
 t:overtime.length+" heading into overtime",
 d:overtime.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekMinutes(e.id,ws))).join(", "), act:"emp", ref:overtime[0].id, actLabel:"Open "+overtime[0].name.split(" ")[0]+"’s profile",
@@ -23654,6 +23777,13 @@ later("No day left this week will take another shift for "+first,
 mine.slice().sort((p,q)=>paidMinutes(q)-paidMinutes(p)).slice(0,2).forEach(x=>lengthFixes(x, "any"));
 profile(v.code==="contract"? "Change "+first+"’s contract" : "Change "+first+"’s guaranteed hours");
 later("Add a shift of the right length", "Under Roles & shifts — the drafter can only use shifts you have named.", ()=>go("shifts"));
+break;
+}
+ 
+case "guarreach": {
+if(e) later(first+"\u2019s hours and limits", "The guarantee, the weekly cap and the day limit are on their profile.", ()=>empModal(e.id));
+later("Roles & shifts", "The shift lengths this week can draw on are defined there.", ()=>go("shifts"));
+later("Ground rules \u2192 Meals and rest breaks", "Where the unpaid meal periods behind the paid-hours figure come from.", ()=>go("settings"));
 break;
 }
 case "alone": {
@@ -26626,11 +26756,11 @@ const W = {
 step:0, biz:"other",
 name:(S.sample||S.org.name===SAMPLE_NAME)? "" : (S.org.name||""),
 site:(S.sample||S.org.name===SAMPLE_NAME)? "" : (S.org.site||""),
-juris:S.sample? "FED" : (S.org.jurisdiction||"FED"),
+juris:(S.org.jurisdiction||"CA"),
 hoursPreset:"same", open:"09:00", close:"17:00",
 dayLoad:[0,1,0,-1,0,1,0], holidayRush:"none", weekendDesire:"unwanted", holidayMode:"same", vacations:false, hols:null,
 posts:"", postSpan:"day", postFam:"1", postRelief:"family",
-xPto:false, xCycles:false, xNotice:false, xWaiver:false, waiverAuto:false, xLic:false, xSkills:false,
+xPto:false, xCycles:false, xNotice:false, xWaiver:(S.org.jurisdiction||"CA")==="CA", waiverAuto:false, xLic:false, xSkills:false,
 satOpen:"10:00", satClose:"16:00", satClosed:false,
 sunOpen:"10:00", sunClose:"16:00", sunClosed:false,
 dayOff:{},                       
@@ -27001,23 +27131,10 @@ W.custom.length+" shift"+(W.custom.length===1?"":"s")+" you built by hand.") : "
             <input type="time" class="wss" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].start)||sh.start}" style="width:120px" aria-label="Starts">
             <span class="mini">to</span>
             <input type="time" class="wse" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].end)||sh.end}" style="width:120px" aria-label="Ends">
-            <select class="wsf" data-i="${i}" style="width:210px" aria-label="Are both ends fixed?">
-              <option value="none"  ${((W.shifts[i]&&W.shifts[i].flex)||sh.flex||"none")==="none"?"selected":""}>Both ends fixed</option>
-              <option value="end"   ${((W.shifts[i]&&W.shifts[i].flex)||sh.flex)==="end"?"selected":""}>Open end</option>
-              <option value="start" ${((W.shifts[i]&&W.shifts[i].flex)||sh.flex)==="start"?"selected":""}>Open start</option>
-            </select>
             <span class="mini" style="margin-left:auto">${esc(DESIRE_LABEL[sh.desire]||"Neutral")}</span>
             <button type="button" class="btn sm ghost" data-wsdel="${i}" aria-label="Remove ${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}">Remove</button>
-          </div>
-          ${((W.shifts[i]&&W.shifts[i].flex)||sh.flex||"none")!=="none"? `<div class="desrow" style="padding-left:14px">
-            <span class="mini">How long can it run?</span>
-            <input type="number" inputmode="decimal" step="0.25" min="1" max="16" class="wsflo" data-i="${i}"
-              value="${esc(String((W.shifts[i]&&W.shifts[i].lenMinH)||sh.lenMinH||""))}" placeholder="6" style="width:90px" aria-label="Shortest">
-            <span class="mini">to</span>
-            <input type="number" inputmode="decimal" step="0.25" min="1" max="16" class="wsfhi" data-i="${i}"
-              value="${esc(String((W.shifts[i]&&W.shifts[i].lenMaxH)||sh.lenMaxH||""))}" placeholder="9" style="width:90px" aria-label="Longest">
-            <span class="mini">hours</span></div>`:""}`).join("")}
-          <div class="help">Wanted / unwanted is guessed from the shape and decides who claims first — change it under Who gets first pick. An <b>open end</b> fixes one end; the other moves inside your hours.</div>
+          </div>`).join("")}
+          <div class="help">Wanted / unwanted is guessed from the shape and decides who claims first — change it under Who gets first pick.</div>
         </div>`:""}
         <div class="row" style="gap:8px;flex-wrap:wrap">
           <button type="button" class="btn sm" id="wsadd">+ Add another shift</button>
@@ -27619,20 +27736,6 @@ list.push({label:"Shift "+(list.length+1), start:m2t(st), end:m2t(en), desire:0}
 W.custom=list; W.shiftPreset="custom"; W.shifts=[];
 paint(); }; }
  
-r.querySelectorAll(".wsf").forEach(el=>el.onchange=()=>{ collect();
- 
-const k=+el.dataset.i, W2=W.shifts[k]=W.shifts[k]||{};
-if(W2.flex && W2.flex!=="none"){
-if(!(+W2.lenMinH>0) || !(+W2.lenMaxH>0)){
-const list=bakeShifts()[k]||{};
-let a=t2m(list.start||"09:00"), b=t2m(list.end||"17:00");
-if(b<=a) b+=1440;
-const nom=Math.max(60, b-a)/60;
-W2.lenMinH=Math.max(1, Math.round((nom-2)*4)/4);
-W2.lenMaxH=Math.max(W2.lenMinH, Math.round(nom*4)/4);
-}
-} else { W2.lenMinH=0; W2.lenMaxH=0; }    
-paint(); });
 r.querySelectorAll("[data-wsdel]").forEach(b2=>b2.onclick=()=>{ collect();
 const d=+b2.dataset.wsdel, list=bakeShifts();
 list.splice(d,1);
@@ -27802,12 +27905,6 @@ r.querySelectorAll(".wsl").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.datas
 r.querySelectorAll(".wss").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.dataset.i]||{}; W.shifts[+i.dataset.i].start=i.value; });
 r.querySelectorAll(".wse").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.dataset.i]||{}; W.shifts[+i.dataset.i].end=i.value; });
  
-r.querySelectorAll(".wsf").forEach(i=>{ const k=+i.dataset.i;
-W.shifts[k]=W.shifts[k]||{}; W.shifts[k].flex=i.value; });
-r.querySelectorAll(".wsflo").forEach(i=>{ const k=+i.dataset.i;
-W.shifts[k]=W.shifts[k]||{}; W.shifts[k].lenMinH=i.value===""? 0 : Math.max(0,+i.value||0); });
-r.querySelectorAll(".wsfhi").forEach(i=>{ const k=+i.dataset.i;
-W.shifts[k]=W.shifts[k]||{}; W.shifts[k].lenMaxH=i.value===""? 0 : Math.max(0,+i.value||0); });
 r.querySelectorAll(".wpt").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].type=i.value; });
 r.querySelectorAll(".wph").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
 r.querySelectorAll(".wmn").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
@@ -30678,7 +30775,6 @@ if(src==="shifts") return base.concat([
 {k:"meal", n:"Meal minutes", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>!m.waived).reduce((t,m)=>t+m.len,0)},
  
 {k:"mealw", n:"Meals waived", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>m.waived).length},
-{k:"cost", n:"Cost", num:true, money:true, get:r=>Math.round(costOf(r)), when:()=>!!(S.org&&S.org.trackCost)},
 {k:"how", n:"How it got there", get:r=>[r.locked?"locked":"", r.cover?"floor cover":"", r.guarantee?"hours owed":"", r.topUp?"project time":"", r.flexed?"stretched":"", r.resized?"resized":"", r.perDiemAuto?"per diem":""].filter(Boolean).join(", ")||"drafted"},
 {k:"holiday", n:"Holiday", get:r=>{ const h=(S.holidays.list||[]).find(x=>x.date===r.date); return h? h.name : ""; }},
 {k:"posted", n:"Week posted", get:r=>(S.weeks[wk(r.date)]||{}).published? "yes":"no"}
@@ -30696,9 +30792,8 @@ if(src==="hours") return [
 {k:"guar", n:"Guaranteed", num:true, get:r=>r.minH},
 {k:"cap", n:"Cap", num:true, get:r=>r.maxH},
 {k:"delta", n:"Over / under guarantee", num:true, get:r=>Math.round((r.mins/60-r.minH)*10)/10},
-{k:"ot", n:"Weekly overtime hours", num:true, get:r=>Math.max(0, Math.round((r.mins/60-r.otH)*10)/10)},
-{k:"wknd", n:"Weekend shifts", num:true, get:r=>r.weekend},
-{k:"cost", n:"Cost", num:true, money:true, get:r=>Math.round(r.cost), when:()=>!!(S.org&&S.org.trackCost)}
+ 
+{k:"wknd", n:"Weekend shifts", num:true, get:r=>r.weekend}
 ];
 if(src==="requests") return [
 {k:"entered", n:"Entered", get:r=>when(r.at)},
@@ -30746,10 +30841,13 @@ Object.keys(S.weeks).sort().forEach(k=>{
 if(k<addDays(from,-6) || k>to) return;
 const wk=S.weeks[k]; if(!(wk.assignments||[]).length) return;
 const by={}; wk.assignments.forEach(a=>{ (by[a.empId]=by[a.empId]||[]).push(a); });
-Object.keys(by).forEach(empId=>{ const e=empById(empId); if(!e) return; const L=effLimits(e, k); const list=by[empId];
+Object.keys(by).forEach(empId=>{
+const e=empById(empId); if(!e) return; const L=effLimits(e, k);
+ 
+const list=by[empId].filter(a=>inR(a.date));
+if(!list.length) return;
 out.push({ws:k, empId, shifts:list.length, days:new Set(list.map(a=>a.date)).size, mins:list.reduce((t,a)=>t+paidMinutes(a),0),
-minH:L.exactH||L.minH||0, maxH:L.exactH||L.maxH||0, otH:L.otWeeklyH||40, weekend:list.filter(a=>a.dow===0||a.dow===6).length,
-cost:list.reduce((t,a)=>t+costOf(a),0)}); });
+minH:L.exactH||L.minH||0, maxH:L.exactH||L.maxH||0, weekend:list.filter(a=>a.dow===0||a.dow===6).length}); });
 });
 return out;
 }
@@ -31206,10 +31304,10 @@ a:"Because that row said \u201cat least 2\u201d, and an at-least row is one the 
 a:"Yes, by default. A full-timer contracted to 40 hours with 8 hours of holiday pay is on contract at 32 hours on the floor \u2014 32 worked plus 8 paid is the 40 their payslip shows \u2014 so the drafter stops there and the week is not flagged. A holiday somebody is rostered to WORK never counts twice: those hours are already in the week, and the holiday premium is money on top. If your guarantee is a promise of hours actually worked, turn it off under Settings \u2192 Hours, guarantees and patterns. An hour CAP is unaffected either way: a cap is about hours on the floor."},
 {t:"Can I choose which shifts take extra people who are short of hours?", k:"extra people shift option prefer never guaranteed hours which shift 8 to 4:30 soak up hours owed coverage needs at most", go:"shifts",
 a:"Yes — open the shift under Roles & shifts and look for Extra people beyond Coverage needs. Yes (the default) lets the drafter add people who are short of their hours to that shift; Prefer this shift puts hours owed there before anywhere else; Never keeps the shift to exactly what Coverage needs asks for. An At most figure on the Coverage needs row still caps the head count either way."},
-{t:"What does an open-ended shift actually do with its length?", k:"open ended shift flexible length usual stretch shrink shortest longest 8 hours 10 hours when needed low priority last resort", go:"shifts",
-a:"The start and end you type are the length it usually runs. The drafter only makes it shorter or longer for a reason: shorter when a contract ceiling or the hours owed call for it; longer when the day is short of cover at the usual length, or — as a last resort, after every ordinary shift has been tried — when somebody is still owed hours. It never goes past the Longest it can be that you set. So 'prefer eight and a half, go to ten only if you have to' is exactly how it behaves."},
+{t:"Can a shift's length change on its own from one week to the next?", k:"shift length fixed change stretch shrink open ended flexible start end", go:"shifts",
+a:"No — every shift runs the exact start and end time you set for it. A shift's length is fixed; if somebody needs more or fewer hours, use the Fix on their week to resize that one shift for them, or change the shift itself under Roles & shifts."},
 {t:"Someone is short of hours \u2014 can I change the length of a shift they already have?", k:"length shift short hours 9.25 8 hours open-ended fix shorten lengthen resize guaranteed", go:"week",
-a:"Yes. Open the Fix for that person and the options include the shifts already on their board: shorten a 9\u00bc-hour open-ended shift to a plain eight in one press, lengthen one to land their hours, or change the start or finish yourself. A shift you resize is locked so the next draft leaves it alone, and its meal is worked out again for the new length."},
+a:"Yes. Open the Fix for that person and the options include the shifts already on their board: shorten a 9\u00bc-hour shift to a plain eight in one press, lengthen one to land their hours, or change the start or finish yourself. A shift you resize is locked so the next draft leaves it alone, and its meal is worked out again for the new length."},
 {t:"Can I edit something by tapping it, instead of hunting for an Edit button?", k:"tap to edit click row edit in place coverage needs row shift day sheet bar team card table row keyboard", go:"demand",
 a:"Yes. Any row that has an Edit button opens when you tap the row itself — people, shifts, roles, posts, holidays, requests, locations. On Coverage needs, tapping a row opens it for editing (count, role, shift), with a link through to the shift itself and an option to apply the change to the same row on other days. On the Day sheet, tap a shift bar to change that shift; on the Week grid, tap a shift block. Keyboard users can Tab to a row and press Enter."},
 {t:"Where is the search box, and can the menu sit on the right?", k:"search box side menu pinned navigation left right rail go anywhere find setting settings index sticky", go:"settings",
@@ -31938,7 +32036,7 @@ exportPeople(wk).map(e=>`<option value="${e.id}">${esc(e.name)}${e.active? "":" 
         <button class="btn" id="xbak">Full backup (JSON)</button></div>
       <div class="mini">A backup restores the whole board — team, rules, shifts, schedules, poll answers — on any device, from Business &amp; law.</div>
     </div></div>
-    <div class="card"><header><h3>What the exports say about compliance</h3></header><div class="body">
+    <div class="card"><header><h3>What the exports show</h3></header><div class="body">
       <div class="help" style="max-width:72ch">Every PDF footer names the jurisdiction whose break rules were applied to the plan and, where the state has one, the premium owed when a meal or rest period is missed. The day sheet spells out each person's meal window and rest breaks. These are the times you scheduled — a printout is a plan for the week, not a record of what anyone actually worked.</div>
     </div></div>
   </div>`;
