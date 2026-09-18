@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 9c801609 2026-09-17 22:28 UTC -->
+<!-- build bbfaad95 2026-09-18 01:56 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -148,6 +148,7 @@
 .skiplink:focus{left:0}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+    animation-delay:0s !important;
     transition-duration:.001ms !important;scroll-behavior:auto !important}
 }
 body{
@@ -461,13 +462,18 @@ tr:last-child td{border-bottom:0}
 .tcard .sent{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
 .tcard .sent .none{color:var(--muted)}
 @media (min-width:900px){ .tstats{grid-template-columns:repeat(6,minmax(0,1fr))} .tlist{grid-template-columns:1fr 1fr} }
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw;
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:7px;font-size:13px;font-weight:500;z-index:200;box-shadow:var(--shadow);max-width:80vw;width:max-content;
   display:flex;align-items:center;gap:12px;bottom:calc(18px + env(safe-area-inset-bottom))}
+.toast>span,.toast>div{flex:1 1 auto;min-width:0}
 .toast .tact{flex:none;background:transparent;border:1px solid rgba(255,255,255,.45);color:var(--ground);
   font:inherit;font-weight:600;padding:7px 12px;min-height:36px;border-radius:6px;cursor:pointer}
 .toast .tact:hover{background:rgba(255,255,255,.14)}
 .toast .tact:focus-visible{outline:2px solid var(--ground);outline-offset:1px}
-@media (max-width:820px){ .toast{max-width:calc(100vw - 24px);font-size:13.5px;bottom:calc(72px + env(safe-area-inset-bottom))}
+/* On a phone the message drops in under the title bar. The foot of the screen
+   is where the press lives, and a message that lands on the press it is
+   answering is the wrong place for it. The width is the screen's, so a
+   sentence and its Undo share one row instead of a column. */
+@media (max-width:820px){ .toast{width:calc(100vw - 24px);max-width:calc(100vw - 24px);font-size:13.5px;bottom:auto;top:calc(70px + env(safe-area-inset-top))}
   .toast .tact{min-height:40px;padding:9px 14px} }
 
 /* ---------- availability grid ---------- */
@@ -626,8 +632,11 @@ ol.a2hs li{padding-left:2px}
 .viol-i .sv.crit{background:var(--crit)} .viol-i .sv.warn{background:var(--warn)} .viol-i .sv.info{background:var(--muted)}
 .dipacts{display:flex;gap:6px;flex:none;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:430px){ .viol-i{flex-wrap:wrap} .dipacts{margin-left:0;width:100%;justify-content:flex-start;margin-top:4px} }
-.viol-i .tx strong{display:block;font-weight:600;font-size:13px}
-.viol-i .tx span{color:var(--muted);font-size:12px}
+/* The sentence is the headline; the check's name sits under it in small type,
+   as on Home. Nothing reviewed is set below fifteen pixels. */
+.viol-i .tx{display:flex;flex-direction:column-reverse}
+.viol-i .tx strong{display:block;font-weight:500;font-size:.8125rem;color:var(--muted)}
+.viol-i .tx span{color:var(--ink);font-size:.9375rem;line-height:1.35}
 .rank{display:flex;flex-direction:column;gap:6px}
 .rankitem{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface2)}
 .rankitem .no{width:22px;height:22px;border-radius:5px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
@@ -938,7 +947,9 @@ ol.a2hs li{padding-left:2px}
 .look .sv{width:3px;align-self:stretch;border-radius:2px;flex:none;min-height:26px}
 .look .sv.crit{background:var(--crit)} .look .sv.warn{background:var(--warn)} .look .sv.ok{background:var(--accent)}
 .look strong{font-size:13.5px}
-@media (max-width:700px){.look{flex-wrap:wrap}}
+/* the sentence takes the whole row on a phone; the inline flex:1 it carries
+   is what used to squeeze it beside its two buttons, hence the override */
+@media (max-width:700px){.look{flex-wrap:wrap} .look>div[style*="flex:1"]{flex:1 1 100%!important} .look>.btn{flex:0 1 auto}}
 
 .ladder{display:flex;flex-direction:column;gap:6px}
 .rung{display:flex;gap:12px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface2);transition:background .12s,box-shadow .12s,transform .06s}
@@ -1346,10 +1357,16 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   cursor:pointer;font-family:inherit}
 .sheetseg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 
-/* A placeholder until the motion layer lands, so the toggle in the one-door
-   sheet is honest the day it is shipped rather than a switch wired to nothing. */
+/* The Motion control in Appearance, and it is the same four lines the OS
+   setting gets -- not a lighter version of them. Somebody who turns movement
+   off in this app has asked the same question as somebody who turned it off
+   in the phone, and they are owed the same answer. It flips live: the
+   attribute goes on <html>, so the whole layer is off on the next frame
+   without a reload, and the JS half asks the same question before it starts
+   anything that cannot be expressed as a duration. */
 html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-motion="reduced"] *::after{
   animation-duration:.001ms!important;animation-iteration-count:1!important;
+  animation-delay:0s!important;
   transition-duration:.001ms!important;scroll-behavior:auto!important}
 
 @media (min-width:821px){
@@ -1685,6 +1702,70 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-mo
 /* A 3px band is the right width for the eye and the wrong one for a thumb, so
    it carries an invisible hit box of its own. */
 .wkband[data-fixat]::before{content:"";position:absolute;left:0;right:0;top:-9px;bottom:-9px}
+/* ==========================================================================
+   HOME, PHASE 2 — the counts on the ladder, and a tail that speaks the same
+   language as the top of the page.
+
+   Phase 1 rebuilt the top of Home and carried the bottom of it down the page
+   untouched. That was the right order to do it in and the wrong place to
+   stop: scroll past the week and the screen changed identity, from hairline
+   rows under quiet labels to five bordered cards with bold headers, grey
+   hints and clusters of 36px buttons. The rules below are the second half of
+   the same idea. Nothing new is invented — the tail's groups are the .inset
+   and .irow the Tools screen already ships, the tiles keep the card wrappers
+   the first judgment protected, and every size here is one of the seven.
+   ========================================================================== */
+
+/* The four counts. They kept their wrappers and their old type: a 29px
+   numeral in the body face, a 12.5px label and an 11.5px detail line, which
+   is three sizes that are on no scale sitting inside a screen that is on
+   one. The numeral is a figure, so it is set in the mono face like every
+   other figure on this screen, at 28px under a thumb and 34px at a desk. */
+.home .tile .tn{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:1.75rem;font-weight:700;letter-spacing:-.02em;line-height:1.1;
+  font-variant-numeric:tabular-nums}
+.home .tile .tn .of{font-size:1.0625rem}
+.home .tile .tlab{font-size:.9375rem;font-weight:600;color:var(--ink2);line-height:1.3}
+.home .tile .td{font-size:.8125rem;color:var(--muted);line-height:1.4}
+.home .tile{gap:3px}
+/* Four counts in a row that are not the same height read as four different
+   kinds of thing. grid-auto-rows makes every row of the grid as tall as its
+   tallest tile, on a phone's 2x2 and on a desktop's 1x4 alike. */
+.home .tiles{grid-auto-rows:1fr}
+.home .tiles>.tile{height:100%}
+@media (min-width:821px){
+  .home .tile .tn{font-size:2.125rem}
+}
+
+/* ---- the tail, as groups ----
+   One label, one inset, hairline rows: the same construction as WORTH A LOOK
+   and WAITING ON YOU above it, and as every row on the Tools screen. The
+   group wrapper exists so the target floor below can be scoped to the tail
+   without reaching into the cards it still carries verbatim. */
+.tailgrp{display:block;min-width:0}
+.tailgrp>.inset{overflow:hidden}
+/* Every press down here is a thumb target. The tail inherited the product's
+   small button from the days it was a wall of cards, and a 36px control in a
+   list of 44px rows is the one place the screen still asks for a fingertip. */
+.home .tailgrp .btn,.home .tailgrp .hnotice .btn{min-height:44px}
+.home .tailgrp .btn.sm{min-height:44px;padding:8px 14px;font-size:.9375rem}
+/* The six-week strip keeps its own markup and its own shape; only the label
+   sizes come up to the floor, and the headcount joins the ladder at 22px. */
+.home .tailstrip{padding:11px 12px}
+.home .wkcard .wn{font-size:1.375rem}
+.home .tailgrp .wkcard{min-height:44px}
+
+/* ---- the post sheet ----
+   It is a sheet now, so it needs nothing of its own except a footer that
+   stays where the thumb is. The two presses and the sentence under them are
+   the point of the dialog; on a phone the open rows and the paragraph above
+   them are longer than the sheet, and a confirm you have to scroll to is a
+   confirm nobody reads the paragraph for. */
+.sheet.post .sheet-bd{padding-bottom:0}
+.sheet.post .postfoot{position:sticky;bottom:0;margin-top:12px;
+  padding:12px 0 calc(14px + env(safe-area-inset-bottom,0px));
+  background:var(--surface);box-shadow:0 -1px 0 var(--line)}
+.sheet.post .postfoot .hcaption{padding:0}
 /* @@HOME-CSS@@ */
 
 /* ============ WEEK: the header, as one component ============ */
@@ -1796,7 +1877,222 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-mo
 .foldlab .fshow{display:none}
 .card.folded>header .foldlab .fhide{display:none}
 .card.folded>header .foldlab .fshow{display:inline}
+
+/* ============ WEEK, second pass ============ */
+
+/* The range row is an inline group, not a justified row. Flex with the range
+   on `flex:1` put each arrow against a card edge, which at 1280 is 450px of
+   white space between a control and the thing it controls. Arrow, range,
+   arrow, six pixels apart, centred -- the same shape the phone already had,
+   because on a phone there was no room for the row to spread. */
+.wkrangerow{justify-content:center}
+.wkhd .wkrange{flex:0 1 auto;padding:0 6px}
+
+/* The Week tools menu lives at the right end of the meta row. The tool row it
+   replaces was three buttons on a shelf of their own between the readings and
+   the review line -- a row of verbs where the reader was looking for nouns. */
+.wkmeta details.wkmenu{margin-left:auto;flex:0 0 auto;max-width:none}
+.wkmeta details.wkmenu>summary{cursor:pointer}
+/* The shared menu chassis goes static and full width below 700px, which was
+   written for a menu at the end of a card header. Inside a meta row that
+   wraps, that drops the list at the bottom of the row rather than under the
+   control that opened it, so on this one the popover behaviour is kept at
+   every width. */
+.wkmeta details.wkmenu .btnmenu{position:absolute;right:0;top:calc(100% + 4px);
+  min-width:252px;width:auto;margin-top:0;box-shadow:var(--shadow)}
+.wkmeta details.wkmenu .btnmenu .btn{min-height:44px;font-size:.9375rem}
+
+/* ---- the seven days, as one list ----
+   Seven bordered cards with a grey head each said "seven things" before they
+   said anything about the week. One surface, hairline separations, and the
+   day is the first thing on the row rather than the box around it. */
+.wkdays{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.wkdays>*+*{box-shadow:inset 0 1px 0 var(--line)}
+.wkdays .dcard{border:0;border-radius:0;background:transparent;overflow:visible}
+.wkdays .dhead{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;
+  padding:11px 12px;background:none;border:0;font:inherit;color:var(--ink);
+  text-align:left;cursor:pointer;justify-content:flex-start}
+.wkdays .dhead:hover{background:var(--surface2)}
+.wkdays .dcard.open .dhead{background:var(--surface2)}
+.wkdays .dn{font-size:1.0625rem;font-weight:600;flex:0 0 auto;min-width:92px;line-height:1.25}
+.wkdays .dh{font-size:.8125rem;color:var(--muted);flex:1;min-width:0;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.wkdays .dcount{flex:0 0 auto;font-size:.8125rem;font-weight:600;color:var(--ink2);
+  font-variant-numeric:tabular-nums}
+.wkdays .dcount.short{color:var(--crit)}
+.wkdays .dhead .sdot{margin:0}
+.wkdays .chev{flex:0 0 auto;color:var(--muted);font-size:1.0625rem;line-height:1;
+  transition:transform .16s ease}
+.wkdays .dcard.open .chev{transform:rotate(90deg)}
+.wkdays .dbody{border-top:1px solid var(--line);padding:8px 12px 10px;background:var(--surface)}
+/* the pay-period band is a label, and a label is not set at 10.5px */
+.wkdays .ppband{font-size:.8125rem;padding:8px 12px 4px;background:var(--surface2)}
+.wkdays .dcard.shut .dhead{opacity:.55}
+.wkdays .dcard.shut{opacity:1}
+
+/* ---- the desktop grid, on the ladder ----
+   Every cell and every click is the one that was here before. What changed is
+   what it is set in: the day heads were 12 and 11, the person 13 over 10.5,
+   the blocks 11.5 over 10.5, and the one button in the head row carried an
+   inline 11px. Six sizes on one grid, three of them under the floor. */
+.week .hcell .gday{font-family:"Archivo","Public Sans",sans-serif;font-size:.9375rem;
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em;line-height:1.25;color:var(--ink)}
+.week .hcell .ghrs{font-size:.8125rem;color:var(--muted);font-family:"IBM Plex Mono",monospace;margin-top:1px}
+.week .hcell .daysheet{font-size:.8125rem;padding:3px 7px;min-height:0}
+.week .name .nm{font-size:1.0625rem;line-height:1.25}
+.week .name .meta{font-size:.8125rem}
+.week .name .meta .tag{font-size:.8125rem;height:auto;padding:1px 7px}
+.week .ecell{position:relative}
+/* A crit in a cell used to be a repaint of the block's own text, which is the
+   one place on the grid where colour already means "which shift". The mark
+   moves out to the corner and says the same thing the rest of the product
+   says with the same dot. */
+.week .ecell>.sdot{position:absolute;top:4px;right:4px;width:8px;height:8px;z-index:2}
+.shiftblk{font-size:.9375rem;padding:5px 7px}
+.shiftblk .tm{font-size:.8125rem}
+/* The meal takes its own line. The coverage warning this screen exists to
+   surface is usually about a meal period, so the hour it starts is not an
+   aside to the shift's times -- it is the fact the reader came for. */
+.shiftblk .tm.meal{display:block;opacity:.75}
+.shiftblk .lk{font-size:.8125rem}
+/* uppercase tags on this screen, off the floor */
+.week .busy,.week .quiet,.wkdays .busy,.wkdays .quiet{font-size:.8125rem}
+/* the "?" on a defined term, in the two places the Week screen prints one */
+.look .qmark,.viollist .qmark{font-size:.8125rem;width:18px;height:18px;line-height:16px}
+
+/* The Labor cost card is part of this screen too, and it was the last thing on
+   it under the floor: its two stat labels at 10.5px and the seven day letters
+   under the spark at 9.5px. Scoped to the card on this screen because the same
+   two families are drawn on Analytics, which Phase 4 sweeps. */
+.wkcost .kpi .k{font-size:.8125rem;letter-spacing:.06em}
+.wkcost .sparkx,.wkcost .sparkx span{font-size:.8125rem}
+
+/* The day-card family the first sweep left behind: nothing renders it today,
+   and it sat at 10.5, 10 and 9px waiting for somebody to reuse it. Raised
+   rather than deleted, because deleting CSS whose markup may live in a branch
+   is a different afternoon's job. */
+.daycard .dd,.daycard .dl,.daycard .dg{font-size:.8125rem;line-height:1.3}
 /* @@WEEK-CSS@@ */
+/* ==========================================================================
+   MOTION
+   --------------------------------------------------------------------------
+   Four durations and one curve. 120ms is a press, 180ms is anything arriving,
+   240ms is one of the two moments the app exists for, 160ms is anything
+   leaving -- quicker than it arrived, or the product feels reluctant to let go
+   of a screen. Transform and opacity only, with one exception the panel asked
+   for by name: the all-clear tick draws itself, because a tick that is simply
+   there is a tick nobody watched arrive.
+   ========================================================================== */
+:root{
+  --mo-fast:120ms;
+  --mo-base:180ms;
+  --mo-slow:240ms;
+  --mo-exit:160ms;
+  --mo-step:26ms;
+  --mo-ease:cubic-bezier(.22,.61,.36,1);
+}
+
+/* ---------- 1. the press ----------
+   The web has no haptics, so this is the whole of what a thumb gets back. It
+   was three different answers before this (.93 on the week arrows, .96 on a
+   column, .99 on the status line), which is three products under one finger.
+   Transform only: a press that repaints a background is a press that can drop
+   a frame on a cheap phone. */
+.btn,.tab,.tabbar button,.irow,.hrow,.tile,.wkcol,.statusline,.sitechip,
+.wkarrow,.wkprev,.wknext,.sheet-x{
+  transition:transform var(--mo-fast) var(--mo-ease),
+             background-color var(--mo-fast) linear,
+             border-color var(--mo-fast) linear;
+}
+.btn:active,.tab:active,.tabbar button:active,.irow:active,.hrow:active,
+.tile:active,.wkcol:active,.statusline:active,.sitechip:active,
+.wkarrow:active,.wkprev:active,.wknext:active,.sheet-x:active{
+  transform:scale(.97);
+}
+
+/* ---------- 2. the screen ----------
+   Only on a view change. This app repaints the whole pane after every edit,
+   and a screen that flickers each time a checkbox is ticked is worse than a
+   screen that never moves -- so the decision is made in JS, against the view
+   that was last painted, and the class is taken off again when the animation
+   ends. */
+@keyframes mo-screenin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+#pane.mo-screenin{animation:mo-screenin var(--mo-base) var(--mo-ease) both}
+
+/* ---------- 3. the sheet ----------
+   An animation rather than a transition, because openSheet() writes the sheet
+   into the DOM in one go and there is no earlier frame to transition from. It
+   also means nothing has to wait for a class toggle, which is how focus still
+   lands on the heading in the same tick it always did. */
+@keyframes mo-sheetup{from{transform:translateY(101%)}to{transform:none}}
+@keyframes mo-sheetdown{from{transform:none}to{transform:translateY(101%)}}
+@keyframes mo-scrimin{from{opacity:0}to{opacity:1}}
+@keyframes mo-scrimout{from{opacity:1}to{opacity:0}}
+#sheetroot>.sheet:not([data-gone]){animation:mo-sheetup 220ms var(--mo-ease) both}
+#sheetroot>.scrim:not([data-gone]){animation:mo-scrimin var(--mo-base) linear both}
+/* On the way out the two nodes keep every rule that shaped them -- they are
+   the same elements, still children of #sheetroot -- and lose only the name
+   the rest of the app asks about. See sheetOpen(). */
+#sheetroot>.sheet[data-gone]{animation:mo-sheetdown var(--mo-exit) var(--mo-ease) both;
+  pointer-events:none}
+#sheetroot>.scrim[data-gone]{animation:mo-scrimout var(--mo-exit) linear both;
+  pointer-events:none}
+@media (min-width:821px){
+  /* Docked to the side, so it arrives from the side. A panel that rises from
+     the bottom of a 1280px window comes from somewhere the eye was not. */
+  @keyframes mo-sheetin-r{from{transform:translateX(102%)}to{transform:none}}
+  @keyframes mo-sheetout-r{from{transform:none}to{transform:translateX(102%)}}
+  @keyframes mo-sheetin-l{from{transform:translateX(-102%)}to{transform:none}}
+  @keyframes mo-sheetout-l{from{transform:none}to{transform:translateX(-102%)}}
+  #sheetroot>.sheet:not([data-gone]){animation-name:mo-sheetin-r}
+  #sheetroot>.sheet[data-gone]{animation-name:mo-sheetout-r}
+  .app.navright~#sheetroot>.sheet:not([data-gone]){animation-name:mo-sheetin-l}
+  .app.navright~#sheetroot>.sheet[data-gone]{animation-name:mo-sheetout-l}
+}
+
+/* ---------- 4. the fix swap ----------
+   The old card is a copy, taken before the paint, and it is out of flow: the
+   cell it sits in is a grid cell shared with the card that replaced it, and a
+   second card in that cell would make the cell taller and move the press. */
+#onething{position:relative}
+#onething>.mo-ghost{position:absolute;left:0;right:0;top:0;z-index:2;pointer-events:none;
+  animation:mo-swapout var(--mo-base) var(--mo-ease) both}
+@keyframes mo-swapout{from{opacity:1;transform:none}
+                      to{opacity:0;transform:translateY(-6px) scale(.985)}}
+.thing.mo-swapin{animation:mo-swapin var(--mo-base) var(--mo-ease) both}
+@keyframes mo-swapin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* The tick, for the 240ms it takes to draw and not one frame longer: the
+   steady state of that card is the glyph the rest of the app uses. */
+.mo-check{width:13px;height:13px;display:block;fill:none;stroke:currentColor;
+  stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.mo-check path{stroke-dasharray:22;stroke-dashoffset:0;
+  animation:mo-draw var(--mo-slow) var(--mo-ease) both}
+@keyframes mo-draw{from{stroke-dashoffset:22}to{stroke-dashoffset:0}}
+
+/* ---------- 5. the post sweep ----------
+   240ms across the strip, each column settling 26ms behind the one before it,
+   396ms end to end. The sweep is clipped by a box of its own rather than by
+   the strip, because the strip has focus rings on it that must not be cut and
+   a 48%-wide bar translating to 240% would otherwise push the page sideways
+   for four hundred milliseconds. */
+.wkgraph{position:relative}
+.mosweepwrap{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}
+.mosweep{position:absolute;top:0;bottom:0;left:0;width:48%;
+  background:linear-gradient(90deg,transparent 0%,var(--accent-soft) 50%,transparent 100%);
+  transform:translateX(-120%);opacity:0}
+.wkgraph.mosweeping .mosweep{animation:mo-sweep var(--mo-slow) var(--mo-ease) 1 both}
+@keyframes mo-sweep{from{transform:translateX(-120%);opacity:1}
+                    to{transform:translateX(240%);opacity:1}}
+.wkgraph.mosweeping .wkcol{animation:mo-settle var(--mo-slow) var(--mo-ease) both;
+  animation-delay:calc(var(--mi,0) * var(--mo-step))}
+@keyframes mo-settle{from{transform:translateY(5px);opacity:.5}to{transform:none;opacity:1}}
+
+/* ---------- 6. the undo ----------
+   The toast already had an action button. It was 40px on a phone and unsized
+   on a desktop, and this is now the button a person presses when they have
+   just realised a fix was wrong, which is the worst possible moment to miss. */
+.toast .tact{min-height:44px}
+/* @@MOTION-CSS@@ */
 </style>
 
 <a class="skiplink" href="#pane">Skip to the page</a>
@@ -3405,8 +3701,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "9c801609";       
-const BUILD_AT = "2026-09-17 22:28 UTC";       
+const BUILD_ID = "bbfaad95";       
+const BUILD_AT = "2026-09-18 01:56 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -14635,7 +14931,8 @@ if(!any){ if(GRACE_TIMER){ clearInterval(GRACE_TIMER); GRACE_TIMER=null; } retur
 if(GRACE_TIMER) return;
 GRACE_TIMER=setInterval(()=>{
 const still=Object.keys(S.weeks||{}).some(ws=>postPending(S.weeks[ws]));
-if(settlePending() || !still){ clearInterval(GRACE_TIMER); GRACE_TIMER=null; render(); return; }
+if(settlePending() || !still){ clearInterval(GRACE_TIMER); GRACE_TIMER=null; render();
+if(still && typeof motionPosted==="function") motionPosted(); return; }
 document.querySelectorAll("[data-gracecount]").forEach(el=>{
 el.textContent = graceClock(postSecsLeft(peekWeek(el.dataset.gracecount)));
 });
@@ -14666,6 +14963,8 @@ function postNow(ws){
 const wk=peekWeek(ws); if(!postPending(wk)) return;
 wk.pendingAt = Date.now() - (wk.graceSec||0)*1000 - 1;
 settlePending(); save(); render();
+ 
+if(typeof motionPosted==="function") motionPosted();
 toast("Posted");
 }
 
@@ -16404,7 +16703,8 @@ const y=SHEET_SCROLL; SHEET_SCROLL=null; window.scrollTo(0,y);
 function closeSheet(){
 const r=sheetRoot();
 const wasOpen=!!r.innerHTML;
-r.innerHTML="";
+ 
+if(typeof motionSheetExit==="function") motionSheetExit(r); else r.innerHTML="";
 { const app=document.querySelector(".app"); if(app) app.removeAttribute("inert");
 const tb=$("#tabbar"); if(tb) tb.removeAttribute("inert"); }
 if(SHEET_ESC){ try{ document.removeEventListener("keydown", SHEET_ESC, true); }catch(e){} SHEET_ESC=null; }
@@ -16415,7 +16715,8 @@ SHEET_OPENER=null; SHEET_ONCLOSE=null;
 try{ if(back && back.isConnected) back.focus({preventScroll:true}); }catch(e){}
 if(done) try{ done(); }catch(e){}
 }
-function sheetOpen(){ try{ return !!sheetRoot().querySelector(".sheet"); }catch(e){ return false; } }
+ 
+function sheetOpen(){ try{ return !!sheetRoot().querySelector(".sheet:not([data-gone])"); }catch(e){ return false; } }
  
  
 var SHEET_INDEX=null, SHEET_INDEX_AT=0;
@@ -17206,12 +17507,13 @@ foot='<div class="thingfoot"><span class="of">'+(idx+1)+" of "+list.length+"</sp
 '<button class="btn sm" data-act="next">Next ›</button>'+
 '<button class="hlink" data-open="tray">See all '+list.length+" ›</button></div>";
 }
-return '<div class="thing" data-sev="'+esc(v.sev)+'">'+
+ 
+return '<div class="thing" data-sev="'+esc(v.sev)+'" data-key="'+esc(checkSig(v))+'">'+
 '<div class="eyebrow">'+eb+"</div>"+
 reviewedHtml(v.detail|| v.title)+
 ((v.detail && v.title)? '<div class="rowsub">'+esc(v.title)+"</div>" : "")+
 '<div class="thingacts">'+
-'<button class="btn primary" data-act="fix" data-vix="'+i+'">'+(posted? "Fix and repost":"Fix")+"</button>"+
+'<button class="btn" data-act="fix" data-vix="'+i+'">'+(posted? "Fix and repost":"Fix")+"</button>"+
 (day!=null? '<button class="btn" data-act="openday" data-day="'+day+'">Open the day</button>' : "")+
 "</div>"+foot+"</div>";
 }
@@ -17235,7 +17537,7 @@ const w=P.warn[0];
 const extra = (w && wk.assignments.length)
 ? '<div class="thingfoot"><div class="eyebrow">WORTH A LOOK</div></div>'+reviewedHtml(w.detail|| w.title,"sm")
 : "";
-return '<div class="thing" data-sev="ok">'+
+return '<div class="thing" data-sev="ok" data-key="'+esc("clear|"+title)+'">'+
 '<div class="okhead"><span class="okmark" aria-hidden="true">✓</span>'+
 "<div><h3>"+esc(title)+"</h3><p>"+esc(det)+"</p></div></div>"+extra+"</div>";
 }
@@ -17248,7 +17550,10 @@ if(HOME_ONE>=list.length) HOME_ONE=0;
  
 const cards=list.map((v,i)=>
 "<div "+(i===HOME_ONE? "data-in" : "data-off")+">"+thingCard(ws,P.V,list,i,posted)+"</div>").join("");
-return '<div class="swapcell" id="onething">'+cards+
+ 
+const shown=list[HOME_ONE];
+const key=shown? checkSig(shown) : "clear";
+return '<div class="swapcell" id="onething" data-key="'+esc(key)+'">'+cards+
 "<div "+(list.length? "data-off" : "data-in")+">"+clearCard(ws)+"</div>"+
 "</div>";
 }
@@ -17450,7 +17755,7 @@ if(sr) wireFix(sr, validate(ws), ws);
 
  
 let POST_SHEET_WS=null;
-function postSheet(ws){
+function postSheet(ws, invoker){
 ws=ws|| curWeek();
 const P=homeProblems(ws);
 const sevRows=(list,sev)=>'<div class="inset">'+list.map(v=>
@@ -17469,25 +17774,21 @@ const foot='<div class="postfoot"><div class="actrow">'+
 '<p class="hcaption">Posting locks the whole week here — it does not tell anybody. '+
 "Handing it out is the step after.</p></div>";
 POST_SHEET_WS=ws;
-modal("Post "+homeRange(ws), '<div class="stack" style="gap:10px">'+body+"</div>", foot, r=>{
-const box=r.querySelector(".modal"); if(box) box.id="postsheet";
+const r=openSheet('<div class="stack" style="gap:10px">'+body+"</div>"+foot,
+{title:"Post "+homeRange(ws), invoker:invoker||null, cls:"post",
+onClose:()=>{ POST_SHEET_WS=null; }});
  
-const behind=[document.querySelector(".app"), document.querySelector("#tabbar")].filter(Boolean);
-behind.forEach(el=>{ el.inert=true; el.setAttribute("inert",""); });
-MODAL_ONCLOSE=()=>{ if(typeof sheetOpen==="function" && sheetOpen()) return;
-behind.forEach(el=>{ el.inert=false; el.removeAttribute("inert"); }); };
-wireHomeActs(r);
-r.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{ POST_SHEET_WS=null; }));
-});
+const box=r&&r.querySelector(".sheet"); if(box) box.id="postsheet";
+return r;
 }
  
 function postSheetGuard(){
 if(!POST_SHEET_WS) return;
 const ws=POST_SHEET_WS;
-if(!modalRoot().querySelector("#postsheet")){ POST_SHEET_WS=null; return; }
+if(!sheetRoot().querySelector("#postsheet")){ POST_SHEET_WS=null; return; }
 const wk=peekWeek(ws);
 const open=validate(ws).filter(v=>v.sev==="crit"||v.sev==="warn").length;
-if((wk && wk.published) || !open){ POST_SHEET_WS=null; closeModal(true); }
+if((wk && wk.published) || !open){ POST_SHEET_WS=null; closeSheet(); }
 }
 
  
@@ -17520,9 +17821,10 @@ openSheet(h, {title:"Which location", invoker:invoker||null});
 }
 
  
+ 
 function homeSixWeeks(ws){
-return `<div class="card"><header><h3>The next six weeks</h3><span class="hint">Where you stand further out</span></header>
-      <div class="body"><div class="wkstrip">
+return `<div class="tailgrp"><div class="eyebrow sec">THE NEXT SIX WEEKS</div>
+      <div class="inset tailstrip"><div class="wkstrip">
         ${Array.from({length:6},(_,i)=>{
 const w=addDays(ws,i*7), wkx=S.weeks[w];
 const n=wkx? wkx.assignments.length:0;
@@ -17535,25 +17837,33 @@ return `<button class="wkcard ${state}${payShade(w)}" data-week="${w}" ${payOn()
             ${w===ws? '<span class="wnow">you are here</span>':""}
           </button>`;
 }).join("")}
-      </div>
-      <div class="row" style="margin-top:9px"><span class="mini" style="flex:1">Tap a week to work on it. Drafting several at once is one press — the button up top.</span>
-        <button class="btn sm" data-go="weeks">All schedules →</button></div>
-      </div></div>`;
+      </div></div></div>`;
+}
+ 
+function homeHandRow(id, title, sub){
+return '<button class="irow" id="'+id+'"><span class="rowmain">'+
+'<span class="rowt">'+esc(title)+'</span>'+
+'<span class="rowsub">'+esc(sub)+'</span></span>'+
+'<span class="rowend"><span class="chev" aria-hidden="true">›</span></span></button>';
 }
 function homeHandOut(){
-return `<div class="card"><header><h3>Hand it out</h3></header>
-      <div class="body row">
-        <button class="btn" id="hpdf">Schedule as a PDF</button>
-        <button class="btn" id="hxls">Open it in Excel</button>
-        <button class="btn" id="hcards">One card per person</button>
-      </div></div>`;
+return '<div class="tailgrp"><div class="eyebrow sec">HAND IT OUT</div>'+
+'<section class="inset">'+
+homeHandRow("hpdf","Schedule as a PDF","The whole week on one page, ready to pin up")+
+homeHandRow("hxls","Open it in Excel","A workbook you can sort, filter and total yourself")+
+homeHandRow("hcards","One card per person","A small sheet each, carrying only their own shifts")+
+"</section></div>";
 }
 function homeReplyCard(){
-return `<div class="card"><header><h3>A reply came back</h3></header>
-      <div class="body stack" style="gap:8px">
-        <div class="mini">Somebody sent you a code — an open shift they will take, a shift they cannot work, a request, a starter form, a vacation pick, a holiday answer. Paste it here and Weeksolved works out which it is.</div>
-        <div class="row"><button class="btn primary" data-inbox="1">Paste a reply</button>${(S.inbox||[]).length? `<span class="mini" style="align-self:center">${(S.inbox||[]).length} read in so far</span>`:""}</div>
-      </div></div>`;
+const n=(S.inbox||[]).length;
+return '<div class="tailgrp"><div class="eyebrow sec">FROM YOUR TEAM</div>'+
+'<section class="inset"><button class="irow" data-inbox="1"><span class="rowmain">'+
+'<span class="rowt">A reply came back</span>'+
+'<span class="rowsub">Somebody sent you a code — a shift they will take, one they cannot work, '+
+'a request, a starter form, a vacation pick, a holiday answer. Paste it here and Weeksolved '+
+'works out which it is.</span></span>'+
+'<span class="rowend">'+(n? '<span class="rowcount">'+n+'</span>' : "")+
+'<span class="chev" aria-hidden="true">›</span></span></button></section></div>';
 }
 function homeHowDrafted(){
 return '<button class="hrow standalone" data-open="drafted"><span class="rowmain">'+
@@ -17613,7 +17923,8 @@ parts.push('<div class="hnotice"><span>'+n+" problem report"+(n===1?"":"s")+
 }
 const body=parts.filter(x=>x && String(x).trim()).join("");
 if(!body) return "";
-return '<div class="eyebrow sec">FROM WEEKSOLVED</div><div class="stack" style="gap:8px">'+body+"</div>";
+return '<div class="tailgrp"><div class="eyebrow sec">FROM WEEKSOLVED</div>'+
+'<div class="stack" style="gap:8px">'+body+"</div></div>";
 }
 
  
@@ -17688,8 +17999,9 @@ const a=el.dataset.act, w=curWeek();
 if(a==="fix"){ const V=validate(w), v=V[+el.dataset.vix]; if(v) fixSheet(v, w); else fixModal(w); }
 else if(a==="openday"){ if(typeof closeSheet==="function") closeSheet(); DAYVIEW=+el.dataset.day; go("day"); }
 else if(a==="next"){ HOME_ONE++; render(); }
-else if(a==="postanyway"){ postSheet(w); }
-else if(a==="postanyway-confirm"){ POST_SHEET_WS=null; closeModal(true); homePost(w); }
+else if(a==="postanyway"){ postSheet(w, el); }
+else if(a==="postanyway-confirm"){ POST_SHEET_WS=null;
+if(typeof closeSheet==="function") closeSheet(); homePost(w); }
 else if(a==="postclean"){ homePost(w); }
 else if(a==="draftedok"){ S.ui=S.ui||{}; S.ui.draftedTipSeen=true; save(); render(); }
 else if(a==="redraft"){ if(typeof closeSheet==="function") closeSheet(); draftModal(); }
@@ -17705,6 +18017,8 @@ const wk=getWeek(ws);
 beginPost(ws, wk, choice); snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true);
 save(); render();
+ 
+if(typeof motionPosted==="function") motionPosted();
 toast(postPending(wk)? "Going up in "+graceClock(postSecsLeft(wk))+" — take it back from the banner if that wasn’t right"
 : "Posted and locked — nobody has been told yet");
 if(!postPending(wk)) repostNotify(ws, choice, changes);
@@ -17731,6 +18045,153 @@ if(d){ ev.preventDefault(); draftedSheet(d); return; }
 const z=t.closest("[data-sitesheet]");
 if(z){ ev.preventDefault(); siteSheet(z); }
 });
+
+ 
+ 
+const MO_SWAP=180, MO_EXIT=160, MO_SWEEP=240, MO_STEP=26;
+
+ 
+function motionOff(){
+try{
+if(document.documentElement.getAttribute("data-motion")==="reduced") return true;
+if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
+}catch(e){}
+return false;
+}
+
+ 
+function motionSheetExit(root){
+root = root || sheetRoot();
+if(!root) return;
+try{ root.querySelectorAll("[data-gone]").forEach(el=>el.remove()); }catch(e){}
+const sh=[...root.children].find(el=>el.classList && el.classList.contains("sheet"));
+const sc=[...root.children].find(el=>el.classList && el.classList.contains("scrim"));
+if(!sh || motionOff()){ root.innerHTML=""; return; }
+[...root.children].forEach(el=>{ if(el!==sh && el!==sc) el.remove(); });
+[sh,sc].forEach(el=>{
+if(!el) return;
+el.setAttribute("data-gone","");
+el.setAttribute("aria-hidden","true");
+el.setAttribute("inert","");
+ 
+el.removeAttribute("id");
+el.removeAttribute("role");
+el.removeAttribute("aria-modal");
+});
+setTimeout(()=>{ [sh,sc].forEach(el=>{ try{ if(el && el.parentNode===root) el.remove(); }catch(e){} }); },
+MO_EXIT+40);
+}
+
+ 
+let MO_VIEW=null, MO_PREV=null;
+
+ 
+function motionBeforePaint(pane){
+MO_PREV=null;
+try{
+const cell=document.querySelector("#onething"); if(!cell) return;
+const card=cell.querySelector("[data-in] .thing") || cell.querySelector(".thing");
+if(!card) return;
+MO_PREV={key:card.getAttribute("data-key"), html:card.outerHTML,
+h:cell.getBoundingClientRect().height};
+}catch(e){ MO_PREV=null; }
+}
+
+function motionAfterPaint(pane){
+const prev=MO_PREV; MO_PREV=null;
+const first=(MO_VIEW===null);
+const changed=(MO_VIEW!==VIEW);
+MO_VIEW=VIEW;
+if(motionOff()) return;
+ 
+if(pane && changed && !first){
+pane.classList.remove("mo-screenin");
+void pane.offsetWidth;
+pane.classList.add("mo-screenin");
+const off=e=>{ if(e.target!==pane) return;
+pane.classList.remove("mo-screenin");
+pane.removeEventListener("animationend", off); };
+pane.addEventListener("animationend", off);
+}
+if(!pane || changed || !prev) return;
+motionSwap(pane, prev);
+}
+
+ 
+function motionSwap(pane, prev){
+const cell=pane.querySelector("#onething"); if(!cell) return;
+const card=cell.querySelector("[data-in] .thing") || cell.querySelector(".thing");
+if(!card) return;
+const key=card.getAttribute("data-key");
+ 
+if(key==null || prev.key==null || key===prev.key) return;
+const ghost=document.createElement("div");
+ghost.className="mo-ghost";
+ghost.setAttribute("aria-hidden","true");
+ghost.setAttribute("inert","");
+ghost.innerHTML=prev.html;
+cell.appendChild(ghost);
+const now=cell.getBoundingClientRect().height;
+const pin=Math.max(prev.h||0, now||0);
+if(pin>0) cell.style.minHeight=pin+"px";
+card.classList.add("mo-swapin");
+motionCheckDraw(card);
+setTimeout(()=>{
+try{ if(ghost.parentNode) ghost.remove(); }catch(e){}
+try{ cell.style.minHeight=""; card.classList.remove("mo-swapin"); }catch(e){}
+}, MO_SWAP+40);
+}
+
+ 
+function motionCheckDraw(card){
+try{
+const m=card.querySelector(".okmark"); if(!m) return;
+const was=m.innerHTML;
+m.innerHTML='<svg class="mo-check" viewBox="0 0 24 24" aria-hidden="true">'+
+'<path d="M5 12.5 9.7 17.2 19 7"></path></svg>';
+setTimeout(()=>{ try{ if(m.isConnected && m.querySelector(".mo-check")) m.innerHTML=was; }catch(e){} },
+MO_SWEEP+30);
+}catch(e){}
+}
+
+ 
+function motionPosted(){
+try{
+if(motionOff()) return;
+if(typeof sheetOpen==="function" && sheetOpen()) return;
+const graphs=document.querySelectorAll("#pane .wkgraph");
+if(!graphs.length) return;
+graphs.forEach(g=>{
+g.querySelectorAll(".mosweepwrap").forEach(w=>w.remove());
+g.classList.remove("mosweeping");
+void g.offsetWidth;
+const wrap=document.createElement("div");
+wrap.className="mosweepwrap";
+wrap.setAttribute("aria-hidden","true");
+wrap.innerHTML='<i class="mosweep"></i>';
+g.appendChild(wrap);
+[...g.querySelectorAll(".wkcol")].forEach((c,i)=>c.style.setProperty("--mi", i));
+g.classList.add("mosweeping");
+setTimeout(()=>{
+try{ g.classList.remove("mosweeping");
+g.querySelectorAll(".mosweepwrap").forEach(w=>w.remove());
+g.querySelectorAll(".wkcol").forEach(c=>c.style.removeProperty("--mi")); }catch(e){}
+}, MO_SWEEP + MO_STEP*6 + 60);
+});
+}catch(e){}
+}
+
+ 
+function motionFixed(text){
+try{
+const msg=String(text||"").trim();
+if(!msg) return;
+const can = (typeof undo==="function") &&
+(typeof undoStack!=="undefined") && undoStack && undoStack.length>0;
+if(can) toast(msg, {label:"Undo", run:()=>undo()});
+else toast(msg);
+}catch(e){}
+}
 
  
 function render(){
@@ -17779,10 +18240,13 @@ try{ if(pane.querySelectorAll(sel).length===1) return sel; }catch(_){}
 return null;
 })();
 let drewOk=true;
+ 
+try{ motionBeforePaint(pane); }catch(_){}
 try{
 pane.innerHTML = fn? fn() : "";
 if(WIRE[VIEW]) WIRE[VIEW](pane);
 wireCommon(pane);
+try{ motionAfterPaint(pane); }catch(_){}
 }catch(err){
 drewOk=false;
 try{ logBug({kind:"render", note:"render("+VIEW+"): "+String((err&&err.message)||err).slice(0,200), auto:true, where:VIEW}); }catch(_){}
@@ -18475,7 +18939,8 @@ const drafted = !!wk.assignments.length;
  
 const kick = '<div class="homekick'+(multiSite()? " multi":"")+'"><span class="eyebrow">'+esc(homeEyebrow())+"</span>"+siteChip("home")+"</div>";
  
-const head = kick + statusLine(ws) + graceBanner(ws) + queueCard(null) +
+ 
+const head = kick + statusLine(ws) + queueCard(null) +
 '<div id="sysnotice">'+sysNotice()+"</div>";
 
  
@@ -18488,14 +18953,16 @@ const look   = worthLook(ws);
 const waits  = waitingRows(ws);
 
  
-const rail   = (ready? homeSixWeeks(ws)+homeHandOut() : "") + homeHowDrafted();
-const rest   = (ready? savedReportsHTML(true)+recurCard(ws)+adviceCard(true) : "") +
-homeReplyCard() + homeTailNotices(ws);
+ 
+const cards  = (ready? recurCard(ws)+adviceCard(true) : "");
+const rail   = (ready? homeSixWeeks(ws)+homeHandOut() : "") + homeHowDrafted() +
+(cards? '<div class="tailgrp">'+cards+"</div>" : "");
+const rest   = homeReplyCard() + (ready? savedReportsHTML(true,"home") : "") +
+homeTailNotices(ws);
 
 if(isPhone()){
 return '<div class="stack home">'+
-head + card + teach + one + acts + tiles + look + waits +
-(ready? homeSixWeeks(ws)+homeHandOut() : "") + homeHowDrafted() + rest +
+head + card + teach + one + acts + tiles + look + waits + rail + rest +
 "</div>";
 }
 return '<div class="stack home">'+ head +
@@ -23111,25 +23578,26 @@ prof.pts.map(p=>`<i class="${p.shut?"shut":p.gap>0?(p.gap>1?"r":"y"):"g"}" title
 };
 
  
+ 
 const dayList = () => `
-    <div class="stack" style="gap:9px">
+    <div class="eyebrow sec">THE SEVEN DAYS</div>
+    <div class="inset wkdays">
       ${dates.map(d=>{
 const h=S.hours[d.dow];
 const on=wk.assignments.filter(a=>a.date===d.date && siteOK(a)).sort((x,y)=>x.startMin-y.startMin);
 const want=expandDemand(d.dow,ws).length;
 const gaps=V.filter(v=>v.date===d.date && v.sev==="crit").length;
+const sev=gaps? "crit" : V.some(v=>v.date===d.date && v.sev==="warn")? "warn" : null;
 const open = DAYOPEN.has(d.dow);
 const _pp=payOn()? payPeriod(d.date) : null; const _first=_pp && (d===dates[0] || (payPeriod(dates[dates.indexOf(d)-1].date)||{}).idx!==_pp.idx);
 return `${_first? `<div class="ppband${payShade(d.date)}"><i></i>Pay period ${esc(_pp.label)}</div>` : ""}<div class="dcard ${h.closed?"shut":""} ${open?"open":""}${payShade(d.date)}">
           <button class="dhead" data-togday="${d.dow}" aria-expanded="${open}">
-            <div class="dl"><strong>${DAYS[d.dow]}</strong> <span class="mini">${esc(prettyDate(d.date))}</span>
-${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}
-              <div class="mini">${h.closed?"Closed":
-(on.length? esc(on.slice(0,3).map(a=>(empById(a.empId)||{name:"?"}).name.split(" ")[0]).join(", "))+(on.length>3?" +"+(on.length-3):"") : "nobody on")}</div></div>
-            <div class="dr">${h.closed? '<span class="mini">Closed</span>'
-: `<span class="chip ${on.length>=want?"ok":"crit"}"${on.length>=want? "" : whyAttrs(on.length+" of the "+want+" shifts you asked for on "+DAYS[d.dow]+" are filled. Open the day, or press Show me the fixes for the ways to fill the rest.", "fixall")}>${on.length}/${want}</span>`+
-(gaps? ' <span class="chip crit"'+whyAttrs("Something on "+DAYS[d.dow]+" breaks a rule or leaves the floor short — a coverage dip, a meal out of its window, or a limit crossed. The day sheet shows exactly where, with a Fix button on each.", "day:"+d.dow)+'>!</span>':"")}
-              <span class="carat">${open?"▾":"▸"}</span></div>
+            <span class="dn">${DSHORT[d.dow]} ${esc(prettyDate(d.date))}</span>
+            <span class="dh"><span class="mono">${esc(dayHoursLabel(d.date, d.dow))}</span>${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return '<span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}</span>
+            ${h.closed? '<span class="dcount">Closed</span>'
+: `<span class="dcount${on.length>=want?"":" short"}"${on.length>=want? "" : whyAttrs(on.length+" of the "+want+" shifts you asked for on "+DAYS[d.dow]+" are filled. Open the day, or press Show me the fixes for the ways to fill the rest.", "fixall")}>${on.length}/${want}</span>`}
+            ${sev? `<span class="sdot" data-sev="${sev}" aria-hidden="true"></span>` : ""}
+            <span class="chev" aria-hidden="true">›</span>
           </button>
           ${!open||h.closed? "" : on.length? `<div class="dbody">
             ${on.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
@@ -23147,6 +23615,9 @@ return `<button class="drow ${bad?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg"
 }).join("")}
     </div>`;
 
+ 
+const atThisWeek = ws === weekStartOf(ymd(new Date()), S.org.weekStart);
+
 return `
   <div class="stack">
     ${graceBanner(ws)}
@@ -23162,7 +23633,12 @@ return `
         <span class="wkstamp">${wk.generatedAt? "drafted "+new Date(wk.generatedAt).toLocaleString([],{dateStyle:"short",timeStyle:"short"}) : "not drafted yet"}${postPending(wk)?" · going up shortly":wk.published?" · posted":""}</span>
         ${multiSite()? `<button class="sitechip" id="wsitechip" data-sitesheet="1">${esc(WEEK_SITE? siteName(WEEK_SITE) : "All locations")} ▾</button>` : ""}
         <button class="sitechip" data-go="weeks">All weeks ▾</button>
-        <button class="sitechip" id="wtoday">This week</button>
+        ${atThisWeek? "" : `<button class="sitechip" id="wtoday">This week</button>`}
+        <details class="btnmore wkmenu"><summary class="sitechip">Week tools ▾</summary><div class="btnmenu">
+          <button class="btn" id="wpat" title="What shape this week runs">Shape: ${esc(patternName(ws))}</button>
+          <button class="btn" id="wgen">Draft${(S.horizon||1)>1? " "+S.horizon+" weeks":" the week"}…</button>
+          <button class="btn" id="wmore">Everything else for this week…</button>
+        </div></details>
       </div>
       <div class="wkchips">
         <span class="chip" title="You asked for ${wantSlots}. Anything over that is there to reach people’s guaranteed hours.">${wk.assignments.filter(siteOK).length} shift${wk.assignments.filter(siteOK).length===1?"":"s"}${
@@ -23171,11 +23647,6 @@ wk.assignments.filter(siteOK).length>wantSlots? " · "+(wk.assignments.filter(si
         ${crit.length? `<span class="chip crit"${whyAttrs(crit.length+" thing"+(crit.length===1?"":"s")+" on this week break"+(crit.length===1?"s":"")+" a rule or leave"+(crit.length===1?"s":"")+" a gap — each one is listed under Conflicts and checks with a Fix button.", "checks")}>${crit.length} to fix</span>`:wk.assignments.length?`<span class="chip ok">hours checked</span>`:""}
         ${warn.length? `<span class="chip warn"${whyAttrs(warn.length+" worth a look"+" — things worth a look before the week goes up, none of them a rule broken. Listed under Conflicts and checks, each with a Fix button.", "checks")}>${warn.length} worth a look</span>`:""}
         ${haveRates()? `<span class="chip ${S.org.budget && weekCost(ws)>S.org.budget?"warn":""}">${money(weekCost(ws))}${S.org.budget?" of "+money(S.org.budget):""}</span>`:""}
-      </div>
-      <div class="wktoolrow">
-        <button class="btn sm ${wk.patternId?"primary":""}" id="wpat" title="What shape this week runs">${esc(patternName(ws))}</button>
-        <button class="btn sm" id="wmore">Week tools ▾</button>
-        <button class="btn sm ${wk.assignments.length?"":"primary"}" id="wgen">Draft${(S.horizon||1)>1? " "+S.horizon+" weeks":""}…</button>
       </div>
       ${reviewCard(ws, wk, V, crit, warn, wantSlots, roster, "head")}
     </div></div>
@@ -23193,17 +23664,17 @@ return pp? `<div class="paybar"><b>Pay period:</b> ${payShadeLegend(ws)}
 })() : ""}
     ${isPhone()? dayList() : `<div class="scroll"><div class="week">
       <div class="hrow">
-        <div class="hcell"><div class="dn">Staff</div><div class="dd">${roster.length} active</div></div>
+        <div class="hcell"><div class="dn gday">Staff</div><div class="dd ghrs">${roster.length} active</div></div>
         ${dates.map(d=>{
 const h=S.hours[d.dow];
 const _sp=payOn()? paySplit(ws) : null;
 const _cut=_sp && _sp.date===d.date;
 return `<div class="hcell ${h.closed?"closed":""}${_cut?" paycut":""}${payShade(d.date)}">
             ${_cut? `<div class="mini" style="color:var(--accent);font-weight:700">new pay period</div>`:""}
-            <div class="dn">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':isHolidayDate(d.date)? "" : dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
-            <div class="dd">${dayHoursLabel(d.date, d.dow)}</div>
+            <div class="dn gday">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':isHolidayDate(d.date)? "" : dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
+            <div class="dd ghrs">${dayHoursLabel(d.date, d.dow)}</div>
             ${covStrip(d)}
-            <div style="margin-top:4px"><button class="btn sm ghost" data-openday="${d.dow}" style="padding:2px 6px;font-size:11px">Day sheet →</button></div>
+            <div style="margin-top:4px"><button class="btn sm ghost daysheet" data-openday="${d.dow}">Day sheet →</button></div>
           </div>`;
 }).join("")}
       </div>
@@ -23229,6 +23700,7 @@ const offCycle = cyclesOn() && !cycleWorksOn(e,d.date);
 const unavail = !(e.avail[d.dow]||{}).ok || offCycle;
 const cellViol = V.some(v=>v.sev==="crit" && v.empId===e.id && v.date===d.date);
 return `<div class="ecell ${(off||unavail)&&!mine.length?"off":""}${_sp&&_sp.date===d.date?" paycut":""}${payShade(d.date)}">
+              ${cellViol? `<span class="sdot" data-sev="crit" aria-hidden="true"></span>` : ""}
               ${off&&!mine.length? `<span class="mini" style="text-align:center">${esc((timeOffFor(e.id,d.date)||{type:"Off"}).type)}</span>`
 : offCycle&&!mine.length? `<span class="mini" style="text-align:center">off cycle</span>`:""}
               ${mine.map(a=>{
@@ -23239,7 +23711,7 @@ return `<div class="shiftblk ${cellViol?"viol":""}${CHG.has(a.empId+"|"+a.date)?
                   ${a.locked?'<span class="lk">●</span>':""}
                   <span class="lb">${dv?`<span class="dmark ${dv>0?"g":"b"}">${dv>0?"+":"−"}</span>`:""}${esc(sh.label)}${a.topUp?' <span class="tup">+</span>':""}</span>
                   <span class="tm">${aTimes(a)}</span>
-                  ${a.breaks&&a.breaks.meals.length&&S.rules.breakMode==="assigned"?`<span class="tm" style="opacity:.7">meal ${m2disp(a.breaks.meals[0].start)}</span>`:""}
+                  ${a.breaks&&a.breaks.meals.length?`<span class="tm meal">meal ${m2disp(a.breaks.meals[0].start)}${a.breaks.meals[0].end!=null? "\u2013"+m2disp(a.breaks.meals[0].end):""}</span>`:""}
                 </div>`;
 }).join("")}
               ${!mine.length && !off && !unavail? `<button class="addbtn" aria-label="Add a shift for ${esc(e.name)}, ${DSHORT[d.dow]}" data-adda="${e.id}:${d.date}:${d.dow}">+</button>`:""}
@@ -23277,7 +23749,7 @@ const total = perDay.reduce((a,b)=>a+b,0) + hol;
 const dayBudget = S.org.budget? S.org.budget/7 : 0;
  
 const PL = payLinesWeek(ws);
-return `<div class="card"><header><h3>Labor cost</h3>
+return `<div class="card wkcost"><header><h3>Labor cost</h3>
         <span class="hint">Paid hours at each person's rate; overtime at time and a half${PL.daily.length? " past "+numsWord(PL.daily)+" hours in a day":""}${PL.dt.length? ", double time past "+numsWord(PL.dt)+" hours":""}, and the ${hoursWord(PL.weekly)} week${PL.weekly.length>1?"s":""} counted the way a pay run does. Meals come out; paid rest breaks stay in.</span></header>
         <div class="body grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)">
           <div class="grid3" style="grid-template-columns:1fr 1fr">
@@ -23319,7 +23791,9 @@ return `<div class="card"><header><h3>Labor cost</h3>
 WIRE.week = root=>{
 root.querySelector("#wprev").onclick=()=>{ S.currentWeek=addDays(curWeek(),-7); save(); render(); };
 root.querySelector("#wnext").onclick=()=>{ S.currentWeek=addDays(curWeek(),7); save(); render(); };
-root.querySelector("#wtoday").onclick=()=>{ S.currentWeek=weekStartOf(ymd(new Date()),S.org.weekStart); save(); render(); };
+ 
+{ const wt=root.querySelector("#wtoday");
+if(wt) wt.onclick=()=>{ S.currentWeek=weekStartOf(ymd(new Date()),S.org.weekStart); save(); render(); }; }
 { const wj=root.querySelector("#wjump"); if(wj) wj.onclick=()=>weekJumpModal(); }
 root.querySelector("#wgen").onclick=()=>draftModal();
 root.querySelectorAll("#wsite").forEach(ws2=>{ ws2.onchange=()=>{ WEEK_SITE=ws2.value||null; render(); }; });
@@ -25357,7 +25831,18 @@ closeModal(true);
  
 let was=[];
 try{ was=(validate(ws)||[]).map(checkSig); }catch(e){}
+ 
+const moDepth=(typeof undoStack!=="undefined" && undoStack)? undoStack.length : -1;
 try{ o.run(); }catch(err){ toast("That fix did not go through"); try{ logBug({kind:"stuck", auto:true, note:"fix: "+(o.t||"")+" — "+String(err&&err.message||err)}); }catch(e2){} return; }
+ 
+setTimeout(()=>{
+try{
+const moved=(moDepth>=0) && (typeof undoStack!=="undefined") && undoStack.length>moDepth;
+if(!moved || typeof motionFixed!=="function") return;
+const said=(()=>{ try{ const t=document.querySelector("#toastroot .toast span"); return t? t.textContent.trim() : ""; }catch(e){ return ""; } })();
+motionFixed(said || o.t || "");
+}catch(e){}
+}, 40);
 setTimeout(()=>{
 let now=[];
 try{ now=validate(ws)||[]; }catch(e){ return; }
@@ -32321,9 +32806,19 @@ r.querySelector("#rbprint").onclick=()=>{ if(typeof printDoc==="function") print
 });
 }
  
-function savedReportsHTML(onlyFav){
+ 
+function savedReportsHTML(onlyFav, onHome){
 const list=rbSaved().slice().sort((a,b)=>(b.fav?1:0)-(a.fav?1:0) || (b.lastRun||b.createdAt||0)-(a.lastRun||a.createdAt||0)).filter(x=>!onlyFav || x.fav);
 if(onlyFav && !list.length) return "";
+if(onHome){
+const when=x=>x.lastRun? " \u00b7 last run "+new Date(x.lastRun).toLocaleString([], {dateStyle:"short", timeStyle:"short"}) : "";
+return '<div class="tailgrp"><div class="eyebrow sec">SAVED REPORTS</div><section class="inset">'+
+list.map(x=>'<button class="irow" data-rbrun="'+esc(x.id)+'"><span class="rowmain">'+
+'<span class="rowt">'+(x.fav? "\u2605 " : "")+esc(x.name)+'</span>'+
+'<span class="rowsub">'+esc(rbSpecLabel(x.spec)+when(x))+'</span></span>'+
+'<span class="rowend"><span class="chev" aria-hidden="true">\u203a</span></span></button>').join("")+
+"</section></div>";
+}
 return `<div class="card"><header><h3>${onlyFav? "Starred reports" : "Your reports"}</h3><span class="hint">${onlyFav? "One press to run" : "Build one from any source, filter and sort it, save it, star the ones you use"}</span>
       ${onlyFav? `<button class="btn sm" data-go="analytics">All reports</button>` : `<button class="btn primary sm" id="rbnew">Build a report</button>`}</header>
     ${list.length? `<div class="setbody">${list.map(x=>`<div class="setrow"><div class="sq"><strong>${x.fav? "★ ":""}${esc(x.name)}</strong><div class="mini">${esc(rbSpecLabel(x.spec))}${x.lastRun? " · last run "+esc(new Date(x.lastRun).toLocaleString([], {dateStyle:"short", timeStyle:"short"})):""}</div></div>
