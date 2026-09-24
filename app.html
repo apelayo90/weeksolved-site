@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 5b3e41de 2026-09-24 11:48 UTC -->
+<!-- build 88c6dfbd 2026-09-24 12:41 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -3785,8 +3785,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "5b3e41de";       
-const BUILD_AT = "2026-09-24 11:48 UTC";       
+const BUILD_ID = "88c6dfbd";       
+const BUILD_AT = "2026-09-24 12:41 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -6322,6 +6322,8 @@ const hadCover=recent.some(k=>(s.weeks[k].assignments||[]).some(a=>a && a.cover)
 if(posts.length || hadCover) s.ui.floorNote={posts};
 }
 }
+ 
+if(!s.ui.b0924){ s.ui.b0924=1; if(s.fww && s.fww.on) s.ui.betaFww=true; }
 if(!Array.isArray(s.callouts)) s.callouts=[];
 if(s.ask && (typeof s.ask!=="object" || !s.ask.token || !s.ask.ws)) delete s.ask;
 if(s.ask && !Array.isArray(s.ask.seen)) s.ask.seen=[];
@@ -8856,7 +8858,9 @@ note:"250 or more employees and 30 or more locations nationwide."},
 note:"Set your own notice period below and Weeksolved will hold you to it."}
 ];
 function fwwPlace(){ return FWW_PLACES.find(x=>x.k===(S.fww&&S.fww.city))||FWW_PLACES[0]; }
-function fwwOn(){ return !!(S.fww && S.fww.on); }
+ 
+function betaFww(){ return !!(S.ui && S.ui.betaFww); }
+function fwwOn(){ return betaFww() && !!(S.fww && S.fww.on); }
  
 function fwwCovered(){
 const P=fwwPlace();
@@ -15818,9 +15822,9 @@ prof.pts.forEach(p=>{
 const seen = {};
 p.detail.forEach(d=>{
 const k=d.rule.id; seen[k]=true;
-if(open[k] && open[k].to===p.t){ open[k].to=p.t+STEP; open[k].worst=Math.max(open[k].worst,d.need-d.have); }
+if(open[k] && open[k].to===p.t){ open[k].to=p.t+STEP; open[k].worst=Math.max(open[k].worst,d.need-d.have); open[k].need=Math.max(open[k].need||0,d.need); }
 else { if(open[k]) closed.push(open[k]);
-open[k]={rule:d.rule, from:p.t, to:p.t+STEP, worst:d.need-d.have}; }
+open[k]={rule:d.rule, from:p.t, to:p.t+STEP, worst:d.need-d.have, need:d.need}; }
 });
 Object.keys(open).forEach(k=>{ if(!seen[k]){ closed.push(open[k]); delete open[k]; } });
 });
@@ -15840,8 +15844,11 @@ push("crit",
 {date,dow, code:"cover", presence:true, ruleId:r.rule.id, from:r.from, to:r.to, pdEmp:pd? pd.id : null});
 return;
 }
+ 
+const onFloor=Math.max(0, (r.need||r.worst)-r.worst);
 push(lastNight? "info" : "warn",
-(lastNight? "No cover from the night before — " : "Below required coverage — ")+DSHORT[dow],
+lastNight? "No cover from the night before — "+DSHORT[dow]
+: DAYS[dow]+" "+clockRange(r.from, r.to)+" has "+onFloor+" on the floor; the minimum is "+(r.need||r.worst),
 (r.rule.label||ruleSentence(r.rule))+": short "+r.worst+" from "+m2disp(r.from)+" to "+m2disp(r.to)+
 (S.rules.staggerMeals?" (meal periods count as off duty)":"")+
 (lastNight? ". "+LAST_NIGHT_SAY : ""),
@@ -20565,7 +20572,8 @@ const EXPLAIN = {
 "union.on": "Turns on the extra terms an agreement or public-sector rulebook adds on top of state law. Example: with it on you can set a rest premium, a report-in guarantee, and a seventh-day rule, and the checks enforce all three.",
 "union.splitPolicy": "What your agreement says about split shifts — not allowed at all, allowed with a premium, or unrestricted. Example: “with a premium” keeps split shifts legal and flags each one so the extra payment is not forgotten.",
 "union.otLedger": "Tracks who has been offered overtime, so it can be offered in the order your agreement requires. Example: with it on, the app tells you whose turn it is before you ring round.",
-"fww.on": "Turns on fair-workweek rules — predictable-scheduling laws that a few cities have. They add advance-notice penalties and rest-between-shifts payments. Example: in a covered city, changing a posted shift inside 14 days can carry a payment, and the app names it.",
+"ui.betaFww": "Early features are switchable and may change. On, Settings shows the Fair Workweek checks for a handful of cities, as Weeksolved read their ordinances; an ordinance can change before the app does. Example: with it on and Los Angeles picked, a shift posted with less notice than the setting counts is flagged, with the number of days.",
+"fww.on": "Turns on the Fair Workweek checks for the city you pick — advance notice, a rest gap between shifts and a written hours estimate for new starters. The checks give the arithmetic and name the setting; they never work out money owed. Example: a shift changed inside the notice window is flagged with the days it was short by.",
 "support.remind": "Whether Weeksolved reminds you about things with dates on them. Example: a licence expiring in three weeks, or a tester's window ending.",
 "remind.on": "The daily nudge with what needs you today. Example: at 06:00 it says the day sheet is ready and names anything unresolved."
 };
@@ -21391,10 +21399,14 @@ sel("org.pay.type", PAY_TYPES, S.org.pay.type||"none"))}
       ${payOn() && (S.org.pay.type==="weekly"||S.org.pay.type==="biweekly")? setRow("A pay period started on",
 "Any past start date will do \u2014 everything is counted forward from it.",
 `<input type="date" data-bind="org.pay.anchor" value="${esc(S.org.pay.anchor||payAnchor())}" data-rerender="no">`) : ""}
-      ${setRow("Scheduling law where you are (optional)", fwwOn()
+      ${setRow("Early features", betaFww()
+? "On. Early features are switchable and may change. The Fair Workweek checks cover a handful of city ordinances as Weeksolved read them on "+LAW_ENCODED+"; an ordinance can change before the app does. They give the arithmetic and name the setting \u2014 a reminder for you, not a determination of what is owed."
+: "Off. Early features are switchable and may change. On, this adds the Fair Workweek checks below \u2014 advance notice, a rest gap between shifts and a written hours estimate for a handful of cities, as Weeksolved read their ordinances on "+LAW_ENCODED+".",
+`<select data-set="ui.betaFww"><option value="0" ${betaFww()?"":"selected"}>Off</option><option value="1" ${betaFww()?"selected":""}>On</option></select>`)}
+      ${betaFww()? setRow("Scheduling law where you are (optional)", fwwOn()
 ? fwwCovered().say
-: "Off \u2014 some cities require two weeks\u2019 notice, a written estimate of hours for new starters, and a rest gap between shifts. Turn it on and Weeksolved will tell you first whether any of it reaches a business your size.",
-`<select data-set="fww.on"><option value="0" ${fwwOn()?"":"selected"}>Off</option><option value="1" ${fwwOn()?"selected":""}>On</option></select>`)}
+: "Off \u2014 some cities ask for two weeks\u2019 notice, a written estimate of hours for new starters, and a rest gap between shifts. On, Weeksolved says first whether any of it reaches a business your size.",
+`<select data-set="fww.on"><option value="0" ${fwwOn()?"":"selected"}>Off</option><option value="1" ${fwwOn()?"selected":""}>On</option></select>`) : ""}
       ${fwwOn()&&unionOn()? `<div class="setrow"><div class="sq"><strong>If you are covered by an agreement</strong>
         <div class="mini">${esc(fwwWaiverNote())}</div></div><div class="sc"></div></div>`:""}
       ${fwwOn()? setRow("Where you are", esc(fwwPlace().note||"Pick the nearest and Weeksolved uses that rulebook."),
@@ -21774,7 +21786,7 @@ save(); render();
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-const boolPaths=["rules.trackLic","rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","rules.familyBiz","rules.familyHazard","ui.recurOff","ui.adviceOff","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger","rules.holCounts"];
+const boolPaths=["rules.trackLic","rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","rules.familyBiz","rules.familyHazard","ui.recurOff","ui.adviceOff","ui.betaFww","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger","rules.holCounts"];
 const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.mealLengthMin","rules.maxSpanH","org.weekStart","org.fiscalStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.dtDailyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
@@ -30562,7 +30574,6 @@ return `
         ${X("xNotice", W.xNotice, "Advance-notice alerts", "Warns if posted late.")}
         ${X("xSkills", W.xSkills, "Training on each post — who needs more time on what", "Only you see it.")}
         ${X("xPay", W.xPay, "Pay period markers on the schedule", "")}
-        ${X("xFww", W.xFww, "Scheduling-law help (Fair Workweek)", "Tells you first if it applies.")}
         ${X("xNoComms", W.xNoComms, "No messages to staff, of any kind", "Printing and PDFs still work.")}
         ${W.xNoComms? "" : X("xMsg", W.xMsg, "Ready-written messages to staff", "Nothing sends on its own.")}
         ${X("xTrainee", W.xTrainee, "New hires who aren’t cover yet", "Scheduled on top of your cover, never alone.")}
@@ -30720,7 +30731,7 @@ W.hoursPreset==="wkend"&&cur.shifts.length? [
             ${(()=>{const on=[W.xPto&&"time-off balances", W.xLic&&"license expiry", W.xCycles&&"work patterns",
 W.xNotice&&"notice warnings", W.xWaiver&&"meal waivers", W.xSkills&&"post training",
 W.xTrainee&&"new hires who aren\u2019t cover yet", W.xMinors&&"under-18 hour limits",
-W.xMsg&&"ready-written messages", W.xFww&&"scheduling-law help", W.xPay&&"pay period markers"].filter(Boolean);
+W.xMsg&&"ready-written messages", W.xPay&&"pay period markers"].filter(Boolean);
 return on.length? `<div class="ln"><span>Also on</span><b>${esc(on.join(", "))}</b></div>`:"";})()}
             ${(W.posts||"").trim()? `<div class="ln"><span>Posts</span><b>${(W.posts||"").split(/\n/).filter(x=>x.trim()).length} on the floor${W.postSpan==="day"?", held all day":", rotating "+(W.postSpan==="half"?"at midday":"every "+W.postSpan.replace("h"," hours"))}</b></div>`:""}
             ${W.hols? `<div class="ln"><span>Holidays</span><b>${(()=>{const C=holidayCandidates();
@@ -31286,8 +31297,7 @@ N.rules.traineeCover = W.xTrainee? "extra" : "cover";
 N.msg = Object.assign({on:false, tpl:Object.assign({}, MSG_DEFAULT)}, N.msg||{});
 N.msg.on = !!W.xMsg && !W.xNoComms;
 N.rules.commsOff = !!W.xNoComms;
-N.fww = Object.assign({on:!!W.xFww, city:"", staff:0, sites:1, asked:false}, N.fww||{});
-N.fww.on = !!W.xFww;
+N.fww = Object.assign({on:false, city:"", staff:0, sites:1, asked:false}, N.fww||{});
 N.org.pay = Object.assign({type:W.xPay? "biweekly":"none", anchor:""}, N.org.pay||{});
 N.org.pay.type = W.xPay? (N.org.pay.type==="none"? "biweekly" : N.org.pay.type) : "none";
 N.dayLoad=(W.dayLoad||[0,1,0,-1,0,1,0]).slice();
