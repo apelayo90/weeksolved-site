@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 88c6dfbd 2026-09-24 12:41 UTC -->
+<!-- build f7af83b9 2026-09-24 15:10 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1021,6 +1021,9 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .cand{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px}
 .cand .why{font-size:11.5px;color:var(--muted);flex:1}
 .cand.blocked{opacity:.62;border-style:dashed}
+.cand .candacts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:none}
+.cand .asked{display:block;font-weight:400;margin-top:2px}
+@media (max-width:820px){ .cand.ask{flex-wrap:wrap} .cand.ask .candacts{flex:1 1 100%} }
 .themetog{display:flex;gap:2px;background:var(--sunken);border-radius:6px;padding:2px;margin-left:auto}
 .themetog button{border:0;background:none;padding:3px 7px;border-radius:4px;cursor:pointer;font-size:11px;color:var(--muted);min-width:26px;min-height:26px}
 .themetog button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600}
@@ -3785,8 +3788,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "88c6dfbd";       
-const BUILD_AT = "2026-09-24 12:41 UTC";       
+const BUILD_ID = "f7af83b9";       
+const BUILD_AT = "2026-09-24 15:10 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -8830,7 +8833,10 @@ approved: "Hi {name} \u2014 your request for {dates} is good, you're off. Nothin
 declined: "Hi {name} \u2014 sorry, I can't make {dates} work this time; we'd be short on the floor. Happy to look at other dates if you have any flexibility.",
 missed:   "Hi {name} \u2014 I couldn't fit {dates} into the schedule this time. You're on the week as posted \u2014 come and find me if that's a problem.",
 offer:    "Hi {name} \u2014 {shift} on {date} ({time}) is going spare. Want it? Reply {yes} to take it or {no} to pass, {by}.{group}",
-changed:  "Hi {name} \u2014 small change to the posted week: {change}. Sorry for the short notice."
+changed:  "Hi {name} \u2014 small change to the posted week: {change}. Sorry for the short notice.",
+ 
+ask:      "Hi {name} \u2014 {who} called out, so {shift} on {date} ({time}) needs cover. Could you take it? A quick yes or no is all I need.",
+covered:  "Hi {name} \u2014 thanks for covering {shift} on {date} ({time}). You\u2019re on, and the week is updated."
 };
  
 const FWW_PLACES = [
@@ -8952,6 +8958,10 @@ const MSG_FIELDS = [
 {k:"missed",   lab:"When it couldn\u2019t be fitted in", vars:["name","dates"], need:[], why:""},
 {k:"offer",    lab:"When you offer an open shift", vars:["name","shift","date","time","yes","no","by","group"],
 need:["yes","no"], why:"they are the reply codes, and without them nobody can answer you"},
+{k:"ask",      lab:"When you ask someone to cover", vars:["name","who","shift","date","time"],
+need:["shift","date"], why:"without them nobody knows which shift you mean"},
+{k:"covered",  lab:"When someone has agreed to cover", vars:["name","shift","date","time"],
+need:["shift","date"], why:"without them nobody knows which shift you mean"},
 {k:"changed",  lab:"When a posted week changes", vars:["name","change"],
 need:["change"], why:"it is the only part that says what actually moved"}
 ];
@@ -8960,7 +8970,7 @@ const MSG_SAMPLE = {
 name:"Maria", dates:"Mon 14 - Wed 16 Sep", shift:"Opening", date:"Tuesday 15 September",
 time:"8:00 AM to 4:30 PM", yes:"YES-4F2B", no:"NO-4F2B", by:"by this time tomorrow",
 group:" I\u2019ve asked a few people, so it\u2019s first come first served \u2014 the first clear yes gets it.",
-change:"Thursday moves from 9:00 AM to 11:00 AM"
+change:"Thursday moves from 9:00 AM to 11:00 AM", who:"Kim"
 };
 function msgOn(){ return !commsOff() && !!(S.msg && S.msg.on); }
 function msgTpl(kind){ return ((S.msg&&S.msg.tpl)||{})[kind] || MSG_DEFAULT[kind] || ""; }
@@ -15159,7 +15169,35 @@ r.querySelector("#rpaff").onclick=()=>{ closeModal(true); doPost("affected"); };
 r.querySelector("#rpall").onclick=()=>{ closeModal(true); doPost("all"); };
 });
 }
-function repostNotify(ws, choice, changes){
+ 
+function msgCardHTML(n, i, k, canSend){
+return `<div class="card"><div class="body stack" style="gap:8px">
+        <div class="spread"><b>${esc(n.emp.name||"Someone")}</b>
+          <span class="mini">${esc(hasContact(n.emp,"email")? contactOf(n.emp).email
+: hasContact(n.emp,"sms")? contactOf(n.emp).phone
+: "no email or mobile on file")}</span></div>
+        <textarea rows="3" id="${k}t${i}" style="font-size:13px">${esc(n.text)}</textarea>
+        <div class="row" style="gap:6px">
+          <button class="btn sm" data-${k}copy="${i}">Copy</button>
+          ${canSend? `<button class="btn sm primary" data-${k}send="${i}">Open a message</button>`:""}
+        </div></div></div>`;
+}
+function wireMsgCards(r, k, notes, titleOf, onUse){
+r.querySelectorAll("[data-"+k+"copy]").forEach(b=>b.onclick=()=>{
+const i=+b.getAttribute("data-"+k+"copy");
+copyText(r.querySelector("#"+k+"t"+i).value, "Copied");
+if(onUse) onUse(notes[i], "copy");
+});
+r.querySelectorAll("[data-"+k+"send]").forEach(b=>b.onclick=()=>{
+const i=+b.getAttribute("data-"+k+"send"), n=notes[i];
+const txt=r.querySelector("#"+k+"t"+i).value;
+if(onUse) onUse(n, "send");
+tellModal(titleOf(n), txt, {emp:n.emp});
+});
+}
+ 
+function repostNotify(ws, choice, changes, opts){
+opts=opts||{};
 if(commsOff()) return;
 if(!choice || choice==="none") return;
 const diff = (changes && changes.length? changes : weekDiff(ws)) || [];
@@ -15172,6 +15210,8 @@ const notes = Object.keys(byEmp).map(id=>{
 const rows=byEmp[id];
 const e=empById(id) || {id, name:rows[0].name, email:"", phone:""};
 const change = rows.map(d=>prettyDate(d.date)+" \u2014 "+d.say).join("; ");
+if(opts.tpl && (!opts.empId || String(opts.empId)===String(id)))
+return {emp:e, change, text: msgFill(opts.tpl, Object.assign({name:(e.name||"").split(" ")[0], change}, opts.vars||{}))};
 return {emp:e, change, text: msgFill("changed", {name:(e.name||"").split(" ")[0], change})};
 }).sort((a,b)=>(a.emp.name||"").localeCompare(b.emp.name||""));
 
@@ -15183,20 +15223,13 @@ const canSend = sendOn();
 modal("Tell "+(choice==="all"?"everyone":"the affected people"),
 `<div class="stack">
       <div class="help">${canSend
-? "Weeksolved has written one message per person from your \u201cwhen a posted week changes\u201d wording. Nothing sends on its own \u2014 open each one and press send in your own app."
+? "Weeksolved has written one message per person from your \u201c"+
+(opts.tpl? ((MSG_FIELDS.find(f=>f.k===opts.tpl)||{lab:"When a posted week changes"}).lab).replace(/^W/,"w") : "when a posted week changes")+
+"\u201d wording. Nothing sends on its own \u2014 open each one and press send in your own app."
 : "Sending isn\u2019t switched on, so here they are ready to copy into a text or an email."}
         You can change the wording for good under Settings \u2192 Messages.</div>
       ${postedFootnote()}
-      ${notes.map((n,i)=>`<div class="card"><div class="body stack" style="gap:8px">
-        <div class="spread"><b>${esc(n.emp.name||"Someone")}</b>
-          <span class="mini">${esc(hasContact(n.emp,"email")? contactOf(n.emp).email
-: hasContact(n.emp,"sms")? contactOf(n.emp).phone
-: "no email or mobile on file")}</span></div>
-        <textarea rows="3" id="rpt${i}" style="font-size:13px">${esc(n.text)}</textarea>
-        <div class="row" style="gap:6px">
-          <button class="btn sm" data-rpcopy="${i}">Copy</button>
-          ${canSend? `<button class="btn sm primary" data-rpsend="${i}">Open a message</button>`:""}
-        </div></div></div>`).join("")}
+      ${notes.map((n,i)=>msgCardHTML(n, i, "rp", canSend)).join("")}
       ${choice==="all"? `<div class="card"><div class="body stack" style="gap:8px">
         <div class="spread"><b>The whole team</b><span class="mini">one list, everybody</span></div>
         <textarea rows="5" id="rpall" style="font-size:13px">${esc(summary)}</textarea>
@@ -15205,13 +15238,7 @@ modal("Tell "+(choice==="all"?"everyone":"the affected people"),
     </div>`,
 `<button class="btn primary" data-close>Done</button>`,
 r=>{
-r.querySelectorAll("[data-rpcopy]").forEach(b=>b.onclick=()=>
-copyText(r.querySelector("#rpt"+b.dataset.rpcopy).value, "Copied"));
-r.querySelectorAll("[data-rpsend]").forEach(b=>b.onclick=()=>{
-const n=notes[+b.dataset.rpsend];
-tellModal("Tell "+(n.emp.name||"them")+" what changed",
-r.querySelector("#rpt"+b.dataset.rpsend).value, {emp:n.emp});
-});
+wireMsgCards(r, "rp", notes, n=>"Tell "+(n.emp.name||"them")+" what changed");
 const all=r.querySelector("#rpcopyall");
 if(all) all.onclick=()=>copyText(r.querySelector("#rpall").value, "Copied");
 });
@@ -15753,8 +15780,10 @@ const detail = (u && u.counted)
 push("crit", pd? pd.name.split(" ")[0]+" could take "+DAYS[dow]+" "+clockRange(sa,sb)
 : "Open shift — "+(shiftById(s.shiftId)||{label:"Shift"}).label+", "+DSHORT[dow],
 detail,
-{date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||"")+"|"+(s.siteId||""),
-code:"open", shiftId:s.shiftId, roleId:s.roleId||null, siteId:s.siteId||null, pdEmp:pd? pd.id : null});
+Object.assign({date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||"")+"|"+(s.siteId||""),
+code:"open", shiftId:s.shiftId, roleId:s.roleId||null, siteId:s.siteId||null, pdEmp:pd? pd.id : null},
+ 
+(rel && askedLine(rel))? {asked:askedLine(rel)} : {}));
 });
 });
 
@@ -17704,6 +17733,7 @@ return '<div class="thing" data-sev="'+esc(v.sev)+'" data-key="'+esc(checkSig(v)
 '<div class="eyebrow">'+eb+"</div>"+
 reviewedHtml(v.detail|| v.title)+
 ((v.detail && v.title)? '<div class="rowsub">'+esc(v.title)+"</div>" : "")+
+(v.asked? '<div class="mini">'+esc(v.asked)+"</div>" : "")+
 '<div class="thingacts">'+
 '<button class="btn" data-act="fix" data-vix="'+i+'">'+(posted? "Fix and repost":"Fix")+"</button>"+
 (day!=null? '<button class="btn" data-act="openday" data-day="'+day+'">Open the day</button>' : "")+
@@ -17871,6 +17901,7 @@ if(v.code==="suspect" && v.rc && typeof rcRow==="function") return rcRow(v);
 const day = v.date? parseYmd(v.date).getDay() : (v.dow!=null? v.dow : null);
 return '<div class="hrow" data-sev="'+esc(v.sev)+'">'+
 '<div class="hrowhd"><span class="sdot" data-sev="'+esc(v.sev)+'"></span>'+reviewedHtml(v.detail|| v.title)+"</div>"+
+(v.asked? '<div class="mini">'+esc(v.asked)+"</div>" : "")+
 '<div class="hrowacts">'+
 (fixBtn(v,i)? '<button class="btn '+(v.sev==="crit"? "primary":"")+'" data-act="fix" data-vix="'+i+'">'+
 ((posted && v.sev==="crit")? "Fix and repost":"Fix")+"</button>" : "")+
@@ -18528,18 +18559,28 @@ save(); render();
 };
 if(!weekIsPosted(ws)){ place(); toast(first+" is on for "+when); return; }
  
+const rel=commsOff()? null : releasedSlot(ws, v.date, v.shiftId, v.roleId||null);
+const pat=askedAt(rel, e.id);
 modal("Call "+first+" in?", `
     <div class="stack">
-      <p class="whead">${esc(first)} on ${esc(when)}. This week is already posted, so ${esc(first)} is sent the change message.</p>
+      <p class="whead">${esc(first)} on ${esc(when)}. ${rel
+? `This week is already posted, so ${esc(first)} can be asked first — nothing on the week changes until ${esc(first)} says yes.`
+: `This week is already posted, so ${esc(first)} is sent the change message.`}</p>
+      ${pat? `<div class="mini">Asked at ${esc(askClock(pat))}</div>` : ""}
       ${postedFootnote()}
     </div>`,
-`<button class="btn" data-close>Back</button><button class="btn primary" id="pdcallgo">Call ${esc(first)} in</button>`,
+`<button class="btn" data-close>Back</button>${rel
+? `<button class="btn" id="pdcallgo">Said yes — call ${esc(first)} in</button><button class="btn primary" id="pdaskgo">Ask ${esc(first)} first</button>`
+: `<button class="btn primary" id="pdcallgo">Call ${esc(first)} in</button>`}`,
 r=>{ r.querySelector("#pdcallgo").onclick=()=>{
 closeModal(true); place();
+if(rel){ if(!coveredNotify(ws, slot, e.id)) toast(first+" is on for "+when); return; }
 const diff=(typeof weekDiff==="function")? weekDiff(ws).filter(d=>d.empId===e.id) : [];
 if(diff.length) repostNotify(ws, "affected", diff);
 else toast(first+" is on for "+when);
-}; });
+};
+const ak=r.querySelector("#pdaskgo");
+if(ak) ak.onclick=()=>{ closeModal(true); askToCover(ws, slot, e, rel); }; });
 }
 
  
@@ -18576,18 +18617,33 @@ wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
 save(); render();
 };
 if(!weekIsPosted(ws)){ place(); toast(first+" is on for "+when+" — this week only"); return; }
+ 
+const rel=commsOff()? null : (releasedSlot(ws, v.date, pick.sh.id, roleId) ||
+(peekWeek(ws).unfilled||[]).slice().reverse().find(u=>u.reason==="called out" && !u.filled && u.date===v.date &&
+(!roleId || (u.roleId||null)===roleId) &&
+(function(){ const s2=shiftById(u.shiftId); if(!s2) return false; const [x,y]=shiftMinutes(s2); return x<bMin && y>aMin; })()) || null);
+const hslot={date:v.date, dow, shiftId:pick.sh.id, roleId, from:aMin, to:bMin};
+const pat=askedAt(rel, e.id);
 modal("Call "+first+" in?", `
     <div class="stack">
-      <p class="whead">${esc(first)} on ${esc(when)}, this week only. This week is already posted, so ${esc(first)} is sent the change message.</p>
+      <p class="whead">${esc(first)} on ${esc(when)}, this week only. ${rel
+? `This week is already posted, so ${esc(first)} can be asked first — nothing on the week changes until ${esc(first)} says yes.`
+: `This week is already posted, so ${esc(first)} is sent the change message.`}</p>
+      ${pat? `<div class="mini">Asked at ${esc(askClock(pat))}</div>` : ""}
       ${postedFootnote()}
     </div>`,
-`<button class="btn" data-close>Back</button><button class="btn primary" id="pdhourgo">Call ${esc(first)} in</button>`,
+`<button class="btn" data-close>Back</button>${rel
+? `<button class="btn" id="pdhourgo">Said yes — call ${esc(first)} in</button><button class="btn primary" id="pdhourask">Ask ${esc(first)} first</button>`
+: `<button class="btn primary" id="pdhourgo">Call ${esc(first)} in</button>`}`,
 r=>{ r.querySelector("#pdhourgo").onclick=()=>{
 closeModal(true); place();
+if(rel){ if(!coveredNotify(ws, hslot, e.id)) toast(first+" is on for "+when); return; }
 const diff=(typeof weekDiff==="function")? weekDiff(ws).filter(d=>d.empId===e.id) : [];
 if(diff.length) repostNotify(ws, "affected", diff);
 else toast(first+" is on for "+when);
-}; });
+};
+const ak=r.querySelector("#pdhourask");
+if(ak) ak.onclick=()=>{ closeModal(true); askToCover(ws, hslot, e, rel); }; });
 }
 function addForHourModal(v, ws){
 ws = ws || curWeek();
@@ -19309,7 +19365,7 @@ wk.assignments=(wk.assignments||[]).filter(x=>x.id!==a.id);
 wk.unfilled=wk.unfilled||[];
 const heldAt=wk.assignments.filter(x=>x.date===slot.date && x.shiftId===slot.shiftId
 && (x.roleId||null)===slot.roleId).length;
-wk.unfilled.push(Object.assign({date:slot.date, shiftId:slot.shiftId, roleId:slot.roleId, reason:"called out", heldAt},
+wk.unfilled.push(Object.assign({date:slot.date, shiftId:slot.shiftId, roleId:slot.roleId, reason:"called out", heldAt, outBy:a.empId||null},
 wasLocked? {fromLock:true} : {}, a.coLine? {history:[a.coLine]} : {}));
 let severity="none", presence=false;
 if(!wasProject){
@@ -19351,6 +19407,64 @@ if((rel.history||[]).length) rec.history=(rec.history||[]).concat(rel.history);
  
 if(rel.fromLock) rec.locked=false;
 rel.filled=true;
+}
+ 
+function askClock(at){ return new Date(at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
+function askedAt(rel, empId){
+const x=((rel && rel.asked)||[]).find(q=>q.empId===empId);
+return x? x.at : null;
+}
+ 
+function askedLine(rel){
+const L=((rel && rel.asked)||[]).slice().sort((x,y)=>x.at-y.at)
+.map(q=>(((empById(q.empId)||{}).name||"Someone").split(" ")[0])+" at "+askClock(q.at));
+return L.length? "Asked "+L.join(", ") : "";
+}
+function markAsked(rel, empId){
+if(!rel) return;
+rel.asked=Array.isArray(rel.asked)? rel.asked : [];
+const x=rel.asked.find(q=>q.empId===empId);
+if(x) x.at=Date.now(); else rel.asked.push({empId, at:Date.now()});
+save(); render();
+}
+ 
+function coverVars(slot){
+const sh=shiftById(slot.shiftId);
+const mm=(slot.from!=null && slot.to!=null)? [slot.from, slot.to] : (sh? shiftMinutes(sh) : null);
+return {shift:sh? sh.label : "the shift", date:prettyFull(slot.date),
+time:mm? m2disp(mm[0])+" to "+m2disp(mm[1]) : ""};
+}
+ 
+function coveredNotify(ws, slot, empId){
+const diff=(typeof weekDiff==="function")? weekDiff(ws).filter(d=>d.empId===empId) : [];
+if(diff.length && typeof repostNotify==="function")
+repostNotify(ws, "affected", diff, {tpl:"covered", vars:coverVars(slot), empId});
+return diff.length;
+}
+ 
+function askToCover(ws, slot, emp, release, after){
+if(!emp) return;
+ws = ws || weekStartOf(slot.date, S.org.weekStart);
+const rel=(release && release.reason==="called out")? release
+: releasedSlot(ws, slot.date, slot.shiftId, slot.roleId||null);
+const outId=(release && release.reason!=="called out" && release.empId) || (rel && rel.outBy) || null;
+const out=outId? empById(outId) : null;
+const who=(out && out.name)? out.name.split(" ")[0] : "somebody";
+const first=(emp.name||"").split(" ")[0];
+const n={emp, text:msgFill("ask", Object.assign({name:first, who}, coverVars(slot)))};
+const canSend=sendOn();
+const at=askedAt(rel, emp.id);
+modal("Ask "+first+" to cover", `<div class="stack">
+      <div class="help">${canSend
+? "Weeksolved has written this from your “when you ask someone to cover” wording. Nothing sends on its own — open it and press send in your own app."
+: "Sending isn’t switched on, so here it is ready to copy into a text or an email."}
+        Nothing on the week changes until ${esc(first)} says yes. You can change the wording for good under Settings → Messages.</div>
+      ${at? `<div class="mini">Asked at ${esc(askClock(at))}</div>` : ""}
+      ${msgCardHTML(n, 0, "ak", canSend)}
+    </div>`,
+`<button class="btn primary" data-close>Done</button>`,
+r=>wireMsgCards(r, "ak", [n], ()=>"Ask "+first+" to cover", ()=>markAsked(rel, emp.id)));
+if(typeof after==="function") MODAL_ONCLOSE=()=>setTimeout(after, 60);
 }
  
 function calloutSheet(presetAId){
@@ -19433,6 +19547,10 @@ const mm=shiftMinutes(sh), aMin=mm[0], bMin=mm[1];
 const grace=postPending(wk);
 const posted=!!wk.published;
  
+const ask=posted && !commsOff();
+const rel=releasedSlot(ws, slot.date, slot.shiftId, slot.roleId||null);
+const asked=rel? askedLine(rel) : "";
+ 
 const cands=candidatesFor(slot.shiftId, slot.date, slot.dow, slot.roleId, release.empId||null, slot.siteId||null);
 const free=cands.filter(c=>!c.blocks.length);
 const blocked=cands.filter(c=>c.blocks.length);
@@ -19440,9 +19558,11 @@ let pd=null, pdRow="";
 if(!free.length){
 pd=(typeof namedPerDiem==="function")? namedPerDiem(slot, ws) : null;
 if(pd && release.empId && pd.id===release.empId) pd=null;
-if(pd) pdRow=`<div class="cand"><div style="flex:none;font-weight:600;font-size:13px;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pd.name)}</div>
+if(pd){ const pat=askedAt(rel, pd.id);
+pdRow=`<div class="cand${ask? " ask":""}"><div style="flex:none;font-weight:600;font-size:13px;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pd.name)}${pat? `<span class="mini asked">Asked at ${esc(askClock(pat))}</span>` : ""}</div>
       <div class="why">On call — clears every check for it.</div>
-      <button type="button" class="btn sm primary" data-pdpick="1">Assign</button></div>`;
+      ${ask? `<div class="candacts"><button type="button" class="btn sm primary" data-pdask="1">Ask ${esc(pd.name.split(" ")[0])}</button><button type="button" class="btn sm" data-pdpick="1">Said yes — put them on</button></div>`
+: `<button type="button" class="btn sm primary" data-pdpick="1">Assign</button>`}</div>`; }
 }
  
 let chain=null; try{ chain=(typeof chainOptions==="function")? (chainOptions(slot, ws, release.empId||null)[0]||null) : null; }catch(e){ chain=null; }
@@ -19455,12 +19575,13 @@ const footnote = posted? ((typeof postedFootnote==="function")? postedFootnote()
 : `<p class="pfoot">Changes after a week is posted can carry notice or pay obligations in some cities and for larger employers.</p>`) : "";
 const html=`<div class="stack">
     <div class="mini">${esc(DAYS[slot.dow])}, ${esc(prettyDate(slot.date))} · ${esc(sh.label)} · ${esc(m2disp(aMin))}–${esc(m2disp(bMin))}${slot.roleId? " · "+esc(roleName(slot.roleId)):""}</div>
+    ${asked? `<div class="mini">${esc(asked)}</div>` : ""}
     ${presenceCopy}${lockCopy}
     ${pdRow}
-    ${free.length? `<div><div class="lab" style="margin:8px 0 6px">Clear to take it</div>${candidateHTML(free, "data-copick")}</div>`
+    ${free.length? `<div><div class="lab" style="margin:8px 0 6px">Clear to take it</div>${candidateHTML(free, "data-copick", ask? {attr:"data-coask", rel} : null)}</div>`
 : (pdRow? "" : `<div class="banner warn"><div><b>Nobody clears every limit.</b> The list below shows exactly what is in the way for each person.</div></div>`)}
     ${swapRow}
-    ${blocked.length? `<div><div class="lab" style="margin:12px 0 6px">Blocked, and by what</div>${candidateHTML(blocked, "data-copick")}</div>`:""}
+    ${blocked.length? `<div><div class="lab" style="margin:12px 0 6px">Blocked, and by what</div>${candidateHTML(blocked, "data-copick", ask? {attr:"data-coask", rel} : null)}</div>`:""}
     ${footnote}
     <div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap">
       ${posted? (grace
@@ -19484,15 +19605,17 @@ w.assignments.push(rec);
 w.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
 save(); closeSheet(); render();
 if(posted){
-try{
-const diff=(typeof weekDiff==="function")? weekDiff(ws).filter(d=>d.empId===empId) : [];
-if(diff.length && typeof repostNotify==="function") repostNotify(ws, "affected", diff);
-}catch(e){}
-toast(emp.name.split(" ")[0]+" is on — sent the usual change message");
+ 
+try{ coveredNotify(ws, slot, empId); }catch(e){}
+toast(emp.name.split(" ")[0]+" is on — the thank-you is ready to send");
 } else toast(emp.name.split(" ")[0]+" is on for "+DAYS[slot.dow]+" "+m2disp(aMin)+"–"+m2disp(bMin));
 };
 r.querySelectorAll("[data-copick]").forEach(b=>b.onclick=()=>assign(b.dataset.copick));
 const pdb=r.querySelector("[data-pdpick]"); if(pdb && pd) pdb.onclick=()=>assign(pd.id);
+ 
+const askOne=(emp)=>{ if(!emp) return; closeSheet(); askToCover(ws, slot, emp, release, ()=>calloutCoverSheet(release)); };
+r.querySelectorAll("[data-coask]").forEach(b=>b.onclick=()=>askOne(empById(b.dataset.coask)));
+const pda=r.querySelector("[data-pdask]"); if(pda && pd) pda.onclick=()=>askOne(pd);
 const swb=r.querySelector("[data-coswap]"); if(swb && chain) swb.onclick=()=>{
 chain.apply();
 const w=getWeek(ws), who=chain.chain[0];
@@ -25206,7 +25329,7 @@ return `<div class="card wkcost"><header><h3>Labor cost</h3>
         <span class="hint">${crit.length} to fix · ${warn.length} worth a look · ${info.length} notes</span></header>
       <div class="viollist" style="max-height:420px;overflow-y:auto">
         ${V.length? V.map((v,vi)=>{ const rr=v.code? RK.get(problemKey(v)) : null; return `<div class="viol-i"><span class="sv ${v.sev}"></span>
-          <div class="tx"><strong>${esc(v.title)}</strong>${termHint(v.code)}<span>${esc(v.detail)}</span></div>
+          <div class="tx">${v.asked? `<div class="mini">${esc(v.asked)}</div>` : ""}<strong>${esc(v.title)}</strong>${termHint(v.code)}<span>${esc(v.detail)}</span></div>
           <span class="dipacts">${rr? `<button class="chip warn chipbtn" data-recur="${esc(rr.key)}" title="Flagged in ${rr.weeks.length} of the last ${rr.of} weeks — press for the change that stops it">keeps happening</button>`:""}${v.openSlot? `<button class="btn sm primary" data-fill="${v.openSlot}">Who could work it?</button>`:""}${fixBtn(v, vi, v.openSlot? " ":"")}</span>
         </div>`; }).join("") : wk.assignments.length? `<div class="empty"><strong>Nothing flagged</strong>Every shift is filled, every minimum holds, and every meal and rest break sits inside the window Weeksolved has for ${esc(law().name)}. ${esc(LAWNOTE)}</div>`
 : `<div class="empty"><strong>Nothing drafted yet</strong>Draft the week and it gets checked shift by shift.</div>`}
@@ -27287,6 +27410,7 @@ return `<div class="fixgrp"><div class="lab">${esc(head)}</div>${sub? `<div clas
 modal(v.title||"Fix this", `
     <div class="stack">
       ${v.detail? `<div class="help">${esc(v.detail)}</div>`:""}
+      ${v.asked? `<div class="mini">${esc(v.asked)}</div>`:""}
       ${recurNote(v, ws)}
       ${grp("now","Fix it this week","Changes this week only. Anything a fix breaks shows up in the checks straight away.")}
       ${grp("later","Stop it coming back","Changes a rule or a setting, so every week from here is drafted without it.")}
@@ -35704,14 +35828,19 @@ rank: blocks.length*1000 - (e.prefShiftIds.includes(shiftId)?30:0)
 });
 return out.sort((a,b)=>a.rank-b.rank);
 }
-function candidateHTML(list, onPickAttr){
+ 
+function candidateHTML(list, onPickAttr, ask){
 if(!list.length) return '<div class="mini">Nobody else on the roster.</div>';
-return list.slice(0,10).map(c=>`<div class="cand ${c.blocks.length?"blocked":""}">
-    <div style="flex:none;font-weight:600;font-size:13px;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.emp.name)}</div>
+return list.slice(0,10).map(c=>{
+const two=!!(ask && !c.blocks.length);
+const at=ask? askedAt(ask.rel, c.emp.id) : null;
+return `<div class="cand ${c.blocks.length?"blocked":""}${two? " ask":""}">
+    <div style="flex:none;font-weight:600;font-size:13px;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.emp.name)}${at? `<span class="mini asked">Asked at ${esc(askClock(at))}</span>` : ""}</div>
     <div class="why">${c.blocks.length? esc(c.blocks.join(" · ")) : (c.likes.length? esc(c.likes.join(" · ")) : "free and within every limit")}
       <div class="mono" style="font-size:.6875rem;opacity:.75">${fmtHrs(c.mins)} → ${fmtHrs(c.mins+c.add)}${c.cap?" of "+fmtHrs(c.cap*60):""}</div></div>
-    <button class="btn sm ${c.blocks.length?"":"primary"}" ${onPickAttr}="${c.emp.id}">${c.blocks.length?"Assign anyway":"Assign"}</button>
-  </div>`).join("");
+    ${two? `<div class="candacts"><button class="btn sm primary" ${ask.attr}="${c.emp.id}">Ask ${esc((c.emp.name||"").split(" ")[0])}</button><button class="btn sm" ${onPickAttr}="${c.emp.id}">Said yes — put them on</button></div>`
+: `<button class="btn sm ${c.blocks.length?"":"primary"}" ${onPickAttr}="${c.emp.id}">${c.blocks.length?"Assign anyway":"Assign"}</button>`}
+  </div>`; }).join("");
 }
 
  
@@ -36142,15 +36271,26 @@ const cands=candidatesFor(shiftId,date,dow,roleId,null, siteId||null);
 const free=cands.filter(c=>!c.blocks.length), blocked=cands.filter(c=>c.blocks.length);
 const rel=releasedSlot(weekStartOf(date,S.org.weekStart), date, shiftId, roleId||null);
 const fromLock=!!(rel && rel.fromLock);
+ 
+const wsx=weekStartOf(date,S.org.weekStart);
+const ask=!!(rel && weekIsPosted(wsx) && !commsOff());
+const askO=ask? {attr:"data-fask", rel} : null;
 modal("Who could work "+sh.label+"?", `
     <div class="stack">
       <div class="mini">${DAYS[dow]} ${prettyFull(date)} · ${m2disp(aMin)}–${m2disp(bMin)} · ${esc(roleName(roleId))}</div>
+      ${ask && askedLine(rel)? `<div class="mini">${esc(askedLine(rel))}</div>` : ""}
       ${fromLock? `<p class="mini">Released from a lock — whoever covers it starts unlocked.</p>` : ""}
-      ${free.length? `<div><div class="lab" style="margin-bottom:6px">Clear to take it</div>${candidateHTML(free,"data-pick")}</div>`
+      ${free.length? `<div><div class="lab" style="margin-bottom:6px">Clear to take it</div>${candidateHTML(free,"data-pick",askO)}</div>`
 : `<div class="banner warn"><div><b>Nobody clears every limit.</b> The list below shows exactly what is in the way for each person — sometimes the answer is to move a different shift first, or to accept one overtime hour.</div></div>`}
-      ${blocked.length? `<div><div class="lab" style="margin:12px 0 6px">Blocked, and by what</div>${candidateHTML(blocked,"data-pick")}</div>`:""}
+      ${blocked.length? `<div><div class="lab" style="margin:12px 0 6px">Blocked, and by what</div>${candidateHTML(blocked,"data-pick",askO)}</div>`:""}
     </div>`, `<button class="btn" data-close>Close</button>`,
 r=>{
+r.querySelectorAll("[data-fask]").forEach(b=>b.onclick=()=>{
+const e=empById(b.dataset.fask); if(!e) return;
+closeModal(true);
+askToCover(wsx, {date, dow, shiftId, roleId:roleId||null, siteId:siteId||null}, e, rel,
+()=>fillOpenModal(date, shiftId, roleId, siteId));
+});
 r.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{
 const empId=b.dataset.pick, e=empById(empId);
 const rec={id:uid("a"),empId,date,dow,shiftId,startMin:aMin,endMin:bMin,
@@ -36161,7 +36301,9 @@ const wk=getWeek(weekStartOf(date,S.org.weekStart));
 wk.assignments.push(rec);
 wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
 staggerDay(wk.assignments.filter(a=>a.date===date && !a.locked), wk.assignments.filter(a=>a.date===date));
-save(); closeModal(); render(); toast(e.name+(fromLock? " added" : " added and locked"));
+save(); closeModal(); render();
+if(ask && coveredNotify(wsx, {date, shiftId}, empId)) toast(e.name.split(" ")[0]+" is on — the thank-you is ready to send");
+else toast(e.name+(fromLock? " added" : " added and locked"));
 });
 });
 }
