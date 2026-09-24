@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build bbfaad95 2026-09-18 01:56 UTC -->
+<!-- build 0c50376c 2026-09-24 06:44 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1887,6 +1887,10 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-mo
    because on a phone there was no room for the row to spread. */
 .wkrangerow{justify-content:center}
 .wkhd .wkrange{flex:0 1 auto;padding:0 6px}
+/* A week that crosses a month ("Sep 28 – Oct 4") is three characters longer
+   than one that does not, and at 28px that is the difference between one line
+   and two between the arrows. It steps down one rung rather than wrapping. */
+.wkhd .wkrange.long{font-size:1.375rem}
 
 /* The Week tools menu lives at the right end of the meta row. The tool row it
    replaces was three buttons on a shelf of their own between the readings and
@@ -2092,6 +2096,81 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-mo
    on a desktop, and this is now the button a person presses when they have
    just realised a fix was wrong, which is the worst possible moment to miss. */
 .toast .tact{min-height:44px}
+/* ---------- the drafter batch: what brings a person in ----------
+   The line every change on a posted week carries, the Rules page's standing
+   sentence about what the checks are, the words on a project-time block, and
+   the presence switch on a coverage rule, which is a row you can press. */
+.pfoot{font-size:.8125rem;line-height:1.45;color:var(--muted);margin:0}
+.rulesdisc{font-size:.9375rem;line-height:1.5;color:var(--ink2);margin:0}
+.ptag{font-size:.8125rem;font-weight:600;color:var(--accent-ink);white-space:nowrap}
+.presw{min-height:2.75rem;display:inline-flex;align-items:center;gap:8px}
+#redpostlist .hrow{min-height:2.75rem}
+#pdnotice .btn,#floornotice .btn{min-height:2.75rem}
+/* ---------- P4: the one slip that explains the rest ----------
+   A suspected input slip is WORTH A LOOK: its headline in the reviewed type,
+   then the number of today's items its correction clears (only once that
+   number has been worked out, and only when it is above 0), and on the fix
+   sheet the times as they were entered. Its two presses are ordinary .btn. */
+.rcdet{margin:4px 0 0;font-size:.9375rem;line-height:1.45;color:var(--ink2)}
+.rcasis{margin:0;font-size:.8125rem;line-height:1.45;color:var(--muted)}
+.rcmain{min-width:0;flex:1}
+.hrow[data-rc] .hrowacts>.btn,.thing[data-rc] .thingacts>.btn{min-height:2.75rem}
+.modal footer [data-rcfix],.modal footer [data-rcok]{min-height:2.75rem}
+/* @@DRAFT-CSS@@ */
+/* ============ WIZ, batch 2026-09-23 (items 1-6, 12, 16a, 18, 11-wizard) ============ */
+/* Item 1: Close -> leave/stay is its own full-width row above the footer, not
+   a flex child squeezed in beside Back/Next -- that read as one word per line
+   with Leave/Stay collapsed to slivers. */
+.wleavebar{border-top:1px solid var(--line);background:var(--surface2);padding:10px 16px}
+.wleavebar .wlsay{margin:0 0 8px;font-size:.8125rem;color:var(--muted)}
+.wleavebar .wlbtns{display:flex;gap:8px}
+.wleavebar .wlbtns .btn{flex:1;min-height:44px}
+/* Item 2: on the team step, at <=700px each person is two rows -- name and
+   role, then Type / Min / Max with their own labels and inputs no narrower
+   than 72px. Above that width one row is plenty. */
+.wteamlist{display:flex;flex-direction:column;gap:8px;margin-top:12px;max-height:280px;overflow:auto}
+.wteamrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.wteamrow .wtr-id{display:flex;flex-direction:column;flex:1 1 140px;min-width:120px}
+.wteamrow .wtr-id .mini{color:var(--muted)}
+.wteamrow .wtr-fields{display:flex;gap:8px}
+.wtr-f{display:flex;flex-direction:column;gap:3px}
+.wtr-f label{font-size:.6875rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.wtr-f select,.wtr-f input{min-width:72px}
+.wtr-f .wpt{width:112px}
+.wtr-f .wmn,.wtr-f .wph{width:72px}
+@media (max-width:700px){
+  .wteamrow{flex-direction:column;align-items:stretch}
+  /* In a column the id block's flex-basis would become a 140px HEIGHT and leave a blank band above the fields. */
+  .wteamrow .wtr-id{flex:0 0 auto;min-width:0}
+  .wteamrow .wtr-fields{width:100%;justify-content:space-between}
+  .wtr-f{flex:1}
+  .wtr-f select,.wtr-f input{width:100%}
+}
+/* Item 3/4: the guessed desirability is a caption under the times, not a
+   button beside Remove; Remove itself is outlined, not ghost, so it reads as
+   something you can press rather than a line of text. */
+.wshiftrow{display:flex;flex-direction:column;gap:2px}
+.wshiftrow .wsdesire{padding:0 12px}
+@media (max-width:700px){ .wshiftrow .wsdesire{display:none} }
+.wshiftrow .wsonote{margin-top:2px}
+/* A time box narrower than its own "09:15 AM" hides the half of the day that
+   the whole overnight check exists to catch, so the two boxes keep their
+   width and the name gives way instead. */
+.wshiftrow .desrow .wsl{flex:1 1 140px;min-width:0}
+.wshiftrow .desrow .wss,.wshiftrow .desrow .wse{flex:0 0 136px}
+/* Item 16a: the lunch-closure sub-questions read like the rest of the wizard's
+   short option rows. */
+.wclosedays{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+/* @@WIZ-CSS@@ */
+/* The loudest line in the shift editor — what a manager actually needs to
+   read before they save — at the same size the app already uses for a card
+   heading, so it outranks the detail paragraph under it without inventing a
+   new size. */
+.shiftlen{font-size:1.0625rem;line-height:1.32;font-weight:700;color:var(--ink);margin:2px 0}
+.lenchips .btn,.mealchips .btn,#overnight .btn{min-height:44px}
+/* @@SHIFT-CSS@@ */
+/* @@UI-CSS@@ */
+.dayacts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}
 /* @@MOTION-CSS@@ */
 </style>
 
@@ -2506,7 +2585,7 @@ meal:{ firstAfterMin:361, earliestStartMin:0, mustStartByMin:360, lengthMin:30, 
 variants:[{startsFromMin:780, startsBeforeMin:360, set:{lengthMin:45}}],
 second:null },
 rest:null,
-premium:"No statutory premium; unprovided meal periods are a Labor Law violation.",
+premium:"No statutory premium; a meal period not provided is a breach of the state's meal rule.",
  
 note:"Non-factory employees working more than 6 hours over the noon period get a 30-minute lunch, and a shift of more than 6 hours starting between 1pm and 6am gets 45 minutes (Lab. L. 162(4)) \u2014 those are the rules Weeksolved applies. It does not work out the extra 20-minute meal between 5 and 7pm on a shift starting before 11am and ending after 7pm (162(3)), it does not test whether a midday shift actually spans the noon period, and it does not handle factory work, where the figures are 60 minutes rather than 30 and 45. Check those yourself. No statutory rest breaks.",
  
@@ -3518,7 +3597,7 @@ modal("A few new questions from the latest update", `
         </select>
         <span class="mini">New: the alarm rides along inside the calendar file, so it goes off on their own phone. Nothing for them to install, nothing for you to send.</span></div>
       <div class="help"><b>The setup questions are shorter.</b> Seven questions now get you a working schedule, with the rest marked optional and a <b>Build it now</b> button once you have enough. Your answers also save as you go, so being interrupted no longer costs you anything. None of this changes what you already set up.</div>
-      <div class="help"><b>New, nothing to answer:</b> a <b>Print</b> button on the week and the day sheet \u2014 the week landscape, day sheets portrait, scaled to the page, as many copies as you like including one for each person working that day. Print a run of weeks on a page each or packed together. And a <b>Reports</b> button on the Record page: sixteen reports covering hours, cost, overtime, coverage, breaks, requests, fairness, posts, balances, callouts, changes, the roster, holiday assignments and vacations \u2014 with names hidden where you want them hidden.</div>
+      <div class="help"><b>New, nothing to answer:</b> a <b>Print</b> button on the week and the day sheet \u2014 the week landscape, day sheets portrait, scaled to the page, as many copies as you like including one for each person working that day. Print a run of weeks on a page each or packed together. And a <b>Reports</b> button on the Record page: sixteen reports covering hours, cost, overtime, coverage, breaks, requests, fairness, posts, balances, changes, the roster, holiday assignments and vacations \u2014 with names hidden where you want them hidden.</div>
       <div class="field"><label>Anyone still learning the job?</label>
         <select id="u_tr">
           <option value="cover" ${traineeExtra()?"":"selected"}>No, or they count as normal cover</option>
@@ -3701,8 +3780,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "bbfaad95";       
-const BUILD_AT = "2026-09-18 01:56 UTC";       
+const BUILD_ID = "0c50376c";       
+const BUILD_AT = "2026-09-24 06:44 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -6223,6 +6302,21 @@ if(typeof s.rules.sendOut!=="boolean") s.rules.sendOut=false;
 if(typeof s.rules.preferLong!=="boolean") s.rules.preferLong=false;
 if(typeof s.org.trackPto!=="boolean") s.org.trackPto=false;
 if(s.rules.perDiem!=="auto") s.rules.perDiem="ask";
+ 
+if(!s.ui.b0923){
+s.ui.b0923=1;
+const pds=(s.employees||[]).filter(e=>e && e.onCall);
+const wasAuto=s.rules.perDiem==="auto";
+pds.forEach(e=>{ e.extraMode="ask"; });
+if(s.setupDone && !s.sample){
+const auto=wasAuto? pds.filter(e=>e.active!==false).map(e=>e.id) : [];
+if(auto.length) s.ui.pdNote={ids:auto};
+const posts=(s.stations||[]).filter(st=>st && st.critical && !st.off && st.kind!=="admin").map(st=>st.name||"A post");
+const recent=Object.keys(s.weeks||{}).filter(k=>((s.weeks[k]||{}).assignments||[]).length).sort().slice(-4);
+const hadCover=recent.some(k=>(s.weeks[k].assignments||[]).some(a=>a && a.cover));
+if(posts.length || hadCover) s.ui.floorNote={posts};
+}
+}
 if(!Array.isArray(s.callouts)) s.callouts=[];
 if(s.ask && (typeof s.ask!=="object" || !s.ask.token || !s.ask.ws)) delete s.ask;
 if(s.ask && !Array.isArray(s.ask.seen)) s.ask.seen=[];
@@ -6720,7 +6814,7 @@ const restMode = S.rules.restMode;
 const M = mealRow(L.meal, worked, startMin);
 if(M && worked >= M.firstAfterMin){
 out.owed.meals = 1;
-const len = Math.max(M.lengthMin, (S.rules && S.rules.mealLengthMin)||0);
+const len = Math.max(M.lengthMin, mealLenFor(opts.shift));
  
 const byWorked = M.mustEndByMin!=null? M.mustEndByMin - len : M.mustStartByMin;
 const deadline = W2C(byWorked);
@@ -6920,7 +7014,9 @@ a.breaks.rests.length, a.breaks.rests[0].len, aGap(a));
 }
 
 function applyBreaks(a){
-const b = computeBreaks(a.startMin, a.endMin, {gap:aGap(a), date:a.date, dow:a.dow, emp:empById(a.empId), waive:a.waive});
+ 
+const sh = (typeof shiftById==="function")? shiftById(a.shiftId) : null;
+const b = computeBreaks(a.startMin, a.endMin, {gap:aGap(a), date:a.date, dow:a.dow, emp:empById(a.empId), waive:a.waive, shift:sh});
 a.breaks = b;
 return a;
 }
@@ -7446,7 +7542,7 @@ const slots=[];
 demandLive(dow, ws).forEach(r=>{
 const sh = shiftById(r.shiftId);
 const site=siteOf(r);
-for(let i=0;i<(r.count||1);i++) slots.push({shiftId:r.shiftId, roleId:r.roleId||null, sh, siteId:site});
+for(let i=0;i<demCount(r);i++) slots.push({shiftId:r.shiftId, roleId:r.roleId||null, sh, siteId:site});
 });
 return slots;
 }
@@ -7859,6 +7955,21 @@ S.employees.forEach(e=>{ const L=effLimits(e, ws);
 const base = L.exactH? L.exactH*60 : (((L.minH||0)+(L.maxH||0))/2*60 || (L.maxH||0)*60);
 target[e.id] = Math.max(0, Math.round(base * minHFactor(e.id, ws)) - holCreditMin(e.id, ws)); });
 
+ 
+const putOn=(e, slot, date, dow, tag)=>{
+const [aMin,bMin]=shiftMinutes(slot.sh);
+const a={ id:uid("a"), empId:e.id, date, dow, shiftId:slot.shiftId,
+startMin:aMin, endMin:bMin, gap:shiftGap(slot.sh||shiftById(slot.shiftId)), roleId:slot.roleId||e.roleIds[0]||null, locked:false };
+if(tag) Object.assign(a, tag);
+if(multiSite() && slot.siteId && slot.siteId!==mainSiteId()) a.siteId=slot.siteId;
+applyBreaks(a);
+assignments.push(a);
+const st=state[e.id];
+st.min += paidMinutes(a); st.days.add(date); (st.byDate[date]=st.byDate[date]||[]).push(a);
+st.lastEnd[date]=bMin; if(dow===0||dow===6) st.weekend++;
+return a;
+};
+
 
  
 const dayOrder = dates.slice().map(d=>{
@@ -7904,99 +8015,70 @@ slots.splice(slots.indexOf(first),1); slots.unshift(first);
 
 slots.forEach(slot=>{
 const [aMin,bMin] = shiftMinutes(slot.sh);
-const cands = S.employees.filter(e=>hardOk(e,slot,date,dow,state,assignments));
+ 
+const able = S.employees.filter(e=>hardOk(e,slot,date,dow,state,assignments));
+const cands = able.filter(e=>!overLine(e, slot, date, state));
 if(!cands.length){
 const sameDay = assignments;
 const probe = S.employees.find(e=>e.active && (!slot.roleId||e.roleIds.includes(slot.roleId)) && availOk(e,dow,aMin,bMin) && !onTimeOff(e.id,date) && !(state[e.id].byDate[date]||[]).length);
 if(probe) slot._breach = breachReason(probe, slot.roleId||probe.roleIds[0], date, dow, sameDay, aMin, bMin, slot.siteId||null);
-unfilled.push({date,dow,shiftId:slot.shiftId,roleId:slot.roleId,siteId:slot.siteId,reason:reasonNoOne(slot,date,dow,state)}); return; }
+unfilled.push({date,dow,shiftId:slot.shiftId,roleId:slot.roleId,siteId:slot.siteId,reason:reasonNoOne(slot,date,dow,state),overtime:able.length>0}); return; }
 let best=null,bestScore=-1e9;
 cands.forEach(e=>{
 const sc = score(e,slot,date,dow,state,target);
 if(sc>bestScore){ bestScore=sc; best=e; }
 });
-const a = {
-id:uid("a"), empId:best.id, date, dow, shiftId:slot.shiftId,
-startMin:aMin, endMin:bMin, gap:shiftGap(slot.sh||shiftById(slot.shiftId)), roleId:slot.roleId||best.roleIds[0]||null, locked:false
-};
-if(multiSite() && slot.siteId && slot.siteId!==mainSiteId()) a.siteId=slot.siteId;
-applyBreaks(a);
-assignments.push(a);
-const st=state[best.id];
-st.min += paidMinutes(a); st.days.add(date); (st.byDate[date]=st.byDate[date]||[]).push(a);
-st.lastEnd[date]=bMin; if(dow===0||dow===6) st.weekend++;
+putOn(best, slot, date, dow);
 });
 });
 
  
 const covered=[];
-dates.forEach(({date,dow})=>{
-if(!dayOpen(date, dow)) return;
-{ const h=(S.holidays.list||[]).find(x=>x.date===date);
-if(h && holPolled(h)) return;    
- 
-if(h && holCapped(h)) return; }
-const pool=S.shifts.filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(dow));
- 
-const asked=new Set(demandRowsFor(dow, ws, date).map(r=>r.shiftId));
- 
-const sitesForCover = sitesAskedOn(dow, ws, date);
-sitesForCover.forEach(site=>{
-let guard=0, lastSig=null;
-while(guard++ < 40){
-const G=floorGaps(date, dow, onFloorFrom(assignments, date, peekWeek(addDays(ws,-7)).assignments), site);
- 
-const holes=[].concat(
-G.empty.map(g=>({from:g.from, to:g.to, roleId:null, why:"nobody on the floor"})),
-G.stations.flatMap(x=>x.gaps.map(g=>({from:g.from, to:g.to, roleId:x.st.roleId||null, why:x.st.name+" uncovered"}))));
-if(!holes.length) break;
- 
-const sig=JSON.stringify(holes.map(h=>[h.from,h.to,h.roleId]));
-if(sig===lastSig) break;
-lastSig=sig;
-holes.sort((a,b)=>(b.to-b.from)-(a.to-a.from));
-let placedOne=false;
-for(const hole of holes){
- 
-const fits=pool.map(sh=>{ const [a,b]=shiftMinutes(sh), g=shiftGap(sh);
-const seg=(x,y)=>Math.max(0, Math.min(y,hole.to)-Math.max(x,hole.from));
- 
-const ov = g? seg(a,g.from)+seg(g.to,b) : seg(a,b);
-return {sh, ov, len:b-a}; })
-.filter(x=>x.ov>0).sort((x,y)=>y.ov-x.ov || (asked.has(x.sh.id)?0:1)-(asked.has(y.sh.id)?0:1) || x.len-y.len);
-for(const {sh} of fits){
-if(!shiftRoom(sh.id, hole.roleId, date, dow, ws, assignments, false, site)) continue;
-const slot={shiftId:sh.id, roleId:hole.roleId, sh, _cover:true, siteId: site||undefined};
-const cands=S.employees.filter(e=>hardOk(e,slot,date,dow,state,assignments));
-if(!cands.length) continue;
-let best=null, bestScore=-1e9;
-cands.forEach(e=>{ const sc=score(e,slot,date,dow,state,target); if(sc>bestScore){ bestScore=sc; best=e; } });
-const [aMin,bMin]=shiftMinutes(sh);
-const a={id:uid("a"), empId:best.id, date, dow, shiftId:sh.id, startMin:aMin, endMin:bMin,
-gap:shiftGap(sh), roleId:hole.roleId||best.roleIds[0]||null, locked:false, cover:true};
- 
-if(multiSite() && site && site!==mainSiteId()) a.siteId=site;
-applyBreaks(a); assignments.push(a);
-const st=state[best.id];
-st.min += paidMinutes(a); st.days.add(date); (st.byDate[date]=st.byDate[date]||[]).push(a);
-st.lastEnd[date]=bMin; if(dow===0||dow===6) st.weekend++;
-covered.push({date, dow, shiftId:sh.id, empId:best.id, from:hole.from, to:hole.to, why:hole.why, siteId: site||undefined});
-placedOne=true; break;
-}
-if(placedOne) break;
-}
-if(!placedOne) break;                    
-}
-});
-});
 
  
-{ const rs = reshufflePass(ws, assignments, state, unfilled);
+{ const rs = reshufflePass(ws, assignments, state, unfilled.filter(u=>!u.overtime));
 wk.reshuffled = rs.moves;
 if(rs.moves.length){
  
 rs.closed.forEach(u=>{ const i=unfilled.indexOf(u); if(i>=0) unfilled.splice(i,1); });
 } }
+ 
+
+ 
+let pdUsed=0;
+if(!wk.published && unfilled.length && S.employees.some(e=>e.active && isPerDiem(e) && perDiemMode(e)==="auto")){
+unfilled.slice().forEach(u=>{
+if(!u.shiftId || u.why) return;                  
+const sh=shiftById(u.shiftId); if(!sh) return;
+const slot={shiftId:u.shiftId, roleId:u.roleId||null, sh, siteId:u.siteId||null, _allowOnCall:true};
+const ok=S.employees.filter(e=>e.active && isPerDiem(e) && perDiemMode(e)==="auto" && hardOk(e,slot,u.date,u.dow,state,assignments))
+.sort((x,y)=>(state[x.id].min-state[y.id].min) || String(x.id).localeCompare(String(y.id)));
+if(!ok.length) return;
+putOn(ok[0], slot, u.date, u.dow, {perDiemAuto:true});
+unfilled.splice(unfilled.indexOf(u),1); pdUsed++;
+});
+}
+ 
+unfilled.slice().forEach(u=>{
+if(!u.shiftId || u.why) return;
+const sh=shiftById(u.shiftId); if(!sh) return;
+const slot={shiftId:u.shiftId, roleId:u.roleId||null, sh, siteId:u.siteId||null};
+ 
+const cands=S.employees.filter(e=>!effLimits(e, u.date).guaranteedOnly && hardOk(e,slot,u.date,u.dow,state,assignments));
+if(!cands.length) return;
+let best=null, bestScore=-1e9;
+cands.forEach(e=>{ const sc=score(e,slot,u.date,u.dow,state,target); if(sc>bestScore){ bestScore=sc; best=e; } });
+putOn(best, slot, u.date, u.dow);
+unfilled.splice(unfilled.indexOf(u),1);
+});
+ 
+if(unfilled.some(u=>u.shiftId && !u.why)){
+const rs3 = reshufflePass(ws, assignments, state, unfilled.filter(u=>u.shiftId && !u.why));
+if(rs3.moves.length){
+wk.reshuffled = (wk.reshuffled||[]).concat(rs3.moves);
+rs3.closed.forEach(u=>{ const i=unfilled.indexOf(u); if(i>=0) unfilled.splice(i,1); });
+}
+}
 
  
 wk.assignments = assignments;
@@ -8034,6 +8116,50 @@ const shortP = topUpPass(ws, assignments, state, dates, "project");
 const named = new Set(shortG.map(x=>x.empId));
 short = shortG.concat(shortP.filter(x=>!named.has(x.empId)));
 }
+ 
+{ let rounds=0;
+const swapOne=()=>{
+for(const P of assignments.filter(a=>a.perDiemAuto && !a.locked)){
+const sh=shiftById(P.shiftId); if(!sh) continue;
+const holders=assignments.filter(x=>x.topUp && x.date===P.date && x.empId!==P.empId && !x.locked);
+const who=[...new Set(holders.map(x=>x.empId))].map(empById)
+.filter(e=>e && e.active && !isPerDiem(e)).sort((x,y)=>String(x.id).localeCompare(String(y.id)));
+for(const e of who){
+const block=holders.filter(x=>x.empId===e.id);
+const without=assignments.filter(x=>x!==P && block.indexOf(x)<0);
+const st=stateFrom(ws, without);
+const slot={shiftId:P.shiftId, roleId:P.roleId||null, sh, siteId:P.siteId||null};
+if(!hardOk(e, slot, P.date, P.dow, st, without)) continue;
+[P].concat(block).forEach(x=>{ const i=assignments.indexOf(x); if(i>=0) assignments.splice(i,1); });
+const a={id:uid("a"), empId:e.id, date:P.date, dow:P.dow, shiftId:P.shiftId, startMin:P.startMin, endMin:P.endMin,
+gap:P.gap||shiftGap(sh), roleId:P.roleId||e.roleIds[0]||null, locked:false};
+if(P.siteId) a.siteId=P.siteId;
+applyBreaks(a); assignments.push(a);
+pdUsed=Math.max(0, pdUsed-1);
+return true;
+}
+}
+return false;
+};
+while(rounds++ < 6){
+let moved=false, guard=0;
+while(guard++ < 60 && swapOne()) moved=true;
+if(!moved) break;
+refresh();
+if(S.rules.fillMode!=="full") break;
+const shortP2 = topUpPass(ws, assignments, state, dates, "project");
+const named2 = new Set(shortG.map(x=>x.empId));
+short = shortG.concat(shortP2.filter(x=>!named2.has(x.empId)));
+}
+ 
+dates.forEach(({date,dow})=>{
+const day=assignments.filter(a=>a.date===date);
+if(!day.some(a=>a.perDiemAuto && !a.locked)) return;
+const ordered=day.filter(a=>!a.perDiemAuto).concat(day.filter(a=>a.perDiemAuto));
+matchDemand(expandDemand(dow, ws), ordered).spare.filter(a=>a.perDiemAuto && !a.locked).forEach(a=>{
+const i=assignments.indexOf(a); if(i>=0){ assignments.splice(i,1); pdUsed=Math.max(0, pdUsed-1); } });
+});
+refresh(); }
 
  
  
@@ -8054,28 +8180,22 @@ wk.covered = covered;
 if(traineeExtra()) placeTrainees(ws);
 
  
-if(S.rules.perDiem==="auto" && unfilled.length && S.employees.some(e=>e.active && e.onCall)){
-const still=[];
-unfilled.forEach(u=>{
-const opt=optionsFor({shiftId:u.shiftId, roleId:u.roleId, date:u.date, dow:u.dow}, ws)
-.find(o=>o.kind==="percall");
- 
-if(opt && wouldPlace(opt.emp, u.shiftId, u.roleId, u.date, u.dow, ws,
-{list:wk.assignments, allowOnCall:true})) { still.push(u); return; }
-if(opt){
-opt.apply();
-const a=wk.assignments.find(x=>x.empId===opt.emp.id && x.date===u.date && x.shiftId===u.shiftId);
-if(a) a.perDiemAuto=true;
-} else still.push(u);
-});
-wk.perDiemUsed=(unfilled.length-still.length)||0;
-wk.unfilled = still;
-} else wk.perDiemUsed=0;
+wk.perDiemUsed=pdUsed;
 flexPass(ws);
 if((S.stations||[]).length){ const T=seedTally(ws, "*");
 dates.forEach(({date})=>{ clearAdmin(date,ws); assignStations(date,ws,T); }); }
  
 dates.forEach(({date})=>assignMentors(date,ws));
+ 
+if((wk.unfilled||[]).length){
+const fin=stateFrom(ws, wk.assignments);
+wk.unfilled.forEach(u=>{
+if(!u.shiftId || u.why) return;
+const sh=shiftById(u.shiftId); if(!sh) return;
+const r=countedReasons({shiftId:u.shiftId, roleId:u.roleId||null, sh, siteId:u.siteId||null}, u.date, u.dow, fin, wk.assignments, ws);
+if(r){ u.reason=r; u.counted=true; }
+});
+}
 return {filled:assignments.length-kept.length, unfilled:wk.unfilled, perDiem:wk.perDiemUsed||0, covered:covered.length};
 }
 
@@ -9465,7 +9585,13 @@ return "this shift pays "+fmtHrs(paidSpan(aM,bM,0,date,tooLong[0]))+", longer th
 }
 if(slot._deferred) return slot._deferred;
 if(slot._breach) return slot._breach;
-return "hour, rest, or consecutive-day limits blocked every candidate";
+ 
+{ const list=[], seen=new Set();
+Object.keys(state).forEach(k=>Object.values((state[k]||{}).byDate||{}).forEach(A=>(A||[]).forEach(a=>{
+if(!seen.has(a)){ seen.add(a); list.push(a); } })));
+const r=countedReasons(slot, date, dow, state, list);
+if(r) return r; }
+return "nobody who holds the role can take it";
 }
 
  
@@ -9840,6 +9966,8 @@ wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
 function setupProblems(ws){
 ws = ws|| curWeek();
 const out=[];
+ 
+if(typeof rcSuspectItems==="function") rcSuspectItems(ws).forEach(x=>out.push(x));
 const dates=weekDates(ws);
 const openDates=dates.filter(({date,dow})=>dayOpen(date,dow) && dayWindow(dow));
 if(!openDates.length) return out;
@@ -10044,7 +10172,7 @@ out.push({code:"setupshift", sev:"warn",
 title:(sh.label||"A shift")+(onlyWindow? " runs outside your opening hours"
 : " is longer than your own shift limit"),
 detail:objs.map(o=>o.say).join(" ")+
-(onlyWindow? " Change its times in Schedule setup \u2192 Shifts & roles, or your opening hours in Business & law."
+(onlyWindow? " Its times can be changed in Schedule setup \u2192 Shifts & roles, and the opening hours under Business hours."
 : " Change its times in Schedule setup \u2192 Shifts & roles, or raise the limit under Scheduling rules."),
 where:"shifts"});
 });
@@ -10133,7 +10261,7 @@ matchDemand(expandDemand(dow,ws), wk.assignments.filter(a=>a.date===date))
 });
  
 (wk.unfilled||[]).forEach(u=>{
-if(u.reason!=="handed back" || u.heldAt==null) return;
+if((u.reason!=="handed back" && u.reason!=="called out") || u.heldAt==null) return;
 const sl={date:u.date, dow:parseYmd(u.date).getDay(), shiftId:u.shiftId, roleId:u.roleId||null};
 if(out.some(o=>slotKey(o)===slotKey(sl))) return;           
 const now=wk.assignments.filter(a=>a.date===sl.date && a.shiftId===sl.shiftId
@@ -13734,7 +13862,7 @@ return a>=o-1 && b<=c+1;
 function loadProposals(ws){
 const D = demandOf(ws);
 const key = r => r.shiftId+"|"+(r.roleId||"");
-const tally = rows => { const m={}; (rows||[]).forEach(r=>{ m[key(r)]=(m[key(r)]||0)+(r.count||1); }); return m; };
+const tally = rows => { const m={}; (rows||[]).forEach(r=>{ m[key(r)]=(m[key(r)]||0)+demCount(r); }); return m; };
 const out=[]; const seen={};
 loadMismatch(ws).forEach(x=>{
 const tag=x.busy.d+">"+x.quiet.d; if(seen[tag]) return; seen[tag]=1;
@@ -13783,13 +13911,13 @@ const D = demandOf(ws);
 const same = r => r.shiftId===best.shiftId && (r.roleId||null)===(best.roleId||null);
  
 const q=(D[x.quiet.d]||[]);
-const qi=q.findIndex(same);
+const qi=q.findIndex(r=>same(r) && demCount(r)>0);
 if(qi<0){ toast("That shift is no longer on "+DAYS[x.quiet.d]); return false; }
-if((q[qi].count||1)>1) q[qi].count=(q[qi].count||1)-1; else q.splice(qi,1);
+if(demCount(q[qi])>1) q[qi].count=demCount(q[qi])-1; else q.splice(qi,1);
  
 D[x.busy.d]=D[x.busy.d]||[];
 const bi=D[x.busy.d].findIndex(same);
-if(bi>=0) D[x.busy.d][bi].count=(D[x.busy.d][bi].count||1)+1;
+if(bi>=0) D[x.busy.d][bi].count=demCount(D[x.busy.d][bi])+1;
 else D[x.busy.d].push({shiftId:best.shiftId, roleId:best.roleId, count:1});
 save();
 return true;
@@ -14975,8 +15103,9 @@ function postConfirm(ws, then){
 ws=ws||curWeek();
 const wk=peekWeek(ws);
 const repostAsks = !!(wk && wk.postedOnce) && weekDiff(ws).length>0 && S.rules.confirmRepost!==false;
-if(S.rules.confirmPost===false || repostAsks){ then(); return; }
+ 
 const V=validate(ws); const crit=V.filter(v=>v.sev==="crit").length, warn=V.filter(v=>v.sev==="warn").length;
+if(!crit && (S.rules.confirmPost===false || repostAsks)){ then(); return; }
 const people=new Set(wk.assignments.map(a=>a.empId)).size;
 const open=wk.assignments.filter(a=>!a.empId).length;
 const g=graceSec();
@@ -14987,7 +15116,8 @@ const cannot=V.filter(v=>v.code==="noavail")
 modal("Post this week?", `
     <div class="stack">
       <div class="help"><b>${esc(prettyDate(ws))} \u2013 ${esc(prettyDate(addDays(ws,6)))}</b> \u00b7 ${wk.assignments.length} shift${wk.assignments.length===1?"":"s"} across ${people} ${people===1?"person":"people"}${open? " \u00b7 "+open+" still open":""}.</div>
-      ${crit? `<div class="banner crit"><div><b>${crit} problem${crit===1?"":"s"} still flagged</b> \u2014 they go up as they are. Cancel and press Fix on each, or post and sort them after.</div></div>`
+      ${crit? `<div class="banner crit"><div><b>${crit===1? "1 item to fix is still open" : crit+" items to fix are still open"}</b></div></div>
+        <div class="inset" id="redpostlist">${V.filter(v=>v.sev==="crit").map(v=>`<div class="hrow" data-sev="crit"><div class="hrowhd"><span class="sdot" data-sev="crit"></span><span class="rowt">${esc(v.title||"")}</span></div></div>`).join("")}</div>`
 : warn? `<div class="banner warn"><div>${warn} thing${warn===1?"":"s"} worth a look, nothing that breaks a rule.</div></div>`
 : `<div class="banner info"><div>Nothing flagged.</div></div>`}
       ${cannot.length? `<div class="banner crit"><div><b>${esc(cannot.join(", "))} ${cannot.length===1?"is":"are"} not on this schedule at all</b> \u2014 ${cannot.length===1?"that person has":"those people have"} no days marked available and ${cannot.length===1?"is":"are"} owed hours. Posting does not change that.</div></div>`:""}
@@ -14995,7 +15125,7 @@ modal("Post this week?", `
       <div class="mini">${g>0? "Posting locks every shift. You have "+durWord(g)+" to take it back from the banner on Home. Nobody is told until you send it."
 : "Posting locks every shift. Nobody is told until you send it \u2014 that is the next button, and it asks again."}</div>
     </div>`,
-`<button class="btn" data-close>Not yet</button><button class="btn primary" id="pcgo">${crit? "Post it anyway":"Post it"}</button>`,
+`<button class="btn" data-close>${crit? "Back" : "Not yet"}</button><button class="btn primary" id="pcgo">${crit? "Post with these open":"Post it"}</button>`,
 r=>{ r.querySelector("#pcgo").onclick=()=>{ closeModal(true); then(); }; });
 }
 function repostGuard(ws, doPost){
@@ -15006,6 +15136,7 @@ const who=[...new Set(changes.map(d=>d.empId))].map(id=>(empById(id)||{name:"?"}
 modal("This schedule was already posted", `
     <div class="stack">
       <div class="help"><b>${changes.length} change${changes.length===1?"":"s"}</b> since it went up, affecting <b>${esc(who.join(", "))}</b> — people may have planned around the old version. Who should hear about it?</div>
+      ${postedFootnote()}
       ${changes.slice(0,8).map(d=>`<div class="mini">• ${esc(d.name)} — ${esc(prettyDate(d.date))}: ${esc(d.say)}</div>`).join("")}
       ${changes.length>8? `<div class="mini">…and ${changes.length-8} more.</div>`:""}
     </div>`,
@@ -15046,6 +15177,7 @@ modal("Tell "+(choice==="all"?"everyone":"the affected people"),
 ? "Weeksolved has written one message per person from your \u201cwhen a posted week changes\u201d wording. Nothing sends on its own \u2014 open each one and press send in your own app."
 : "Sending isn\u2019t switched on, so here they are ready to copy into a text or an email."}
         You can change the wording for good under Settings \u2192 Messages.</div>
+      ${postedFootnote()}
       ${notes.map((n,i)=>`<div class="card"><div class="body stack" style="gap:8px">
         <div class="spread"><b>${esc(n.emp.name||"Someone")}</b>
           <span class="mini">${esc(hasContact(n.emp,"email")? contactOf(n.emp).email
@@ -15517,7 +15649,7 @@ const push=(sev,title,detail,extra)=>V.push(Object.assign({sev,title,detail},ext
 
  
 setupProblems(ws).forEach(x=>push(x.sev, x.title, x.detail,
-Object.assign({code:x.code, where:x.where, setup:true}, x.empId? {empId:x.empId} : {})));
+Object.assign({code:x.code, where:x.where, setup:true}, x.empId? {empId:x.empId} : {}, x.rc? {rc:x.rc} : {})));
 
  
 const noRole=(function(){
@@ -15559,18 +15691,6 @@ push("warn", esc(h.name||"A holiday")+" is drafted like an ordinary "+DAYS[dow],
 {code:"holfull", act:"go:demand"});
 });
  
-dates.forEach(({date,dow})=>{
-const h=holOn(dow, ws); if(!h) return;
-if(holPolled(h) || holMode(h)!=="reduced") return;
-const asked=(S.holidays.demand||[]).reduce((t,r)=>t+(r.count||1),0);
-const on=wk.assignments.filter(a=>a.date===date).length;
-if(!asked || on<=asked) return;
-push("info", (h.name||"That holiday")+" has more people on it than you asked for",
-"You asked for "+asked+" and "+on+" "+(on===1?"is":"are")+" on it. The extra "+(on-asked)+" "+
-(on-asked===1?"is":"are")+" there because you are open the whole day and the floor may not stand empty. "+
-"If a holiday should genuinely run with "+asked+", give it its own shorter hours on the Holidays page, or close the day \u2014 then nobody is added to cover hours you are not open for.",
-{code:"holfloor", act:"go:holidays"});
-});
 }catch(e){}
  
 if(anyPeak()) try{
@@ -15609,12 +15729,41 @@ const missing = matchDemand(expandDemand(dow, ws), wk.assignments.filter(a=>a.da
 missing.forEach(s=>{
 if(s.roleId && noRoleIds.has(s.roleId)) return;           
 const u = (wk.unfilled||[]).find(x=>x.date===date&&x.shiftId===s.shiftId&&(x.roleId||null)===(s.roleId||null));
-push("crit","Open shift — "+(shiftById(s.shiftId)||{label:"Shift"}).label+", "+DSHORT[dow],
-roleName(s.roleId)+" · "+(u?u.reason:"no one assigned yet")+(pat? " · asked for by the pattern \u201c"+pat.name+"\u201d" : ""),
+ 
+const pd = namedPerDiem({shiftId:s.shiftId, roleId:s.roleId||null, date, dow, siteId:s.siteId||null}, ws, wk.assignments);
+const shx = s.sh || shiftById(s.shiftId);
+const [sa,sb] = shx? shiftMinutes(shx) : [0,0];
+const nShort = missing.filter(x=>x.shiftId===s.shiftId && (x.roleId||null)===(s.roleId||null) && (x.siteId||null)===(s.siteId||null)).length;
+const detail = (u && u.counted)
+? DAYS[dow]+" "+clockRange(sa,sb)+" "+(s.roleId? roleName(s.roleId) : (shx||{label:"Shift"}).label)+" is "+nShort+" short. "+u.reason+"."+
+(pat? " Asked for by the pattern “"+pat.name+"”." : "")
+: roleName(s.roleId)+" · "+(u?u.reason:"no one assigned yet")+(pat? " · asked for by the pattern “"+pat.name+"”" : "");
+push("crit", pd? pd.name.split(" ")[0]+" could take "+DAYS[dow]+" "+clockRange(sa,sb)
+: "Open shift — "+(shiftById(s.shiftId)||{label:"Shift"}).label+", "+DSHORT[dow],
+detail,
 {date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||"")+"|"+(s.siteId||""),
-code:"open", shiftId:s.shiftId, roleId:s.roleId||null, siteId:s.siteId||null});
+code:"open", shiftId:s.shiftId, roleId:s.roleId||null, siteId:s.siteId||null, pdEmp:pd? pd.id : null});
 });
 });
+
+ 
+{ const bare=[];
+dates.forEach(({date,dow})=>{
+if(!dayOpen(date, dow)) return;
+const h=(S.holidays.list||[]).find(x=>x.date===date);
+if(h && holPolled(h)) return;                           
+if(demandLive(dow, ws).length) return;
+const asks = (S.coverage||[]).some(r=>(r.kind||"min")==="min" && covOn(r, dow))
+|| (S.stations||[]).some(st=>st.critical && !st.off && st.kind!=="admin" && (!(st.days||[]).length || st.days.includes(dow)));
+if(asks) bare.push({date, dow});
+});
+const say="Posts and hourly minimums don’t bring anyone in, so only guaranteed hours are scheduled.";
+if(bare.length && !dates.some(d=>demandLive(d.dow, ws).length))
+push("crit", "This board has no coverage needs written", say,
+{code:"norows", norowDays:bare.map(x=>x.dow)});
+else bare.forEach(x=>push("crit", DAYS[x.dow]+" has no coverage needs written", say,
+{date:x.date, dow:x.dow, code:"norows", norowDays:[x.dow]}));
+}
 
  
 if(multiSite()) dates.forEach(({date,dow})=>{
@@ -15670,7 +15819,16 @@ Object.keys(open).forEach(k=>{ if(!seen[k]){ closed.push(open[k]); delete open[k
 Object.values(open).forEach(r=>closed.push(r));
 closed.forEach(r=>{
 const lastNight = gapIsLastNight(date, dow, r.from, ws);
-push(lastNight? "info" : "crit",
+ 
+if(!lastNight && isPresenceRule(r.rule)){
+let rs=t2m(r.rule.start), re=t2m(r.rule.end); if(re<=rs) re+=1440;
+push("crit",
+"No "+(r.rule.roleId? roleName(r.rule.roleId).toLowerCase() : "one")+" on site "+DAYS[dow]+" "+clockRange(r.from, r.to),
+"Breaks the rule set for this board: "+(r.rule.label||ruleSentence(r.rule))+", "+clockRange(rs, re)+".",
+{date,dow, code:"cover", presence:true, ruleId:r.rule.id, from:r.from, to:r.to});
+return;
+}
+push(lastNight? "info" : "warn",
 (lastNight? "No cover from the night before — " : "Below required coverage — ")+DSHORT[dow],
 (r.rule.label||ruleSentence(r.rule))+": short "+r.worst+" from "+m2disp(r.from)+" to "+m2disp(r.to)+
 (S.rules.staggerMeals?" (meal periods count as off duty)":"")+
@@ -15695,7 +15853,7 @@ const siteTag = (multiSite() && site)? " \u2014 "+siteName(site) : "";
  
 G.empty.forEach(r=>{
 const lastNight = gapIsLastNight(date, dow, r.from, ws);
-push(lastNight? "info" : "crit",
+push(lastNight? "info" : "warn",
 (lastNight? "Nobody on the floor yet — " : "Nobody on the floor — ")+DSHORT[dow]+siteTag,
 prettyDate(date)+siteTag+": open from "+m2disp(win[0])+" to "+m2disp(win[1])+
 ", but nobody is scheduled between "+m2disp(r.from)+" and "+m2disp(r.to)+
@@ -15706,7 +15864,7 @@ prettyDate(date)+siteTag+": open from "+m2disp(win[0])+" to "+m2disp(win[1])+
  
 G.stations.forEach(({st, from, to, gaps})=>{
 gaps.forEach(g=>{
-push("crit","Nobody can cover "+st.name+" — "+DSHORT[dow]+siteTag,
+push("warn", st.name+" uncovered "+DAYS[dow]+" "+clockRange(g.from, g.to)+siteTag,
 prettyDate(date)+siteTag+": this post is marked must-cover from "+m2disp(from)+" to "+m2disp(to)+
 ", and there is nobody"+(st.roleId? " qualified as "+roleName(st.roleId):"")+
 " on the floor between "+m2disp(g.from)+" and "+m2disp(g.to)+".",
@@ -15930,7 +16088,7 @@ push("warn","Seventh day of the week — "+e.name,
 prettyDate(sev)+" is the seventh day of a week they have worked every day of, so "+
 (over? "the first 8h are paid at time and a half and the remaining "+fmtHrs(over)+" at double time"
 : "all "+fmtHrs(sevMin)+" is paid at time and a half")+
-" under "+(law().name||"state law")+
+" under "+(law().name||"your state\u2019s rules")+
 ((unionOn() && union().seventhDay)? ", and "+unionLabel()+" carries the same premium" : "")+
 ". Giving them one of the seven days off costs less and is the point of the rule.",
 {date:sev, empId:e.id, premium:true, code:"seventh"});
@@ -16231,7 +16389,7 @@ push("info","Eating outside the lunch closure",
 who.map(x=>x.name.split(" ")[0]+" ("+x.at.slice(0,3).join(", ")+")").join("; ")+
 ". Their shift starts too early or too late for a meal at "+
 [...shut].sort((a,b)=>a-b).map(m2disp).join(" or ")+
-" to be legal, so each keeps its own meal time that meets the rule.", {code:"closure"});
+" to meet the meal rule, so each keeps its own meal time that does.", {code:"closure"});
 }
 
  
@@ -16278,6 +16436,10 @@ head.detail = guarReachSay(head.gr, guarReachDrafted(rows));
 });
 if(kept.length!==V.length){ V.length=0; kept.forEach(v=>V.push(v)); }
 }
+
+ 
+if(typeof longShiftItems==="function")
+longShiftItems(ws).forEach(x=>push(x.sev, x.title, x.detail, Object.assign({code:"longshift"}, x.extra||{})));
 
 const order={crit:0,warn:1,info:2};
 return V.sort((a,b)=>order[a.sev]-order[b.sev]);
@@ -16544,7 +16706,7 @@ const NAV=[
 {id:"help", label:"Help & FAQ", simple:true, d:"How the rules work"},
  
 {id:"shifts", label:"Shifts & roles", sub:"setup"},
-{id:"demand", label:"Coverage needs", sub:"setup", n:()=>Object.values(S.demand).reduce((t,r)=>t+r.reduce((x,y)=>x+(y.count||1),0),0)||null},
+{id:"demand", label:"Coverage needs", sub:"setup", n:()=>Object.values(S.demand).reduce((t,r)=>t+r.reduce((x,y)=>x+demCount(y),0),0)||null},
 {id:"priority", label:"Who gets first pick", sub:"setup"},
 {id:"stations", label:"Posts on the floor", sub:"setup", n:()=>(S.stations||[]).length||null}
 ];
@@ -17307,6 +17469,8 @@ return '<div class="hnotice" data-slot="system">'+
 'picking an option — and you will have a schedule.</p>'+
 '<div class="row" style="gap:8px"><button class="btn primary" id="hsetup">Set it up</button></div></div>';
 }
+ 
+{ const dn=(typeof draftNotices==="function")? draftNotices() : ""; if(dn) return dn; }
 const wk=peekWeek(curWeek());
 if(wk && wk.auto && wk.suggested && !wk.published && !draftedTipSeen()){
 return '<div class="hnotice" data-slot="system">'+
@@ -17508,6 +17672,7 @@ foot='<div class="thingfoot"><span class="of">'+(idx+1)+" of "+list.length+"</sp
 '<button class="hlink" data-open="tray">See all '+list.length+" ›</button></div>";
 }
  
+if(v.code==="suspect" && v.rc && typeof rcThing==="function") return rcThing(v, i, eb, foot);
 return '<div class="thing" data-sev="'+esc(v.sev)+'" data-key="'+esc(checkSig(v))+'">'+
 '<div class="eyebrow">'+eb+"</div>"+
 reviewedHtml(v.detail|| v.title)+
@@ -17545,7 +17710,8 @@ function oneThing(ws){
 ws=ws|| curWeek();
 const wk=peekWeek(ws), P=homeProblems(ws);
 const posted=!!(wk.published && !postPending(wk));
-const list=P.crit;
+ 
+const list=(typeof rcOneList==="function")? rcOneList(ws, P) : P.crit;
 if(HOME_ONE>=list.length) HOME_ONE=0;
  
 const cards=list.map((v,i)=>
@@ -17571,7 +17737,7 @@ if(wk.published)
 return '<button class="btn primary" data-tell="'+esc(ws)+'">Hand it out</button>'+
 '<button class="btn" id="hunpost">Take it back</button>';
 if(P.crit.length)
-return '<button class="btn primary" data-act="fix" data-vix="'+P.V.indexOf(P.crit[0])+'">Fix it</button>'+
+return '<button class="btn primary" data-act="fix" data-vix="'+P.V.indexOf(((typeof rcOneList==="function")? rcOneList(ws, P)[0] : null)||P.crit[0])+'">Fix it</button>'+
 '<button class="btn" data-act="postanyway">Post it anyway</button>';
 if(P.warn.length)
 return '<button class="btn primary wide" data-act="postanyway">Post it anyway</button>';
@@ -17584,7 +17750,10 @@ const cap = !homeReady()? "Six minutes, and you can stop and come back."
 : !wk.assignments.length? "A starting point you can change — nothing goes out."
 : (wk.published && !postPending(wk))? "Handing it out is the step after. Nobody has been told yet."
 : "Locks the week here — it does not tell anybody.";
-return '<div class="homepress"><div id="homeacts">'+actionPair(ws)+"</div>"+
+const showCallout = calloutCandidates().length>0;
+return '<div class="homepress"><div id="homeacts">'+actionPair(ws)+
+(showCallout? '<button class="btn wide" id="hcallout">Someone called out</button>' : "")+
+"</div>"+
 '<p class="hcaption">'+esc(cap)+"</p></div>";
 }
 
@@ -17633,6 +17802,7 @@ const P=homeProblems(ws|| curWeek());
 if(!P.warn.length || !P.crit.length) return "";
 const rows=P.warn.slice(0,3).map(v=>{
 const i=P.V.indexOf(v);
+if(v.code==="suspect" && v.rc && typeof rcRow==="function") return rcRow(v);
 const day = v.date? parseYmd(v.date).getDay() : (v.dow!=null? v.dow : null);
 return '<div class="hrow" data-sev="warn">'+
 '<div class="hrowhd"><span class="sdot" data-sev="warn"></span>'+reviewedHtml(v.detail|| v.title)+"</div>"+
@@ -17670,6 +17840,7 @@ return '<div class="eyebrow sec" id="waiting">WAITING ON YOU</div><div class="in
  
 function trayRow(v, V, posted){
 const i=V.indexOf(v);
+if(v.code==="suspect" && v.rc && typeof rcRow==="function") return rcRow(v);
 const day = v.date? parseYmd(v.date).getDay() : (v.dow!=null? v.dow : null);
 return '<div class="hrow" data-sev="'+esc(v.sev)+'">'+
 '<div class="hrowhd"><span class="sdot" data-sev="'+esc(v.sev)+'"></span>'+reviewedHtml(v.detail|| v.title)+"</div>"+
@@ -17999,6 +18170,8 @@ const a=el.dataset.act, w=curWeek();
 if(a==="fix"){ const V=validate(w), v=V[+el.dataset.vix]; if(v) fixSheet(v, w); else fixModal(w); }
 else if(a==="openday"){ if(typeof closeSheet==="function") closeSheet(); DAYVIEW=+el.dataset.day; go("day"); }
 else if(a==="next"){ HOME_ONE++; render(); }
+else if(a==="rcfix"){ if(typeof closeSheet==="function") closeSheet(); rcApply(el.dataset.rc, w); }
+else if(a==="rcok"){ if(typeof closeSheet==="function") closeSheet(); rcConfirm(el.dataset.rc, w); }
 else if(a==="postanyway"){ postSheet(w, el); }
 else if(a==="postanyway-confirm"){ POST_SHEET_WS=null;
 if(typeof closeSheet==="function") closeSheet(); homePost(w); }
@@ -18193,6 +18366,998 @@ else toast(msg);
 }catch(e){}
 }
 
+ 
+
+ 
+function demCount(r){
+if(!r || r.count==null || r.count==="") return 1;
+const n=+r.count;
+return (isFinite(n) && n>=0)? Math.round(n) : 1;
+}
+ 
+function isPerDiem(e){ return !!(e && e.onCall); }
+ 
+function perDiemMode(e){ return (e && e.extraMode==="auto")? "auto" : "ask"; }
+ 
+function isPresenceRule(r){
+if(!r || (r.kind||"min")!=="min") return false;
+if(typeof r.presence==="boolean") return r.presence;
+const role=r.roleId? roleById(r.roleId) : null;
+return !!(role && role.licensed);
+}
+ 
+function clock12(m){
+m=((m%1440)+1440)%1440;
+let h=Math.floor(m/60); const mm=m%60, ap=h>=12? "PM":"AM";
+h=h%12||12;
+return h+(mm? ":"+String(mm).padStart(2,"0") : "")+" "+ap;
+}
+ 
+function clockRange(a, b){
+const A=clock12(a), B=clock12(b);
+return (A.slice(-2)===B.slice(-2)? A.slice(0,-3) : A)+"–"+B;
+}
+ 
+const POSTED_NOTE="Changes after a week is posted can carry notice or pay obligations in some cities and for larger employers.";
+function postedFootnote(){ return '<p class="pfoot">'+esc(POSTED_NOTE)+"</p>"; }
+function weekIsPosted(ws){ const wk=peekWeek(ws|| curWeek()); return !!(wk && wk.published); }
+
+ 
+function namedPerDiem(slot, ws, list){
+if(!(S.employees||[]).some(e=>e.active && isPerDiem(e))) return null;
+const sh=shiftById(slot.shiftId); if(!sh) return null;
+ws = ws || weekStartOf(slot.date, S.org.weekStart);
+list = list || (peekWeek(ws).assignments||[]);
+const state=stateFrom(ws, list);
+const s={shiftId:slot.shiftId, roleId:slot.roleId||null, sh, siteId:slot.siteId||null, _allowOnCall:true};
+const ok=(S.employees||[]).filter(e=>e.active && isPerDiem(e) && hardOk(e, s, slot.date, slot.dow, state, list));
+ok.sort((a,b)=>((state[a.id]||{min:0}).min-(state[b.id]||{min:0}).min) || String(a.id).localeCompare(String(b.id)));
+return ok[0]||null;
+}
+
+ 
+const WALL_WORDS={
+inactive:["is set aside","are set aside"],
+site:["works at another location","work at other locations"],
+siteshut:["works at a location that is shut that day","work at a location that is shut that day"],
+avail:["is unavailable then","are unavailable then"],
+timeoff:["is on time off","are on time off"],
+licence:["has a lapsed license","have lapsed licenses"],
+cycle:["is off under their work pattern","are off under their work patterns"],
+minor:["is held by the under-18 limits","are held by the under-18 limits"],
+trainee:["is still in training","are still in training"],
+sameday:["is already on that day","are already on that day"],
+apart:["is kept apart from someone already on","are kept apart from someone already on"],
+maxD:["is at their day limit","are at their day limits"],
+cap:["is at their hour limit","are at their hour limits"],
+exact:["is at their contracted hours","are at their contracted hours"],
+shiftlen:["would pass their longest-shift limit","would pass their longest-shift limits"],
+span:["would pass the longest-day limit","would pass the longest-day limit"],
+nosplit:["cannot work a split shift","cannot work a split shift"],
+stretch:["would pass the agreement’s stretch limit","would pass the agreement’s stretch limit"],
+rest:["needs more rest between shifts","need more rest between shifts"],
+clopen:["would close then open","would close then open"],
+consec:["is at their days-in-a-row limit","are at their days-in-a-row limits"],
+request:["asked not to work then","asked not to work then"],
+breach:["would break a ratio or pairing rule set for this board","would break a ratio or pairing rule set for this board"],
+veto:["was turned down for it on an earlier draft","were turned down for it on an earlier draft"],
+ask:["is on Ask me first","are on Ask me first"],
+posted:["is on call, and this week is posted","are on call, and this week is posted"],
+free:["could take it","could take it"],
+other:["is held back by a limit","are held back by limits"]
+};
+ 
+function countedReasons(slot, date, dow, state, list, ws){
+ws = ws || weekStartOf(date, S.org.weekStart);
+const holders=(S.employees||[]).filter(e=>e.active && (!slot.roleId || (e.roleIds||[]).includes(slot.roleId)));
+if(!holders.length) return null;
+const posted=weekIsPosted(ws);
+const groups=new Map();
+holders.forEach(e=>{
+let k;
+const o=placeObjections(e, Object.assign({}, slot, {_allowOnCall:isPerDiem(e)}), date, dow, state, list||[]);
+if(o.length) k=WALL_WORDS[o[0].rule]? o[0].rule : "other";
+else if(isPerDiem(e)) k = posted? "posted" : (perDiemMode(e)==="ask"? "ask" : "free");
+else k="free";
+if(!groups.has(k)) groups.set(k, []);
+groups.get(k).push((e.name||"Someone").split(" ")[0]);
+});
+const names=L=>L.length<=3? (L.length===1? L[0] : L.slice(0,-1).join(", ")+" and "+L[L.length-1])
+: L.slice(0,3).join(", ")+" and "+(L.length-3)+" more";
+const clauses=[...groups.entries()].map(([k,L])=>names(L)+" "+WALL_WORDS[k][L.length===1? 0:1]);
+const n=holders.length;
+const lead = slot.roleId
+? (n===1? "1 person holds the role" : n+" people hold the role")
+: (n===1? "1 person is on the team" : n+" people are on the team");
+return lead+": "+clauses.join(", ");
+}
+
+ 
+function overLine(e, slot, date, state){
+const L=effLimits(e, date);
+const [a,b]=shiftMinutes(slot.sh);
+return ((state[e.id]||{min:0}).min + paidEstimate(a,b,{date})) > (L.otWeeklyH||40)*60 + 1;
+}
+
+ 
+function callInPerDiem(v, ws){
+ws = ws || curWeek();
+const e=empById(v.pdEmp); if(!e){ toast("That person is no longer on the roster"); return; }
+const sh=shiftById(v.shiftId); if(!sh){ toast("That shift no longer exists"); return; }
+const first=e.name.split(" ")[0];
+const slot={shiftId:v.shiftId, roleId:v.roleId||null, date:v.date, dow:v.dow, siteId:v.siteId||null};
+const why=wouldPlace(e, v.shiftId, v.roleId||null, v.date, v.dow, ws, {allowOnCall:true, siteId:v.siteId||null});
+if(why){ toast(first+" can’t take it now — "+why); render(); return; }
+const [a,b]=shiftMinutes(sh);
+const when=DAYS[v.dow]+" "+clockRange(a,b);
+const place=()=>{
+placeInSlot(e, slot, ws, {allowOnCall:true});
+const put=(peekWeek(ws).assignments||[]).find(x=>x.empId===e.id && x.date===v.date && x.shiftId===v.shiftId);
+ 
+if(put){ put.calledIn=true; delete put.override; }
+save(); render();
+};
+if(!weekIsPosted(ws)){ place(); toast(first+" is on for "+when); return; }
+ 
+modal("Call "+first+" in?", `
+    <div class="stack">
+      <p class="whead">${esc(first)} on ${esc(when)}. This week is already posted, so ${esc(first)} is sent the change message.</p>
+      ${postedFootnote()}
+    </div>`,
+`<button class="btn" data-close>Back</button><button class="btn primary" id="pdcallgo">Call ${esc(first)} in</button>`,
+r=>{ r.querySelector("#pdcallgo").onclick=()=>{
+closeModal(true); place();
+const diff=(typeof weekDiff==="function")? weekDiff(ws).filter(d=>d.empId===e.id) : [];
+if(diff.length) repostNotify(ws, "affected", diff);
+else toast(first+" is on for "+when);
+}; });
+}
+
+ 
+function addForHourModal(v, ws){
+ws = ws || curWeek();
+const date=v.date; if(!date || v.from==null || v.to==null){ toast("That gap has no hours on it"); return; }
+const dow=parseYmd(date).getDay();
+const from=v.from, to=v.to;
+const rule=v.code==="cover"? (S.coverage||[]).find(r=>r.id===(v.ruleId||(v.ruleIds||[])[0])) : null;
+const roleId = v.code==="stationgap"? ((stationById(v.stationId)||{}).roleId||null)
+: rule? (rule.roleId||null) : null;
+const pool=(S.shifts||[]).filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(dow));
+const scored=pool.map(sh=>{ const [x,y]=shiftMinutes(sh);
+return {sh, x, y, ov:Math.max(0, Math.min(y,to)-Math.max(x,from)), span:(x<=from && y>=to), len:y-x}; })
+.filter(o=>o.ov>0)
+.sort((p,q)=>(q.span-p.span) || (q.ov-p.ov) || (p.len-q.len) || String(p.sh.id).localeCompare(String(q.sh.id)));
+const pick=scored[0];
+if(!pick){ toast("No shift in the pool reaches "+clockRange(from,to)+" on "+DAYS[dow]); return; }
+const aMin=Math.max(pick.x, from), bMin=Math.min(pick.y, to);
+const cands=candidatesFor(pick.sh.id, date, dow, roleId, null, v.siteId||null);
+const free=cands.filter(c=>!c.blocks.length), blocked=cands.filter(c=>c.blocks.length);
+const posted=weekIsPosted(ws);
+modal("Add someone for this hour", `
+    <div class="stack">
+      <div class="mini">${esc(prettyFull(date))} · ${esc(clockRange(aMin,bMin))}${roleId? " · "+esc(roleName(roleId)) : ""}</div>
+      <p class="caption">For this week only. Coverage needs stay as they are.</p>
+      ${posted? postedFootnote() : ""}
+      ${free.length? `<div><div class="lab" style="margin-bottom:6px">Clear to take it</div>${candidateHTML(free,"data-pick")}</div>`
+: `<div class="banner warn"><div><b>Nobody clears every limit.</b> The list below shows exactly what is in the way for each person.</div></div>`}
+      ${blocked.length? `<div><div class="lab" style="margin:12px 0 6px">Blocked, and by what</div>${candidateHTML(blocked,"data-pick")}</div>`:""}
+    </div>`, `<button class="btn" data-close>Close</button>`,
+r=>{
+r.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{
+const e=empById(b.dataset.pick); if(!e) return;
+const rec={id:uid("a"), empId:e.id, date, dow, shiftId:pick.sh.id, startMin:aMin, endMin:bMin,
+roleId:roleId||(e.roleIds||[])[0]||null, locked:true, byYou:true};
+if(multiSite() && v.siteId && v.siteId!==mainSiteId()) rec.siteId=v.siteId;
+applyBreaks(rec);
+const wk=getWeek(ws);
+wk.assignments.push(rec);
+wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
+save(); closeModal(); render();
+const diff=(posted && typeof weekDiff==="function")? weekDiff(ws).filter(d=>d.empId===e.id) : [];
+if(diff.length) repostNotify(ws, "affected", diff);
+else toast(e.name.split(" ")[0]+" added "+clockRange(aMin,bMin)+" — this week only");
+});
+});
+}
+
+ 
+function rowsFromPosts(ws, days){
+const out={};
+days.forEach(dow=>{
+const pool=(S.shifts||[]).filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(dow));
+const shiftFor=(a,b)=>{
+const s=pool.map(sh=>{ const [x,y]=shiftMinutes(sh);
+return {sh, ov:Math.max(0, Math.min(y,b)-Math.max(x,a)), span:(x<=a && y>=b), len:y-x}; })
+.filter(o=>o.ov>0)
+.sort((p,q)=>(q.span-p.span) || (q.ov-p.ov) || (p.len-q.len) || String(p.sh.id).localeCompare(String(q.sh.id)));
+return s[0]? s[0].sh : null;
+};
+const rows=[];
+const add=(sh, roleId, n, from)=>{
+if(!sh) return;
+const k=sh.id+"|"+(roleId||"");
+const had=rows.find(r=>r.k===k);
+if(had){ had.count=Math.max(had.count, n); had.max=had.count; had.from.push(from); return; }
+rows.push({k, shiftId:sh.id, roleId:roleId||null, count:n, max:n, from:[from]});
+};
+(S.coverage||[]).filter(r=>(r.kind||"min")==="min" && covOn(r, dow)).forEach(r=>{
+let a=t2m(r.start), b=t2m(r.end); if(b<=a) b+=1440;
+add(shiftFor(a,b), r.roleId||null, Math.max(1, r.min||1), r.label||ruleSentence(r));
+});
+(S.stations||[]).filter(st=>st.critical && !st.off && st.kind!=="admin" && (!(st.days||[]).length || st.days.includes(dow))).forEach(st=>{
+const win=dayWindow(dow); if(!win) return;
+let a=st.from? t2m(st.from) : win[0], b=st.to? t2m(st.to) : win[1]; if(b<=a) b+=1440;
+add(shiftFor(a,b), st.roleId||null, 1, st.name);
+});
+if(rows.length) out[dow]=rows;
+});
+return out;
+}
+function writeRowsSheet(v, ws){
+ws = ws || curWeek();
+const days = v.norowDays || (v.dow!=null? [v.dow] : []);
+const plan=rowsFromPosts(ws, days);
+const keys=Object.keys(plan).map(Number);
+if(!keys.length){
+toast("No shift in the pool reaches those hours — opening Coverage needs");
+go("demand"); return;
+}
+const body=keys.map(dow=>'<div class="fixgrp"><div class="lab">'+esc(DAYS[dow])+"</div>"+
+plan[dow].map(r=>{ const sh=shiftById(r.shiftId); const [a,b]=shiftMinutes(sh);
+return '<div class="hrow"><span class="rowmain"><span class="rowt">'+esc(sh.label)+" · "+esc(clockRange(a,b))+
+" · "+(r.roleId? esc(roleName(r.roleId)) : "anyone on the roster")+", exactly "+r.count+"</span>"+
+'<span class="rowsub">From '+esc(r.from.join(", "))+"</span></span></div>"; }).join("")+"</div>").join("");
+modal("Coverage needs from posts and minimums", `
+    <div class="stack">
+      <p class="caption">Proposed rows, one for each minimum and must-cover post. Nothing is saved until you save them, and every row can be changed afterwards under Coverage needs.</p>
+      ${body}
+    </div>`,
+`<button class="btn" data-close>Cancel</button><button class="btn primary" id="rowsgo">Save these rows</button>`,
+r=>{ r.querySelector("#rowsgo").onclick=()=>{
+const D=demandOf(ws);
+keys.forEach(dow=>{ D[dow]=D[dow]||[];
+plan[dow].forEach(x=>D[dow].push({shiftId:x.shiftId, roleId:x.roleId, count:x.count, max:x.max})); });
+save(); closeModal(true); render();
+toast(keys.length===1? DAYS[keys[0]]+" has coverage needs now — Draft again to use them"
+: "Coverage needs written for "+keys.length+" days — Draft again to use them");
+}; });
+}
+
+ 
+function draftNotices(){
+const u=S.ui||{};
+if(u.pdNote && !u.pdNoteDone){
+const who=(u.pdNote.ids||[]).map(empById).filter(Boolean);
+if(who.length){
+const L=who.map(e=>e.name.split(" ")[0]);
+const list = L.length===1? L[0] : L.slice(0,-1).join(", ")+" and "+L[L.length-1];
+return '<div class="hnotice" data-slot="system" id="pdnotice">'+
+'<p class="ntext"><b>On-call people now each have their own setting</b> Everyone starts on Ask me first. '+
+esc(list)+(L.length===1? " was" : " were")+" called in automatically before.</p>"+
+'<div class="row" style="gap:8px"><button class="btn primary" data-dnote="pdauto">Keep them automatic</button>'+
+'<button class="btn" data-dnote="pdask">Keep Ask me first</button></div></div>';
+}
+}
+if(u.floorNote && !u.floorNoteDone){
+const posts=(u.floorNote.posts||[]);
+return '<div class="hnotice" data-slot="system" id="floornotice">'+
+'<p class="ntext"><b>Posts and hourly minimums no longer bring people in</b> Short hours now show as Worth a look, '+
+"with the hour named. Coverage needs are what bring people in."+
+(posts.length? " These posts were Must cover: "+esc(posts.join(", "))+". A post that is a rule the business has to follow can be set as a presence rule in Rules." : "")+
+"</p>"+
+'<div class="row" style="gap:8px"><button class="btn" data-dnote="floorrules">Open Rules</button>'+
+'<button class="btn" data-dnote="floorok">Got it</button></div></div>';
+}
+return "";
+}
+ 
+document.addEventListener("click", ev=>{
+const b=ev.target && ev.target.closest && ev.target.closest("[data-dnote]"); if(!b) return;
+const k=b.dataset.dnote; S.ui=S.ui||{};
+if(k==="pdauto"){
+const ids=new Set((S.ui.pdNote||{}).ids||[]);
+(S.employees||[]).forEach(e=>{ if(ids.has(e.id) && isPerDiem(e)) e.extraMode="auto"; });
+S.ui.pdNoteDone=true; save(); render(); toast("Set to call them in automatically — each card can change it");
+} else if(k==="pdask"){ S.ui.pdNoteDone=true; save(); render(); }
+else if(k==="floorok"){ S.ui.floorNoteDone=true; save(); render(); }
+else if(k==="floorrules"){ S.ui.floorNoteDone=true; save(); go("demand");
+setTimeout(()=>{ try{ const c=document.querySelector("#addcov"); if(c) c.scrollIntoView({block:"center"}); }catch(e){} }, 80); }
+});
+document.addEventListener("change", ev=>{
+const b=ev.target && ev.target.closest && ev.target.closest("[data-presence]"); if(!b) return;
+const r=(S.coverage||[]).find(x=>x.id===b.dataset.presence); if(!r) return;
+r.presence=!!b.checked; save(); render();
+});
+
+ 
+
+ 
+const RC_NOT_RULE = new Set(["open","norows","norole","suspect"]);
+ 
+const RC_RERUNS = 3, RC_BUDGET_MS = 1000;
+let RC_SHADOW = false, RC_JOB = null;
+const RC_CACHE = new Map();
+
+const rcFlip = m => (m+720)%1440;
+const rcDead = m => { m=((m%1440)+1440)%1440; return m>=1260 || m<300; };
+ 
+function rcClock(m){
+m=((m%1440)+1440)%1440; let h=Math.floor(m/60); const mm=m%60;
+const ap=h>=12? "PM" : "AM"; h=h%12; if(h===0) h=12;
+return h+(mm? ":"+String(mm).padStart(2,"0") : "")+" "+ap;
+}
+function rcHHMM(m){ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+
+ 
+function rcOpenMask(){
+const m=new Uint8Array(672);
+for(let d=0; d<7; d++){
+const w=dayWindow(d); if(!w) continue;
+for(let t=w[0]; t<w[1]; t+=15) m[Math.floor((d*1440+t)/15)%672]=1;
+}
+return m;
+}
+const rcAt = (mask, abs) => !!mask[Math.floor((((abs%10080)+10080)%10080)/15)];
+ 
+function rcTimeOpen(mask, t, isEnd){
+const probe=isEnd? t-1 : t;
+for(let d=0; d<7; d++) if(rcAt(mask, d*1440+probe)) return true;
+return false;
+}
+ 
+function rcSpanOpen(mask, a, b){
+for(let d=0; d<7; d++){
+let ok=true;
+for(let t=a; t<b; t+=15) if(!rcAt(mask, d*1440+t)){ ok=false; break; }
+if(ok) return true;
+}
+return false;
+}
+ 
+function rcTimeFires(mask, a, e, kind){
+const out=[];
+const b = e<=a? e+1440 : e;
+if(e<=a && !rcSpanOpen(mask, a, b)) out.push({cls:1, which:"end", start:a, end:rcFlip(e)});
+const dS = (kind==="avail" && a===0)? false : (rcDead(a) && !rcTimeOpen(mask, a, false));
+const dE = (kind==="avail")? false : (rcDead(e) && !rcTimeOpen(mask, e, true));
+if(dS || dE) out.push({cls:2, which:(dS&&dE)? "both" : dS? "start" : "end",
+start:dS? rcFlip(a) : a, end:dE? rcFlip(e) : e});
+if(kind!=="avail" && e>a && (e-a)>14*60 && !rcSpanOpen(mask, a, e)){
+if(!rcTimeOpen(mask, e, true)) out.push({cls:3, which:"end", start:a, end:rcFlip(e)});
+else if(!rcTimeOpen(mask, a, false)) out.push({cls:3, which:"start", start:rcFlip(a), end:e});
+}
+return out;
+}
+ 
+function rcPick(mask, a, e, kind){
+const fires=rcTimeFires(mask, a, e, kind);
+for(const f of fires) if(!rcTimeFires(mask, f.start, f.end, kind).length) return f;
+return null;
+}
+function rcTimeSuspect(o){
+const f=o.fire;
+const title = f.which==="both"
+? o.who+" "+rcClock(o.a)+"–"+rcClock(o.e)+" looks like "+rcClock(f.start)+"–"+rcClock(f.end)
+: f.which==="start"
+? o.who+" "+rcClock(o.a)+" start looks like "+rcClock(f.start)
+: o.who+" "+rcClock(o.e)+" end looks like "+rcClock(f.end);
+const to = f.which==="both"? rcClock(f.start)+"–"+rcClock(f.end)
+: f.which==="start"? rcClock(f.start) : rcClock(f.end);
+return {key:o.key, kind:o.kind, id:o.id, empId:o.empId||null, dow:o.dow, cls:f.cls, which:f.which,
+date:o.date, time:o.a, title, fixLabel:"Change to "+to, done:"Changed to "+to,
+fix:{start:rcHHMM(f.start), end:rcHHMM(f.end)}};
+}
+
+ 
+function rcSuspects(ws){
+ws=ws|| curWeek();
+const dates=weekDates(ws), mask=rcOpenMask(), out=[];
+const used={};
+const mark=(id,i)=>{ (used[id]=used[id]||new Set()).add(i); };
+dates.forEach(({dow},i)=>{ demandLive(dow, ws).forEach(r=>mark(r.shiftId, i)); });
+(peekWeek(ws).assignments||[]).forEach(a=>{
+if(!a.shiftId) return; const i=dates.findIndex(d=>d.date===a.date); if(i>=0) mark(a.shiftId, i); });
+(S.shifts||[]).forEach(sh=>{
+const u=used[sh.id]; if(!u || !u.size) return;           
+const days=[...u].sort((x,y)=>x-y), first=dates[days[0]];
+const label=sh.label||"unnamed";
+const a=t2m(sh.start), e=t2m(sh.end);
+if(!sh.overnight && sh.confirmedTimes!==(sh.start+"-"+sh.end)){
+const who = days.length===1? DAYS[first.dow]+"’s" : "The "+label+" shift’s";
+const f=rcPick(mask, a, e, "shift");
+if(f) out.push(rcTimeSuspect({key:"sh:"+sh.id, kind:"shift", id:sh.id, who, fire:f, a, e,
+date:first.date, dow:first.dow}));
+}
+if(typeof sh.mealMin==="number" && sh.mealMin===0 && !sh.confirmedMeal){
+let owed=false;
+try{ const sm=shiftMinutes(sh); owed=((computeBreaks(sm[0], sm[1])||{}).meals||[]).length>0; }catch(err){}
+if(owed) out.push({key:"ml:"+sh.id, kind:"meal", id:sh.id, cls:4, date:first.date, dow:first.dow, time:a,
+title:(days.length===1? DAYS[first.dow]+"’s "+label+" shift" : "The "+label+" shift")+" has a 0-minute meal",
+fixLabel:"Remove the 0-minute meal", done:"The 0-minute meal is gone"});
+}
+});
+(S.employees||[]).forEach(emp=>{
+if(!emp || emp.active===false || !Array.isArray(emp.avail)) return;
+const first=String(emp.name||"Someone").split(" ")[0];
+emp.avail.forEach((av,dow)=>{
+if(!av || !av.ok || !av.from || !av.to) return;
+if(av.confirmedTimes===(av.from+"-"+av.to)) return;
+const a=t2m(av.from); let e=t2m(av.to);
+if(e===0 || e>=1439) return;                             
+const f=rcPick(mask, a, e, "avail"); if(!f) return;
+const d=dates.find(x=>x.dow===dow); if(!d) return;
+const s=rcTimeSuspect({key:"av:"+emp.id+":"+dow, kind:"avail", empId:emp.id, dow, fire:f, a, e, date:d.date,
+who:first+"’s "+DAYS[dow]+" availability: the"});
+out.push(s);
+});
+});
+const D=demandOf(ws)||{};
+dates.forEach(({date,dow})=>{
+if(!(S.hours && S.hours[dow] && S.hours[dow].closed)) return;
+const rows=(D[dow]||[]).filter(r=>!r.confirmedClosed);
+if(!rows.length) return;
+out.push({key:"rw:"+dow, kind:"row", dow, cls:5, date, time:0,
+title:DAYS[dow]+" is marked closed and still has "+(rows.length===1? "a coverage row" : rows.length+" coverage rows"),
+fixLabel:"Remove "+DAYS[dow]+"’s rows", done:DAYS[dow]+"’s rows are removed"});
+});
+out.sort(rcDetectCmp);
+return out;
+}
+function rcKeyCmp(a,b){ return a<b? -1 : a>b? 1 : 0; }
+function rcDetectCmp(x,y){ return x.cls-y.cls || rcKeyCmp(x.date,y.date) || x.time-y.time || rcKeyCmp(x.key,y.key); }
+
+ 
+function rcKey(v){
+return [v.code||"", v.date||"", v.dow==null? "" : v.dow, v.empId||"", v.shiftId||"", v.roleId||"",
+String(v.title||"").replace(/\d+/g,"#")].join("|");
+}
+ 
+function rcSig(ws){
+const prev=addDays(ws,-7), next=addDays(ws,7);
+let str="";
+try{
+str=JSON.stringify(S, function(k,v){
+if(this===S){
+if(k==="weeks") return [S.weeks[ws]||null, (S.weeks[prev]||{}).assignments||null, (S.weeks[next]||{}).assignments||null];
+if(k==="ui" || k==="bugs" || k==="support") return undefined;
+}
+return v;
+});
+}catch(err){ str=String(Date.now()); }
+let h=2166136261;
+for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+return ws+"|"+(h>>>0).toString(36)+"|"+str.length;
+}
+
+ 
+function rcCorrect(s, ws){
+if(s.kind==="shift"){ const sh=shiftById(s.id); if(sh){ sh.start=s.fix.start; sh.end=s.fix.end; } }
+else if(s.kind==="meal"){ const sh=shiftById(s.id); if(sh) delete sh.mealMin; }
+else if(s.kind==="avail"){
+const e=(S.employees||[]).find(x=>x.id===s.empId), av=e && e.avail && e.avail[s.dow];
+if(av){ av.from=s.fix.start; av.to=s.fix.end; } }
+else if(s.kind==="row"){ const D=demandOf(ws); if(D && D[s.dow]) D[s.dow]=D[s.dow].filter(r=>r.confirmedClosed); }
+}
+ 
+function rcRedraws(wk){ return !!(wk && (wk.assignments||[]).length && !wk.published); }
+
+ 
+function rcCurrentKeys(ws){
+const was=RC_SHADOW; RC_SHADOW=true;
+try{ return validate(ws).filter(v=>v.code!=="suspect").map(rcKey); }
+finally{ RC_SHADOW=was; }
+}
+ 
+function rcShadow(ws, s){
+const real=S, shuffle=SHUFFLE, recur=RECUR_CACHE, realSave=save, realLs=lsSave, was=RC_SHADOW;
+const redraw=rcRedraws(peekWeek(ws));
+try{
+RC_SHADOW=true;
+save=function(){}; lsSave=function(){};
+S=JSON.parse(JSON.stringify(real));
+rcCorrect(s, ws);
+if(redraw){ const w=getWeek(ws); w.assignments=w.assignments.filter(a=>a.locked); generateSchedule(ws); }
+return validate(ws).filter(v=>v.code!=="suspect").map(rcKey);
+}finally{
+S=real; SHUFFLE=shuffle; RECUR_CACHE=recur; save=realSave; lsSave=realLs; DRAFT=null; RC_SHADOW=was;
+}
+}
+ 
+function rcStep(c){
+if(!c.targets){
+c.targets=rcSuspects(c.ws).slice(0, RC_RERUNS);
+c.base=rcCurrentKeys(c.ws);
+return c.targets.length>0;
+}
+const s=c.targets.find(t=>!c.res[t.key]); if(!s) return false;
+const t0=(typeof performance!=="undefined")? performance.now() : Date.now();
+const after=rcShadow(c.ws, s);
+const ms=((typeof performance!=="undefined")? performance.now() : Date.now())-t0;
+c.ms.push(Math.round(ms));
+const left={}; after.forEach(k=>{ left[k]=(left[k]||0)+1; });
+const cleared=[];
+c.base.forEach(k=>{ if(left[k]) left[k]--; else cleared.push(k); });
+c.res[s.key]={n:cleared.length, cleared};
+ 
+if(c.ms.length===1 && ms*c.targets.length>RC_BUDGET_MS && c.targets.length>1){ c.targets=c.targets.slice(0,1); c.limited=true; }
+return c.targets.some(t=>!c.res[t.key]);
+}
+function rcNewJob(ws, sig){
+const c={ws, sig, done:false, res:{}, ms:[], targets:null, base:null, limited:false};
+RC_CACHE.set(sig, c);
+while(RC_CACHE.size>8) RC_CACHE.delete(RC_CACHE.keys().next().value);
+return c;
+}
+const rcLater = fn => (typeof requestIdleCallback==="function")? requestIdleCallback(fn, {timeout:400}) : setTimeout(fn, 16);
+ 
+function rcSchedule(ws, sig){
+if(ws!==curWeek()) return;
+if(RC_JOB && RC_JOB.sig===sig) return;
+const c=rcNewJob(ws, sig);
+RC_JOB=c;
+const tick=()=>{
+if(RC_JOB!==c) return;
+if(rcSig(ws)!==sig){ RC_CACHE.delete(sig); RC_JOB=null; return; }
+let more=false;
+try{ more=rcStep(c); }catch(err){ RC_CACHE.delete(sig); RC_JOB=null; return; }
+if(more){ rcLater(tick); return; }
+c.done=true; RC_JOB=null;
+if(curWeek()!==ws || rcSig(ws)!==sig) return;
+homeProblemsFresh();
+const busy=!!modalRoot().innerHTML || (typeof sheetOpen==="function" && sheetOpen());
+if(!busy) render();
+};
+rcLater(tick);
+}
+ 
+function rcRunNow(ws){
+ws=ws|| curWeek();
+const sig=rcSig(ws);
+if(RC_JOB && RC_JOB.sig===sig) RC_JOB=null;
+const c=rcNewJob(ws, sig);
+while(rcStep(c)){}
+c.done=true;
+homeProblemsFresh();
+return c;
+}
+function rcStatus(ws){ ws=ws|| curWeek(); return RC_CACHE.get(rcSig(ws))||null; }
+
+ 
+function rcSuspectItems(ws){
+if(RC_SHADOW) return [];
+ws=ws|| curWeek();
+let sus;
+try{ sus=rcSuspects(ws); }catch(err){ return []; }
+if(!sus.length) return [];
+let c=null;
+if(ws===curWeek()){
+const sig=rcSig(ws);
+c=RC_CACHE.get(sig)||null;
+if(!c || (!c.done && !(RC_JOB && RC_JOB.sig===sig))) rcSchedule(ws, sig);
+if(c && !c.done) c=null;
+}
+return sus.map(s=>{
+const r=c && c.res[s.key];
+const n=r? r.n : null;
+return {code:"suspect", sev:"warn", title:s.title,
+detail: n>0? "Correcting it clears "+n+" other item"+(n===1?"":"s")+"." : "",
+where:"shifts", empId:s.empId||undefined,
+rc:{key:s.key, cls:s.cls, date:s.date, time:s.time, n, cleared:r? r.cleared : null, fixLabel:s.fixLabel}};
+});
+}
+
+ 
+function rcBrokenRule(v){ return v.sev==="crit" && !v.setup && !RC_NOT_RULE.has(v.code); }
+function rcRankCmp(x,y){
+const a=x.rc, b=y.rc;
+return (b.n||0)-(a.n||0) || a.cls-b.cls || rcKeyCmp(a.date,b.date) || a.time-b.time || rcKeyCmp(a.key,b.key);
+}
+function rcClears(s, v){ return !!(s.rc && s.rc.cleared && s.rc.cleared.indexOf(rcKey(v))>=0); }
+function rcOneList(ws, P){
+P=P|| homeProblems(ws|| curWeek());
+const crit=P.crit;
+const sus=P.warn.filter(v=>v.code==="suspect" && v.rc && v.rc.n>0).sort(rcRankCmp);
+if(!sus.length) return crit;
+const out=[], placed=new Set(), broken=crit.filter(rcBrokenRule);
+sus.forEach(s=>{
+broken.forEach(b=>{ if(!placed.has(b) && !rcClears(s,b)){ out.push(b); placed.add(b); } });
+out.push(s);
+});
+crit.forEach(v=>{ if(!placed.has(v)) out.push(v); });
+return out;
+}
+
+ 
+function rcButtons(v){
+const k=esc(v.rc.key);
+return '<button class="btn" data-act="rcfix" data-rc="'+k+'">'+esc(v.rc.fixLabel)+"</button>"+
+'<button class="btn" data-act="rcok" data-rc="'+k+'">It’s right as entered</button>';
+}
+ 
+function rcHead(v){
+return '<p class="reviewed"><b>'+esc(v.title)+"</b></p>"+(v.detail? '<p class="rcdet">'+esc(v.detail)+"</p>" : "");
+}
+function rcThing(v, i, eb, foot){
+return '<div class="thing" data-sev="warn" data-key="'+esc(checkSig(v))+'" data-rc="'+esc(v.rc.key)+'">'+
+'<div class="eyebrow">'+eb+"</div>"+rcHead(v)+
+'<div class="thingacts">'+rcButtons(v)+"</div>"+foot+"</div>";
+}
+function rcRow(v){
+return '<div class="hrow" data-sev="warn" data-rc="'+esc(v.rc.key)+'">'+
+'<div class="hrowhd"><span class="sdot" data-sev="warn"></span><div class="rcmain">'+rcHead(v)+"</div></div>"+
+'<div class="hrowacts">'+rcButtons(v)+"</div></div>";
+}
+function rcFixSheet(v, ws){
+ws=ws|| curWeek();
+const s=rcSuspects(ws).find(x=>x.key===v.rc.key);
+const asis = !s? "" : s.kind==="shift"? (shiftById(s.id)? rcClock(t2m(shiftById(s.id).start))+" to "+rcClock(t2m(shiftById(s.id).end)) : "")
+: s.kind==="avail"? (function(){ const e=empById(s.empId), av=e && e.avail && e.avail[s.dow];
+return av? rcClock(t2m(av.from))+" to "+rcClock(t2m(av.to)) : ""; })()
+: s.kind==="meal"? "0 minutes" : "";
+modal(v.title, '<div class="stack">'+
+(v.detail? '<p class="rcdet">'+esc(v.detail)+"</p>" : "")+
+(asis? '<p class="rcasis">As entered: '+esc(asis)+"</p>" : "")+
+"</div>",
+'<button class="btn" data-rcok>It’s right as entered</button>'+
+'<button class="btn primary" data-rcfix>'+esc(v.rc.fixLabel)+"</button>",
+r=>{
+const f=r.querySelector("[data-rcfix]"), o=r.querySelector("[data-rcok]");
+if(f) f.onclick=()=>{ closeModal(true); rcApply(v.rc.key, ws); };
+if(o) o.onclick=()=>{ closeModal(true); rcConfirm(v.rc.key, ws); };
+});
+}
+ 
+function rcApply(key, ws){
+ws=ws|| curWeek();
+const s=rcSuspects(ws).find(x=>x.key===key);
+if(!s){ render(); toast("That entry has already changed"); return; }
+const wk=getWeek(ws), redraw=rcRedraws(wk);
+rcCorrect(s, ws);
+if(redraw){ wk.assignments=wk.assignments.filter(a=>a.locked); generateSchedule(ws); wk.touched=true; wk.suggested=true; }
+save(); render();
+toast(s.done+(redraw? " and the week drafted again" : ""), {label:"Undo", run:()=>undo()});
+}
+ 
+function rcConfirm(key, ws){
+ws=ws|| curWeek();
+const s=rcSuspects(ws).find(x=>x.key===key);
+if(!s){ render(); return; }
+if(s.kind==="shift"){ const sh=shiftById(s.id); if(sh) sh.confirmedTimes=sh.start+"-"+sh.end; }
+else if(s.kind==="meal"){ const sh=shiftById(s.id); if(sh) sh.confirmedMeal=true; }
+else if(s.kind==="avail"){
+const e=(S.employees||[]).find(x=>x.id===s.empId), av=e && e.avail && e.avail[s.dow];
+if(av) av.confirmedTimes=av.from+"-"+av.to; }
+else if(s.kind==="row"){ const D=demandOf(ws); ((D && D[s.dow])||[]).forEach(r=>{ r.confirmedClosed=true; }); }
+save(); render();
+toast("Kept as entered — that one won’t be flagged again");
+}
+ 
+ 
+function typeDefaults(type){
+const D={
+FT:   {hoursMode:"exact", minH:40, maxH:40},
+PT:   {hoursMode:"range", minH:20, maxH:40},
+PRN:  {hoursMode:"range", minH:0,  maxH:40, onCall:true, extraMode:"ask"},
+TEMP: {hoursMode:"range", minH:0,  maxH:40},
+TRAIN:{hoursMode:"range", minH:20, maxH:40}
+};
+return D[type] || D.PT;
+}
+ 
+function keepModalScroll(fn){
+const r=modalRoot();
+const before=r.querySelector(".modal .body");
+const scrollTop=before? before.scrollTop : 0;
+let focusSel=null, caret=null;
+const active=document.activeElement;
+if(before && active && active!==document.body && before.contains(active)){
+const q=v=>(window.CSS && CSS.escape)? CSS.escape(v) : String(v).replace(/["\\\]]/g,"\\$&");
+if(active.id) focusSel="#"+q(active.id);
+else{
+const ds=active.dataset||{};
+for(const k in ds){
+const attr="data-"+k.replace(/[A-Z]/g, m=>"-"+m.toLowerCase());
+const sel="["+attr+'="'+String(ds[k]).replace(/["\\]/g,"\\$&")+'"]';
+try{ if(before.querySelectorAll(sel).length===1){ focusSel=sel; break; } }catch(_){}
+}
+}
+if(focusSel && active.selectionStart!=null) caret=active.selectionStart;
+}
+const ret=fn();
+const after=r.querySelector(".modal .body");
+if(after && scrollTop) after.scrollTop=scrollTop;
+if(focusSel){
+try{
+const t=r.querySelector(focusSel);
+if(t && t.focus){ t.focus({preventScroll:true});
+if(caret!=null && t.setSelectionRange){ try{ t.setSelectionRange(caret,caret); }catch(_){} } }
+}catch(_){}
+}
+return ret;
+}
+ 
+ 
+function mealLenFor(shift){
+let lawMin=0;
+try{ const L=law(); if(L && L.meal && L.meal.lengthMin) lawMin=L.meal.lengthMin; }catch(e){}
+const want = (shift && typeof shift.mealMin==="number") ? shift.mealMin
+: (S.rules && S.rules.mealLengthMin) ? S.rules.mealLengthMin : 0;
+return Math.max(want, lawMin);
+}
+ 
+function longestOpenSpanMin(){
+let best=0;
+for(let d=0; d<7; d++){ const w=(typeof dayWindow==="function")? dayWindow(d) : null; if(w) best=Math.max(best, w[1]-w[0]); }
+return best;
+}
+ 
+function overnightNote(startMin, endMin){
+if(startMin==null || endMin==null || !isFinite(startMin) || !isFinite(endMin) || endMin>startMin) return null;
+const span=(endMin+1440)-startMin;
+const flip=m=>(m+720)%1440;
+const fmtClock=m=>{ const mm=((m%1440)+1440)%1440; let h=Math.floor(mm/60); const min=mm%60;
+const ap=h>=12?"PM":"AM"; h=h%12; if(h===0) h=12;
+return h+(min? ":"+String(min).padStart(2,"0"):"")+" "+ap; };
+const fmtSpan=m=>{ const h=Math.floor(m/60), r=m%60; return r? h+" h "+r+" min" : h+(h===1?" hour":" hours"); };
+const flippedEnd=flip(endMin);
+ 
+let which="start", fixedStart=flip(startMin), fixedEnd=endMin;
+if(flippedEnd>startMin && (flippedEnd-startMin)<=14*60){ which="end"; fixedStart=startMin; fixedEnd=flippedEnd; }
+const shown = which==="end"? fixedEnd : fixedStart;
+const clock = fmtClock(shown);
+return { which, fixedStart, fixedEnd, spanMin:span,
+say:"Runs overnight — "+fmtSpan(span)+". Did you mean "+clock+"?",
+btn:"Make it "+clock.slice(-2) };
+}
+ 
+function longShiftItems(ws){
+ws = ws || (typeof curWeek==="function"? curWeek() : S.currentWeek);
+const wk = (typeof peekWeek==="function")? peekWeek(ws) : (S.weeks||{})[ws];
+if(!wk) return [];
+const span14=14*60, spanOpen=longestOpenSpanMin();
+const cap = spanOpen>0? Math.min(span14, spanOpen) : span14;
+const groups={};
+(wk.assignments||[]).forEach(a=>{
+if(a.topUp || a.callout) return;
+const span=(a.endMin-a.startMin) - gapMin(a);
+if(span<=cap) return;
+const key=a.date+"|"+(a.shiftId||"");
+const dow = a.dow!=null? a.dow : parseYmd(a.date).getDay();
+if(!groups[key]) groups[key]={date:a.date, dow, sh:aShift(a), span, n:0};
+groups[key].n++;
+if(span>groups[key].span) groups[key].span=span;
+});
+return Object.keys(groups).map(k=>{
+const g=groups[k];
+return {
+sev:"warn",
+title: DSHORT[g.dow]+"’s "+g.sh.label+" runs "+fmtHrs(g.span)+" on the clock",
+detail: (g.n>1? g.n+" people are on it. " : "")+
+(g.span>span14? "That is more than 14 hours on one shift."
+: "That is longer than any day you are open."),
+extra:{date:g.date, shiftId:g.sh.id}
+};
+});
+}
+ 
+ 
+ 
+
+ 
+function calloutStarted(a){
+return Date.now() >= parseYmd(a.date).getTime()+a.startMin*60000;
+}
+
+ 
+function calloutCandidates(){
+const today=ymd(new Date()), tomorrow=addDays(today,1);
+const out=[];
+[today, tomorrow].forEach(date=>{
+const ws=weekStartOf(date, S.org.weekStart);
+const wk=peekWeek(ws);
+(wk.assignments||[]).forEach(a=>{
+if(a.date!==date) return;
+const e=empById(a.empId); if(!e || e.active===false) return;
+if(calloutStarted(a)) return;
+out.push({a, e, ws});
+});
+});
+out.sort((x,y)=> x.a.date.localeCompare(y.a.date) || x.a.startMin-y.a.startMin || x.e.name.localeCompare(y.e.name));
+return out;
+}
+
+ 
+function logCallout(a, kind){
+const e=empById(a.empId);
+S.callouts=S.callouts||[];
+ 
+const have=S.callouts.find(x=>x.empId===a.empId && x.date===a.date && x.shiftId===a.shiftId);
+if(have){ if(have.kind!==kind){ have.kind=kind; have.editedAt=Date.now(); a.calloutEdited=true; } }
+else S.callouts.push({id:uid("co"), empId:a.empId, date:a.date, shiftId:a.shiftId, kind, at:Date.now()});
+a.callout=kind;
+logIt("callout", (e? e.name.split(" ")[0] : "Someone")+" · "+(kind==="noshow"?"no-show":"called out")+" · "+
+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}));
+}
+
+ 
+function releaseCallout(a, ws){
+ws = ws || weekStartOf(a.date, S.org.weekStart);
+const wk=getWeek(ws);
+const wasProject = !!(a.topUp || a.project);
+const wasLocked = !!a.locked;
+const slot={date:a.date, dow:a.dow, shiftId:a.shiftId, roleId:a.roleId||null, siteId:a.siteId||null};
+ 
+const sig2=v=>checkSig(v)+"|"+(v.detail||"")+"|"+(v.from!=null?v.from:"")+"|"+(v.to!=null?v.to:"")+"|"+(v.openSlot||"");
+const beforeCounts={};
+if(!wasProject) try{ (validate(ws)||[]).forEach(v=>{ const k=sig2(v); beforeCounts[k]=(beforeCounts[k]||0)+1; }); }catch(e){}
+wk.assignments=(wk.assignments||[]).filter(x=>x.id!==a.id);
+wk.unfilled=wk.unfilled||[];
+const heldAt=wk.assignments.filter(x=>x.date===slot.date && x.shiftId===slot.shiftId
+&& (x.roleId||null)===slot.roleId).length;
+wk.unfilled.push({date:slot.date, shiftId:slot.shiftId, roleId:slot.roleId, reason:"called out", heldAt});
+let severity="none", presence=false;
+if(!wasProject){
+let after=[]; try{ after=validate(ws)||[]; }catch(e){}
+const afterCounts={};
+after.forEach(v=>{ const k=sig2(v); afterCounts[k]=(afterCounts[k]||0)+1; });
+const bumped=new Set(Object.keys(afterCounts).filter(k=>afterCounts[k]>(beforeCounts[k]||0)));
+const added=after.filter(v=>bumped.has(sig2(v)));
+for(const v of added){
+if(v.code==="open"){ severity="row"; break; }
+if(v.code==="cover"){
+const rid=v.ruleId||(v.ruleIds||[])[0];
+const rule=(S.coverage||[]).find(r=>r.id===rid);
+const isPres=(typeof isPresenceRule==="function")? isPresenceRule(rule)
+: !!(rule && (typeof rule.presence==="boolean"? rule.presence : ((roleById(rule.roleId||null)||{}).licensed)));
+if(isPres){ severity="presence"; presence=true; break; }
+if(severity==="none") severity="postmin";
+} else if((v.code==="stationgap"||v.code==="empty"||v.code==="emptyfirst") && severity==="none"){
+severity="postmin";
+}
+}
+}
+save();
+return {slot, severity, presence, wasLocked, ws, empId:a.empId,
+empName:(empById(a.empId)||{name:"Someone"}).name};
+}
+
+ 
+function calloutSheet(presetAId){
+if(presetAId){
+let found=null;
+Object.keys(S.weeks||{}).some(ws=>{
+const wk=S.weeks[ws];
+const a=(wk.assignments||[]).find(x=>x.id===presetAId);
+if(a){ found={a, e:empById(a.empId)||{name:"Someone"}, ws}; return true; }
+return false;
+});
+if(!found){ toast("That shift is no longer on the board"); return; }
+calloutStep2(found);
+return;
+}
+const list=calloutCandidates();
+const byEmp=new Map();
+list.forEach(x=>{ if(!byEmp.has(x.e.id)) byEmp.set(x.e.id, x); });
+const people=[...byEmp.values()];
+if(!people.length){ toast("Nobody has a shift today or tomorrow that hasn’t started"); return; }
+const html=`<div class="stack">
+    <p class="mini">Pick who called out — their next shift today or tomorrow is shown.</p>
+    <div class="stack" style="gap:6px">
+      ${people.map((x,i)=>{ const sh=aShift(x.a);
+return `<button type="button" class="btn" data-cop="${i}" style="justify-content:flex-start;text-align:left;min-height:44px">
+          <span><b>${esc(x.e.name)}</b><span class="mini" style="display:block">${esc(DSHORT[x.a.dow])} ${esc(prettyDate(x.a.date))} · ${esc(sh.label)} · ${esc(aTimes(x.a))}</span></span></button>`;
+}).join("")}
+    </div>
+  </div>`;
+const r=openSheet(html, {title:"Who called out?"});
+r.querySelectorAll("[data-cop]").forEach(b=>b.onclick=()=>{
+const x=people[+b.dataset.cop]; closeSheet(); setTimeout(()=>calloutStep2(x), 60);
+});
+}
+
+ 
+function calloutStep2(x){
+const {a, e, ws}=x;
+const sh=aShift(a);
+const started=calloutStarted(a);
+let kind=a.callout || "callout";
+const html=`<div class="stack">
+    <div class="mini">${esc(e.name)} · ${esc(DSHORT[a.dow])} ${esc(prettyDate(a.date))} · ${esc(sh.label)} ${esc(aTimes(a))}</div>
+    <div class="seg" id="cokindseg">
+      <button type="button" data-cokind="callout" aria-pressed="${kind==="callout"}">Called out</button>
+      <button type="button" data-cokind="noshow" aria-pressed="${kind==="noshow"}">No-show</button>
+    </div>
+    ${started? `<p class="mini">This shift has already started, so it can be tagged but not released — cover it by hand from the day.</p>` : ""}
+    <div class="row" style="gap:8px;margin-top:4px">
+      <button type="button" class="btn" id="cocancel" style="flex:1;min-height:44px">Cancel</button>
+      ${started
+? `<button type="button" class="btn primary" id="cotagonly" style="flex:2;min-height:44px">Save the tag</button>`
+: `<button type="button" class="btn primary" id="corelease" style="flex:2;min-height:44px">Release shift and find cover</button>`}
+    </div>
+  </div>`;
+const r=openSheet(html, {title:"Who called out?"});
+r.querySelectorAll("[data-cokind]").forEach(b=>b.onclick=()=>{
+kind=b.dataset.cokind;
+r.querySelectorAll("[data-cokind]").forEach(x2=>x2.setAttribute("aria-pressed", String(x2.dataset.cokind===kind)));
+});
+const cc=r.querySelector("#cocancel"); if(cc) cc.onclick=()=>closeSheet();
+const to=r.querySelector("#cotagonly"); if(to) to.onclick=()=>{
+logCallout(a, kind); save(); closeSheet(); render();
+toast((kind==="noshow"?"No-show":"Callout")+" logged for "+e.name.split(" ")[0]);
+};
+const rl=r.querySelector("#corelease"); if(rl) rl.onclick=()=>{
+logCallout(a, kind);
+const release=releaseCallout(a, ws);
+closeSheet(); render();
+setTimeout(()=>calloutCoverSheet(release), 60);
+};
+}
+
+ 
+function calloutCoverSheet(release){
+const {slot, severity, presence, wasLocked, ws}=release;
+const wk=peekWeek(ws);
+const sh=shiftById(slot.shiftId)||{label:"Shift"};
+const mm=shiftMinutes(sh), aMin=mm[0], bMin=mm[1];
+const grace=postPending(wk);
+const posted=!!wk.published;
+const cands=candidatesFor(slot.shiftId, slot.date, slot.dow, slot.roleId, null, slot.siteId||null);
+const free=cands.filter(c=>!c.blocks.length);
+const blocked=cands.filter(c=>c.blocks.length);
+let pd=null, pdRow="";
+if(!free.length){
+pd=(typeof namedPerDiem==="function")? namedPerDiem(slot, ws) : null;
+if(pd) pdRow=`<div class="cand"><div style="flex:none;font-weight:600;font-size:13px;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pd.name)}</div>
+      <div class="why">On call — clears every check for it.</div>
+      <button type="button" class="btn sm primary" data-pdpick="1">Assign</button></div>`;
+}
+const presenceCopy = presence
+? `<div class="banner crit"><div><b>This also leaves a rule the board has to keep uncovered.</b> The window it checked stays broken until somebody is on it.</div></div>` : "";
+const lockCopy = wasLocked ? `<p class="mini">Released from a lock — whoever covers it starts unlocked.</p>` : "";
+const footnote = posted? ((typeof postedFootnote==="function")? postedFootnote()
+: `<p class="pfoot">Changes after a week is posted can carry notice or pay obligations in some cities and for larger employers.</p>`) : "";
+const html=`<div class="stack">
+    <div class="mini">${esc(DAYS[slot.dow])}, ${esc(prettyDate(slot.date))} · ${esc(sh.label)} · ${esc(m2disp(aMin))}–${esc(m2disp(bMin))}${slot.roleId? " · "+esc(roleName(slot.roleId)):""}</div>
+    ${presenceCopy}${lockCopy}
+    ${pdRow}
+    ${free.length? `<div><div class="lab" style="margin:8px 0 6px">Clear to take it</div>${candidateHTML(free, "data-copick")}</div>`
+: (pdRow? "" : `<div class="banner warn"><div><b>Nobody clears every limit.</b> The list below shows exactly what is in the way for each person.</div></div>`)}
+    ${blocked.length? `<div><div class="lab" style="margin:12px 0 6px">Blocked, and by what</div>${candidateHTML(blocked, "data-copick")}</div>`:""}
+    ${footnote}
+    <div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap">
+      ${posted? (grace
+? `<button type="button" class="btn" id="cooffer" disabled style="min-height:44px">Offer once the week posts (${esc(graceClock(postSecsLeft(wk)))})</button>`
+: `<button type="button" class="btn" id="cooffer" style="min-height:44px">Offer it instead — wait for a reply</button>`)
+: ""}
+      ${presence
+? `<a href="#" id="coleave" class="mini" style="text-decoration:underline">Leave it open — the rule stays broken</a>`
+: `<button type="button" class="btn ghost" id="coleave" style="min-height:44px">Leave it open</button>`}
+    </div>
+  </div>`;
+const r=openSheet(html, {title:"Who could cover it?"});
+const assign=(empId)=>{
+const emp=empById(empId); if(!emp) return;
+const rec={id:uid("a"), empId, date:slot.date, dow:slot.dow, shiftId:slot.shiftId, startMin:aMin, endMin:bMin,
+roleId:slot.roleId||(emp.roleIds||[])[0]||null, locked:false};
+if(typeof applyBreaks==="function") applyBreaks(rec);
+const w=getWeek(ws);
+w.assignments.push(rec);
+w.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
+save(); closeSheet(); render();
+if(posted){
+try{
+const diff=(typeof weekDiff==="function")? weekDiff(ws).filter(d=>d.empId===empId) : [];
+if(diff.length && typeof repostNotify==="function") repostNotify(ws, "affected", diff);
+}catch(e){}
+toast(emp.name.split(" ")[0]+" is on — sent the usual change message");
+} else toast(emp.name.split(" ")[0]+" is on for "+DAYS[slot.dow]+" "+m2disp(aMin)+"–"+m2disp(bMin));
+};
+r.querySelectorAll("[data-copick]").forEach(b=>b.onclick=()=>assign(b.dataset.copick));
+const pdb=r.querySelector("[data-pdpick]"); if(pdb && pd) pdb.onclick=()=>assign(pd.id);
+const of=r.querySelector("#cooffer");
+if(of && !grace) of.onclick=()=>{ closeSheet(); askModal(ws, {date:slot.date, dow:slot.dow, shiftId:slot.shiftId, roleId:slot.roleId}); };
+const lv=r.querySelector("#coleave"); if(lv) lv.onclick=(ev)=>{ ev.preventDefault(); closeSheet(); };
+}
  
 function render(){
  
@@ -18850,7 +20015,10 @@ MODAL_GUARD=null;
 histModalOpen();
 const r=modalRoot();
  
-MODAL_OPENER = (document.activeElement && document.activeElement!==document.body)? document.activeElement : null;
+const reentrant = !!r.querySelector(".modal");
+const draw=()=>{
+ 
+if(!reentrant) MODAL_OPENER = (document.activeElement && document.activeElement!==document.body)? document.activeElement : null;
 const ttlId="mdt_"+Math.random().toString(36).slice(2,8);
 r.innerHTML='<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="'+ttlId+'"><header><h3 id="'+ttlId+'">'+esc(title)+
 '</h3><button class="btn ghost sm" data-close>Close</button></header><div class="body">'+bodyHtml+
@@ -18878,6 +20046,8 @@ wirePwEyes(r);
 polishA11y(r);
 markRequired(r); markExplain(r);
 markToggleState(r); enhanceDates(r); stackTables(r); wireWhy(r);
+};
+if(reentrant) keepModalScroll(draw); else draw();
 return r;
 }
 let MODAL_OPENER=null;
@@ -19001,6 +20171,7 @@ toast(postPending(wk)? "Going up in "+graceClock(postSecsLeft(wk))+" \u2014 take
 : "Posted and locked \u2014 nobody has been told yet");
 if(!postPending(wk)) repostNotify(ws, choice, changes); })); });
 on("#hunpost",()=>unpostWeek(S.currentWeek, "Open for edits again"));
+on("#hcallout",()=>calloutSheet());
 on("#hlook",()=>go("week"));
 on("#hpdf",()=>{ const ws=S.currentWeek;
 exportWeekPDF().then(ok=>{ const wk=peekWeek(ws); if(ok&&wk&&wk.published&&!postPending(wk)){ markTold(ws,"pdf"); render(); } }).catch(()=>pdfUnavailable()); });
@@ -19189,7 +20360,6 @@ const EXPLAIN = {
 "rules.guaranteeSpread": "Where the extra shifts go when somebody is under their guaranteed hours. Example: a part-timer guaranteed 16 hours with only 8 scheduled needs one more shift — “busiest days first” puts it where you are stretched, “evenly” puts it where the floor is thinnest, and “on one named shift” always uses the shift you pick.",
 "rules.guaranteeShift": "The one shift that soaks up hours owed, when you chose to spread them that way. Example: pick your 8:00–16:30 and every top-up lands there rather than scattering across openings and closings.",
 "rules.preferLong": "When there is a choice, give people longer shifts rather than more of them. Example: somebody owed 16 hours gets two eight-hour days instead of four four-hour ones.",
-"rules.perDiem": "Whether people marked “on call” may be called in automatically when a week is short. Example: with it on, a gap nobody else can take is offered to your per diem list rather than left open.",
 "rules.fairness": "How hard the drafter works to even out the unpopular shifts over time. Higher means it will accept a slightly worse fit today to keep the ledger level. Example: at the top setting, somebody who closed three Fridays running will not be given a fourth while anybody else can take it.",
 "rules.honorPrefs": "How much weight somebody's shift preferences carry against everything else. Preferences never beat a rule — they break ties. Example: two people can both take Saturday; the one who asked for it gets it.",
 
@@ -19795,7 +20965,7 @@ toast("Removed \u2014 everything that was there now belongs to "+siteName(main))
 function vSettings(){
 const L=law(), P=S.priority;
 const bt=BIZ_TYPES.find(x=>x.id===S.org.bizType);
-const slots=Object.values(S.demand).reduce((t,r)=>t+r.reduce((x,y)=>x+(y.count||1),0),0);
+const slots=Object.values(S.demand).reduce((t,r)=>t+r.reduce((x,y)=>x+demCount(y),0),0);
 const live=(S.requests||[]).filter(r=>r.status!=="declined");
 const standing=live.filter(r=>r.every&&r.every.length);
 const sel=(id,opts,cur)=>`<select data-set="${id}">${opts.map(o=>`<option value="${o[0]}" ${String(cur)===String(o[0])?"selected":""}>${esc(o[1])}</option>`).join("")}</select>`;
@@ -20301,8 +21471,6 @@ sel("rules.honorPrefs", [[1,"On"],[0,"Off"]], S.rules.honorPrefs?1:0))}
 sel("rules.fairness", [[1,"On"],[0,"Off"]], S.rules.fairness?1:0))}
       ${setRow("Prefer fewer, longer shifts", "When topping people up, one 8-hour shift beats two 4-hour ones \u2014 fewer handoffs, fewer commutes.",
 sel("rules.preferLong", [[1,"On"],[0,"Off"]], S.rules.preferLong?1:0))}
-      ${setRow("People you keep on call (per diem)", "Either way they are never drafted for ordinary shifts \u2014 only when coverage cannot be met without them.",
-sel("rules.perDiem", [["ask","Suggest them when a gap appears \u2014 I decide"],["auto","Call them in automatically"]], S.rules.perDiem==="auto"?"auto":"ask"))}
       ${setRow("Requests on file", live.length+" live"+(standing.length? ", "+standing.length+" standing every week":""), "", "requests")}
       ${setRow("The record", "Hours, trends, and every request you've met or turned down", "", "analytics")}
     </div></div>
@@ -20875,14 +22043,17 @@ return `
         <tbody>${S.shifts.map(s=>{
 const [a,b]=shiftMinutes(s); const gg=shiftGap(s);
 const gross=(b-a)-(gg? gg.to-gg.from : 0);
-const br=computeBreaks(a,b,{gap:gg});
+const br=computeBreaks(a,b,{gap:gg, shift:s});
+const over14=gross>14*60;
+const mealLen = br.meals[0]? br.meals[0].len : mealLenFor(s);
 return `<tr>
             <td><span class="tag" style="--sc:${esc(s.color)}">${esc(s.label)}</span>${
 gg? `<div class="mini">split \u2014 off ${esc(fmtHrs(gg.to-gg.from))} in the middle</div>`:""}${
 shiftFlex(s)? `<div class="mini">${esc(flexLabel(s))}</div>`:""}</td>
-            <td class="mono">${shTimes(s)}<div>${usesChip("shiftId", s.id)}</div></td>
-            <td class="mono">${fmtHrs(gross)}${gg? `<div class="mini">${esc(fmtHrs(b-a))} span</div>`:""}</td>
-            <td class="mono">${br.owed.meals? br.owed.meals*(law().meal?law().meal.lengthMin:30)+" min":"—"}</td>
+            <td class="mono">${shTimes(s)}${b>1440? ' <span class="mini">overnight</span>':""}<div>${usesChip("shiftId", s.id)}</div></td>
+            <td class="mono">${over14? `<span style="color:var(--warn)">${fmtHrs(gross)}</span>` : fmtHrs(gross)}${gg? `<div class="mini">${esc(fmtHrs(b-a))} span</div>`:""}</td>
+            <td class="mono">${!br.owed.meals? "—"
+: (typeof s.mealMin==="number"? `<span class="chip">${mealLen}-min meal</span>` : br.owed.meals*mealLen+" min")}</td>
             <td><span class="chip pref">${DESIRE_LABEL[s.desire||0]}</span></td>
             <td class="mini">${br.owed.meals||br.owed.rests? `${br.owed.meals} meal${br.owed.meals===1?"":"s"} · ${br.owed.rests} rest break${br.owed.rests===1?"":"s"} owed`:"no breaks owed"}</td>
             <td><button class="btn sm" data-editshift="${s.id}">Edit</button>
@@ -20996,10 +22167,7 @@ save();
  
 function defaultShiftSpanMin(){
  
-let meal=0;
-try{ const L=law(); if(L && L.meal && L.meal.lengthMin) meal=L.meal.lengthMin; }catch(e){}
-meal = Math.max(meal, (S.rules && S.rules.mealLengthMin)||0);
-return 8*60 + meal;
+return 8*60 + mealLenFor(null);
 }
  
  
@@ -21023,7 +22191,7 @@ function shiftObjections(sh){
 const out=[];
 if(!sh || !sh.start || !sh.end) return out;
 const [a,b]=shiftMinutes(sh);
-const worked=paidEstimate(a, b, {gap:shiftGap(sh)});
+const worked=paidEstimate(a, b, {gap:shiftGap(sh), shift:sh});
  
 const capH=+((S.rules||{}).maxShiftH)||0;
 if(capH && worked > capH*60+1)
@@ -21061,6 +22229,10 @@ modal(id? ("Edit "+((s&&s.label)||"shift")) : "New shift", `
         <div class="field"><label>Starts</label><input type="time" id="ss" value="${esc(s.start)}"></div>
         <div class="field"><label>Ends</label><input type="time" id="se" value="${esc(s.end)}"></div>
       </div>
+      <div class="field"><label>Set the length</label><div class="row lenchips" id="lenchips"></div></div>
+      <div class="field"><label>Unpaid meal</label><div class="row mealchips" id="mealchips"></div></div>
+      <div id="overnight" class="banner warn" style="display:none"></div>
+      <div id="shiftlen" class="shiftlen"></div>
       <label class="switch"><input type="checkbox" id="ssplit" ${(s.gapFrom&&s.gapTo)?"checked":""}> Split shift &mdash; they go home in the middle and come back <span class="chip">optional</span></label>
       <div class="grid2" id="ssplitwrap" style="display:${(s.gapFrom&&s.gapTo)?"":"none"}">
         <div class="field"><label>Off at</label><input type="time" id="sgf" value="${esc(s.gapFrom||"14:00")}"></div>
@@ -21088,13 +22260,19 @@ root=>{
 wireSaveNext(root, "#saveshift", S.shifts.map(x=>x.id), id, shiftModal);
 let color=s.color;
  
+let mealMin = (typeof s.mealMin==="number")? s.mealMin : null;
+ 
+let confirmed = s.confirmedTimes||"";
+ 
 let objSeen=false;
 const prev=()=>{
 objSeen=false;
 const obox=root.querySelector("#shiftobj");
 if(obox && obox.style.display!=="none"){ obox.style.display="none"; obox.innerHTML=""; }
 const sv=root.querySelector("#saveshift"); if(sv) sv.textContent="Save shift";
-const a=t2m(root.querySelector("#ss").value); let b=t2m(root.querySelector("#se").value); if(b<=a)b+=1440;
+ 
+const rawA=t2m(root.querySelector("#ss").value), rawB=t2m(root.querySelector("#se").value);
+const a=rawA; let b=rawB; if(b<=a) b+=1440;
 const sp=root.querySelector("#ssplit");
 let gg=null;
 if(sp && sp.checked){
@@ -21102,8 +22280,60 @@ let gf=t2m(root.querySelector("#sgf").value), gt=t2m(root.querySelector("#sgt").
 if(gf<a) gf+=1440; if(gt<=gf) gt+=1440;
 if(gf>a && gt<b) gg={from:gf, to:gt};
 }
-const br=computeBreaks(a,b,{gap:gg}); const L=law();
+const shiftLike={mealMin};
+const br=computeBreaks(a,b,{gap:gg, shift:shiftLike}); const L=law();
 const gross=(b-a)-(gg? gg.to-gg.from : 0), unpaid=br.unpaid||0, paid=gross-unpaid;
+const over14=gross>14*60;
+ 
+ 
+const typed=root.querySelector("#ss").value+"-"+root.querySelector("#se").value;
+const on=(rawB<=rawA && confirmed!==typed)? overnightNote(rawA, rawB) : null;
+const obanner=root.querySelector("#overnight");
+if(on){
+obanner.style.display="";
+obanner.innerHTML=`<div><b>${esc(on.say)}</b></div><div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" id="fixampm">${esc(on.btn)}</button><button type="button" class="btn sm" id="keepampm">It’s right as entered</button></div>`;
+root.querySelector("#fixampm").onclick=()=>{
+root.querySelector("#ss").value=m2t(on.fixedStart);
+root.querySelector("#se").value=m2t(on.fixedEnd);
+root.querySelector("#se").dispatchEvent(new Event("input",{bubbles:true}));
+};
+root.querySelector("#keepampm").onclick=()=>{
+confirmed=typed;
+root.querySelector("#se").dispatchEvent(new Event("input",{bubbles:true}));
+};
+} else { obanner.style.display="none"; obanner.innerHTML=""; }
+ 
+root.querySelector("#shiftlen").innerHTML =
+`<span${over14?' style="color:var(--warn)"':""}>${fmtHrs(paid)} paid \u00b7 ${fmtHrs(gross)} on the clock \u00b7 ends ${esc(m2disp(b))}</span>`;
+ 
+{ const curH=paid/60, fixed=[6,8,10,12];
+const list=fixed.concat(fixed.some(h=>Math.abs(curH-h)<0.02)? [] : [curH]).sort((x,y)=>x-y);
+root.querySelector("#lenchips").innerHTML=list.map(h=>
+`<button type="button" class="btn sm" data-lenchip="${h}" aria-pressed="${Math.abs(curH-h)<0.02}">${esc(fmtHrs(h*60))} paid</button>`).join("");
+root.querySelectorAll("#lenchips [data-lenchip]").forEach(btn=>{
+btn.onclick=()=>{
+const h=+btn.dataset.lenchip;
+const newEnd=(a + Math.round(h*60) + mealLenFor(shiftLike)) % 1440;
+const se2=root.querySelector("#se");
+se2.value=m2t(newEnd);
+se2.dispatchEvent(new Event("input",{bubbles:true}));
+};
+});
+}
+ 
+{ const M=mealRow(L.meal||null, gross, a); const lawMin=(M&&M.lengthMin)||0;
+const boardDef=Math.max(mealLenFor(null), lawMin);
+const extra=[45,60].filter(v=>v>=lawMin && v!==boardDef);
+const chips=[{v:null,t:"Board default ("+boardDef+")"}].concat(extra.map(v=>({v,t:String(v)})));
+root.querySelector("#mealchips").innerHTML=chips.map(c=>
+`<button type="button" class="btn sm" data-mealchip="${c.v==null?"":c.v}" aria-pressed="${mealMin==null? c.v==null : mealMin===c.v}">${esc(c.t)}</button>`).join("");
+root.querySelectorAll("#mealchips [data-mealchip]").forEach(btn=>{
+btn.onclick=()=>{
+mealMin = btn.dataset.mealchip===""? null : +btn.dataset.mealchip;
+prev();
+};
+});
+}
 root.querySelector("#brkprev").innerHTML = `<div>
           <b>${fmtHrs(gross)} on the clock` +
 (unpaid? ` \u2212 ${unpaid} min unpaid meal = <b>${fmtHrs(paid)} worked and paid</b>` : `, all of it paid`) + `.</b><br>
@@ -21136,7 +22366,7 @@ const trail=()=>{
 if(!follow) return;
 if(!ss.value) return;                  
 const a=t2m(ss.value); if(!isFinite(a)) return;
-se.value=m2hhmm((a + defaultShiftSpanMin()) % 1440);
+se.value=m2hhmm((a + 8*60 + mealLenFor({mealMin})) % 1440);
 prevE();
 };
 ss.addEventListener("input", trail);
@@ -21156,6 +22386,10 @@ flex:"none", lenMinH:0, lenMaxH:0,
 gapFrom:s.gapFrom||"", gapTo:s.gapTo||"",
 roleId:null,color,note:root.querySelector("#snote").value.trim(),unpaidBreakMin:30,desire:des,
 extra:(root.querySelector("#sextra")||{}).value||"yes"};
+ 
+if(typeof mealMin==="number") rec.mealMin=mealMin;
+ 
+if(confirmed===(rec.start+"-"+rec.end)) rec.confirmedTimes=confirmed;
 if(rec.gapFrom && rec.gapTo && !shiftGap(rec)){
 toast("The break has to sit inside the shift \u2014 check the times"); return; }
  
@@ -21260,8 +22494,7 @@ if(w==="yes") notes.push(`<span class="chip acc"${whyAttrs(e.name.split(" ")[0]+
 else if(w==="no") notes.push(`<span class="chip"${whyAttrs(e.name.split(" ")[0]+" has not signed a meal waiver, so their meal is always scheduled even when the board waives others. Change it on their profile once a form is signed.", "emp:"+e.id)}>never waives meals</span>`);
 }
 { const bl=ptoBalance(e); if(bl!==null) notes.push(`<span class="chip ${bl<0?"crit":""}"${bl<0? whyAttrs(e.name.split(" ")[0]+" has taken "+Math.abs(bl)+"h more time off than they have accrued. Adjust the balance or the accrual on their profile.", "emp:"+e.id):""}>${bl}h PTO</span>`); }
-{ const li=(S.callouts||[]).filter(c=>c.empId===e.id && c.at>Date.now()-90*86400000); const n=li.length; const hn=handNote(li);
-if(n) notes.push(`<span class="chip warn"${whyAttrs(n+" callout"+(n===1?"":"s")+" or no-show"+(n===1?"":"s")+" logged in the last 90 days"+(hn? " ("+hn+")":"")+". Logged from the shift itself, under Called out. It is a record for you, not a penalty — nothing in the drafter changes because of it.", "emp:"+e.id)}>${n} callout${n===1?"":"s"} / 90d</span>`); }
+ 
 let lic="";
 if(empLicensed(e)){
 if(e.licExp){
@@ -21956,7 +23189,6 @@ const emps=S.employees.filter(e=>e.active);
 if(!emps.length){ toast("Add the team first"); return; }
 const KINDS=[
 ["timeoff","Time off already taken","Vacation, sick days, anything they were away for. Counts against a PTO balance if you say so."],
-["callout","A callout or a no-show","So the pattern you already know about is in the record from day one."],
 ["request","A request you granted or turned down","So \u201cwho has had their way lately\u201d is fair from the start, not from today."],
 ["holiday","A holiday somebody worked","Feeds the holiday rotation, so whoever did last Thanksgiving isn\u2019t asked first again."]
 ];
@@ -22140,7 +23372,7 @@ modal(id?"Edit "+e.name:"Add someone", `
       <div class="field"><label>How they're used</label><select id="eoc">
         <option value="0" ${e.onCall?"":"selected"}>Scheduled as normal</option>
         <option value="1" ${e.onCall?"selected":""}>Only called in when there's a gap</option></select>
-        <span class="mini">The draft never gives an on-call person a shift while anybody scheduled as normal can cover it. It builds the week first, and only where coverage is still short are they offered \u2014 or called in on their own, if you set that under Scheduling rules \u2192 Per diem. This is the setting for somebody you would rather not use unless the week needs them.</span></div>
+        <span class="mini">The draft never gives an on-call person a shift while anybody scheduled as normal can cover it. It builds the week first, and only where coverage is still short are they offered \u2014 or called in on their own, if you set that on this card. This is the setting for somebody you would rather not use unless the week needs them.</span></div>
       ${waiverPossible()? `<div class="field"><label>Meal waiver</label><select id="ewv">
         <option value="default" ${empWaiver(e)==="default"?"selected":""}>Follow the board setting (${esc(WAIVER_WORDS[waiverMode()].toLowerCase())})</option>
         <option value="yes" ${empWaiver(e)==="yes"?"selected":""}>Signed a waiver — waive their meal whenever the law allows</option>
@@ -22181,6 +23413,10 @@ modal(id?"Edit "+e.name:"Add someone", `
         <option value="ask" ${e.extraH==="ask"?"selected":""}>Ask me first \u2014 guarantee is the cap until I say</option></select>
         <span class="mini warnnote" id="eextrawarn" style="display:none;color:var(--warn)"></span>
         <span class="mini">Ask me first stops the drafter at the guarantee; you approve extra hours week by week.</span></div>
+      <div class="field" id="epdwrap" style="display:${e.onCall?"":"none"}"><label>When nobody else can cover</label><select id="epdm">
+        <option value="auto" ${perDiemMode(e)==="auto"?"selected":""}>Call ${esc((e.name||"").split(" ")[0]||"them")} in automatically</option>
+        <option value="ask" ${perDiemMode(e)==="ask"?"selected":""}>Ask me first</option></select>
+        <span class="mini">Only while a week is being drafted. Once a week is posted, nobody is put on it without you.</span></div>
       <div class="field"><label>Max days / week</label><select id="emaxd">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${e.maxD===n?"selected":""}>${n} day${n===1?"":"s"}</option>`).join("")}</select></div>
       <div class="field"><label>Started</label><input type="date" id="esen" value="${esc(e.seniority||"")}"></div>
       ${costOn()? `<div class="field"><label>Hourly rate</label><input type="number" inputmode="decimal" id="erate" min="0" step="0.25" value="${e.rate||0}"><span class="mini">optional — drives labor cost. Stays in your account; never shared.</span></div>`:""}
@@ -22513,6 +23749,20 @@ note.textContent = ex
 : "Aim for the guarantee, never exceed the cap.";
 };
 hm.onchange=paintHM; paintHM();
+ 
+{ const oc=root.querySelector("#eoc"), pw=root.querySelector("#epdwrap"), pm=root.querySelector("#epdm"), en=root.querySelector("#en");
+const paintPD=()=>{
+const on=!!(oc && oc.value==="1");
+if(pw) pw.style.display = on? "" : "none";
+const xw=root.querySelector("#eextrawrap");
+if(xw) xw.style.display = (on || hm.value==="exact")? "none" : "";
+if(pm && pm.options[0]){ const f=((en&&en.value)||"").trim().split(" ")[0]||"them";
+pm.options[0].textContent="Call "+f+" in automatically"; }
+};
+if(oc) oc.addEventListener("change", paintPD);
+if(en) en.addEventListener("input", paintPD);
+hm.addEventListener("change", paintPD);
+paintPD(); }
 const hp=root.querySelector("#ehp");
 const paintHP=()=>{ root.querySelector("#ehphwrap").style.display = hp.value==="1"? "":"none"; };
 hp.onchange=paintHP; paintHP();
@@ -22530,7 +23780,6 @@ if(pp) pp.onchange=()=>{ root.querySelector("#eptorw").style.display = pp.value=
 const et=root.querySelector("#et");
 const emin=root.querySelector("#emin"), emax=root.querySelector("#emax"), eminnote=root.querySelector("#eminnote");
  
-const TYPE_HOURS={FT:[32,40], PT:[0,28], PRN:[0,40], TEMP:[0,40], TRAIN:[0,32]};
 const paintMin=()=>{
 if(!eminnote) return;
 const v=+(emin&&emin.value||0), t=(et&&et.value)||e.type;
@@ -22542,11 +23791,13 @@ eminnote.textContent = t==="PRN"
 };
 if(emin) emin.addEventListener("input", paintMin);
 if(et) et.addEventListener("change",()=>{
-const was=TYPE_HOURS[e.type]||[], now=TYPE_HOURS[et.value];
+const was=typeDefaults(e.type), now=typeDefaults(et.value);
  
-if(now && emin && emax && +emin.value===(was[0]||0) && +emax.value===(was[1]||0)){
-emin.value=now[0]; emax.value=now[1];
+if(emin && emax && +emin.value===(was.minH||0) && +emax.value===(was.maxH||0)){
+emin.value=now.minH; emax.value=now.maxH;
 }
+ 
+if(hm && hm.value===was.hoursMode){ hm.value=now.hoursMode; paintHM(); }
 e.type=et.value;
 paintMin();
  
@@ -22629,6 +23880,9 @@ return out; }
 })(),
 hoursMode:root.querySelector("#ehm").value,
 extraH:((root.querySelector("#eextra")||{}).value)||e.extraH||"auto",
+extraMode:(root.querySelector("#eoc").value==="1")
+? (((root.querySelector("#epdm")||{}).value)==="auto"? "auto" : "ask")
+: (e.extraMode==="auto"? "auto" : "ask"),
 minH:+root.querySelector("#emin").value||0, maxH:+root.querySelector("#emax").value||0,
 holidayPay:root.querySelector("#ehp").value==="1",
 holidayPayH:(function(){
@@ -22785,14 +24039,14 @@ const D=editDemand();
 const usedId=weekPatId();
 const offSet = (EDITPAT||null)!==(usedId||null);
 const usedName = usedId? ((pats.find(x=>x.id===usedId)||{}).name||"another pattern") : "the standard week";
-const flexRows=Object.keys(D).reduce((t,k)=>t+(D[k]||[]).filter(r=>r.max==null).length,0)
-+ ((S.holidays&&S.holidays.demand)||[]).filter(r=>r.max==null).length;
+const flexRows=Object.keys(D).reduce((t,k)=>t+(D[k]||[]).filter(r=>r.max==null && demCount(r)>0).length,0)
++ ((S.holidays&&S.holidays.demand)||[]).filter(r=>r.max==null && demCount(r)>0).length;
 return `
   <div class="stack">
     ${offSet? `<div class="banner warn"><div><b>These rows are not what the week you are on will be drafted from.</b>
       You are editing <b>${esc(cur? cur.name : "the standard week")}</b>, but the week of ${esc(prettyDate(curWeek()))} is on <b>${esc(usedName)}</b> — so adding, removing or changing a role here will not change what Generate produces for it.</div>
       <div class="row" style="gap:6px;flex:none"><button class="btn sm primary" id="demusethis">Edit ${esc(usedName)} instead</button></div></div>` : ""}
-    ${flexRows && !(S.ui&&S.ui.demFlexOk)? `<div class="banner warn"><div><b>${flexRows} row${flexRows===1?" says":"s say"} \u201cat least\u201d.</b> A day asking for 2 can end up with 3, because the drafter may add to ${flexRows===1?"it":"them"} for hours owed or floor cover.</div>
+    ${flexRows && !(S.ui&&S.ui.demFlexOk)? `<div class="banner warn"><div><b>${flexRows} row${flexRows===1?" says":"s say"} \u201cat least\u201d.</b> A day asking for 2 can end up with 3, because the drafter may add to ${flexRows===1?"it":"them"} for hours owed.</div>
       <div class="row" style="gap:6px;flex:none"><button class="btn sm primary" id="demexact">Make them all exact</button><button class="btn sm ghost" id="demflexok">Leave as they are</button></div></div>` : ""}
     <div class="card"><div class="body spread" style="padding:12px 14px">
       <div class="row">
@@ -22823,7 +24077,7 @@ return `<div class="banner warn"><div><b>${DAYS[x.busy.d]} is ${esc((LOAD_LABEL[
       <div class="body stack">
       ${DAYS.map((d,i)=>{
 const rows=D[i]||[]; const h=S.hours[i];
-const total=rows.reduce((t,r)=>t+(r.count||1),0);
+const total=rows.reduce((t,r)=>t+demCount(r),0);
 return `<div style="border:1px solid var(--line);border-radius:var(--r);overflow:hidden">
           <div class="spread" style="padding:9px 13px;background:var(--surface2);border-bottom:1px solid var(--line)">
             <div><strong style="font-family:Archivo,sans-serif;font-size:13px">${d}</strong>
@@ -22843,8 +24097,9 @@ return `<div class="demrow" data-dshift="${esc(r.shiftId)}" data-editdem="${i}:$
               <span class="tag" style="--sc:${sh.color}">${esc(sh.label)}</span>
               <span class="mono">${m2disp(a)}–${m2disp(b)}</span>
               <span>${esc(roleName(r.roleId))}</span>
-              <span class="chip acc">${r.max!=null? (r.count||1)===r.max? r.max+" exactly" : "at least "+(r.count||1)+" · at most "+r.max : "at least "+(r.count||1)}</span>
+              <span class="chip acc">${r.max!=null? demCount(r)===r.max? r.max+" exactly" : "at least "+demCount(r)+" · at most "+r.max : "at least "+demCount(r)}</span>
               <span class="mini">${fmtHrs(b-a)} each</span>
+              ${typeof sh.mealMin==="number"? `<span class="chip">${sh.mealMin}-min meal</span>`:""}
               <span class="row" style="margin-left:auto;gap:6px"><button class="btn sm" data-editdem2="${i}:${ri}">Edit</button><button class="btn sm danger" data-deldem="${i}:${ri}">Remove</button></span></div>`;
 }).join("")}</div>`
 : `<div class="empty" style="padding:16px">${h.closed?"Closed — nothing to staff.":"No shifts requested for this day."}</div>`}
@@ -22852,7 +24107,7 @@ return `<div class="demrow" data-dshift="${esc(r.shiftId)}" data-editdem="${i}:$
 }).join("")}
       ${(()=>{  
 const rows=(S.holidays&&S.holidays.demand)||[];
-const total=rows.reduce((t,r)=>t+(r.count||1),0);
+const total=rows.reduce((t,r)=>t+demCount(r),0);
 const own=holCoverOwn();
 const U=holUsingOwn();
 const listed=U.total;
@@ -22875,7 +24130,7 @@ const [a2,b2]=shiftMinutes(sh);
 return `<div class="demrow ${own?"":"off"}" data-editdem="${DOW_HOL}:${ri}" tabindex="0" role="button">
               <span class="tag" style="--sc:${esc(sh.color)}">${esc(sh.label)}</span>
               <span class="mono mini">${m2disp(a2)}\u2013${m2disp(b2)}</span>
-              <strong style="font-size:13px">${(r.count||1)}${r.max==null? " or more" : (r.max===(r.count||1)? " exactly" : "\u2013"+r.max)}</strong>
+              <strong style="font-size:13px">${demCount(r)}${r.max==null? " or more" : (r.max===demCount(r)? " exactly" : "\u2013"+r.max)}</strong>
               <span class="mini">${r.roleId? esc(roleName(r.roleId)) : "anyone on the roster"}</span>
             </div>`;
 }).join("")}</div>`
@@ -22896,7 +24151,7 @@ return `<div class="demrow ${own?"":"off"}" data-editdem="${DOW_HOL}:${ri}" tabi
           <td><span class="chip ${(c.kind||"min")==="min"?"":"acc"}">${(c.kind||"min")==="min"?"Minimum":(c.kind==="ratio"?"Ratio":"Pairing")}</span></td>
           <td class="mono" style="font-size:11px">${(!Array.isArray(c.days)||!c.days.length)? "every day" : DSHORT.map((d,i)=>c.days.includes(i)?d[0]:"·").join("")}</td>
           <td class="mono">${m2disp(t2m(c.start))}–${m2disp(t2m(c.end))}</td>
-          <td class="mini">${esc(ruleSentence(c))}${c.mealsCount===false?' <span class="chip">meals don\'t count</span>':""}</td>
+          <td class="mini">${esc(ruleSentence(c))}${c.mealsCount===false?' <span class="chip">meals don\'t count</span>':""}${(c.kind||"min")==="min"? `<label class="switch presw"><input type="checkbox" data-presence="${esc(c.id)}" ${isPresenceRule(c)?"checked":""}> This is a rule the business has to follow</label>`:""}</td>
           <td><button class="btn sm danger" data-delcov="${c.id}">Remove</button></td></tr>`).join("")}
         </tbody></table>`:`<div class="empty"><strong>No rules set</strong>Add one — "someone qualified on duty whenever we're open", or "one supervisor for every three assistants".</div>`}
       </div>
@@ -22930,8 +24185,8 @@ r=>{ r.querySelector("#hmgo").onclick=()=>{ closeModal(true); apply(true); };
 r.querySelector("#hmkeep").onclick=()=>{ closeModal(true); apply(false); }; });
 else apply(false); }; }
 { const ex=root.querySelector("#demexact"); if(ex) ex.onclick=()=>{ const D=editDemand(); let n=0;
-Object.keys(D).forEach(k=>(D[k]||[]).forEach(r=>{ if(r.max==null){ r.max=r.count||1; n++; } }));
-demSetFor(DOW_HOL).forEach(r=>{ if(r.max==null){ r.max=r.count||1; n++; } });
+Object.keys(D).forEach(k=>(D[k]||[]).forEach(r=>{ if(r.max==null && demCount(r)>0){ r.max=demCount(r); n++; } }));
+demSetFor(DOW_HOL).forEach(r=>{ if(r.max==null && demCount(r)>0){ r.max=demCount(r); n++; } });
 save(); render(); toast(n+" row"+(n===1?"":"s")+" now exact \u2014 tap a row to open one up again"); };
 const ok=root.querySelector("#demflexok"); if(ok) ok.onclick=()=>{ S.ui=S.ui||{}; S.ui.demFlexOk=true; save(); render(); }; }
 const openEdit=(v)=>{ const [d,i]=v.split(":").map(Number); demModal(d, i); };
@@ -22998,7 +24253,7 @@ if(!S.shifts.length){ toast("Define a shift first — opening the shift editor")
  
 const cur = (ri!=null && (demSetFor(dow)||[])[ri]) || null;
 if(ri!=null && !cur){ toast("That row is gone"); render(); return; }
-const same=(a,b)=> a.shiftId===b.shiftId && (a.roleId||null)===(b.roleId||null) && siteOf(a)===siteOf(b) && (a.count||1)===(b.count||1) && (a.max==null?null:a.max)===(b.max==null?null:b.max);
+const same=(a,b)=> a.shiftId===b.shiftId && (a.roleId||null)===(b.roleId||null) && siteOf(a)===siteOf(b) && demCount(a)===demCount(b) && (a.max==null?null:a.max)===(b.max==null?null:b.max);
 const twins = (cur && dow!==DOW_HOL)? [0,1,2,3,4,5,6].filter(d=>d!==dow && (editDemand()[d]||[]).some(r=>same(r,cur))) : [];
 modal((cur? "Edit the "+DAY_LABEL(dow)+" row" : "Add a shift to "+DAY_LABEL(dow)),`
     <div class="stack"><div class="grid2">
@@ -23007,16 +24262,16 @@ modal((cur? "Edit the "+DAY_LABEL(dow)+" row" : "Add a shift to "+DAY_LABEL(dow)
       <div class="field"><label>Filled by</label><select id="dr"><option value="">Anyone on the roster</option>${S.roles.map(r=>`<option value="${r.id}" ${cur&&cur.roleId===r.id?"selected":""}>${esc(r.name)}</option>`).join("")}</select></div>
       <div class="field"><label>Can the drafter add more than that?</label>
         <select id="dmode">
-          <option value="exact" ${(!cur || (cur.max!=null && cur.max===(cur.count||1)))?"selected":""}>No \u2014 exactly this many, never more</option>
-          <option value="min" ${(cur && cur.max==null)?"selected":""}>Yes \u2014 at least this many; extra people may be added for hours owed or floor cover</option>
-          <option value="range" ${(cur && cur.max!=null && cur.max!==(cur.count||1))?"selected":""}>Up to a limit \u2014 at least this many, at most a number I give</option>
+          <option value="exact" ${(!cur || (cur.max!=null && cur.max===demCount(cur)))?"selected":""}>No \u2014 exactly this many, never more</option>
+          <option value="min" ${(cur && cur.max==null)?"selected":""}>Yes \u2014 at least this many; extra people may be added for hours owed</option>
+          <option value="range" ${(cur && cur.max!=null && cur.max!==demCount(cur))?"selected":""}>Up to a limit \u2014 at least this many, at most a number I give</option>
         </select>
         <span class="mini">Exactly is the safe answer: the day gets what you asked for and nothing else. Pick "yes" on the shift that should soak up hours owed.</span></div>
-      <div class="field"><label>How many</label><input type="number" inputmode="decimal" id="dc" min="1" max="20" value="${cur? (cur.count||1) : 1}">
+      <div class="field"><label>How many</label><input type="number" inputmode="decimal" id="dc" min="0" max="20" value="${cur? demCount(cur) : 1}">
         <span class="mini">Never fewer than this. ${S.rules.fillMode==="full"
 ? "Anyone left over still gets their contracted hours as "+esc((S.rules.topUpLabel||"project time").toLowerCase())+"."
-: "Spare people simply aren't scheduled unless a gap on the floor needs them or their profile guarantees them hours. A guarantee is met from the pool wherever there is room for it \u2014 a shift whose Coverage needs rows are all exact is full, and the checks say so by name rather than quietly adding somebody to it. To also fill everyone's contracted hours as project time, flip \u201ctarget or floor\u201d under Settings \u2192 Rules."}</span></div>
-      <div class="field" id="dmwrap" style="display:${(cur && cur.max!=null && cur.max!==(cur.count||1))? "":"none"}"><label>At most</label><input type="number" inputmode="decimal" id="dm" min="1" max="40" placeholder="no limit" value="${cur&&cur.max!=null? cur.max : ""}">
+: "Spare people simply aren't scheduled unless their profile guarantees them hours. A guarantee is met from the pool wherever there is room for it \u2014 a shift whose Coverage needs rows are all exact is full, and the checks say so by name rather than quietly adding somebody to it. To also fill everyone's contracted hours as project time, flip \u201ctarget or floor\u201d under Settings \u2192 Rules."}</span></div>
+      <div class="field" id="dmwrap" style="display:${(cur && cur.max!=null && cur.max!==demCount(cur))? "":"none"}"><label>At most</label><input type="number" inputmode="decimal" id="dm" min="1" max="40" placeholder="no limit" value="${cur&&cur.max!=null? cur.max : ""}">
         <span class="mini">Leave it blank on the shift that should take the balance. \u201cTwo openers, two closers, everyone else on the day shift\u201d is: openers at most 2, closers at most 2, day shift no limit.</span></div>
       ${dow===DOW_HOL? `<input type="hidden" id="dall" value="one">` : cur
 ? `<div class="field"><label>Also apply to</label><select id="dall"><option value="one">Just ${DAYS[dow]}</option>${twins.length? `<option value="twins">The same row on ${esc(twins.map(d=>DSHORT[d]).join(", "))} too</option>` : ""}</select></div>`
@@ -23045,8 +24300,16 @@ const de=r.querySelector("#dshiftedit"); if(de) de.onclick=(ev)=>{ ev.preventDef
 { const dm=r.querySelector("#dmode"), dw=r.querySelector("#dmwrap"); if(dm && dw) dm.onchange=()=>{ dw.style.display = dm.value==="range"? "" : "none"; }; }
 const dd=r.querySelector("#deldem"); if(dd) dd.onclick=()=>{ demSetFor(dow).splice(ri,1); save(); closeModal(); render(); };
 r.querySelector("#savedem").onclick=()=>{
-const count=+r.querySelector("#dc").value||1;
 const mode=(r.querySelector("#dmode")||{}).value||"exact";
+ 
+const craw=String(r.querySelector("#dc").value||"").trim(), cnum=+craw;
+const count=(craw==="" || !isFinite(cnum))? 1 : Math.max(0, Math.round(cnum));
+if(count===0 && mode==="exact"){
+if(!cur){ toast("Exactly 0 asks for nobody — pick “at least” or “up to a limit” to keep a row for extra people"); return; }
+demSetFor(dow).splice(ri,1); save(); closeModal(); render();
+toast("Row removed — exactly 0 asks for nobody", {label:"Put it back", run:()=>undo()});
+return;
+}
 const mraw=r.querySelector("#dm").value.trim();
 let max = mode==="exact"? count
 : mode==="min"? null
@@ -23131,7 +24394,9 @@ box.innerHTML = kind==="min" ? `
         <div class="field"><label>Who counts</label><select id="cr"><option value="">Anyone on the roster</option>${roleOpts(-1)}</select></div>
         <div class="field"><label>At least this many</label><select id="cm">${[1,2,3,4,5,6,8,10].map(n=>`<option value="${n}" ${n===1?"selected":""}>${n} ${n===1?"person":"people"}</option>`).join("")}</select></div>
       </div>
-      <div class="help">A minimum is a hard floor — the drafter will never let the count dip below it, meals included. If a role has no real floor (plenty of places can run with zero techs at quiet times), don't add a rule for it: your coverage counts under Coverage needs already decide how many get scheduled.</div>`
+      <div class="help">A minimum is checked minute by minute, meals included, and a dip below it shows on the week. It never brings anybody in on its own: your coverage counts under Coverage needs decide how many get scheduled. If a role has no real floor (plenty of places can run with zero techs at quiet times), don't add a rule for it.</div>
+      <label class="switch presw"><input type="checkbox" id="cpres"> This is a rule the business has to follow</label>
+      <div class="mini">A gap in it is then marked to fix and names this rule. Otherwise a gap is worth a look.</div>`
 : kind==="ratio" ? `
       <div class="grid3" style="align-items:end">
         <div class="field"><label>At least one</label><select id="cr">${roleOpts(0)}</select></div>
@@ -23152,6 +24417,14 @@ box.innerHTML = kind==="min" ? `
       </div>`;
 paintLabels(r);
 box.querySelectorAll("select").forEach(sel=>sel.addEventListener("change",()=>paintLabels(r)));
+ 
+{ const cp=box.querySelector("#cpres"), cr=box.querySelector("#cr");
+if(cp){
+const dflt=()=>{ const role=(cr && cr.value)? roleById(cr.value) : null; return !!(role && role.licensed); };
+cp.checked=dflt();
+cp.addEventListener("change", ()=>{ cp.__touched=true; });
+if(cr) cr.addEventListener("change", ()=>{ if(!cp.__touched) cp.checked=dflt(); });
+} }
 const tier=box.querySelector("#ctier"), tw=box.querySelector("#ctierwrap");
 if(tier) tier.onchange=()=>{ tw.style.display = tier.checked? "" : "none"; };
 };
@@ -23234,6 +24507,7 @@ end:   win.value==="custom"? r.querySelector("#ce").value : w.to, days};
 if(wh==="each") rec.siteScope="each";
 else if(wh && wh!=="all") rec.siteId=wh; }
 if(kind!=="min" && rec.roleId===rec.perRoleId){ toast("Pick two different roles"); return; }
+if(kind==="min") rec.presence=!!((r.querySelector("#cpres")||{}).checked);
 S.coverage.push(rec); save(); closeModal(); render();
 };
 });
@@ -23366,10 +24640,10 @@ modal("What shape does this week run?", `
       <div class="wopts" id="wpsel">
         <button type="button" class="wopt ${!wk.patternId?"on":""}" data-p="">
           <span class="wt">Standard week</span>
-          <span class="wd">${weekDates(ws).reduce((t,d)=>t+((S.demand[d.dow]||[]).reduce((x,y)=>x+(y.count||1),0)),0)} shifts, the shape you set under Coverage needs</span></button>
+          <span class="wd">${weekDates(ws).reduce((t,d)=>t+((S.demand[d.dow]||[]).reduce((x,y)=>x+demCount(y),0)),0)} shifts, the shape you set under Coverage needs</span></button>
         ${pats.map(p=>`<button type="button" class="wopt ${wk.patternId===p.id?"on":""}" data-p="${p.id}">
           <span class="wt">${esc(p.name)}</span>
-          <span class="wd">${weekDates(ws).reduce((t,d)=>t+((p.demand[d.dow]||[]).reduce((x,y)=>x+(y.count||1),0)),0)} shifts${p.len? ", "+p.len+"-hour":""}</span></button>`).join("")}
+          <span class="wd">${weekDates(ws).reduce((t,d)=>t+((p.demand[d.dow]||[]).reduce((x,y)=>x+demCount(y),0)),0)} shifts${p.len? ", "+p.len+"-hour":""}</span></button>`).join("")}
       </div>
       ${pats.length? "" : `<div class="help">You haven't built any alternatives yet. Coverage needs → “Build a pattern from scratch” makes one from a shift length and how many you need on at once.</div>`}
     </div>`,
@@ -23396,6 +24670,7 @@ const mode=(name,key,opts)=>`<div class="field"><label>${name}</label><div class
     <span class="mini">${opts.find(o=>o[0]===R[key])?opts.find(o=>o[0]===R[key])[2]:""}</span></div>`;
 return `
   <div class="stack">
+    <p class="rulesdisc">Weeksolved checks the rules set on this board. It doesn\u2019t check what the law requires for your business, license or location.</p>
     ${adviceCard(false)}
     <div class="card"><header><h3>Meals and rest breaks</h3><span class="hint">${esc(L.name)} rules decide what is owed. You decide who picks the clock time.</span></header>
       <div class="body stack">
@@ -23416,7 +24691,7 @@ return `
 : mealPlan()==="slots"
 ? "Nobody is given a meal at any other time. If none of your slots is legal for a shift, that shift keeps its own legal time and the day sheet says so."
 : mealPlan()==="closed"
-? "The doors are shut for the stretch below, so coverage isn't counted against you during it."
+? "The doors are shut for the stretch below, so coverage isn't counted against you during it — the common case is a short lunch closure on a quiet day, like a Saturday with one person on."
 : "Each meal lands inside the legal window, spread so the floor never empties."}</span></div>
         ${(mealPlan()==="slots"||mealPlan()==="slotsrandom")? `
         <div class="field"><label>Your meal times</label>
@@ -23492,12 +24767,6 @@ return `
       <label class="switch"><input type="checkbox" data-bind="rules.fairness" ${R.fairness?"checked":""}> Spread hours and weekends evenly rather than loading the same people</label>
       <label class="switch"><input type="checkbox" data-bind="rules.preferLong" ${R.preferLong?"checked":""}> Prefer fewer, longer shifts over lots of short ones</label>
       <div class="help" style="margin-left:28px">When topping people up to their hours, one 8-hour shift beats two 4-hour ones. Healthcare and retail crews usually want this on — fewer handoffs, fewer commutes for the same pay. Leave it off if you rely on short overlap shifts to cover rushes.</div>
-      <div class="field" style="max-width:420px;margin-top:6px"><label>People you keep on call (per diem)</label>
-        <select data-bind="rules.perDiem">
-          <option value="ask" ${R.perDiem!=="auto"?"selected":""}>Suggest them when a gap appears — I decide each time</option>
-          <option value="auto" ${R.perDiem==="auto"?"selected":""}>Call them in automatically when nobody else can cover</option>
-        </select>
-        <span class="mini">Either way they're never drafted for ordinary shifts — only when coverage can't be met without them.</span></div>
     </div></div></div>
 
     <div class="card"><header><h3>How the scheduler decides</h3></header><div class="body">
@@ -23600,17 +24869,17 @@ return `${_first? `<div class="ppband${payShade(d.date)}"><i></i>Pay period ${es
             <span class="chev" aria-hidden="true">›</span>
           </button>
           ${!open||h.closed? "" : on.length? `<div class="dbody">
+            <div class="dayacts"><button class="btn sm" data-openday="${d.dow}">Day sheet →</button>
+              <button class="btn sm" data-addday="${d.date}:${d.dow}">Add someone</button></div>
             ${on.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
 const bad=V.some(v=>v.sev==="crit"&&v.empId===a.empId&&v.date===a.date);
 return `<button class="drow ${bad?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" style="--sc:${sh.color}">
                 <span class="dw">${esc(e.name)}</span>
-                <span class="ds">${a.locked?"● ":""}${esc(sh.label)}${a.topUp?" +":""}</span>
+                <span class="ds">${a.locked?"● ":""}${esc(sh.label)}${a.topUp?' <span class="ptag">+ Project time</span>':""}</span>
                 <span class="dt mono">${aTimes(a)}</span></button>`;
 }).join("")}
-            <div class="dfoot"><button class="btn sm ghost" data-openday="${d.dow}">Day sheet →</button>
-              <button class="btn sm ghost" data-addday="${d.date}:${d.dow}">Add someone</button></div>
-          </div>` : `<div class="dbody"><div class="mini" style="padding:8px 2px">Nobody on this day.
-            <button class="btn sm ghost" data-addday="${d.date}:${d.dow}" style="margin-left:6px">Add someone</button></div></div>`}
+          </div>` : `<div class="dbody"><div class="dayacts"><button class="btn sm" data-addday="${d.date}:${d.dow}">Add someone</button></div>
+            <div class="mini" style="padding:8px 2px">Nobody on this day.</div></div>`}
         </div>`;
 }).join("")}
     </div>`;
@@ -23625,7 +24894,7 @@ return `
     <div class="card wkhd"><div class="body" style="padding:12px 14px">
       <div class="wkrangerow">
         <button class="wkarrow" id="wprev" aria-label="The week before" title="The week before">‹</button>
-        <button class="wkrange mono" id="wjump" title="Jump to any week"><span aria-hidden="true">${esc(isPhone()? weekSpanShort(ws) : weekSpanLong(ws))}</span><span class="wkvh">${esc(weekSpanLong(ws))}</span></button>
+        <button class="wkrange mono${(isPhone() && weekSpanShort(ws).length>12)? " long" : ""}" id="wjump" title="Jump to any week"><span aria-hidden="true">${esc(isPhone()? weekSpanShort(ws) : weekSpanLong(ws))}</span><span class="wkvh">${esc(weekSpanLong(ws))}</span></button>
         <button class="wkarrow" id="wnext" aria-label="The week after" title="The week after">›</button>
       </div>
       <div class="wkmeta">
@@ -23674,7 +24943,7 @@ return `<div class="hcell ${h.closed?"closed":""}${_cut?" paycut":""}${payShade(
             <div class="dn gday">${DSHORT[d.dow]} ${prettyDate(d.date)}${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return ' <span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed"?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?' <span class="busy" title="Counts one step busier when drafting">holiday rush</span>':isHolidayDate(d.date)? "" : dayLoad(d.dow)>0?' <span class="busy">busy</span>':dayLoad(d.dow)<0?' <span class="quiet">quiet</span>':""}</div>
             <div class="dd ghrs">${dayHoursLabel(d.date, d.dow)}</div>
             ${covStrip(d)}
-            <div style="margin-top:4px"><button class="btn sm ghost daysheet" data-openday="${d.dow}">Day sheet →</button></div>
+            <div style="margin-top:4px"><button class="btn sm daysheet" data-openday="${d.dow}">Day sheet →</button></div>
           </div>`;
 }).join("")}
       </div>
@@ -23709,7 +24978,7 @@ const dv = desireOf(a.shiftId,a.dow);
 return `<div class="shiftblk ${cellViol?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" tabindex="0" role="button" style="--sc:${sh.color}"
                   title="${esc(sh.label)} · ${DESIRE_LABEL[clamp(dv,-2,2)]}">
                   ${a.locked?'<span class="lk">●</span>':""}
-                  <span class="lb">${dv?`<span class="dmark ${dv>0?"g":"b"}">${dv>0?"+":"−"}</span>`:""}${esc(sh.label)}${a.topUp?' <span class="tup">+</span>':""}</span>
+                  <span class="lb">${dv?`<span class="dmark ${dv>0?"g":"b"}">${dv>0?"+":"−"}</span>`:""}${esc(sh.label)}${a.topUp?' <span class="tup">+</span> <span class="ptag">Project time</span>':""}</span>
                   <span class="tm">${aTimes(a)}</span>
                   ${a.breaks&&a.breaks.meals.length?`<span class="tm meal">meal ${m2disp(a.breaks.meals[0].start)}${a.breaks.meals[0].end!=null? "\u2013"+m2disp(a.breaks.meals[0].end):""}</span>`:""}
                 </div>`;
@@ -23906,7 +25175,7 @@ save(); render();
 function assignModal(aid){
 const wk=getWeek(); const a=wk.assignments.find(x=>x.id===aid); if(!a) return;
 const e=empById(a.empId), sh=aShift(a);
-const b=a.breaks||computeBreaks(a.startMin,a.endMin);
+const b=a.breaks||computeBreaks(a.startMin,a.endMin,{shift:sh});
 const L=law();
 modal(e.name+" — "+sh.label,`
     <div class="stack">
@@ -23942,16 +25211,15 @@ return `<div class="mini">${f.end
         <button class="btn sm ghost" id="acands">Show who could cover it</button></div>
       <div id="candbox"></div>
       <div class="sep"></div>
-      <div class="spread"><div class="lab">${a.callout? (a.callout==="noshow"?"Logged as a no-show":"Logged as a callout") : "Called out sick, or didn't show?"}</div>
-        ${a.callout? `<button class="btn sm ghost" id="acoundo">Remove the log</button>`
-: `<div class="row" style="gap:6px"><button class="btn sm" id="acout">Called out</button><button class="btn sm" id="anoshow">No-show</button></div>`}</div>
-      <div class="mini">Logging keeps the record straight — the shift stays on the board so you can hand it to someone above.</div>
+      <div class="spread"><div class="lab">${a.callout? (a.callout==="noshow"?"Logged as a no-show":"Logged as a callout")+(a.calloutEdited?" · edited":"") : "Called out?"}</div>
+        ${a.callout? `<span class="row" style="gap:6px"><span class="seg" id="acokind"><button type="button" data-acokind="callout" aria-pressed="${a.callout==="callout"}">Called out</button><button type="button" data-acokind="noshow" aria-pressed="${a.callout==="noshow"}">No-show</button></span><button class="btn sm" id="acoundo">Remove the log</button></span>` : `<button class="btn sm" id="acout">Called out</button>`}</div>
+      <div class="mini">${a.callout? "The tag lives on this shift only. Nothing counts it, and switching it edits the one record." : "Opens the sheet to say who called out, log it and find cover — same as Home’s “Someone called out.”"}</div>
     </div>`,
 `<button class="btn danger" id="adel">Remove shift</button><button class="btn" data-close>Cancel</button><button class="btn primary" id="asave">Save</button>`,
 r=>{
 const paint=()=>{
 const s=t2m(r.querySelector("#as").value); let en=t2m(r.querySelector("#ae").value); if(en<=s)en+=1440;
-const bb=computeBreaks(s,en,{date:a.date, emp:empById((r.querySelector("#am")||{}).value||a.empId), waive:a.waive});
+const bb=computeBreaks(s,en,{date:a.date, emp:empById((r.querySelector("#am")||{}).value||a.empId), waive:a.waive, shift:sh});
 r.querySelector("#brklist").innerHTML = (bb.owed.meals||bb.owed.rests)? `
           <div class="stack" style="gap:7px">
             ${bb.meals.map((m,i)=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:7px 10px">
@@ -23972,18 +25240,13 @@ wireEdge(r, paint);
 };
 r.querySelector("#as").oninput=paint; r.querySelector("#ae").oninput=paint; paint();
 { const am=r.querySelector("#am"); if(am) am.addEventListener("change", paint); }
-const logOut=(kind)=>{
-S.callouts=S.callouts||[];
-S.callouts.push({id:uid("co"), empId:a.empId, date:a.date, shiftId:a.shiftId, kind, at:Date.now()});
-a.callout=kind; save(); render();
-toast((kind==="noshow"?"No-show":"Callout")+" logged for "+((empById(a.empId)||{name:"them"}).name)+" — now find the cover");
-closeModal(true); assignModal(a.id);
-};
-const co=r.querySelector("#acout"); if(co) co.onclick=()=>logOut("callout");
-const ns=r.querySelector("#anoshow"); if(ns) ns.onclick=()=>logOut("noshow");
+const co=r.querySelector("#acout"); if(co) co.onclick=()=>{ closeModal(true); calloutSheet(a.id); };
+r.querySelectorAll("[data-acokind]").forEach(b=>b.onclick=()=>{
+if(a.callout===b.dataset.acokind) return;
+logCallout(a, b.dataset.acokind); save(); render(); closeModal(true); assignModal(a.id); });
 const cu=r.querySelector("#acoundo"); if(cu) cu.onclick=()=>{
 S.callouts=(S.callouts||[]).filter(x=>!(x.empId===a.empId&&x.date===a.date&&x.shiftId===a.shiftId));
-delete a.callout; save(); render(); closeModal(true); assignModal(a.id); };
+delete a.callout; delete a.calloutEdited; save(); render(); closeModal(true); assignModal(a.id); };
 const impact=()=>{
 const st=t2m(r.querySelector("#as").value); let en=t2m(r.querySelector("#ae").value); if(en<=st) en+=1440;
 const who=r.querySelector("#am").value;
@@ -24901,8 +26164,8 @@ const myMealsCov=RELIEF.filter(x=>x.mealOf===a.empId);
 const late = b.meals.some(m=>!m.waived && m.start>m.deadline);
 const missing = b.owed.meals > b.meals.filter(m=>!m.waived || m.waivable).length;
 const mealTxt = !b.owed.meals? "not owed"
-: S.rules.breakMode==="self"? b.owed.meals+" × "+(L.meal?L.meal.lengthMin:30)+" min, staff-timed"
-: S.rules.breakMode==="lengths"? b.owed.meals+" × "+(L.meal?L.meal.lengthMin:30)+" min by "+m2disp(b.meals[0].deadline)
+: S.rules.breakMode==="self"? b.owed.meals+" × "+(b.meals[0]? b.meals[0].len : (L.meal?L.meal.lengthMin:30))+" min, staff-timed"
+: S.rules.breakMode==="lengths"? b.owed.meals+" × "+(b.meals[0]? b.meals[0].len : (L.meal?L.meal.lengthMin:30))+" min by "+m2disp(b.meals[0].deadline)
 : b.meals.map(m=>{const c=lunchClosure(a.dow,a.date);
 return m.waived?"waived":m2disp(m.start)+(c&&m.start!==c.from?" (own time)":"");}).join(", ");
 const restTxt = !b.owed.rests? "not owed"
@@ -24912,7 +26175,8 @@ const stn=a.station? stationById(a.station):null, stn2=a.station2? stationById(a
 const duties=(a.admin||[]).map(x=>stationById(x)).filter(Boolean);
 return `<tr>
             <td><strong>${empNameLink(e)}</strong> <span class="mini">${esc(roleAbbr(a.roleId))}</span>
-              ${a.topUp? `<div class="mini"><span class="chip acc">${esc(S.rules.topUpLabel||"Project time")}</span></div>`:""}
+              ${a.topUp? `<div class="mini"><span class="chip acc">Project time${projectLabel()!=="Project time"? " · "+esc(projectLabel()) : ""}</span></div>`:""}
+              ${a.byYou? `<div class="mini"><span class="chip">Added by you</span> This week only.</div>`:""}
               ${a.cover? `<div class="mini"><span class="chip">Added to keep the floor covered</span> Nothing under Coverage needs asked for this shift that day; without it the floor was empty ${(()=>{ const c=((peekWeek(S.currentWeek).covered)||[]).find(x=>x.date===a.date && x.empId===a.empId && x.shiftId===a.shiftId); return c? m2disp(c.from)+"\u2013"+m2disp(c.to) : "for part of the day"; })()}.</div>`:""}
               ${duties.length? duties.map(d=>`<div class="mini"><span class="chip warn"${whyAttrs("An extra duty on top of their post today: "+d.name+". Duties rotate fairly across the team; press Rotate the posts to hand them out again, or change them under Stations.", "go:stations")}>${esc(d.name)}</span></div>`).join(""):""}
               ${myRelief.map(x=>`<div class="mini"><span class="chip acc">Covers ${esc(x.station.name)} ${m2disp(x.start)}–${m2disp(x.end)}</span>${
@@ -25313,6 +26577,13 @@ const soloDay=date=> new Set(wk.assignments.filter(x=>x.date===date).map(x=>x.em
 const closeForLunch=(date,from,to)=>{
 if(mealPlan()==="closed" || S.rules.breakMode!=="assigned") return;
 const solo=soloDay(date);
+ 
+const dow2=parseYmd(date).getDay();
+if((to-from)<=60 && from>=10*60 && to<=15*60)
+later("Close for lunch on "+DAYS[dow2],
+"Shuts "+m2disp(from)+"–"+m2disp(to)+" on "+DAYS[dow2]+"s only. Nothing is owed while the doors are shut, so it stops counting as a gap.",
+()=>{ S.rules.mealPlan="closed"; S.rules.mealClose={when:"days", days:[dow2], from:m2t(from), to:m2t(to)}; rebuildBreaks(); save(); render();
+toast("Doors shut "+m2disp(from)+"–"+m2disp(to)+" on "+DAYS[dow2]+"s — change it under Scheduling rules"); });
 later(solo? "Close the doors for lunch on days when only one person is on" : "Close the doors for lunch every day",
 "Shuts "+m2disp(from)+"–"+m2disp(to)+(solo? " on solo days":"")+". Nothing is owed while the doors are shut, so it stops counting as a gap, and everyone eats then.",
 ()=>{ S.rules.mealPlan="closed"; S.rules.mealClose={when: solo? "solo":"all", from:m2t(from), to:m2t(to)}; rebuildBreaks(); save(); render();
@@ -25326,7 +26597,7 @@ const span=S.shifts.map(sh=>{ const [x,y]=shiftMinutes(sh); return {sh,x,y,len:y
 if(span){
 later("Need one more "+span.sh.label+" ("+m2disp(span.x)+"–"+m2disp(span.y)+") on "+DAYS[d2]+"s", "Adds one to "+DAYS[d2]+"’s coverage needs. Every draft from now on staffs it; press Draft again to fill it this week.",
 ()=>{ const D=demandOf(ws); D[d2]=D[d2]||[]; const row=D[d2].find(r=>r.shiftId===span.sh.id && !r.roleId);
-if(row) row.count=(row.count||1)+1; else D[d2].push({shiftId:span.sh.id, roleId:null, count:1});
+if(row) row.count=demCount(row)+1; else D[d2].push({shiftId:span.sh.id, roleId:null, count:1});
 save(); render(); toast("One more "+span.sh.label+" on "+DAYS[d2]+"s — Draft again to fill it this week"); });
 }
 }
@@ -25357,7 +26628,15 @@ now("Change the length of "+who+"\u2019s "+day+" shift yourself", "Any start or 
 
 switch(v.code){
 case "open": {
-now("Who could work it?", "Everyone who clears every limit, best fit first.", ()=>fillOpenModal(v.date, v.shiftId, v.roleId||null, v.siteId||null), true);
+ 
+const pd=v.pdEmp? empById(v.pdEmp) : null;
+if(pd){
+const f=pd.name.split(" ")[0];
+now("Call "+f+" in", f+" is kept on call"+(perDiemMode(pd)==="ask"? " and set to Ask me first" : "")+", and clears every limit for this shift."+
+(weekIsPosted(ws)? " The week is posted, so "+f+" is sent the change message." : ""),
+()=>callInPerDiem(v, ws), true);
+}
+now(pd? "Who else could work it?" : "Who could work it?", "Everyone who clears every limit, best fit first.", ()=>fillOpenModal(v.date, v.shiftId, v.roleId||null, v.siteId||null), !pd);
 now("All open shifts and the best ways out", "Per diem, an hour of overtime, a request to decline — ranked, least disruptive first.", ()=>fixModal(ws));
 now("Offer it to the team", "One page they can reply to with a code. Nobody needs an account.", ()=>offerModal(ws));
 bringIn(v.date);
@@ -25369,7 +26648,9 @@ case "cover": {
 const rules=(v.ruleIds||[v.ruleId]).map(id=>S.coverage.find(r=>r.id===id)).filter(Boolean);
 const from=v.from, to=v.to, date=v.date;
 const mealDriven = wk.assignments.some(x=>x.date===date && ((x.breaks||{}).meals||[]).some(m=>!m.waived && m.start<to && m.end>from));
-stretchInto(date, from, to, true);
+if(date && from!=null && to!=null)
+now("Add someone for this hour", "One person for "+clockRange(from,to)+", this week only. Coverage needs stay as they are.", ()=>addForHourModal(v, ws), !!v.presence);
+stretchInto(date, from, to, !v.presence);
 if(mealDriven){
 const before=dipScore(date, dow, ws, from, to);
 mealFixes(date, from, to, ()=>{ const s=dipScore(date, dow, ws, from, to); if(s.inWin>0 || s.bad>=before.bad) return null; return -s.bad; });
@@ -25621,7 +26902,7 @@ break;
 }
 case "oncallguar": {
 profile("Change "+first+"’s hours or take them off on-call", "A guarantee and \u201concall only\u201d cannot both be true \u2014 the profile holds each.");
-later("How on-call people are used", "Per diem lives under Scheduling rules.", ()=>go("rules"));
+later("How on-call people are used", "Each on-call person’s card says whether they are called in automatically or named for you first.", ()=>go("team"));
 break;
 }
 case "norole": {
@@ -25637,7 +26918,10 @@ break;
 }
 case "empty": {
  
-if(v.date && v.from!=null && v.to!=null) stretchInto(v.date, v.from, v.to, true);
+if(v.date && v.from!=null && v.to!=null){
+now("Add someone for this hour", "One person for "+clockRange(v.from,v.to)+", this week only. Coverage needs stay as they are.", ()=>addForHourModal(v, ws), true);
+stretchInto(v.date, v.from, v.to, false);
+}
 bringIn(v.date, !O.some(o=>o.rec));
 moreOnDay(dow, v.from, v.to);
 hoursLink();
@@ -25645,10 +26929,17 @@ dayLink();
 break;
 }
 case "stationgap": {
-bringIn(v.date, true);
+if(v.date && v.from!=null && v.to!=null)
+now("Add someone for this hour", "One person for "+clockRange(v.from,v.to)+", this week only. Coverage needs stay as they are.", ()=>addForHourModal(v, ws), true);
+bringIn(v.date, !O.some(o=>o.rec));
 moreOnDay(dow, v.from, v.to);
 if(v.stationId) later("Change what the post needs, or when", "Its window, its role, its licences — or stop marking it must-cover.", ()=>stationModal(v.stationId));
 dayLink();
+break;
+}
+case "norows": {
+now("Write them from posts and minimums", "Proposed rows, one for each minimum and must-cover post. Nothing is saved until you save them.", ()=>writeRowsSheet(v, ws), true);
+later("Open Coverage needs", "Write the rows yourself, day by day.", ()=>go("demand"));
 break;
 }
 case "role": {
@@ -25689,7 +26980,7 @@ if(pref){ O.forEach(o=>o.rec=false); pref.rec=true; }
 }
 }
 if(v.code==="cover" && v.date && soloDay(v.date)){
-const nowOpts=O.filter(o=>o.g==="now" && !/^Open the day sheet/.test(o.t));
+const nowOpts=O.filter(o=>o.g==="now" && !/^(Open the day sheet|Add someone for this hour)/.test(o.t));
 if(nowOpts.length===1 && /^Bring someone/.test(nowOpts[0].t)){
 const pref=O.find(o=>/^Close the doors/.test(o.t)) || O.find(o=>/^Let a meal count/.test(o.t));
 if(pref){ O.forEach(o=>o.rec=false); pref.rec=true; }
@@ -25808,6 +27099,7 @@ esc(consequenceSay(c).replace(/^[^:]+: /,""))+
 }
 function fixSheet(v, ws){
 ws=ws||curWeek();
+if(v && v.code==="suspect" && v.rc && typeof rcFixSheet==="function") return rcFixSheet(v, ws);
 const opts=fixOptions(v, ws);
 if(!opts.length){ toast("Nothing to press for this one — it is a note, not a fault"); return; }
 const grp=(g,head,sub)=>{
@@ -25905,7 +27197,7 @@ weeks.forEach(w=>{
 const seen=new Set();
 let V=[]; try{ V=validate(w); }catch(e){ V=[]; }
 V.forEach(v=>{
-if(!v.code || v.code==="closure" || v.code==="split" || v.sev==="info") return;
+if(!v.code || v.code==="closure" || v.code==="split" || v.code==="suspect" || v.sev==="info") return;
 const k=problemKey(v); if(seen.has(k)) return; seen.add(k);
 const r=map.get(k)||{key:k, code:v.code, weeks:[], sample:null, sampleWs:null, sev:"warn", dow:(v.dow!=null? v.dow : v.date? parseYmd(v.date).getDay() : null), empId:v.empId||null};
 r.weeks.push(w);
@@ -26038,7 +27330,7 @@ add("pool:"+sh.id, "“"+sh.label+"” is "+fmtHrs(shiftSpan(sh))+", longer than
  
 try{
 const dem=S.demand||{}; let need=0;
-Object.keys(dem).forEach(d=>{ if((S.hours[d]||{}).closed) return; (dem[d]||[]).forEach(row=>{ const sh=shiftById(row.shiftId); if(sh) need+=shiftSpan(sh)*(row.count||1); }); });
+Object.keys(dem).forEach(d=>{ if((S.hours[d]||{}).closed) return; (dem[d]||[]).forEach(row=>{ const sh=shiftById(row.shiftId); if(sh) need+=shiftSpan(sh)*demCount(row); }); });
 const give=act.filter(e=>!e.onCall).reduce((t,e)=>t+((e.maxH||0)*60),0);
 if(need && give && need>give*1.05)
 add("capacity","Coverage asks for about "+fmtHrs(need)+" a week; the team’s caps add up to "+fmtHrs(give),
@@ -26729,7 +28021,7 @@ body:list.map(a=>{
 const e=empById(a.empId)||{name:"—"}, b=a.breaks||{meals:[],rests:[],owed:{meals:0,rests:0}};
 const mealTxt = !b.owed.meals? "not owed"
 : S.rules.breakMode==="self"? "staff-timed"
-: S.rules.breakMode==="lengths"? b.owed.meals+"×"+(L.meal?L.meal.lengthMin:30)+"m by "+m2disp(b.meals[0].deadline)
+: S.rules.breakMode==="lengths"? b.owed.meals+"×"+(b.meals[0]? b.meals[0].len : (L.meal?L.meal.lengthMin:30))+"m by "+m2disp(b.meals[0].deadline)
 : b.meals.map(m=>m.waived?"waived":m2disp(m.start)+"–"+m2disp(m.end)).join(", ");
 const restTxt = !b.owed.rests? "not owed"
 : S.rules.restMode==="assigned"? b.rests.map(r=>m2disp(r.start)).join(", ")
@@ -26908,7 +28200,7 @@ S.org.site?" \u00b7 "+esc(S.org.site):""} \u00b7 ${list.length} scheduled</div>
 const e=empById(a.empId)||{name:"\u2014"}, bk=a.breaks||{meals:[],rests:[],owed:{meals:0,rests:0}};
 const meal=!bk.owed.meals? "not owed"
 : S.rules.breakMode==="self"? "staff-timed"
-: S.rules.breakMode==="lengths"? bk.owed.meals+"\u00d7"+(L.meal?L.meal.lengthMin:30)+"m"
+: S.rules.breakMode==="lengths"? bk.owed.meals+"\u00d7"+(bk.meals[0]? bk.meals[0].len : (L.meal?L.meal.lengthMin:30))+"m"
 : bk.meals.map(m=>m.waived?"waived":m2disp(m.start)+"\u2013"+m2disp(m.end)).join(", ");
 const rest=!bk.owed.rests? "not owed"
 : S.rules.restMode==="assigned"? bk.rests.map(r=>m2disp(r.start)).join(", ")
@@ -27006,7 +28298,6 @@ const REPORTS = [
 {k:"fair",    n:"Who got what",           d:"Weekends, the sought-after shifts and the unpopular ones, spread across the team."},
 {k:"posts",   n:"Time on each post",      d:"How the posts were shared out. Only useful once you have posts set up."},
 {k:"pto",     n:"Time off balances",      d:"What each person has banked today, and when their next lot lands."},
-{k:"callouts",n:"Callouts and no-shows",  d:"Who called out, when, and how often over the period."},
 {k:"changes", n:"Changes after posting",  d:"Every change made to a schedule once it was up, and whether people were told."},
 {k:"minors",  n:"Under-18 hours",         d:"Every shift worked by anyone under 18, against the limit that applied that day."},
 {k:"roster",  n:"The roster",              d:"Everyone on the team. You choose exactly what appears \u2014 leave the private columns off and it is safe to pin up."},
@@ -27293,16 +28584,6 @@ return [esc(e.name), b+"h", nx? esc(nx.say) : "doesn\u2019t accrue"];
 }).filter(Boolean);
 body=repTable(["Person","Balance today","Next lot"], rows, {num:[1], w:["34%","18%"]})+
 '<p class="foot">Balances are your own figures carried forward from the date you entered, plus what has accrued, less approved time off.</p>';
-}
-else if(k==="callouts"){
-const co=(S.callouts||[]).filter(c=>{ const d=ymd(new Date(c.at)); return d>=from && d<=to; });
-const rows=co.sort((a,b)=>b.at-a.at).map(c=>[prettyDate(c.date), esc((empById(c.empId)||{name:"\u2014"}).name),
-esc((shiftById(c.shiftId)||{label:"\u2014"}).label), c.kind==="noshow"? '<b class="bad">no-show</b>':"called out", srcCell(c)]);
-const tally={}; co.forEach(c=>{ tally[c.empId]=(tally[c.empId]||0)+1; });
-const t2=Object.keys(tally).map(id=>[esc((empById(id)||{name:"\u2014"}).name), tally[id]]).sort((a,b)=>b[1]-a[1]);
-body=repTable(["Date","Person","Shift","What happened","Where from"], rows)+
-handFoot(co,"absences")+
-(t2.length? '<h3>How often</h3>'+repTable(["Person","Times"], t2, {num:[1], w:["60%","20%"]}):"");
 }
 else if(k==="changes"){
 const rows=(S.audit||[]).filter(x=>{ const d=ymd(new Date(x.at)); return d>=from && d<=to; })
@@ -28148,7 +29429,7 @@ const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(S.org.
   <table><thead><tr><th>Employee</th>${(S.stations||[]).length?"<th>Station</th>":""}<th>Role</th><th>In</th><th>Out</th><th>Meal</th><th>Rest breaks</th><th>Paid</th>${(S.rules.sheetNotes||"lines")!=="off"?'<th style="width:'+((S.rules.sheetNotes==="wide")?"230":"150")+'px">Notes</th>':""}</tr></thead><tbody>
   ${list.map(a=>{const e=empById(a.empId)||{name:"—"},b=a.breaks||{meals:[],rests:[],owed:{meals:0,rests:0}};
 const mealTxt=!b.owed.meals?"not owed":S.rules.breakMode==="self"?"staff-timed":S.rules.breakMode==="lengths"?
-b.owed.meals+"×"+(L.meal?L.meal.lengthMin:30)+" min by "+m2disp(b.meals[0].deadline):
+b.owed.meals+"×"+(b.meals[0]? b.meals[0].len : (L.meal?L.meal.lengthMin:30))+" min by "+m2disp(b.meals[0].deadline):
 b.meals.map(m=>m.waived?"waived":m2disp(m.start)+"–"+m2disp(m.end)).join(", ");
 const restTxt=!b.owed.rests?"not owed":S.rules.restMode==="assigned"?b.rests.map(r=>m2disp(r.start)).join(", "):
 b.owed.rests+"×"+(L.rest?L.rest.lengthMin:10)+" min staff-timed";
@@ -28447,7 +29728,7 @@ M.employees.push(ne); added++;
 });
 const untouched=(M.employees||[]).filter(e=>!empMap[e.id+"_used"] && !N.employees.includes(e)).length;
  
-["minRestH","maxConsecDays","noClopen","preferLong","perDiem","breakMode","restMode","mealPlan","mealSlots","mealClose",
+["minRestH","maxConsecDays","noClopen","preferLong","breakMode","restMode","mealPlan","mealSlots","mealClose",
 "fillMode","topUpLabel","projectShape","projectShare","sendOut","remindH","minorsOn","traineeCover","holidayRush","holidayRushScope",
 "useCycles","advanceNoticeDays","allowMealWaiver","mealWaiverMode","trackLic","skillsOn","stationSpan","stationFamilies","commsOff"]
 .forEach(k=>{ if(N.rules[k]!==undefined) M.rules[k]=N.rules[k]; });
@@ -28507,6 +29788,7 @@ shiftPreset:"openclose", shifts:[], custom:null,
 perShift:{}, perShiftMax:{},
 minRest:10, maxConsec:6, noClopen:true, preferLong:false, perDiem:"ask", breakMode:"assigned", restMode:"self", holPay:"ft", cycles:false, fillMode:"demand",
 mealPlan:"auto", mealSlots:["11:30","12:00","12:30"], mealCloseFrom:"13:00", mealCloseTo:"14:00",
+mealCloseWhen:"all", mealCloseDays:[0,6], mealCloseMins:0,
 sendOut:false, remindH:12,
 topUpLabel:"Project time", projectShape:"chunk", projectShare:"fair",
 priority:"seniority",
@@ -28686,7 +29968,7 @@ return `
           ${Object.keys(LAW).map(x=>`<option value="${x}" ${W.juris===x?"selected":""}>${esc(LAW[x].name)}</option>`).join("")}</select></div>
         <div class="banner info"><div><b>${esc((LAW[W.juris]||LAW.NONE).name)}.</b> ${esc((LAW[W.juris]||LAW.NONE).note||"")}
           ${(LAW[W.juris]||{}).premium? " <b>If you get it wrong:</b> "+esc(LAW[W.juris].premium):""}</div></div>
-        <div class="help">City rules and union contracts go under Scheduling rules later.</div>
+        <div class="help">City rules and union contracts go under Scheduling rules later. Weeksolved checks the rules set on this board. It doesn't check what the law requires for your business, license or location.</div>
         <div class="sep"></div>
         <div class="field"><label>How many places do you schedule?</label>
           <div class="wopts wcols">${[1,2,3,4,5,6].map(x=>opt("siteCount",x,NS,
@@ -28757,9 +30039,11 @@ if(k==="busy") return `
           <strong style="font-family:Archivo,sans-serif;font-size:13px">Around a holiday, does it get busier?</strong>
           <select id="whrush" style="margin-left:auto">
             <option value="none" ${W.holidayRush==="none"?"selected":""}>No change</option>
-            <option value="before" ${W.holidayRush==="before"?"selected":""}>The day before</option>
-            <option value="after" ${W.holidayRush==="after"?"selected":""}>The day after</option>
-            <option value="both" ${W.holidayRush==="both"?"selected":""}>Both</option>
+            <option value="day" ${W.holidayRush==="day"?"selected":""}>The holiday itself</option>
+            <option value="before" ${W.holidayRush==="before"?"selected":""}>Day before</option>
+            <option value="after" ${W.holidayRush==="after"?"selected":""}>Day after</option>
+            <option value="both" ${W.holidayRush==="both"?"selected":""}>Before and after</option>
+            <option value="all" ${W.holidayRush==="all"?"selected":""}>All three</option>
           </select>
         </div>
         <div class="help">Those days count one step busier next to a holiday you keep.</div>
@@ -28862,14 +30146,21 @@ return `
 W.custom.length+" shift"+(W.custom.length===1?"":"s")+" you built by hand.") : "")
 + presets.map(x=>opt("shiftPreset",x.id,W.shiftPreset,x.t,x.d)).join("")}</div>
         ${cur.shifts.length? `<div class="stack" style="gap:6px">
-          ${cur.shifts.map((sh,i)=>`<div class="desrow">
+          ${cur.shifts.map((sh,i)=>{
+const stv=(W.shifts[i]&&W.shifts[i].start)||sh.start, env=(W.shifts[i]&&W.shifts[i].end)||sh.end;
+ 
+const note=(typeof overnightNote==="function")? overnightNote(t2m(stv), t2m(env)) : null;
+return `<div class="wshiftrow">
+            <div class="desrow">
             <input type="text" class="wsl" data-i="${i}" value="${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}" style="width:150px" aria-label="Shift name">
-            <input type="time" class="wss" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].start)||sh.start}" style="width:120px" aria-label="Starts">
+            <input type="time" class="wss" data-i="${i}" value="${stv}" style="width:136px" aria-label="Starts">
             <span class="mini">to</span>
-            <input type="time" class="wse" data-i="${i}" value="${(W.shifts[i]&&W.shifts[i].end)||sh.end}" style="width:120px" aria-label="Ends">
-            <span class="mini" style="margin-left:auto">${esc(DESIRE_LABEL[sh.desire]||"Neutral")}</span>
-            <button type="button" class="btn sm ghost" data-wsdel="${i}" aria-label="Remove ${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}">Remove</button>
-          </div>`).join("")}
+            <input type="time" class="wse" data-i="${i}" value="${env}" style="width:136px" aria-label="Ends">
+            <button type="button" class="btn sm" style="margin-left:auto" data-wsdel="${i}" aria-label="Remove ${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}">Remove</button>
+            </div>
+            <div class="tablabel wsdesire">Guessed: ${esc((DESIRE_LABEL[sh.desire]||"Neutral").toLowerCase())}</div>
+            ${note? `<div class="banner warn wsonote"><div>${esc(note.say)} <button type="button" class="btn sm" data-wsfix="${i}" data-wswhich="${esc(note.which)}" data-wsstart="${note.fixedStart}" data-wsend="${note.fixedEnd}">${esc(note.btn)}</button></div></div>` : ""}
+          </div>`;}).join("")}
           <div class="help">Wanted / unwanted is guessed from the shape and decides who claims first — change it under Who gets first pick.</div>
         </div>`:""}
         <div class="row" style="gap:8px;flex-wrap:wrap">
@@ -29035,20 +30326,31 @@ opt("mealPlan","closed",W.mealPlan,"We close for lunch","The doors shut and the 
             <span class="mini" style="width:100%">The times you use — change or add any of them:</span>
             ${(W.mealSlots||[]).map((t,i)=>`<input type="time" value="${esc(t)}" data-wmslot="${i}" style="width:auto">`).join("")}
             <button type="button" class="btn sm" id="wmadd">Add one</button></div>`:""}
-          ${W.mealPlan==="closed"? `<div class="row" style="margin-top:8px">
-            <label class="mini">Closed from</label><input type="time" data-w="mealCloseFrom" value="${esc(W.mealCloseFrom)}" style="width:auto">
-            <label class="mini">until</label><input type="time" data-w="mealCloseTo" value="${esc(W.mealCloseTo)}" style="width:auto"></div>`:""}
+          ${W.mealPlan==="closed"? `<div class="stack" style="gap:8px;margin-top:8px">
+            <div class="row">
+              <label class="mini">Closed from</label><input type="time" data-w="mealCloseFrom" value="${esc(W.mealCloseFrom)}" style="width:auto">
+              <label class="mini">until</label><input type="time" data-w="mealCloseTo" value="${esc(W.mealCloseTo)}" style="width:auto">
+            </div>
+            <div class="field"><label>Which days?</label>
+              <div class="wopts wcols">${
+opt("mealCloseWhen","all",W.mealCloseWhen,"Every day")+
+opt("mealCloseWhen","days",W.mealCloseWhen,"Only the days I pick")}</div>
+              ${W.mealCloseWhen==="days"? `<div class="wclosedays">${DAYS.map((d,i)=>`
+                <button type="button" class="daytog ${(W.mealCloseDays||[]).includes(i)?"on":""}" data-mcday="${i}" title="${esc(d)}">${DSHORT[i]}</button>`).join("")}</div>`:""}
+            </div>
+            <div class="field"><label>For how long?</label>
+              <div class="wopts wcols">${
+opt("mealCloseMins",0,W.mealCloseMins,"Whole window")+
+opt("mealCloseMins",30,W.mealCloseMins,"30 min")+
+opt("mealCloseMins",45,W.mealCloseMins,"45 min")+
+opt("mealCloseMins",60,W.mealCloseMins,"60 min")}</div></div>
+          </div>`:""}
         </div>`:""}
         <div class="field"><label>Rest breaks (the short paid ones)</label>
           <div class="wopts">${
 opt("restMode","self",W.restMode,"Staff take them when they see fit","The most common setup.")+
 opt("restMode","lengths",W.restMode,"Say how many and how long","What each person is owed, no times.")+
 opt("restMode","assigned",W.restMode,"Put times on the schedule too","Placed near the middle of each stretch of work.")}</div></div>
-        <div class="sep"></div>
-        <div class="field"><label>People you keep on call (per diem)</label>
-          <div class="wopts">${
-opt("perDiem","ask",W.perDiem,"Ask me each time","A gap suggests them; you decide each time.")+
-opt("perDiem","auto",W.perDiem,"Use them automatically","The draft calls them in when nobody regular can cover.")}</div></div>
       </div>`;
 if(k==="pri") return `
       <div class="stack">
@@ -29084,19 +30386,19 @@ const X=(id,on,title,desc)=>`<label class="switch" style="align-items:flex-start
         <span class="mini" style="display:block">${esc(desc)}</span></span></label>`;
 return `
       <div class="stack">
-        <p class="whead">All optional, all switchable later — anything left off stays out of your way.</p>
-        <div class="help" style="margin-bottom:10px"><b>Already on:</b> the day sheet, hour by hour.</div>
-        ${X("xPto", W.xPto, "Time off balances", "They grow as people work.")}
+        <p class="whead">All optional and switchable later.</p>
+        <div class="help" style="margin-bottom:10px"><b>Already on:</b> the day sheet.</div>
+        ${X("xPto", W.xPto, "Time off balances", "")}
         ${X("xLic", W.xLic, "License and certification expiry", "Nobody is scheduled past a lapsed license.")}
-        ${X("xCycles", W.xCycles, "Work patterns like 7 on, 7 off", "Or averaged over a period.")}
-        ${X("xNotice", W.xNotice, "Advance-notice alerts", "If a week goes up under two weeks ahead.")}
+        ${X("xCycles", W.xCycles, "Work patterns like 7 on, 7 off", "Or averaged.")}
+        ${X("xNotice", W.xNotice, "Advance-notice alerts", "Warns if posted late.")}
         ${X("xSkills", W.xSkills, "Training on each post — who needs more time on what", "Only you see it.")}
         ${X("xPay", W.xPay, "Pay period markers on the schedule", "")}
-        ${X("xFww", W.xFww, "Scheduling-law help (Fair Workweek)", "It says first whether any of it applies to you.")}
+        ${X("xFww", W.xFww, "Scheduling-law help (Fair Workweek)", "Tells you first if it applies.")}
         ${X("xNoComms", W.xNoComms, "No messages to staff, of any kind", "Printing and PDFs still work.")}
-        ${W.xNoComms? "" : X("xMsg", W.xMsg, "Ready-written messages to staff", "Written for you; nothing sends on its own.")}
+        ${W.xNoComms? "" : X("xMsg", W.xMsg, "Ready-written messages to staff", "Nothing sends on its own.")}
         ${X("xTrainee", W.xTrainee, "New hires who aren’t cover yet", "Scheduled on top of your cover, never alone.")}
-        ${X("xMinors", W.xMinors, "Under-18 hour limits", "Kept inside the hours the law allows for their age.")}
+        ${X("xMinors", W.xMinors, "Under-18 hour limits", "Enforced automatically by age.")}
         ${X("xWaiver", W.xWaiver, "Meal waivers where the law allows them", "You still collect the signature.")}
         <div class="field" id="xwaiverhow" style="margin:-4px 0 10px 14px;display:${W.xWaiver?"":"none"}"><label>How far?</label>
           <select data-wv="1">
@@ -29115,12 +30417,12 @@ return `
 
         <div class="wopts">${
 opt("vacations",false,W.vacations,"I\u2019ll handle longer time off myself",
-"Approve each request as it comes, on the Team page.")+
+"Approved on the Team page.")+
 opt("vacations",true,W.vacations,"Run one fair draw for the season",
-"Everybody ranks their choices by a deadline; one draw grants the largest set that still covers the floor. Ties go by seniority, fairness or a seeded lottery.")}</div>
+"Everybody ranks their choices by a deadline; one draw grants the largest set that still covers the floor, ties broken by seniority or lottery.")}</div>
 
         ${people.length? `<div class="lab" style="margin-top:6px">Already promised or already booked</div>
-        <div class="help" style="margin-bottom:8px">Put it in now and the first schedule works around it.</div>
+        <div class="help" style="margin-bottom:8px">The first schedule works around it.</div>
         <div class="reqform">
           <div class="field" style="min-width:150px"><label>Who</label><select id="wbe">${people.map((pn,i)=>`<option value="${i}">${esc(pn.name)}</option>`).join("")}</select></div>
           <div class="field" style="min-width:150px"><label>What</label><select id="wbk">
@@ -29138,7 +30440,7 @@ opt("vacations",true,W.vacations,"Run one fair draw for the season",
         </tbody></table></div>`:`<div class="mini">Nothing added yet.</div>`}
 
         <div class="lab" style="margin-top:14px">Holidays already worked this year</div>
-        <div class="help" style="margin-bottom:8px">Only if you are starting part-way through the year.</div>
+        <div class="help" style="margin-bottom:8px">Only if starting part-way through the year.</div>
         <div class="grid2">${people.map((pn,i)=>`
           <div class="desrow"><span style="min-width:0;flex:1">${esc(pn.name)}</span>
             <select data-wph="${i}" style="max-width:110px">${[0,1,2,3,4,5,6].map(n=>
@@ -29282,25 +30584,27 @@ box.innerHTML = `
       <div class="banner ${listed? (W.headcount && listed<W.headcount ? "warn":"info") : "warn"}"><div>
         ${listed? `<b>${listed} listed.</b>${W.headcount? (listed<W.headcount? " You said about "+W.headcount+" — "+(W.headcount-listed)+" to go." : listed>W.headcount? " That's more than the "+W.headcount+" you said, which is fine." : " That matches what you said.") : ""}`
 : "<b>Nothing listed yet.</b> Add at least one name to continue."}</div></div>
-      ${listed? `<div class="scroll" style="max-height:210px;margin-top:12px"><table>
-        <thead><tr><th>Name</th><th style="width:130px">Role</th><th style="width:130px">Type</th><th style="width:92px">Min hrs</th><th style="width:92px">Max hrs</th></tr></thead>
-        <tbody>${allNames().map(pn=>{ const key=pn.key, pp=pset(pn)||{};
-return `<tr><td><strong>${esc(pn.name)}</strong></td><td class="mini">${esc(bucketLabel(W,pn.b))}</td>
-            <td><select class="wpt" data-k="${esc(key)}">${Object.keys(TYPES).map(t=>`<option value="${t}" ${(pp.type||"FT")===t?"selected":""}>${TYPES[t]}</option>`).join("")}</select></td>
-            <td><input type="number" inputmode="decimal" class="wmn" data-k="${esc(key)}" min="0" max="80" value="${pp.minH!=null? pp.minH : 0}" placeholder="none"></td>
-            <td><input type="number" inputmode="decimal" class="wph" data-k="${esc(key)}" min="0" max="80" value="${pp.maxH|| (pp.type==="PT"?28:pp.type==="PRN"?20:40)}"></td></tr>`;
-}).join("")}</tbody></table></div>
-        <div class="mini" style="margin-top:8px">Min hrs are <b>guaranteed</b> hours \u2014 a promise the drafter keeps by adding shifts until everyone reaches their number, on top of the cover you ask for. Leave it at 0 unless somebody really is owed hours every week; you can set it per person here or later under Team. Everyone starts available all week; narrow anyone's hours on their profile once you're in.</div>`:""}`;
+      ${listed? `<div class="scroll wteamlist" style="max-height:210px;margin-top:12px">${allNames().map(pn=>{ const key=pn.key, pp=pset(pn)||{};
+const td=typeDefaults(pp.type||"FT");
+return `<div class="wteamrow"><div class="wtr-id"><strong>${esc(pn.name)}</strong><span class="mini">${esc(bucketLabel(W,pn.b))}</span></div>
+            <div class="wtr-fields">
+              <div class="wtr-f"><label>Type</label><select class="wpt" data-k="${esc(key)}">${Object.keys(TYPES).map(t=>`<option value="${t}" ${(pp.type||"FT")===t?"selected":""}>${TYPES[t]}</option>`).join("")}</select></div>
+              <div class="wtr-f"><label>Min</label><input type="number" inputmode="decimal" class="wmn" data-k="${esc(key)}" min="0" max="80" value="${pp.minH!=null? pp.minH : td.minH}" placeholder="none"></div>
+              <div class="wtr-f"><label>Max</label><input type="number" inputmode="decimal" class="wph" data-k="${esc(key)}" min="0" max="80" value="${pp.maxH!=null? pp.maxH : td.maxH}"></div>
+            </div></div>`;
+}).join("")}</div>
+        <div class="mini" style="margin-top:8px">Min hrs are <b>guaranteed</b> hours \u2014 a promise the drafter keeps by adding shifts until everyone reaches their number, on top of the cover you ask for. Each type starts from its usual range; change anyone here or later under Team. Everyone starts available all week; narrow anyone's hours on their profile once you're in.</div>`:""}`;
 box.querySelectorAll(".wpt").forEach(i=>i.onchange=()=>{ const k=i.dataset.k;
 W.people[k]=W.people[k]||{}; W.people[k].type=i.value;
  
-const row=i.closest("tr")||box;
+const row=i.closest(".wteamrow")||box;
+const d=typeDefaults(i.value);
 const h=row.querySelector(".wph");
-if(h) h.value = i.value==="PT"?28 : i.value==="PRN"?20 : i.value==="TEMP"?32 : 40;
-W.people[k].maxH=+((h||{}).value)||40;
+if(h) h.value = d.maxH;
+W.people[k].maxH=+((h||{}).value)||d.maxH;
  
 const mn=row.querySelector(".wmn");
-if(mn) W.people[k].minH=Math.max(0, +mn.value||0); });
+if(mn){ mn.value=d.minH; W.people[k].minH=Math.max(0, +mn.value||0); } });
 box.querySelectorAll(".wph").forEach(i=>i.oninput=()=>{ const k=i.dataset.k;
 W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
 box.querySelectorAll(".wmn").forEach(i=>i.oninput=()=>{ const k=i.dataset.k;
@@ -29308,28 +30612,12 @@ W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
 }
 
 let PAINT_STEP=-1;
-function paint(){
-const r=modalRoot();
-const prevBody=r.querySelector(".modal .body");
-const keep = (PAINT_STEP===W.step && prevBody)? prevBody.scrollTop : 0;
-const sameStep = PAINT_STEP===W.step;
  
-const keepFocus = (function(){
-if(!sameStep) return null;
-try{
-const el=document.activeElement, box=r.querySelector(".modal");
-if(!el || el===document.body || !box || !box.contains(el)) return null;
-const q=v=>(window.CSS && CSS.escape)? CSS.escape(v) : String(v).replace(/["\\\]]/g,"\\$&");
-if(el.id) return {sel:"#"+q(el.id), caret:(el.selectionStart!=null? el.selectionStart : null)};
-const ds=el.dataset||{};
-for(const k in ds){
-const attr="data-"+k.replace(/[A-Z]/g, m=>"-"+m.toLowerCase());
-const sel="["+attr+'="'+String(ds[k]).replace(/["\\]/g,"\\$&")+'"]';
-try{ if(box.querySelectorAll(sel).length===1) return {sel, caret:null}; }catch(_){}
+function paint(){
+if(PAINT_STEP===W.step) keepModalScroll(paintStep); else paintStep();
 }
-}catch(_){}
-return null;
-})();
+function paintStep(){
+const r=modalRoot();
 PAINT_STEP=W.step;
 histModalOpen();           
 const last = W.step===STEPS.length-1;
@@ -29353,7 +30641,6 @@ return out; })()}</div>
 : `<button class="btn ghost" id="wskip">Use defaults for the rest</button>`)}
         <button class="btn primary" id="wnext">${last?"Build it":"Next"}</button>
       </footer></div></div>`;
-{ const nb=r.querySelector(".modal .body"); if(nb && sameStep && keep) nb.scrollTop=keep; }
  
 { const body=r.querySelector(".modal .body");
 if(body){ try{ stackTables(body); polishA11y(body); markToggleState(body); enhanceDates(body); markRequired(body); markExplain(body); }catch(e){} } }
@@ -29377,12 +30664,14 @@ if(b && !b.dataset.wizdirty){ b.dataset.wizdirty="1";
 const mark=()=>{ try{ collect(); wizSave(W); }catch(e){} W.__typed=true; };
 b.addEventListener("input", mark); b.addEventListener("change", mark); } })();
 MODAL_GUARD = (W.step>0 || W.__typed) ? ()=>{
-const foot=modalRoot().querySelector(".modal footer");
-if(foot && !foot.querySelector("#wleave")){
+const modalBox=modalRoot().querySelector(".modal");
+const foot=modalBox && modalBox.querySelector("footer");
+if(foot && modalBox && !modalBox.querySelector("#wleave")){
 const b=document.createElement("div");
-b.id="wleave"; b.style.cssText="flex:1;display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)";
-b.innerHTML='Leave for now? Your answers are saved \u2014 you can pick up here. <button class="btn sm danger" id="wleaveyes">Leave</button><button class="btn sm" id="wleaveno">Stay</button>';
-foot.prepend(b);
+b.id="wleave"; b.className="wleavebar";
+b.innerHTML='<p class="wlsay">Leave for now? Your answers are saved \u2014 you can pick up here.</p>'+
+'<div class="wlbtns"><button class="btn danger" id="wleaveyes">Leave</button><button class="btn" id="wleaveno">Stay</button></div>';
+foot.before(b);
  
 b.querySelector("#wleaveyes").onclick=()=>{ try{ collect(); wizSave(W); }catch(e){} closeModal(true); };
 b.querySelector("#wleaveno").onclick=()=>b.remove();
@@ -29390,13 +30679,6 @@ b.querySelector("#wleaveno").onclick=()=>b.remove();
 } : null;
 wireDialog(r);
  
-if(keepFocus){ try{
-const t=r.querySelector(keepFocus.sel);
-if(t && t.focus){ t.focus({preventScroll:true});
-if(keepFocus.caret!=null && t.setSelectionRange){
-try{ t.setSelectionRange(keepFocus.caret, keepFocus.caret); }catch(_){}
-} }
-}catch(e){} }
 wireSug(r);
 r.querySelectorAll(".wopt").forEach(b=>b.onclick=()=>{
 const g=b.dataset.g; let v=b.dataset.v;
@@ -29486,6 +30768,30 @@ W.perShift=slide(W.perShift); W.perShiftMax=slide(W.perShiftMax); W.shifts=[];
 if(list.length){ W.custom=list; W.shiftPreset="custom"; }
 else { W.custom=null; W.shiftPreset="none"; }
 paint(); });
+ 
+{ const wireFix=b2=>{ b2.onclick=()=>{
+const i=b2.dataset.wsfix, which=b2.dataset.wswhich;
+const field=r.querySelector((which==="end"?".wse":".wss")+'[data-i="'+i+'"]');
+if(field) field.value=m2t(+(which==="end"? b2.dataset.wsend : b2.dataset.wsstart));
+collect(); paint();
+}; };
+r.querySelectorAll("[data-wsfix]").forEach(wireFix);
+ 
+r.querySelectorAll(".wshiftrow .wss,.wshiftrow .wse").forEach(inp=>inp.addEventListener("input",()=>{
+const row=inp.closest(".wshiftrow"); if(!row) return;
+const i=inp.dataset.i;
+const s=row.querySelector('.wss[data-i="'+i+'"]'), e=row.querySelector('.wse[data-i="'+i+'"]');
+if(!s||!e) return;
+const note=(typeof overnightNote==="function")? overnightNote(t2m(s.value), t2m(e.value)) : null;
+let banner=row.querySelector(".wsonote");
+if(note){
+const html=esc(note.say)+' <button type="button" class="btn sm" data-wsfix="'+i+'" data-wswhich="'+esc(note.which)+'" data-wsstart="'+note.fixedStart+'" data-wsend="'+note.fixedEnd+'">'+esc(note.btn)+"</button>";
+if(!banner){ banner=document.createElement("div"); banner.className="banner warn wsonote"; banner.innerHTML="<div></div>"; row.appendChild(banner); }
+banner.querySelector("div").innerHTML=html;
+const fresh=banner.querySelector("[data-wsfix]"); if(fresh) wireFix(fresh);
+} else if(banner) banner.remove();
+}));
+}
 const wma=r.querySelector("#wmadd");
 if(wma) wma.onclick=()=>{ collect();
 const last=(W.mealSlots||[]).map(t2m).sort((a,b)=>a-b).slice(-1)[0];
@@ -29545,6 +30851,13 @@ const whs=r.querySelector("#whrushs"); if(whs) whs.onchange=()=>{ W.holidayRushS
 const wwk=r.querySelector("#wwkend"); if(wwk) wwk.onchange=()=>{ W.weekendDesire=wwk.value; };
 const wvc=r.querySelector("#wvac"); if(wvc) wvc.onchange=()=>{ W.vacations=wvc.value==="1"; };
 r.querySelectorAll("[data-hol]").forEach(sel=>sel.onchange=()=>{ W.hols=W.hols||{}; W.hols[sel.dataset.hol]=sel.value; paint(); });
+ 
+r.querySelectorAll("[data-mcday]").forEach(btn=>btn.onclick=()=>{
+const d=+btn.dataset.mcday;
+W.mealCloseDays=W.mealCloseDays||[];
+W.mealCloseDays = W.mealCloseDays.includes(d)? W.mealCloseDays.filter(x=>x!==d) : W.mealCloseDays.concat([d]);
+paint();
+});
 const wp=r.querySelector("#wposts");
 if(wp){ wp.addEventListener("blur",()=>{ const v=wp.value;
 if(v===W.posts) return; W.posts=v; setTimeout(paint,0); }); }    
@@ -29710,15 +31023,18 @@ const people=allNames();
 N.employees=people.map(pn=>{
 const pp=pset(pn)||{};
 const type=pp.type||"FT";
-const maxH=pp.maxH || (type==="FT"?40: type==="PT"?28: type==="PRN"?20:32);
+ 
+const td=typeDefaults(type);
+const maxH=pp.maxH!=null? +pp.maxH : td.maxH;
 const roleId=N.roles[pn.b]? N.roles[pn.b].id : (N.roles[0]&&N.roles[0].id);
 const off=doffOf(pn);
 return {id:uid("e"),name:pn.name,email:"",phone:"",roleIds:roleId?[roleId]:[],type,
  
-minH: Math.min(maxH, pp.minH!=null? Math.max(0, +pp.minH||0) : 0), maxH, maxD: type==="FT"?5:4,
+minH: Math.min(maxH, pp.minH!=null? Math.max(0, +pp.minH||0) : td.minH), maxH, maxD: type==="FT"?5:4,
 avail:[0,1,2,3,4,5,6].map(d=>({ok:!off.includes(d),from:"00:00",to:"23:59"})),
 prefShiftIds:[],avoidShiftIds:[],prefDaysOff:[],canOpen:true,canClose:true,
-hoursMode:"range",
+hoursMode:td.hoursMode,
+...(td.onCall? {onCall:true, extraMode:(pp.extraMode||td.extraMode||"ask")} : {}),
 holidayPay: W.holPay==="all" || (W.holPay==="ft" && type==="FT"),
 holidayPayH: 8,
 notes:"",seniority:"",active:true,rate:0};
@@ -29786,7 +31102,10 @@ N.rules.breakMode=W.breakMode; N.rules.restMode=W.restMode;
 N.rules.mealPlan=W.mealPlan||"auto";
 N.rules.mealSlots=(W.mealSlots||[]).filter(Boolean).sort();
 if(!N.rules.mealSlots.length) N.rules.mealSlots=["11:30","12:00","12:30"];
-N.rules.mealClose={from:W.mealCloseFrom||"13:00", to:W.mealCloseTo||"14:00"};
+N.rules.mealClose={from:W.mealCloseFrom||"13:00", to:W.mealCloseTo||"14:00",
+when:(W.mealPlan==="closed" && W.mealCloseWhen==="days")? "days":"all",
+days:(W.mealCloseDays&&W.mealCloseDays.length? W.mealCloseDays : [0,6]).slice().sort((a,b)=>a-b),
+mins:+W.mealCloseMins||0};
 N.rules.fillMode=W.fillMode||"demand";
 N.rules.topUpLabel=(W.topUpLabel||"").trim()||"Project time";
 N.rules.projectShape=W.projectShape||"chunk";
@@ -31470,7 +32789,7 @@ return `<div class="banner warn"><div><b>${past.length} holiday${past.length===1
         <div class="stack" style="gap:6px;margin-top:10px">
           ${(S.holidays.demand||[]).length? (S.holidays.demand||[]).map((r,i)=>{
 const sh=shiftById(r.shiftId)||{label:"(deleted shift)"};
-return `<div class="desrow"><strong style="font-size:13px">${(r.count||1)} × ${esc(sh.label)}</strong>
+return `<div class="desrow"><strong style="font-size:13px">${demCount(r)} × ${esc(sh.label)}</strong>
               <span class="mini">${r.roleId? esc(roleName(r.roleId)) : "anyone on the roster"}</span>
               <button class="btn sm" data-hdel="${i}" style="margin-left:auto">Remove</button></div>`;
 }).join("") : `<div class="mini">Nothing yet — every listed holiday drafts empty until you add what should run.</div>`}
@@ -31915,7 +33234,7 @@ const dow=parseYmd(date).getDay();
 if(S.hours[dow].closed) return true;
  
 const rows=(typeof demandOf==="function"? (demandOf(weekStartOf(date, S.org.weekStart))[dow]||[]) : (S.demand[dow]||[]));
-const need=rows.reduce((t,r)=>t+(r.count||1),0);
+const need=rows.reduce((t,r)=>t+demCount(r),0);
 const pool=S.employees.filter(e=>e.active && e.avail[dow]&&e.avail[dow].ok && !onTimeOff(e.id,date));
 const heads=pool.length;
  
@@ -32524,7 +33843,7 @@ if(src==="shifts") return base.concat([
 {k:"meal", n:"Meal minutes", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>!m.waived).reduce((t,m)=>t+m.len,0)},
  
 {k:"mealw", n:"Meals waived", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>m.waived).length},
-{k:"how", n:"How it got there", get:r=>[r.locked?"locked":"", r.cover?"floor cover":"", r.guarantee?"hours owed":"", r.topUp?"project time":"", r.flexed?"stretched":"", r.resized?"resized":"", r.perDiemAuto?"per diem":""].filter(Boolean).join(", ")||"drafted"},
+{k:"how", n:"How it got there", get:r=>[r.locked?"locked":"", r.cover?"floor cover":"", r.guarantee?"hours owed":"", r.topUp?"Project time":"", r.flexed?"stretched":"", r.resized?"resized":"", r.perDiemAuto?"per diem":"", r.byYou?"added by you":""].filter(Boolean).join(", ")||"drafted"},
 {k:"holiday", n:"Holiday", get:r=>{ const h=(S.holidays.list||[]).find(x=>x.date===r.date); return h? h.name : ""; }},
 {k:"posted", n:"Week posted", get:r=>(S.weeks[wk(r.date)]||{}).published? "yes":"no"}
 ]);
@@ -33030,7 +34349,7 @@ function kbList(){ return KB.filter(e=>!e.when || e.when()); }
 const KB=[
  
 {t:"A holiday is scheduling my whole roster \u2014 how do I run it light?", k:"holiday full roster everyone scheduled thanksgiving christmas one pharmacist skeleton crew fewer people holiday cover holiday shifts still scheduling ten", go:"demand",
-a:"Three things decide this, and the second one is what usually bites.\n\n<b>1. Say what should run.</b> Open Coverage needs and scroll past Saturday to the <b>Holidays</b> block. Add the shifts that should actually run \u2014 one Pharmacist on the day shift, say.\n\n<b>2. Make sure the holiday is actually reading them.</b> Every holiday added from the standard list arrives with a setting of its own (Christmas closed, Veterans Day normal), and <b>a holiday's own setting beats the general one</b>. So switching the general setting to \u201cits own cover\u201d can change nothing at all and say nothing about it. Weeksolved now asks: press <b>Use its own cover</b> and, if any holiday has its own setting, it offers to clear those so every holiday follows you. The block header tells you the truth either way \u2014 \u201cused by 3 of 11\u201d.\n\n<b>3. Decide whether anyone may be added on top.</b> Even with one person asked for, the drafter will normally add people so the floor is never empty while you are open, and may give somebody a holiday shift to reach their guaranteed hours. On the Holidays page, <b>Topping people up on a holiday \u2192 Minimum cover only</b> stops both: the day gets exactly what you asked for and nobody else. Any stretch left uncovered is still reported \u2014 it is just not filled behind your back.\n\nIf the day is genuinely short rather than genuinely quiet, give the holidays their own hours instead: Holidays \u2192 <b>Set hours on every holiday</b> does all of them at once."},
+a:"Three things decide this, and the second one is what usually bites.\n\n<b>1. Say what should run.</b> Open Coverage needs and scroll past Saturday to the <b>Holidays</b> block. Add the shifts that should actually run \u2014 one Pharmacist on the day shift, say.\n\n<b>2. Make sure the holiday is actually reading them.</b> Every holiday added from the standard list arrives with a setting of its own (Christmas closed, Veterans Day normal), and <b>a holiday's own setting beats the general one</b>. So switching the general setting to \u201cits own cover\u201d can change nothing at all and say nothing about it. Weeksolved now asks: press <b>Use its own cover</b> and, if any holiday has its own setting, it offers to clear those so every holiday follows you. The block header tells you the truth either way \u2014 \u201cused by 3 of 11\u201d.\n\n<b>3. Decide whether anyone may be added on top.</b> Even with one person asked for, the drafter may give somebody a holiday shift to reach their guaranteed hours. On the Holidays page, <b>Topping people up on a holiday \u2192 Minimum cover only</b> stops that: the day gets exactly what you asked for and nobody else. Any stretch left uncovered is still reported \u2014 it is just not filled behind your back.\n\nIf the day is genuinely short rather than genuinely quiet, give the holidays their own hours instead: Holidays \u2192 <b>Set hours on every holiday</b> does all of them at once."},
 {t:"How long is a new shift by default?", k:"default shift length 8 hours 8.5 meal break new shift end time automatic 830 430 lunch unpaid", go:"setup",
 a:"Eight paid hours plus the unpaid meal the law where you are owes for them \u2014 so in a state with a 30-minute meal, a shift starting at 8:00 ends at 16:30, and one starting at 9:00 ends at 17:30. That is the shape most businesses run, so it is what you get without doing the arithmetic.\n\nChange the start and the end follows it, keeping the day eight paid hours long. The moment you type your own end time it stops following, so a deliberate twelve-hour shift is never quietly pulled back. Editing a shift you already have never moves anything on its own."},
 {t:"Is there two-factor sign-in?", k:"two factor 2fa authentication authenticator security code phone sign in login extra security mfa", go:null,
@@ -33080,7 +34399,7 @@ a:"Yes, and nothing is filled in for you. Picking your kind of business tells We
 {t:"A part-timer should only work extra hours if I approve it", k:"guaranteed hours cap approve extra overtime part time part-timer minimum only guaranteed ask first permission approve hours past guarantee", go:"team",
 a:"On their profile, under Hours past the guarantee, choose Ask me first. The drafter then treats their guaranteed number as the cap and never goes past it on its own. If the week comes up short, covering the gap offers you a line saying they are held at their guarantee and how many hours are left before their cap — one press approves it, for that week only. It does not change their profile and it does not carry into next week. The other setting, Schedule them freely, is the normal behaviour and stays the default."},
 {t:"I want someone used only when the week is short", k:"on call per diem casual reserve backup only when needed gap last resort spare only if coverage demands schedule last", go:"team",
-a:"That is How they're used on their profile — set it to Only called in when there's a gap. The drafter builds the whole week from everybody scheduled as normal first, and only where coverage is still short does it reach for them. Under Scheduling rules you then choose what happens at that point: Ask me each time, where they appear as one of the ways out and you decide, or Use them automatically, where the draft calls them in and tells you who it used. This is different from Hours past the guarantee: that one is for somebody who is definitely working and might do a few more hours; this one is for somebody you would rather not use at all unless the week needs them."},
+a:"That is How they're used on their profile — set it to Only called in when there's a gap. The drafter builds the whole week from everybody scheduled as normal first, and only where coverage is still short does it reach for them. On the same card you then choose what happens at that point: Ask me first, where they are named in the Fix and you decide, or Call them in automatically, where the draft calls them in while the week is being drafted and never after it is posted. This is different from Hours past the guarantee: that one is for somebody who is definitely working and might do a few more hours; this one is for somebody you would rather not use at all unless the week needs them."},
 {t:"Will a fix cause another problem?", k:"fix causes another problem knock on side effect remove shift coverage warning breaks something else undo put it back", go:"week",
 a:"Weeksolved now tells you when it will. Removing a shift is rehearsed first: the change is run on a throwaway copy of the week, every check runs again, and if the removal would cause anything new you get the list before you press — coverage dips, an open shift, somebody now under their hours — and you decide. For the fix list, some fixes change rules and settings rather than the week, which is too much to rehearse safely; there Weeksolved checks straight afterwards instead and says what the fix cost, with a Put it back button on the message. Either way you are told, and nothing is decided for you: a fix that causes a smaller problem than the one it solves is often exactly the right call."},
 {t:"I removed someone and lost their shifts — can I keep the record?", k:"remove delete employee gone left quit fired history past shifts records keep erase warning confirmation undo", go:"team",
@@ -33183,8 +34502,8 @@ a:"Who gets first pick decides who gets first claim on the sought-after shifts: 
 a:"Each person has a guarantee and a cap; the drafter aims for the guarantee and never passes the cap. Editing a shift shows live where it takes their week — including the overtime cost if you track rates. The week header flags anyone past the overtime line."},
 {t:"Trade two shifts safely", k:"swap trade switch exchange cover swap shifts", go:"week",
 a:"This week → More → 'Check a trade'. Pick the two shifts; every rule is checked — hours, turnaround, availability, coverage, licenses — before anything moves. Clean trades apply in one tap; risky ones tell you exactly what would break, and you decide."},
-{t:"Someone called out", k:"callout call out sick noshow no show absent didnt come cover emergency", go:"week",
-a:"Open the shift → 'Called out sick, or didn't show?' Logging keeps the record (the Team page tallies the last 90 days) and drops you straight into the list of who could legally cover it, with anyone blocked explained."},
+{t:"Someone called out", k:"callout call out sick noshow no show absent didnt come cover emergency", go:"home",
+a:"Home → “Someone called out” (shown whenever today or tomorrow has a shift that hasn’t started yet), or open the shift itself → “Called out”. Pick who, mark it Called out or No-show, and one press releases the shift and opens who could cover it, with anyone blocked explained. There is no count or rate kept anywhere — each log lives only on that shift’s own history."},
 {t:"Month at a glance", k:"month view calendar overview monthly", go:"weeks",
 a:"All schedules → Month toggle. Every day shows its shift count — green posted, teal drafted — with holidays starred. Tap any day to open its sheet."},
 {t:"Print and export", k:"print pdf excel csv xlsx workbook spreadsheet export paper post wall breaksheet payroll", go:"export",
@@ -34551,10 +35870,11 @@ modal("Week tools", `
       <div class="stack" style="gap:8px">
         <div class="lab">This week</div>
         <button class="btn primary" id="mtell">Hand it out to the team</button>
-        <button class="btn" id="mclear">Clear everything that isn't locked</button>
+        <button class="btn" id="mclear">Clear the unlocked shifts</button>
         <button class="btn" id="mcopy">Copy last week forward</button>
         <button class="btn" id="mswap">Check a trade — two people swapping shifts</button>
         <button class="btn" id="munlock">Unlock every shift</button>
+        ${(!getWeek().published && getWeek().assignments.length)? `<button class="btn danger" id="mdiscard">Discard this draft</button>` : ""}
       </div>
       <div class="sep"></div>
       <div class="stack" style="gap:8px">
@@ -34595,6 +35915,14 @@ const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swa
 const hb=r.querySelector("#mhand"); if(hb) hb.onclick=()=>{ closeModal(); handBackModal(curWeek()); };
 r.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>{ closeModal(); setTimeout(()=>inboxModal(""),120); });
 r.querySelector("#mclear").onclick=()=>{ const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
+{ const md=r.querySelector("#mdiscard"); if(md) md.onclick=()=>{
+const ws=curWeek();
+ 
+S.weeks[ws] = {assignments:[], published:false, generatedAt:null,
+touched:true, suggested:false, auto:false, unfilled:[]};
+save(); closeModal(); render();
+toast("Draft discarded", {label:"Undo", run:undo});
+}; }
 r.querySelector("#munlock").onclick=()=>{ getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
 r.querySelector("#mcopy").onclick=()=>{
 const prev=S.weeks[addDays(curWeek(),-7)];
