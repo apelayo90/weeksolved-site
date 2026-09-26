@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build f7af83b9 2026-09-24 15:10 UTC -->
+<!-- build 84df3315 2026-09-25 18:27 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -22,8 +22,8 @@
 <meta name="theme-color" content="#1c6a66">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Weeksolved">
-<link rel="canonical" href="https://weeksolved.com/app.html">
-<meta property="og:url" content="https://weeksolved.com/app.html">
+<link rel="canonical" href="https://weeksolved.com/app">
+<meta property="og:url" content="https://weeksolved.com/app">
 <meta property="og:title" content="Weeksolved — Staff Scheduling Software with Built-In Break Rules">
 <meta property="og:description" content="Give it your coverage rules once. Weeksolved drafts your week from your own coverage rules, places every meal and rest break inside the window your state's rules set, and tells you exactly what blocked any shift it could not fill.">
 <meta name="twitter:card" content="summary_large_image">
@@ -866,6 +866,8 @@ ol.a2hs li{padding-left:2px}
 .wopt{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;border:1px solid var(--line2);
   background:var(--surface);border-radius:8px;padding:10px 13px;cursor:pointer;transition:border-color .12s,background .12s;width:100%}
 .wopts.wcols .wopt{width:auto;min-width:112px;flex:1}
+.wopts.wcols.wlens .wopt{min-width:64px;align-items:center}
+.wopt .wtag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);vertical-align:1px}
 .wopt:hover{border-color:var(--muted);background:var(--surface2)}
 .wopt.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
 .wopt .wt{font-weight:600;font-size:13.5px}
@@ -2981,7 +2983,7 @@ modal("Two versions of your schedule", `
       </div></div>
       <div class="help">Whichever you keep becomes the one true copy on every device. Deciding later is fine \u2014 nothing syncs until you do.</div>
     </div>`,
-`<button class="btn" id="bcbak">Back up both first</button>
+`<button class="btn" id="bcbak">Back up both now</button>
      <button class="btn" id="bctheirs">Use my account's</button>
      <button class="btn primary" id="bcmine">Keep this device's</button>`,
 r=>{
@@ -3059,7 +3061,7 @@ modal("Restore this backup?", `
       </div></div>
     </div>`,
 `<button class="btn" data-close>Cancel</button>
-     <button class="btn" id="rsbak">Back up what is here first</button>
+     <button class="btn" id="rsbak">Back up now</button>
      <button class="btn primary" id="rsyes">Replace it</button>`,
 r=>{
 r.querySelector("#rsbak").onclick=()=>saveFile("weeksolved-backup.json", backupJson());
@@ -3788,8 +3790,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "f7af83b9";       
-const BUILD_AT = "2026-09-24 15:10 UTC";       
+const BUILD_ID = "84df3315";       
+const BUILD_AT = "2026-09-25 18:27 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -5979,7 +5981,7 @@ modal("Clear this device", `
         <div class="help">Take a backup first if there is anything here you want to keep.</div>
       </div>`,
 `<button class="btn" data-close>Cancel</button>
-       <button class="btn" id="dabak0">Back it up first</button>
+       <button class="btn" id="dabak0">Back up now</button>
        <button class="btn danger" id="dawipe">Clear this device</button>`,
 r=>{ r.querySelector("#dabak0").onclick=()=>saveFile("weeksolved-backup.json", backupJson());
 r.querySelector("#dawipe").onclick=()=>{ dropAccountLocal(null); location.reload(); }; });
@@ -5997,7 +5999,7 @@ modal("Delete your account", `
         <div class="mini">${BACKEND==="supabase"? "<b>Your sign-in itself, for up to 24 hours.</b> Everything in the account \u2014 schedules, team, weeks, devices and the problem reports you sent \u2014 goes the moment you press the button. The sign-in that carries your email address is removed by hand after that, so the address is free to use again within a day rather than straight away.<br><br>":""}${tester? "<b>The record that your access code was used.</b> That is the thing that stops one code making a second account, so it survives deletion by design. Deleting this account does <b>not</b> give the code back, and you cannot sign up again with it.<br><br>":""}<b>The note that you agreed to the terms.</b> One line saying which version you accepted and when. Nobody can edit or remove it, us included — a record that can be rewritten later is not a record.<br><br>${BACKEND==="supabase"? "" : "<b>Any problem reports you sent.</b> They are how things get fixed, and they are not deleted with the account.<br><br>"}Nothing else is kept. If you would rather those went too, write to us and ask.</div>
       </div></div>
       <div class="field"><label>Take a backup first?</label>
-        <button class="btn sm" id="dabak">Download a backup of this board</button>
+        <button class="btn sm" id="dabak">Back up now</button>
         <span class="mini">A backup restores everything into a fresh account later. This is your last chance to take one.</span></div>
       ${googleOnlyUser(FB.auth.currentUser)
 ? `<div class="field"><label>Prove it is you</label>
@@ -6191,8 +6193,8 @@ const html =
 '<div style="max-width:26rem;padding:24px;text-align:center">'+
 '<p style="font-weight:700;margin:0 0 8px">This page is inside another site.</p>'+
 '<p style="margin:0 0 14px">Weeksolved will not open in someone else\u2019s frame. Open it directly.</p>'+
-'<p style="margin:0"><a href="https://weeksolved.com/app.html" target="_top" rel="noopener" '+
-'style="color:#1c6a66;font-weight:600">weeksolved.com/app.html</a></p></div></div>';
+'<p style="margin:0"><a href="https://weeksolved.com/app" target="_top" rel="noopener" '+
+'style="color:#1c6a66;font-weight:600">weeksolved.com/app</a></p></div></div>';
 try{ document.body.innerHTML = html; document.body.style.cssText="margin:0;background:#fff"; }catch(e){}
 }
 const FRAMED = framedByStranger();
@@ -8706,6 +8708,9 @@ if(floorMin && paidSpan(aMin,bMin,0,d.date,e) < floorMin) continue;
 if(guaranteeMode && !relaxed){ const fl=fitLen(sh); const over=fl-want;
 if(over > 60 && over > fl/2) continue; }
  
+if(!relaxed){ const Lx=effLimits(e, ws);
+if(Lx.exactH && exactTrap(e, ws, state[e.id], d.date, aMin, bMin, paidSpan(aMin,bMin,(()=>{const g=shiftGap(sh); return g? g.to-g.from:0;})(),d.date,e), owedFloorMin(e, ws), Lx)) continue; }
+ 
 let slot=null, rId=null;
 for(const c of slotsFor(sh, d)){
 const s2={shiftId:sh.id, roleId:c.roleId, sh, siteId:c.siteId};
@@ -9664,7 +9669,102 @@ if(memo) memo.set(key, v);
 return v;
 }
  
+function exactReachable(e, ws, st, needMin, room, cand){
+if(Math.abs(needMin)<=5) return true;
+if(needMin<0 || room<=0) return false;
+const skip = cand? cand.date : null;
+const lim = effLimits(e, ws);
+const rest = (lim.minRestH||0)*60;
+ 
+const onDay=d=>(d===skip? [cand] : []).concat((st.byDate&&st.byDate[d])||[]);
+const perDay=[];
+exactDayOpts(e, ws).forEach(({date, opts})=>{
+if(date===skip) return;
+if(st.byDate && st.byDate[date] && st.byDate[date].length) return;
+const pv=rest? onDay(addDays(date,-1)) : [], nx=rest? onDay(addDays(date,1)) : [];
+const pvEnd=pv.length? Math.max.apply(null,pv.map(x=>x.endMin)) : null;
+const nxStart=nx.length? Math.min.apply(null,nx.map(x=>x.startMin)) : null;
+const lens=new Set();
+opts.forEach(o=>{
+if(pvEnd!=null && (o.a+1440)-pvEnd < rest) return;
+if(nxStart!=null && (nxStart+1440)-o.b < rest) return;
+lens.add(o.pay);
+});
+if(lens.size) perDay.push([...lens]);
+});
+ 
+let seen=new Map([[0,0]]);
+perDay.forEach(ls=>{
+const nx=new Map(seen);
+seen.forEach((c,v)=>{ if(c>=room) return;
+ls.forEach(l=>{ const t=v+l; if(t>needMin+5) return; const o=nx.get(t); if(o==null || o>c+1) nx.set(t,c+1); }); });
+seen=nx;
+});
+for(const v of seen.keys()) if(Math.abs(v-needMin)<=5) return true;
+return false;
+}
+ 
+function exactDayOpts(e, ws){
+const memo = DRAFT? (DRAFT.exactDays || (DRAFT.exactDays=new Map())) : null;
+const key = e.id+"|"+ws;
+if(memo && memo.has(key)) return memo.get(key);
+const lim = effLimits(e, ws);
+const days=[];
+weekDates(ws).forEach(({date,dow})=>{
+if(!dayOpen(date,dow)) return;
+if(onTimeOff(e.id,date) || licBlock(e,date) || !cycleWorksOn(e,date)) return;
+const rows=demandRowsFor(dow, ws, date);
+const src = rows.length
+? rows.map(r=>({sh:shiftById(r.shiftId), roleId:r.roleId||null}))
+: S.shifts.filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(dow))
+.map(sh=>({sh, roleId:sh.roleId||null}));
+const opts=[];
+src.forEach(({sh, roleId})=>{
+if(!sh) return;
+if(roleId && !(e.roleIds||[]).includes(roleId)) return;
+const [a,b]=shiftMinutes(sh);
+if(!availOk(e,dow,a,b)) return;
+if(onTimeOffShift(e.id,date,b)) return;
+const g=shiftGap(sh), gm=g? g.to-g.from : 0;
+const pay=paidSpan(a,b,gm,date,e);
+if(pay<=0) return;
+if(lim.maxShiftH && pay > lim.maxShiftH*60) return;
+opts.push({a, b, pay});
+});
+if(opts.length) days.push({date, opts});
+});
+if(memo) memo.set(key, days);
+return days;
+}
+ 
+ 
+function exactFlexWeek(e, ws){
+const memo = DRAFT? (DRAFT.exactFlex || (DRAFT.exactFlex=new Map())) : null;
+const key = e.id+"|"+ws;
+if(memo && memo.has(key)) return memo.get(key);
+const D=demandOf(ws);
+const ids=new Set();
+Object.keys(D).forEach(dow=>(D[dow]||[]).forEach(r=>{ if(!r.roleId || (e.roleIds||[]).includes(r.roleId)) ids.add(r.shiftId); }));
+const pool = ids.size? S.shifts.filter(sh=>ids.has(sh.id)) : S.shifts;
+const v = pool.some(sh=>!!shiftFlex(sh));
+if(memo) memo.set(key, v);
+return v;
+}
+function exactTrap(e, ws, st, date, aMin, bMin, addMin, goal, lim){
+if(!lim || !lim.exactH || !(goal>0) || !st) return false;
+if(exactFlexWeek(e, ws)) return false;
+const maxD = lim.maxD||7;
+const used = st.days? st.days.size : 0;
+const before = goal - (st.min||0);
+if(before<=5) return false;                                
+if(!exactReachable(e, ws, st, before, maxD-used, null)) return false;
+const newDay = !(st.days && st.days.has(date));
+return !exactReachable(e, ws, st, before-addMin, maxD-used-(newDay?1:0), {date, startMin:aMin, endMin:bMin});
+}
+ 
 const SLACK_WEIGHT = 600;
+ 
+const EXACT_TRAP = 1500;
 function score(e, slot, date, dow, state, target){
 const st=state[e.id];
 const [aMin,bMin]=shiftMinutes(slot.sh);
@@ -9686,6 +9786,8 @@ const before = Math.abs(goal - st.min), now = Math.abs(goal - after);
 sc += (before - now)/60 * 55;                  
 if(after > goal + 1) sc -= 200;                
 sc += SLACK_WEIGHT * urgent;                   
+ 
+if(exactTrap(e, weekStartOf(date, S.org.weekStart), st, date, aMin, bMin, after - st.min, goal, lim)) sc -= EXACT_TRAP;
 } else {
 const t = target[e.id]||0;
 if(lim.minH && st.min < lim.minH*60) sc += 40 * (1 - st.min/Math.max(1,lim.minH*60));
@@ -16018,18 +16120,32 @@ fmtHrs(used)+" across the "+p.weeks+" weeks from "+prettyDate(p.start)+", agains
 }
 if(lim.exactH && e.onCall && mins < Math.round(lim.exactH*60*minHFactor(e.id, ws))){
 push("info","On call, but a fixed contract — "+e.name,
-e.name.split(" ")[0]+" is only called in when the week is short, so the drafter never fills a contract for them \u2014 yet their profile says exactly "+lim.exactH+"h. Change one or the other.",
+e.name.split(" ")[0]+" is only called in when the week is short, so the drafter never fills a contract for them \u2014 yet their profile says exactly "+lim.exactH+"h. One or the other needs to change.",
 {empId:e.id, code:"oncallguar"});
 } else if(lim.exactH && Math.abs(empPaidMins - Math.round(lim.exactH*60*minHFactor(e.id, ws))) > 5){    
  
 const fac=minHFactor(e.id, ws);
 const owe=Math.round(lim.exactH*60*fac);
 const f=exactHoursFeasible(e, ws);
+ 
+const daysOn=new Set(mine.map(a=>a.date)).size;
+const per=lim.maxD? owe/lim.maxD : 0;
+const shortOnes=(lim.maxD && daysOn>=lim.maxD && empPaidMins<owe)? mine.filter(a=>paidMinutes(a) < per-5) : [];
+const wkndOnly=shortOnes.length && shortOnes.every(a=>a.dow===0||a.dow===6);
+const lens=[...new Set(shortOnes.map(a=>paidMinutes(a)))];
+const NUMW=["no","one","two","three","four","five","six","seven"];
+const shortSay = shortOnes.length
+? "Their "+(NUMW[daysOn]||daysOn)+" days include "+(NUMW[shortOnes.length]||shortOnes.length)+" "+
+(lens.length===1? fmtHrs(lens[0])+" " : "shorter ")+(wkndOnly? "weekend ":"")+"shift"+(shortOnes.length===1?"":"s")+
+", so "+fmtHrs(owe)+" isn't reachable this week. Somebody else on "+(shortOnes.length===1? "that shift" : "one of those shifts")+
+", or a longer day, would close it."
+: "";
 push("crit","Off contract — "+e.name,
 e.name.split(" ")[0]+" is contracted to exactly "+lim.exactH+"h and has "+fmtHrs(empPaidMins)+holSay+
 (fac<1? ", against "+fmtHrs(owe)+" owed this week (contract scaled \u2014 they're away part of it)" : "")+". "+
-(f.ok? "It can be done from the shifts you've defined — something else got in the way this week, so try locking one of their shifts and drafting again."
-: "Can't be done: "+f.why+". Add a shift of the right length under Roles & shifts, or change the contract."),
+(shortSay && f.ok? shortSay
+: f.ok? "It can be done from the shifts you've defined — something else got in the way this week, and locking one of their shifts and drafting again usually closes it."
+: "Can't be done: "+f.why+". A shift of the right length under Roles & shifts, or a different contract, would close it."),
 {empId:e.id, code:"contract"});
 } else if(!lim.exactH && lim.minH && e.type!=="PRN"){
 const fac=minHFactor(e.id, ws);
@@ -17169,7 +17285,7 @@ if(plat==="ios") return [
 "Tap <b>Add</b>, top right. The icon appears on your home screen."];
 if(plat==="ios-other") return [
 "Home screen icons on iPhone and iPad can only be made from <b>Safari</b>.",
-"Open <b>weeksolved.com/app.html</b> in Safari, then tap the Share button — the square with an arrow.",
+"Open <b>weeksolved.com/app</b> in Safari, then tap the Share button — the square with an arrow.",
 "Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>."];
 if(plat==="android") return [
 "Tap the three-dot menu, top right of Chrome.",
@@ -21431,12 +21547,12 @@ return g==="even"? "Anyone owed hours beyond the cover you asked for is put on t
         </select>${S.rules.guaranteeSpread==="shift"? `<select data-set="rules.guaranteeShift" style="margin-left:6px">${S.shifts.map(x=>`<option value="${x.id}" ${S.rules.guaranteeShift===x.id?"selected":""}>${esc(x.label)}</option>`).join("")}</select>` : ""}`)}
       ${setRow("Which days extra hours may land on", "Hours owed on a guarantee are only added on the days ticked here. Untick the weekend and a part-timer short of hours is topped up Monday to Friday; if those days cannot take the hours, the drafter falls back to any open day and the week’s checks say so.",
 `<input type="hidden" data-set="rules.guaranteeDays"><div class="daypick" style="display:flex;gap:6px;flex-wrap:wrap">${[1,2,3,4,5,6,0].map(dw=>{ const on=!guaranteeDays() || guaranteeDays().includes(dw); return `<label class="chip ${on?"acc":""}" style="cursor:pointer"><input type="checkbox" data-gday="${dw}" ${on?"checked":""} style="margin-right:4px">${DSHORT[dw]}</label>`; }).join("")}</div>`)}
-      ${setRow("Is the cover you asked for a target or a floor?", S.rules.fillMode==="full"
-? "A floor — after the required shifts are covered, everyone owed hours keeps getting them"
-: "A target — it schedules exactly what you asked for and no more",
+      ${setRow("Hours past the cover you asked for", S.rules.fillMode==="full"
+? "The cover you asked for, then ordinary shifts for anyone short of their contracted hours, and project time for whatever those can't reach"
+: "The cover you asked for, then ordinary shifts only where someone is short of their contracted hours",
 `<select data-set="rules.fillMode">
-          <option value="demand" ${S.rules.fillMode==="full"?"":"selected"}>Schedule exactly what I asked for</option>
-          <option value="full" ${S.rules.fillMode==="full"?"selected":""}>Also give everyone their contracted hours</option>
+          <option value="demand" ${S.rules.fillMode==="full"?"":"selected"}>Cover plus contracted hours</option>
+          <option value="full" ${S.rules.fillMode==="full"?"selected":""}>Also use project time</option>
         </select>`)}
       ${setRow("Someone set to \u201cask me first\u201d and short of their guarantee",
 S.rules.extraMode==="auto"
@@ -21827,8 +21943,8 @@ return where + who +
 + "No names, no contact details, nothing from a schedule. Off means nothing is sent, and you can still report a problem by hand.",
 `<label class="switch"><input type="checkbox" data-bind="rules.crashSend" ${(S.rules&&S.rules.crashSend===false)?"":"checked"}> Send them</label>`)}
       ${setRow("Payment details", "Weeksolved has never asked you for a card and there is no payment form anywhere in this app. When paid plans arrive, card details will go straight to the payment company and never touch your board \u2014 and you will be told before anything changes.", "", null)}
-      ${setRow("Your data", "A backup restores this whole board on any device",
-`<button class="btn sm" id="setbak">Download a backup</button><button class="btn sm" id="setrestore">Restore</button>`)}
+      ${setRow("Your data", "Saves this board as a file you can restore from later.",
+`<button class="btn sm" id="setbak">Back up now</button><button class="btn sm" id="setrestore">Restore</button>`)}
       ${setRow("Start over", "Wipes everything and takes you straight back to the setup questions, exactly as if the account were new. Useful for a practice run.",
 `<button class="btn sm danger" id="setreset">Reset and start the questions again</button>`)}
       ${setRow("Empty the board", "Clears the roster, rules, schedules and requests and leaves you on a blank board, without re-asking anything", `<button class="btn sm danger" id="setclear">Clear everything</button>`)}
@@ -21971,7 +22087,7 @@ const rr=root.querySelector("#setrerun");
 if(rr) rr.onclick=()=>modal("Run setup again?",
 `<p>The interview rebuilds the board from your answers — roster, roles, shifts, cover and rules all get replaced. Anything you've posted goes with it.</p>
      <p class="help">If you only want to change one answer, close this and change it on the page you're already on. Grab a backup first if you'd rather be safe.</p>`,
-`<button class="btn" data-close>Stay here</button><button class="btn sm" id="setbak2">Back it up first</button><button class="btn danger" id="setgo">Run the questions</button>`,
+`<button class="btn" data-close>Stay here</button><button class="btn sm" id="setbak2">Back up now</button><button class="btn danger" id="setgo">Run the questions</button>`,
 r=>{ r.querySelector("#setgo").onclick=()=>{ closeModal(); wizardOpen(); };
 r.querySelector("#setbak2").onclick=()=>saveFile("weeksolved-backup.json", backupJson()); });
 const nm=root.querySelector("#setname");
@@ -22098,7 +22214,7 @@ if(rst) rst.onclick=()=>modal("Reset everything and start over?",
 `<p>This wipes the roster, shifts, cover, rules, schedules, requests, holidays and every setting \u2014 then re-opens the setup questions from the first one, exactly as a brand-new account sees them.</p>
      <p class="help">There is no undo. Take a backup first if there is anything here you want to keep.</p>`,
 `<button class="btn" data-close>Keep my data</button>
-     <button class="btn sm" id="rsbak">Back it up first</button>
+     <button class="btn sm" id="rsbak">Back up now</button>
      <button class="btn danger" id="rsgo2">Reset and start the questions</button>`,
 r=>{
 r.querySelector("#rsbak").onclick=()=>saveFile("weeksolved-backup.json", backupJson());
@@ -22182,7 +22298,7 @@ return `
       </div></div>
 
     <div class="card"><header><h3>Data</h3></header><div class="body row">
-      <button class="btn" id="expjson">Download a backup</button>
+      <button class="btn" id="expjson" title="Saves this board as a file you can restore from later.">Back up now</button>
       <button class="btn" id="impjson">Restore from backup</button>
       <button class="btn" id="runsetup">Run setup again</button>
       <button class="btn danger" id="clearall">Clear everything and start empty</button>
@@ -27837,8 +27953,29 @@ try{ w.opener=null; }catch(e){}
 if(url) setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
 return true;
 }
+ 
+async function phoneBackup(filename, data){
+const plat=(typeof a2hsPlatform==="function")? a2hsPlatform() : "desktop";
+if(plat==="desktop" && !(typeof isStandalone==="function" && isStandalone())) return null;
+try{
+const file=new File([data], filename, {type:"application/json"});
+if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+try{ await navigator.share({files:[file], title:filename}); toast("Backup file ready"); return true; }
+catch(err){ if(err && err.name==="AbortError") return false; }
+}
+}catch(e){}
+try{
+const blob=new Blob([data], {type:"application/octet-stream"});
+const url=URL.createObjectURL(blob), a=document.createElement("a");
+a.href=url; a.download=filename;
+document.body.appendChild(a); a.click(); a.remove();
+setTimeout(()=>URL.revokeObjectURL(url), 60000);
+toast("Downloading "+filename); return true;
+}catch(e){ toast("Your browser blocked that download."); return false; }
+}
 async function saveFile(filename, data){
 try{
+if(/\.json$/i.test(filename)){ const pb=await phoneBackup(filename, data); if(pb!==null) return pb; }
  
 const blob = data instanceof Blob? data : new Blob([data],{type:mimeFor(filename)});
 const url=URL.createObjectURL(blob); const a=document.createElement("a");
@@ -27856,7 +27993,7 @@ if(w){ setTimeout(()=>URL.revokeObjectURL(url), 60000); toast("Opened "+filename
 document.body.appendChild(a); a.click(); a.remove();
 setTimeout(()=>URL.revokeObjectURL(url),1500);
 toast("Saved "+filename); return true;
-}catch(e){ toast("Your browser blocked that download."); return false; }
+}catch(e){ toast("Downloads aren't available in this view."); return false; }
 }
 function csvRow(arr){ return arr.map(v=>{
 let s=String(v==null?"":v);
@@ -29801,24 +29938,68 @@ const HOURS_PRESETS=[
 {id:"wkday", t:"Weekdays only",                 d:"Closed Saturday and Sunday."},
 {id:"always",t:"Around the clock",              d:""}
 ];
-function shiftPresets(open, close, always){
+ 
+function paidUnder(juris, a, b){
+const keep=S.org.jurisdiction;
+if(juris) S.org.jurisdiction=juris;
+try{ return paidEstimate(a, b, {}); } finally { S.org.jurisdiction=keep; }
+}
+ 
+function clockForPaid(paidMin, juris, from){
+from=from||0;
+for(let x=paidMin; x<=paidMin+240; x+=15) if(paidUnder(juris, from, from+x) >= paidMin) return x;
+return paidMin+30;
+}
+ 
+function hmLen(min){ min=Math.round(min); const h=Math.floor(min/60), m=min%60; return h+"h"+(m? String(m).padStart(2,"0") : ""); }
+ 
+function shiftPresets(open, close, always, paidH, juris){
 const o=t2m(open); let c=t2m(close); if(c<=o) c+=1440;
 const span=c-o;
-const mk=(label,a,b,desire)=>({label,start:m2t(Math.round(a/15)*15),end:m2t(Math.round(b/15)*15),desire});
+const J=juris||S.org.jurisdiction;
+const P=Math.round((+paidH||8)*60);
+const C=clockForPaid(P, J, always? 7*60 : o);
+const r15=x=>Math.round(x/15)*15;
+const mk=(label,a,b,desire)=>({label,start:m2t(r15(a)%1440),end:m2t(r15(b)%1440),desire});
+const pay=sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return paidUnder(J, a, b); };
+const say=(shifts, tail)=>{
+if(!shifts.length) return "";
+const ps=shifts.map(pay);
+const same=ps.every(x=>x===ps[0]);
+return shifts.map((sh,i)=>sh.label+" "+m2disp(t2m(sh.start))+"\u2013"+m2disp(t2m(sh.end))+(same? "" : " ("+fmtHrs(ps[i])+" paid)")).join(" \u00b7 ")+
+(same? " \u00b7 "+fmtHrs(ps[0])+" paid" : "")+(tail? ". "+tail : "");
+};
  
-const len=Math.min(span, 8.5*60, Math.max(240, Math.round(span*0.7)));
+const fits = span > C;
+const len = fits? C : Math.min(span, Math.max(240, Math.round(span*0.7)));
 const midStart=o+(span-len)/2;
+const hole=(a,b)=> b-a>=15? m2disp(r15(a))+"\u2013"+m2disp(r15(b)) : null;
 const list=[];
-list.push({id:"one", t:"One shift covers the day", d:"", shifts:[mk("Day",o,c,0)]});
-list.push({id:"openclose", t:"An opening and a closing shift", d:"Two overlapping shifts covering the day.",
-shifts:[mk("Opening",o,o+len,2), mk("Closing",c-len,c,-2)]});
-list.push({id:"three", t:"Opening, mid, and closing", d:"Heaviest cover in the middle.",
-shifts:[mk("Opening",o,o+len,2), mk("Mid",midStart,midStart+len,1), mk("Closing",c-len,c,-2)]});
-list.push({id:"halves", t:"Two halves, morning and afternoon", d:"Good for shorter shifts.",
-shifts:[mk("Morning",o,o+span/2,1), mk("Afternoon",o+span/2,c,-1)]});
-if(always) list.push({id:"roundclock", t:"Three eight-hour shifts, round the clock", d:"Day, evening and night.",
-shifts:[mk("Day",7*60,15*60,2), mk("Evening",15*60,23*60,-1), mk("Night",23*60,31*60,-2)]});
+const add=(id,t,shifts,tail)=>{ if(!always) list.push({id, t, d:say(shifts, tail), shifts}); };
+ 
+add("one", "One shift covers the day", [mk("Day",o,c,0)]);
+{ const g=hole(o+len, c-len);
+add("openclose", "An opening and a closing shift", [mk("Opening",o,o+len,2), mk("Closing",c-len,c,-2)],
+g? "Nobody is on "+g : ""); }
+{ const g=[hole(o+len, midStart), hole(midStart+len, c-len)].filter(Boolean);
+add("three", "Opening, mid, and closing", [mk("Opening",o,o+len,2), mk("Mid",midStart,midStart+len,1), mk("Closing",c-len,c,-2)],
+g.length? "Nobody is on "+g.join(" or ") : ""); }
+add("halves", "Two halves, morning and afternoon", [mk("Morning",o,o+span/2,1), mk("Afternoon",o+span/2,c,-1)]);
+if(always){
+ 
+const step = P>=12*60? 12*60 : 8*60;
+const C2 = clockForPaid(step, J, 7*60);
+const names = step===12*60? [["Day",1],["Night",-2]] : [["Day",2],["Evening",-1],["Night",-2]];
+const sh = names.map(([l,d],i)=>mk(l, 7*60+i*step, 7*60+i*step+C2, d));
+const ov = C2-step;
+const ovSay = ov<=0? "" : "with a "+(ov%60===0? (ov/60)+"-hour" : ov+"-minute")+" overlap at each handover";
+list.push({id:"roundclock", t:(names.length===3? "Three" : "Two")+" shifts, round the clock",
+d:names.map((x,i)=>sh[i].label+" "+m2disp(t2m(sh[i].start))+"\u2013"+m2disp(t2m(sh[i].end))).join(" \u00b7 ")+
+" \u00b7 "+fmtHrs(step)+" paid each"+(ovSay? ", "+ovSay : "")+".", shifts:sh});
+}
 list.push({id:"none", t:"I'll set my own up later", d:"", shifts:[]});
+list.suggested = always? "roundclock" : span<=C? "one" : span<=2*C? "openclose" : "three";
+list.clock = C;
 return list;
 }
  
@@ -30089,6 +30270,8 @@ startFresh:false,
 bucketCount:2, buckets:["Staff","Lead","",""], bucketNames:["","","",""], bucketLic:[false,false,false,false],
 people:{},                      
 shiftPreset:"openclose", shifts:[], custom:null,
+shiftLen:8,                      
+shiftAuto:true,                  
 perShift:{}, perShiftMax:{},
 minRest:10, maxConsec:6, noClopen:true, preferLong:false, perDiem:"ask", breakMode:"assigned", restMode:"self", holPay:"ft", cycles:false, fillMode:"demand",
 mealPlan:"auto", mealSlots:["11:30","12:00","12:30"], mealCloseFrom:"13:00", mealCloseTo:"14:00",
@@ -30149,8 +30332,8 @@ if(b==="hotel"||b==="security") return h.common==="closed"? "reduced" : h.common
 if(b==="office"||b==="clinic")  return h.common==="reduced"? "closed" : h.common==="closed"? "closed" : "skip";
 return h.common==="normal"? "skip" : h.common;    
 };
-const opt=(group,val,cur,title,desc)=>`<button type="button" class="wopt ${cur===val?"on":""}" data-g="${group}" data-v="${val}">
-    <span class="wt">${esc(title)}</span>${desc?`<span class="wd">${esc(desc)}</span>`:""}</button>`;
+const opt=(group,val,cur,title,desc,tag)=>`<button type="button" class="wopt ${cur===val?"on":""}" data-g="${group}" data-v="${val}">
+    <span class="wt">${esc(title)}${tag? `<span class="wtag">${esc(tag)}</span>` : ""}</span>${desc?`<span class="wd">${esc(desc)}</span>`:""}</button>`;
  
 const cleanNameLine = raw => {
 let t=String(raw||"")
@@ -30204,11 +30387,43 @@ const old=W.people[pn.b+":"+pn.i];
 if(old){ W.people[pn.key]=old; delete W.people[pn.b+":"+pn.i]; return W.people[pn.key]; }
 return null;
 };
+ 
+const lenOpts = () => W.hoursPreset==="always"? [8,12] : [6,8,10,12];
+const shiftLen = () => { const L=lenOpts(); return L.includes(+W.shiftLen)? +W.shiftLen : 8; };
+const presetsNow = () => shiftPresets(W.hoursPreset==="always"?"00:00":W.open, W.hoursPreset==="always"?"23:59":W.close,
+W.hoursPreset==="always", shiftLen(), W.juris);
+ 
+const effPreset = () => {
+if(W.shiftPreset==="custom" && (W.custom||[]).length) return "custom";
+if(W.shiftAuto!==false && W.shiftPreset!=="none" && W.shiftPreset!=="custom") return presetsNow().suggested;
+return W.shiftPreset;
+};
 const curShifts = () => {
-if(W.shiftPreset==="custom" && (W.custom||[]).length)
+if(effPreset()==="custom")
 return {id:"custom", t:"Shifts you set up here", d:"", shifts:W.custom};
-const ps=shiftPresets(W.hoursPreset==="always"?"00:00":W.open, W.hoursPreset==="always"?"23:59":W.close, W.hoursPreset==="always");
-return ps.find(x=>x.id===W.shiftPreset)||ps[0];
+const ps=presetsNow();
+return ps.find(x=>x.id===effPreset())||ps[0];
+};
+ 
+const weekendPlan = () => {
+const out={};
+if(W.hoursPreset!=="wkend") return out;
+const eff=effPreset();
+const made={};
+[[6,"Saturday",W.satClosed,W.satOpen,W.satClose],[0,"Sunday",W.sunClosed,W.sunOpen,W.sunClose]].forEach(([dow,day,closed,o,c])=>{
+if(closed) return;
+if(o===W.open && c===W.close) return;
+const key=o+"|"+c;
+if(made[key]){ out[dow]=made[key]; return; }
+const both = !W.satClosed && !W.sunClosed && W.satOpen===W.sunOpen && W.satClose===W.sunClose;
+const ps=shiftPresets(o, c, false, shiftLen(), W.juris);
+const cut = (eff==="openclose"||eff==="three") && ps.suggested!=="one";
+const shifts = cut
+? ps.find(x=>x.id===ps.suggested).shifts.map(sh=>Object.assign({}, sh, {label:(both? "Weekend" : day)+" "+sh.label.toLowerCase(), desire:-1}))
+: [{label:day, start:o, end:c, desire:-1}];
+made[key]=out[dow]={shifts, day};
+});
+return out;
 };
  
 const bakeShifts = () => (curShifts().shifts||[]).map((sh,i)=>({
@@ -30231,23 +30446,128 @@ const openDays = W.hoursPreset==="wkday"? 5
 const capacity = Math.max(1, Math.floor((people.length||W.headcount||1)*4.6/Math.max(1,openDays)));
 const def = wizDefaultDemand(shifts.length, Math.max(1,roles.length), capacity).grid;
 let perDay=0, minsPerDay=0;
+const byRole=roles.map(()=>0);              
 shifts.forEach((sh,i)=>{
 const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440;
-const paid=paidEstimate(a,b,{});
+const paid=paidUnder(W.juris, a, b);
 roles.forEach((r,ri)=>{
 const n=(W.perShift[i+":"+ri]!=null)? +W.perShift[i+":"+ri] : (def[i+":"+ri]||0);
-if(n>0){ perDay+=n; minsPerDay+=n*paid; }
+if(n>0){ perDay+=n; minsPerDay+=n*paid; byRole[ri]+=n*paid; }
 });
 });
-const coverMin=minsPerDay*openDays;
-let guarMin=0;
-people.forEach(pn=>{ const pp=pset(pn)||{}; guarMin += Math.max(0, +pp.minH||0)*60; });
+ 
+const wp=weekendPlan(), wkDays=Object.keys(wp).length;
+const per=Math.max(1, Math.min(roles.length, Math.ceil(capacity/2)));
+let wkMin=0, wkShifts=0; const wkRole=roles.map(()=>0);
+Object.keys(wp).forEach(d=>wp[d].shifts.forEach(sh=>{
+const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440;
+const paid=paidUnder(W.juris, a, b);
+for(let ri=0; ri<per; ri++){ wkMin+=paid; wkShifts++; wkRole[ri]+=paid; }
+}));
+const normalDays=Math.max(0, openDays-wkDays);
+const coverMin=minsPerDay*normalDays + wkMin;
+const roleCover=roles.map((_,ri)=>byRole[ri]*normalDays + wkRole[ri]);
+let guarMin=0, capMin=0, perDiem=false, reachMin=0, allReach=true;
+const roleGuar=roles.map(()=>0);
+ 
+const usual = (()=>{ const ps=shifts.map(sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return paidUnder(W.juris, a, b); }).filter(x=>x>0);
+return ps.length? Math.max.apply(null, ps) : 0; })();
+people.forEach(pn=>{ const pp=pset(pn)||{}; const type=pp.type||"FT"; const td=typeDefaults(type);
+const g=Math.max(0, pp.minH!=null? +pp.minH||0 : td.minH)*60;
+const cap=Math.max(0, pp.maxH!=null? +pp.maxH||0 : td.maxH)*60;
+guarMin += g; if(roleGuar[pn.b]!=null) roleGuar[pn.b]+=g;
+capMin += cap;
+if(g>0 && usual>0){
+const days = type==="FT"? 5 : 4;
+let r;
+if(td.hoursMode==="exact"){ r=Math.min(days, Math.floor(Math.min(g, cap||g)/usual))*usual; if(Math.abs(r-g)>5) allReach=false; }
+else { r=Math.min(days*usual, cap||1e9, Math.ceil(g/usual)*usual); if(r<g-5) allReach=false; }
+reachMin += Math.max(r, 0);
+} else reachMin += g;
+if(type==="PRN") perDiem=true; });
  
 const rated=(S.employees||[]).filter(e=>e.active && +e.rate>0);
 const rate = rated.length? rated.reduce((t,e)=>t+ +e.rate,0)/rated.length : 0;
 const mins=Math.max(coverMin, guarMin);
-return {perDay, openDays, shifts:perDay*openDays, coverMin, guarMin, mins, rate,
-cost: rate? mins/60*rate : 0};
+return {perDay, openDays, shifts:perDay*normalDays + wkShifts, coverMin, guarMin, mins, rate,
+cost: rate? mins/60*rate : 0, capMin, perDiem, roles, roleCover, roleGuar, normalDays, wkDays, reachMin, allReach,
+shiftPaid: shifts.map(sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return paidUnder(W.juris, a, b); }),
+def};
+};
+ 
+const balanceLine = () => {
+const est=wizEstimate();
+const H=m=>Math.round(m/60);
+const unit=(est.shiftPaid.length? est.shiftPaid.reduce((t,x)=>t+x,0)/est.shiftPaid.length : 480) || 480;
+const head="Your team is contracted for about "+H(est.guarMin)+"h a week; your cover asks for about "+H(est.coverMin)+"h.";
+let tail="", warn=false, btn="";
+const over=est.coverMin-est.capMin;
+if(est.capMin>0 && over >= unit*0.75){
+warn=true;
+const nOpen=Math.max(1, Math.round(over/unit));
+tail="That's about "+H(over)+"h more than your team can work, so about "+nOpen+" shift"+(nOpen===1?"":"s")+" a week "+
+(est.perDiem? "will go to per diem or be left open." : "will be left open.");
+} else if(est.guarMin-est.coverMin >= unit*0.75){
+ 
+const wp=weekendPlan();
+const shortWk=Object.keys(wp).some(d=>wp[d].shifts.length===1 && (()=>{ const sh=wp[d].shifts[0];
+const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return paidUnder(W.juris,a,b) < unit-5; })());
+const reach = est.allReach && !shortWk;
+const gap = Math.max(0, (est.allReach? est.guarMin : est.reachMin) - est.coverMin);
+const nAdd=Math.max(1, Math.round(gap/unit));
+tail="The first draft adds about "+nAdd+" shift"+(nAdd===1?"":"s")+
+(reach? " so everyone reaches their contracted hours." : ", bringing people as near their contracted hours as these shifts allow.");
+const rp=raisePlan();
+const keys=Object.keys(rp.added);
+if(keys.length){
+const shifts=bakeShifts();
+const byRole={};
+keys.forEach(k=>{ const [si,ri]=k.split(":").map(Number); (byRole[ri]=byRole[ri]||[]).push({si, n:rp.added[k]}); });
+const when = est.wkDays? "on each weekday" : "on each open day";
+const say=Object.keys(byRole).map(ri=>{ const L=byRole[ri].sort((a,b)=>a.si-b.si);
+return L.map((x,i)=>x.n+(i===0? " "+est.roles[ri] : "")+" to "+shifts[x.si].label).join(" and "); }).join("; ");
+btn=`<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+          <button type="button" class="btn sm" id="wraise">Raise the cover to match</button>
+          <span class="mini" id="wraisesay">Adds ${esc(say)} ${esc(when)}.</span></div>`;
+W._raiseSay="Added "+say+" "+when+".";
+}
+} else if(Math.abs(est.guarMin-est.coverMin) < unit*0.75){
+tail="";
+}
+const both = !tail && !warn && Math.abs(est.guarMin-est.coverMin) < unit*0.75;
+const text = both? "Your cover and your team's contracted hours both come to about "+H(Math.max(est.guarMin, est.coverMin))+"h a week."
+: head+(tail? " "+tail : "");
+const undo = W._raiseUndo? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center"><button type="button" class="btn sm" id="wraiseundo">Undo</button>${W._raiseUndo.say? `<span class="mini" id="wraisedone">${esc(W._raiseUndo.say)}</span>` : ""}</div>` : "";
+return `<div class="banner ${warn?"warn":"info"}" id="wbalance"><div>${esc(text)}${btn}${undo}</div></div>`;
+};
+ 
+const raisePlan = () => {
+const est=wizEstimate();
+const shifts=bakeShifts();
+const ps=Object.assign({}, W.perShift);
+const added={};
+est.roles.forEach((r,ri)=>{
+let asked=est.roleCover[ri];
+const want=est.roleGuar[ri];
+for(let guard=0; guard<60; guard++){
+let best=-1, bestN=1e9;
+shifts.forEach((sh,si)=>{
+const k=si+":"+ri;
+const cur=(ps[k]!=null)? +ps[k] : (est.def[k]||0);
+const mx=(W.perShiftMax||{})[k];
+if(mx!=null && mx!=="" && cur+1 > +mx) return;
+if(cur<bestN){ bestN=cur; best=si; }
+});
+if(best<0) break;
+const step=est.shiftPaid[best]*est.normalDays;
+if(!(step>0) || asked+step > want) break;
+const k=best+":"+ri;
+ps[k]=((ps[k]!=null)? +ps[k] : (est.def[k]||0))+1;
+asked+=step;
+added[k]=(added[k]||0)+1;
+}
+});
+return {ps, added};
 };
 
 function body(){
@@ -30440,20 +30760,70 @@ return `<tr><td><strong>${esc(pn.name)}</strong><div class="mini">${esc(bucketLa
       </div>`;
 }
 if(k==="shifts"){
-const presets=shiftPresets(W.hoursPreset==="always"?"00:00":W.open, W.hoursPreset==="always"?"23:59":W.close, W.hoursPreset==="always");
+const presets=presetsNow();
 const cur=curShifts();
+const eff=effPreset();
+const L=shiftLen();
+ 
+const clk=presets.clock;
+const cap=clk>L*60
+? L+" paid is "+hmLen(clk)+" with the unpaid meal."
+: "No unpaid meal comes out of a "+L+"h shift here, so the clock says the same.";
+const anyFT = !allNames().length || allNames().some(pn=>((pset(pn)||{}).type||"FT")==="FT");
+ 
+const curPaid = (cur.shifts||[]).map(sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return paidUnder(W.juris,a,b); });
+const Lp = (curPaid.length && curPaid.every(x=>x===curPaid[0]) && curPaid[0]>0)? curPaid[0]/60 : L;
+const ftSay = (()=>{ if(!anyFT) return "";
+const td=typeDefaults("FT"), goal=td.minH, days=5, h=Lp;
+const r=x=>Math.round(x*100)/100;
+if(Math.abs(goal/h-Math.round(goal/h))<1e-6 && goal/h<=days) return "";
+if(Math.ceil(goal/h-1e-6) > days) return r(h)+"h shifts: five days make "+r(h*days)+"h, not a full-timer's "+goal+"h.";
+const lo=Math.floor(goal/h+1e-6)*h;
+return r(h)+"h shifts: a full-timer on "+goal+"h lands on "+r(lo)+"h or "+r(lo+h)+"h, not "+goal+"h."; })();
+ 
+const otSay = (()=>{ const ot=otDefaults(W.juris); if(!(ot.otDailyH>0) || !curPaid.length) return "";
+const top=Math.max.apply(null, curPaid)/60; if(top <= ot.otDailyH+1e-6) return "";
+const f=x=>(Math.round(x*100)/100)+"h";
+const dt = (ot.dtDailyH>0 && top>ot.dtDailyH)? top-ot.dtDailyH : 0;
+const ot1 = (dt? ot.dtDailyH : top) - ot.otDailyH;
+return f(top)+" shifts run past the "+ot.otDailyH+"-hour daily overtime line here: "+f(ot1)+" of each is paid at time and a half"+
+(dt? " and "+f(dt)+" at double time" : "")+"."+
+(W.juris==="CA"? " An alternative workweek schedule, where one has been adopted, changes this." : ""); })();
+ 
+const wkSay = (()=>{ if(!anyFT || eff==="custom" || eff==="none") return "";
+const wp=weekendPlan(); const ds=Object.keys(wp).map(Number);
+const short=ds.filter(d=>wp[d].shifts.length===1).map(d=>{ const sh=wp[d].shifts[0];
+const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return {d, paid:paidUnder(W.juris,a,b)}; })
+.filter(x=>x.paid < L*60 - 5);
+if(!short.length) return "";
+const one=short.length===1 || short[0].paid!==short[1].paid || wp[6]!==wp[0];
+const nm=d=>d===6? "Saturday" : "Sunday";
+const when=d=>{ const sh=wp[d].shifts[0]; return m2disp(t2m(sh.start))+"\u2013"+m2disp(t2m(sh.end)); };
+return (short.length===1? nm(short[0].d)+" is one "+when(short[0].d)+" shift, "+hmLen(short[0].paid)+" paid."
+: one? short.map(x=>nm(x.d)+" is one "+when(x.d)+" shift, "+hmLen(x.paid)+" paid.").join(" ")
+: "Saturday and Sunday are each one "+when(short[0].d)+" shift, "+hmLen(short[0].paid)+" paid.")+
+" A full-timer who works "+(short.length===1? "it" : "one")+" reaches "+typeDefaults("FT").minH+"h only with a sixth day or a longer weekday."; })();
 return `
       <div class="stack">
-        <p class="whead">The shifts you use over and over. Times come from your hours; the names are yours.</p>
+        <p class="whead">Times come from your hours; the names are yours.</p>
+        <div class="field"><label>Paid hours per shift</label>
+          <div class="wopts wcols wlens" role="group" aria-label="Paid hours in a shift">${lenOpts().map(h=>opt("shiftLen",h,L,h+"h","")).join("")}</div>
+          <span class="mini" id="wlencap">${esc(cap)}</span>
+          ${ftSay? `<div class="banner info" id="wlenft"><div>${esc(ftSay)}</div></div>` : ""}
+          ${otSay? `<div class="banner info" id="wlenot"><div>${esc(otSay)}</div></div>` : ""}
+        </div>
         <div class="wopts">${
-((W.custom||[]).length? opt("shiftPreset","custom",W.shiftPreset,"The ones you set up here",
+((W.custom||[]).length? opt("shiftPreset","custom",eff,"The ones you set up here",
 W.custom.length+" shift"+(W.custom.length===1?"":"s")+" you built by hand.") : "")
-+ presets.map(x=>opt("shiftPreset",x.id,W.shiftPreset,x.t,x.d)).join("")}</div>
++ presets.map(x=>opt("shiftPreset",x.id,eff,x.t,x.d,(x.id===presets.suggested && x.id!=="none")? "Suggested" : "")).join("")}</div>
+        ${wkSay? `<div class="banner info" id="wwknd" style="margin-top:6px"><div>${esc(wkSay)}</div></div>` : ""}
         ${cur.shifts.length? `<div class="stack" style="gap:6px">
           ${cur.shifts.map((sh,i)=>{
 const stv=(W.shifts[i]&&W.shifts[i].start)||sh.start, env=(W.shifts[i]&&W.shifts[i].end)||sh.end;
  
-const note=(typeof overnightNote==="function")? overnightNote(t2m(stv), t2m(env)) : null;
+ 
+const asBuilt = eff!=="custom" && stv===sh.start && env===sh.end;
+const note=(!asBuilt && typeof overnightNote==="function")? overnightNote(t2m(stv), t2m(env)) : null;
 return `<div class="wshiftrow">
             <div class="desrow">
             <input type="text" class="wsl" data-i="${i}" value="${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}" style="width:150px" aria-label="Shift name">
@@ -30465,7 +30835,7 @@ return `<div class="wshiftrow">
             <div class="tablabel wsdesire">Guessed: ${esc((DESIRE_LABEL[sh.desire]||"Neutral").toLowerCase())}</div>
             ${note? `<div class="banner warn wsonote"><div>${esc(note.say)} <button type="button" class="btn sm" data-wsfix="${i}" data-wswhich="${esc(note.which)}" data-wsstart="${note.fixedStart}" data-wsend="${note.fixedEnd}">${esc(note.btn)}</button></div></div>` : ""}
           </div>`;}).join("")}
-          <div class="help">Wanted / unwanted is guessed from the shape and decides who claims first — change it under Who gets first pick.</div>
+          <div class="help">Wanted or unwanted is guessed from the shape; see Who gets first pick.</div>
         </div>`:""}
         <div class="row" style="gap:8px;flex-wrap:wrap">
           <button type="button" class="btn sm" id="wsadd">+ Add another shift</button>
@@ -30488,7 +30858,7 @@ u + (W.perShift[i+":"+ri]!=null? +W.perShift[i+":"+ri] : (def[i+":"+ri]||0)),0),
 const tight = perDay > capacity;
 return `
       <div class="stack">
-        <p class="whead">On a normal open day, how many does each shift need? First box is the <b>floor</b> — never fewer. Second a <b>ceiling</b> — blank for none. One pair per job, per shift.</p>
+        <p class="whead">How many does each shift need on a normal day? First box is the <b>floor</b>; second, a <b>ceiling</b> (blank for none).</p>
         ${cur.shifts.map((sh,i)=>`<div class="stack" style="gap:6px;border:1px solid var(--line);border-radius:7px;padding:10px 12px">
           <div class="row"><strong style="font-family:Archivo,sans-serif">${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}</strong>
             <span class="mini mono">${m2disp(t2m((W.shifts[i]&&W.shifts[i].start)||sh.start))}–${m2disp(t2m((W.shifts[i]&&W.shifts[i].end)||sh.end))}</span></div>
@@ -30505,10 +30875,10 @@ return `
                   value="${W.perShiftMax[i+":"+ri]!=null? W.perShiftMax[i+":"+ri] : ""}" style="min-width:0">
               </div></div>`).join("")}</div>
         </div>`).join("")}
-        <div class="field"><label>And what should it do with anyone left over?</label>
+        <div class="field"><label>Past those numbers</label>
           <div class="wopts">${
-opt("fillMode","demand",W.fillMode,"Stop at the floor","It fills those numbers and stops.")+
-opt("fillMode","full",W.fillMode,"Keep going until everyone has their contracted hours","Where full-timers must be fully scheduled. The extra goes down as project time.")}</div></div>
+opt("fillMode","demand",W.fillMode,"Cover plus contracted hours","Then ordinary shifts only for anyone short of their contracted hours.")+
+opt("fillMode","full",W.fillMode,"Also use project time","For places that schedule full-timers to their whole contract; what shifts can't reach becomes project time.")}</div></div>
         ${W.fillMode==="full"? `
         <div class="field"><label>What do you call that extra time?</label>
           <input type="text" data-w="topUpLabel" value="${esc(W.topUpLabel)}" placeholder="Project time"></div>
@@ -30521,9 +30891,7 @@ opt("projectShape","spread",W.projectShape,"Wherever it fits","Shorter pieces, s
 opt("projectShare","fair",W.projectShare,"Share it round","Everyone eligible takes a turn.")+
 opt("projectShare","best",W.projectShare,"Stack it on your best people","Whoever is first in line fills up first.")}</div>
           </div>`:""}
-        <div class="banner ${(tight&&W.fillMode!=="full")?"warn":"info"}"><div>${(tight&&W.fillMode!=="full")
-? "<b>That's more than your team can cover.</b> "+perDay+" a day across "+openDays+" open days is about "+(perDay*openDays)+" shifts a week, "+fmtHrs(wizEstimate().mins)+" of work, and "+names2+" people can realistically cover around "+(capacity*openDays)+" shifts. The scheduler will leave the extras open and tell you why — but it's worth trimming now."
-: "<b>"+perDay+" shift"+(perDay===1?"":"s")+" a day, about "+(perDay*openDays)+" a week \u2014 "+fmtHrs(wizEstimate().mins)+" of work.</b> "+names2+" people can cover roughly "+(capacity*openDays)+" shifts, so that fits."}</div></div>
+        ${balanceLine()}
       </div>`;
 }
 if(k==="hols"){
@@ -30849,7 +31217,7 @@ W.hoursPreset==="wkend"&&cur.shifts.length? [
             <div class="ln"><span>Labor cost</span><b>${W.trackCost?"tracked":"off"}</b></div>
             <div class="ln"><span>Holiday pay</span><b>${W.holPay==="all"?"everyone, 8h":W.holPay==="ft"?"full-timers, 8h":"nobody"}</b></div>
             ${W.xCycles? `<div class="ln"><span>Rotating patterns</span><b>on</b></div>`:""}
-            <div class="ln"><span>Cover you asked for</span><b>${W.fillMode==="full"?"a floor — everyone fully scheduled":"exactly that many"}</b></div>
+            <div class="ln"><span>Cover you asked for</span><b>${W.fillMode==="full"?"that many, plus contracted hours, with project time":"that many, plus contracted hours"}</b></div>
             <div class="ln"><span>Handing it out</span><b>${W.sendOut?"emailed or texted from here":"however you do it now"}</b></div>
             ${W.fillMode==="full"? `<div class="ln"><span>${esc(W.topUpLabel||"Project time")}</span><b>${W.projectShape==="chunk"?"in blocks":"wherever it fits"}, ${W.projectShare==="best"?"stacked on your best":"shared round"}</b></div>`:""}
             ${(()=>{const on=[W.xPto&&"time-off balances", W.xLic&&"license expiry", W.xCycles&&"work patterns",
@@ -30983,6 +31351,7 @@ b.querySelector("#wleaveno").onclick=()=>b.remove();
 wireDialog(r);
  
 wireSug(r);
+r.querySelectorAll('.wopt[data-g="shiftLen"]').forEach(b=>{ b.dataset.eff=effPreset(); });
 r.querySelectorAll(".wopt").forEach(b=>b.onclick=()=>{
 const g=b.dataset.g; let v=b.dataset.v;
 if(v==="true") v=true; else if(v==="false") v=false; else if(/^-?\d+$/.test(v)) v=+v;
@@ -30997,7 +31366,7 @@ if(!v && wizRealBoard(S)) Object.assign(W, wizSeedFrom(S));
 W.startFresh=v; W.step=at;
 }
 if(g==="biz"){ rebuildSteps(); const bt=BIZ_TYPES.find(x=>x.id===v);
-if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=bt.shifts;
+if(bt){ W.open=bt.open; W.close=bt.close; W.hoursPreset=bt.hours; W.shiftPreset=bt.shifts; W.shiftAuto=true;
  
  
 const wasCount=W.bucketCount||0, newCount=bt.roles.length;
@@ -31019,7 +31388,10 @@ setTimeout(()=>toast(spare.length+" name"+(spare.length===1?"":"s")+" moved into
 }
 W.bucketCount=newCount; W.buckets=["","","",""]; W.bucketLic=(bt.lic||[]).concat([false,false,false,false]).slice(0,4); W.shifts=[]; W.perShift={}; W.perShiftMax={};
 if(bt.rules) Object.assign(W, bt.rules); } }
-if(g==="shiftPreset"){ W.shifts=[]; W.perShift={}; W.perShiftMax={}; }
+if(g==="shiftPreset"){ W.shifts=[]; W.perShift={}; W.perShiftMax={}; W.shiftAuto=false; }
+ 
+if(g==="shiftLen"){ W.shifts=[]; const was=b.dataset.eff;
+if(was && was!==effPreset()){ W.perShift={}; W.perShiftMax={}; } }
 if(g==="biz"){ W.custom=null; }
 if(g==="hoursPreset"){ W.shifts=[]; W.perShift={}; W.perShiftMax={}; W.custom=null; }
 paint();
@@ -31041,6 +31413,15 @@ W.bucketCount=Math.min(WIZ_MAX_ROLES,(+W.bucketCount||1)+1);
 W.buckets=W.buckets||[];         while(W.buckets.length<W.bucketCount)     W.buckets.push("");
 W.bucketLic=W.bucketLic||[];     while(W.bucketLic.length<W.bucketCount)   W.bucketLic.push(false);
 W.bucketNames=W.bucketNames||[]; while(W.bucketNames.length<W.bucketCount) W.bucketNames.push("");
+paint(); }; }
+{ const rb=r.querySelector("#wraise");
+if(rb) rb.onclick=()=>{ collect();
+W._raiseUndo={perShift:Object.assign({}, W.perShift), say:W._raiseSay||""};
+W.perShift=raisePlan().ps;
+paint(); };
+const ub=r.querySelector("#wraiseundo");
+if(ub) ub.onclick=()=>{ collect();
+if(W._raiseUndo){ W.perShift=W._raiseUndo.perShift; delete W._raiseUndo; }
 paint(); }; }
 { const wsa=r.querySelector("#wsadd");
 if(wsa) wsa.onclick=()=>{ collect();
@@ -31346,16 +31727,14 @@ notes:"",seniority:"",active:true,rate:0};
  
 const weekendShift={};         
 if(W.hoursPreset==="wkend" && N.shifts.length){
-const made={};
-[[6,"Saturday",W.satClosed,W.satOpen,W.satClose],[0,"Sunday",W.sunClosed,W.sunOpen,W.sunClose]]
-.forEach(([dow,label,closed,o,c])=>{
-if(closed) return;
-if(o===W.open && c===W.close) return;       
-const key=o+"|"+c;
-if(made[key]){ weekendShift[dow]=made[key]; return; }
-const sh={id:uid("s"),label,start:o,end:c,roleId:null,
+const wp=weekendPlan(), made=new Map();
+[6,0].forEach(dow=>{
+const plan=wp[dow]; if(!plan) return;
+if(made.has(plan)){ weekendShift[dow]=made.get(plan); return; }
+const list=plan.shifts.map(x=>{ const sh={id:uid("s"),label:x.label,start:x.start,end:x.end,roleId:null,
 color:PALETTE[N.shifts.length%PALETTE.length],note:"",unpaidBreakMin:30,desire:-1};
-N.shifts.push(sh); made[key]=sh; weekendShift[dow]=sh;
+N.shifts.push(sh); return sh; });
+made.set(plan, list); weekendShift[dow]=list;
 });
 }
  
@@ -31377,7 +31756,7 @@ if(N.hours[d].closed){ N.demand[d]=[]; continue; }
 const rows=[];
 if(weekendShift[d]){
 const per=Math.max(1,Math.min(N.roles.length,Math.ceil(cap/2)));
-N.roles.slice(0,per).forEach(r=>rows.push({shiftId:weekendShift[d].id, roleId:r.id, count:1}));
+weekendShift[d].forEach(sh=>N.roles.slice(0,per).forEach(r=>rows.push({shiftId:sh.id, roleId:r.id, count:1})));
 } else {
 cur.shifts.forEach((sh,si)=>{
 N.roles.forEach((r,ri)=>{
@@ -35418,8 +35797,8 @@ exportPeople(wk).map(e=>`<option value="${e.id}">${esc(e.name)}${e.active? "":" 
     <div class="card"><header><h3>Everything</h3></header><div class="body stack">
       <div class="row"><button class="btn" id="xall">Team roster (CSV)</button>
         <button class="btn" id="xhol" ${S.holidays.result?"":"disabled"}>Holiday split (CSV)</button>
-        <button class="btn" id="xbak">Full backup (JSON)</button></div>
-      <div class="mini">A backup restores the whole board — team, rules, shifts, schedules, poll answers — on any device, from Business &amp; rules.</div>
+        <button class="btn" id="xbak">Back up now</button></div>
+      <div class="mini">Back up now saves this board as a file you can restore from later. A backup restores the whole board — team, rules, shifts, schedules, poll answers — on any device, from Business &amp; rules.</div>
     </div></div>
     <div class="card"><header><h3>What the exports show</h3></header><div class="body">
       <div class="help" style="max-width:72ch">Every PDF footer names the jurisdiction whose break rules were applied to the plan and, where the state has one, the premium owed when a meal or rest period is missed. The day sheet spells out each person's meal window and rest breaks. These are the times you scheduled — a printout is a plan for the week, not a record of what anyone actually worked.</div>

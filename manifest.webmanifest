@@ -2,7 +2,7 @@
  "name": "Weeksolved",
  "short_name": "Weeksolved",
  "description": "Staff scheduling that follows your rules and your state's break law.",
- "start_url": "/app.html",
+ "start_url": "/app",
  "scope": "/",
  "display": "standalone",
  "background_color": "#f4f7f6",
