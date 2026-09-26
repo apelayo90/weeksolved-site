@@ -1,12 +1,12 @@
 # Weeksolved — how to report a security problem
-# https://weeksolved.com/security.html
+# https://weeksolved.com/security
 
 Contact: mailto:security@weeksolved.com
-Contact: https://weeksolved.com/contact.html
+Contact: https://weeksolved.com/contact
 Expires: 2027-09-02T00:00:00.000Z
 Preferred-Languages: en
 Canonical: https://weeksolved.com/.well-known/security.txt
-Policy: https://weeksolved.com/security.html
+Policy: https://weeksolved.com/security
 
 # We are a small team. You will get a human reply, usually within three
 # business days. Tell us what you found, how to reproduce it, and what you
