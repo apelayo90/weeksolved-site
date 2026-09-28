@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 84df3315 2026-09-25 18:27 UTC -->
+<!-- build 0182ed49 2026-09-28 16:36 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -3790,8 +3790,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "84df3315";       
-const BUILD_AT = "2026-09-25 18:27 UTC";       
+const BUILD_ID = "0182ed49";       
+const BUILD_AT = "2026-09-28 16:36 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -5782,6 +5782,8 @@ try{ const gs=await FB.db.collection("grants").get(); (gs.docs||[]).forEach(d=>{
  
 try{ reps=await cloudReportsAll(); }catch(e){ repErr=readWhy(e, "reports"); }
 
+ 
+rows = rows.filter(r=>r && r.uid);
 rows.sort((a,b)=>(b.at||0)-(a.at||0));
 const known=(typeof ACCESS!=="undefined"&&ACCESS&&ACCESS.codes)? ACCESS.codes : [];
 const knownIds=known.map(c=>c.id);
@@ -5860,7 +5862,7 @@ const place = tzCity(r.tz);
 const lang = langName(r.loc);
 const meta = [device, place, lang, viaGoogle(r.id)? "Google sign-in":""].filter(Boolean);
 return `<div class="tcard ${x.quiet?"silent":""}">
-      <div class="tt"><span class="chip ${(r.id==="FOUNDER"||r.id==="GIFT")?"acc":""}">${esc(r.id||"?")}</span>
+      <div class="tt"><span class="chip ${r.id==="FOUNDER"?"acc":""}">${esc(r.id||"?")}</span>
         <span class="who">${esc(r.email||"(no address recorded)")}</span>
         ${accTxt? `<span class="left ${accCls}">${esc(accTxt)}</span>`:""}</div>
       ${meta.length? `<div class="meta">${meta.map(m=>`<span>${esc(m)}</span>`).join("")}</div>`:""}
@@ -7284,7 +7286,7 @@ const unpaid = (a.breaks?a.breaks.meals:[]).filter(m=>!m.waived).reduce((t,m)=>t
 return gross-unpaid;
 }
  
-function paidSpan(aMin, bMin, gap, date, emp){
+function paidSpan(aMin, bMin, gap, date, emp, shift){
 const o={};
 if(gap && typeof gap==="object" && gap.to>gap.from) o.gap=gap;
 else { const gm=+gap||0;
@@ -7292,6 +7294,7 @@ if(gm>0 && gm < (bMin-aMin)){ const from=aMin+Math.floor(((bMin-aMin)-gm)/2); o.
 else if(gm>0) return 0; }           
 if(date) o.date=date;
 if(emp)  o.emp=emp;
+if(shift) o.shift=shift;               
 return paidEstimate(aMin, bMin, o);
 }
  
@@ -7302,6 +7305,28 @@ const gapM = opts.gap? (opts.gap.to-opts.gap.from) : 0;
  
 const dst = opts.date? clockShiftMin(opts.date, aMin, bMin) : 0;
 return (bMin-aMin) + dst - gapM - b.meals.filter(m=>!m.waived).reduce((t,m)=>t+m.len,0);
+}
+ 
+function slotPaid(sh, date, emp){
+if(!sh) return 0;
+const [a,b]=shiftMinutes(sh);
+const o={shift:sh};
+const g=shiftGap(sh); if(g) o.gap=g;
+if(date) o.date=date;
+if(emp) o.emp=emp;
+return paidEstimate(a,b,o);
+}
+ 
+function paidFor(aMin, bMin, date, emp, src){
+if(src && src.empId!==undefined && src.startMin===aMin && src.endMin===bMin && src.breaks) return paidMinutes(src);
+const o={date, emp};
+if(src){
+const isA = src.empId!==undefined;
+o.shift = isA? shiftById(src.shiftId) : src;
+const g = isA? aGap(src) : shiftGap(src);
+if(g && g.from>aMin && g.to<bMin) o.gap=g;
+}
+return paidEstimate(aMin, bMin, o);
 }
 function empWeekMinutes(empId, ws){
 return peekWeek(ws).assignments.filter(a=>a.empId===empId).reduce((t,a)=>t+paidMinutes(a),0);
@@ -7632,7 +7657,7 @@ return {from:ws, to:addDays(ws,(weeks||1)*7-1)};
 }
 
  
-function reqBlocks(e, date, aMin, bMin, weekMins){
+function reqBlocks(e, date, aMin, bMin, weekMins, src){
 if(bMin>1440){
 const next=addDays(date,1);
 for(const r of reqsFor(e.id,next)){
@@ -7645,7 +7670,7 @@ if(!r.hard) continue;
 if(r.kind==="off") return "asked for "+prettyDate(date)+" off";
 if(r.kind==="late" && aMin < t2m(r.time)) return "can't start before "+m2disp(t2m(r.time))+" that day";
 if(r.kind==="early" && bMin > t2m(r.time)) return "has to be gone by "+m2disp(t2m(r.time))+" that day";
-if(r.kind==="maxh" && r.num && (weekMins||0)+paidEstimate(aMin,bMin) > r.num*60+1)
+if(r.kind==="maxh" && r.num && (weekMins||0)+paidFor(aMin,bMin,date,e,src) > r.num*60+1)
 return "asked to stay under "+r.num+"h";
 }
 return null;
@@ -7936,8 +7961,8 @@ else { const hr=S.hours[d.dow]; if(hr && !hr.closed){ aMin=t2m(hr.open); bMin=t2
 if(bMin<=aMin) bMin+=1440;
  
 const sofar=assignments.filter(x=>x.empId===e.id).reduce((t,x)=>t+paidMinutes(x),0);
-if(minorsOn() && minorBlock(e, d.date, d.dow, aMin, bMin, sofar, ws)) return;
 const match=S.shifts.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===aMin&&y===bMin; });
+if(minorsOn() && minorBlock(e, d.date, d.dow, aMin, bMin, sofar, ws, match||null)) return;
 const roleId=rrow.roleId||e.roleIds[0]||null;
  
 { const slot={shiftId:match? match.id:null, roleId, sh:(match||{id:null, start:m2hhmm(aMin%1440), end:m2hhmm(bMin%1440)}), _hol:true};
@@ -8630,7 +8655,7 @@ if(cands.length) return {roleId:cands[0].roleId, siteId:sid};
 return held[0]? {roleId:held[0], siteId:sid} : null;
 };
  
-const fitLen=sh=>{ const [a0,b0]=shiftMinutes(sh); const nominal=paidSpan(a0,b0,0,null,e);
+const fitLen=sh=>{ const [a0,b0]=shiftMinutes(sh); const nominal=paidSpan(a0,b0,shiftGap(sh)||0,null,e,sh);
 const f=shiftFlex(sh); if(!f) return nominal;
 const hi=Math.min(f.hi, Math.max(f.lo, f.nominal));                     
 const span=Math.max(f.lo, Math.min(hi, want + (nominal - f.nominal)));    
@@ -8703,13 +8728,13 @@ return hardOk(e, {shiftId:x.shiftId, roleId:rs.roleId, sh:osh, siteId:rs.siteId}
 for(const sh of dayShifts){
 if((owes || phase==="required") && !mustFirst.has(sh.id)) continue;
 const [aMin,bMin]=shiftMinutes(sh);
-if(floorMin && paidSpan(aMin,bMin,0,d.date,e) < floorMin) continue;    
+if(floorMin && paidSpan(aMin,bMin,shiftGap(sh)||0,d.date,e,sh) < floorMin) continue;    
  
 if(guaranteeMode && !relaxed){ const fl=fitLen(sh); const over=fl-want;
 if(over > 60 && over > fl/2) continue; }
  
 if(!relaxed){ const Lx=effLimits(e, ws);
-if(Lx.exactH && exactTrap(e, ws, state[e.id], d.date, aMin, bMin, paidSpan(aMin,bMin,(()=>{const g=shiftGap(sh); return g? g.to-g.from:0;})(),d.date,e), owedFloorMin(e, ws), Lx)) continue; }
+if(Lx.exactH && exactTrap(e, ws, state[e.id], d.date, aMin, bMin, paidSpan(aMin,bMin,shiftGap(sh)||0,d.date,e,sh), owedFloorMin(e, ws), Lx)) continue; }
  
 let slot=null, rId=null;
 for(const c of slotsFor(sh, d)){
@@ -8783,14 +8808,14 @@ const [aMin,bMin]=shiftMinutes(sh);
 const gapM=(()=>{const g=shiftGap(sh); return g? g.to-g.from : 0;})();
 if(!availOk(e,d.dow,aMin,bMin)){ note("that shift falls outside the hours they can work"); return; }
 {
-const mb=minorsOn()? minorBlock(e, d.date, d.dow, aMin, bMin, state[e.id].min, null) : null;
+const mb=minorsOn()? minorBlock(e, d.date, d.dow, aMin, bMin, state[e.id].min, null, sh) : null;
 if(mb){ note("they\u2019re under 18 and it\u2019s "+mb); return; }
 }
-if(L.maxShiftH && paidSpan(aMin, bMin, gapM, d.date, e) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
+if(L.maxShiftH && paidSpan(aMin, bMin, gapM, d.date, e, sh) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
 if(L.maxSpanH && (bMin-aMin) > L.maxSpanH*60){ note("that shift keeps them at work longer than their span allows"); return; }
-if(hasCap(L) && state[e.id].min + paidEstimate(aMin,bMin,{emp:e}) > (L.maxH||0)*60+1){
+if(hasCap(L) && state[e.id].min + slotPaid(sh, d.date, e) > (L.maxH||0)*60+1){
 note("another shift would take them past their "+(L.maxH||0)+"h cap"); return; }
-if(reqBlocks(e,d.date,aMin,bMin,state[e.id].min)){ note("a request of theirs rules those days out"); return; }
+if(reqBlocks(e,d.date,aMin,bMin,state[e.id].min,sh)){ note("a request of theirs rules those days out"); return; }
 if(L.noSplit && shiftGap(sh)){ note(unionLabel()+" does not allow a day broken in two, and that shift is"); return; }
 const prev=(state[e.id].byDate[addDays(d.date,-1)]||[]);
 if(prev.length){
@@ -9232,7 +9257,7 @@ return true;
 function schoolWeekOn(ws){ return weekDates(ws).some(d=>schoolDayOn(d.date)); }
 
  
-function minorBlock(e, date, dow, aMin, bMin, minsSoFar, ws){
+function minorBlock(e, date, dow, aMin, bMin, minsSoFar, ws, src){
 if(!minorsOn()) return null;
 const a=ageOnDate(e, date);
 if(a===null || a>=18) return null;
@@ -9243,12 +9268,12 @@ const band=minorBand(e, date);
 const R=minorRule(band, date, exempt);
 if(!R) return null;                           
 const sd=schoolDayOn(date), sw=schoolWeekOn(ws||weekStartOf(date, S.org.weekStart));
-const hrs=paidEstimate(aMin,bMin)/60;       
+const hrs=paidFor(aMin,bMin,date,e,src)/60;       
 const dayCap = sd? R.sd : R.nd;
 if(dayCap && hrs > dayCap+0.001)
 return "over the "+dayCap+"-hour limit for a "+(sd?"school day":"non-school day")+" at "+a;
 const weekCap = sw? R.sw : R.nw;
-if(weekCap && (minsSoFar+paidEstimate(aMin,bMin))/60 > weekCap+0.001)
+if(weekCap && (minsSoFar+paidFor(aMin,bMin,date,e,src))/60 > weekCap+0.001)
 return "past the "+weekCap+"-hour limit for a "+(sw?"school week":"non-school week")+" at "+a;
  
 const from=R.from, to=(R.summerTo && !sd)? R.summerTo : R.to;
@@ -9454,7 +9479,7 @@ if(!availOk(e,dow,aMin,bMin) && say("avail","they are not available then")) retu
 if(onTimeOffShift(e.id,date,bMin) && say("timeoff","they are on time off")) return out;
 { const lb=licBlockShift(e,date,bMin); if(lb && say("licence","their "+lb+" has expired")) return out; }
 if(!cycleWorksOn(e,date) && say("cycle","their work pattern has them off that day")) return out;
-if(minorsOn()){ const mb=minorBlock(e,date,dow,aMin,bMin,st.min,null); if(mb && say("minor",mb)) return out; }
+if(minorsOn()){ const mb=minorBlock(e,date,dow,aMin,bMin,st.min,null,slot.sh); if(mb && say("minor",mb)) return out; }
 if(traineeExtra() && isTrainee(e,date) && !slot._allowTrainee && say("trainee","they are still in training")) return out;
 if(st.byDate[date] && st.byDate[date].length && say("sameday","they are already on that day")) return out;
 if(apartOn()){ const ab=apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).byDate[date]||[], slot.siteId);
@@ -9463,17 +9488,17 @@ if(ab && say("apart","they are kept apart from "+((empById(ab.other)||{name:"som
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)
 && say("maxD","that is more days than their limit of "+lim.maxD,
 st.days.size+1-(lim.maxD||7), st.days.size+1)) return out;
-{ const capMin=placeCapMin(lim, slot._allowExtra), would=st.min + paidEstimate(aMin,bMin,{date});
+{ const capMin=placeCapMin(lim, slot._allowExtra), would=st.min + slotPaid(slot.sh, date, e);
 if(capped(lim, slot._allowExtra, capMin) && would > capMin + 1
 && say("cap","it puts them over their "+lim.maxH+"h cap", would-capMin, would)) return out; }
 if(lim.exactH){
 const credit = holCreditLive(e, date, st);
-const room = Math.max(0, lim.exactH*60 - credit), would = st.min + paidEstimate(aMin,bMin,{date});
+const room = Math.max(0, lim.exactH*60 - credit), would = st.min + slotPaid(slot.sh, date, e);
 if(credit && would > room + 1
 && say("exact","it puts them past their "+lim.exactH+"h contract \u2014 "+fmtHrs(credit)+" of it is holiday pay this week",
 would-room, would)) return out;
 }
-{ const worked=paidSpan(aMin,bMin,gapM,date,e);
+{ const worked=paidSpan(aMin,bMin,gapM,date,e,slot.sh);
 if(lim.maxShiftH && worked > lim.maxShiftH*60
 && say("shiftlen","the shift is longer than their "+lim.maxShiftH+"h limit",
 worked-lim.maxShiftH*60, worked)) return out; }
@@ -9503,7 +9528,7 @@ while((st.byDate[d]||[]).length){ run++; d=addDays(d,1); }
 if(run > lim.maxConsecDays
 && say("consec",run+" days in a row, past their limit of "+lim.maxConsecDays, run-lim.maxConsecDays, run)) return out;
 }
-{ const rb=reqBlocks(e, date, aMin, bMin, st.min); if(rb && say("request",rb)) return out; }
+{ const rb=reqBlocks(e, date, aMin, bMin, st.min, slot.sh); if(rb && say("request",rb)) return out; }
 { const br=breachReason(e, slot.roleId||e.roleIds[0], date, dow, list||[], aMin, bMin, slot.siteId||null);
 if(br && say("breach",br)) return out; }
  
@@ -9523,13 +9548,13 @@ if(!availOk(e,dow,aMin,bMin)) return false;
 if(onTimeOffShift(e.id,date,bMin)) return false;
 if(licBlockShift(e, date, bMin)) return false;                   
 if(!cycleWorksOn(e,date)) return false;              
-if(minorsOn() && minorBlock(e, date, dow, aMin, bMin, (state[e.id]||{min:0}).min, null)) return false;
+if(minorsOn() && minorBlock(e, date, dow, aMin, bMin, (state[e.id]||{min:0}).min, null, slot.sh)) return false;
 if(traineeExtra() && isTrainee(e, date) && !slot._allowTrainee) return false;    
 const st = state[e.id], lim = effLimits(e, date);
 if(st.byDate[date] && st.byDate[date].length) return false;            
 if(apartOn() && apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).byDate[date]||[], slot.siteId)) return false;   
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return false;  
-const add = paidEstimate(aMin,bMin,{date});
+const add = slotPaid(slot.sh, date, e);
  
 { const capMin=placeCapMin(lim, slot._allowExtra);
 if(capped(lim, slot._allowExtra, capMin) && (st.min + add) > capMin + 1) return false; }   
@@ -9538,7 +9563,7 @@ if(lim.exactH){
 const credit = holCreditLive(e, date, st);
 if(credit && (st.min + add) > Math.max(0, lim.exactH*60 - credit) + 1) return false;
 }
-if(lim.maxShiftH && paidSpan(aMin, bMin, gapM, date, e) > lim.maxShiftH*60) return false;
+if(lim.maxShiftH && paidSpan(aMin, bMin, gapM, date, e, slot.sh) > lim.maxShiftH*60) return false;
 if(lim.maxSpanH && (bMin-aMin) + clockShiftMin(date, aMin, bMin) > lim.maxSpanH*60) return false;
 if(lim.noSplit && gapM>0) return false;                               
 if(lim.maxStretchH && estStretch(aMin,bMin,gapM) > lim.maxStretchH*60) return false;
@@ -9566,7 +9591,7 @@ while(st.byDate[d] && st.byDate[d].length && n++<20){ run++; d=addDays(d,1); }
 if(run > lim.maxConsecDays) return false;
 }
  
-if((S.requests||[]).length && reqBlocks(e, date, aMin, bMin, st.min)) return false;
+if((S.requests||[]).length && reqBlocks(e, date, aMin, bMin, st.min, slot.sh)) return false;
  
 if(vetoed(e.id, date, slot.shiftId)) return false;
  
@@ -9599,12 +9624,12 @@ return "the only people left are kept apart from someone already on: "+who.join(
 }
 if(free.length){
 const [aM,bM]=shiftMinutes(slot.sh);
-const why=free.map(e=>reqBlocks(e,date,aM,bM,state[e.id].min)).filter(Boolean);
+const why=free.map(e=>reqBlocks(e,date,aM,bM,state[e.id].min,slot.sh)).filter(Boolean);
 if(why.length===free.length) return "everyone who could take it "+(why.length===1? why[0] : "asked not to be scheduled then");
-const tooLong=free.filter(e=>{ const L=effLimits(e,date); return L.maxShiftH && paidSpan(aM,bM,0,date,e) > L.maxShiftH*60; });
+const tooLong=free.filter(e=>{ const L=effLimits(e,date); return L.maxShiftH && paidSpan(aM,bM,shiftGap(slot.sh)||0,date,e,slot.sh) > L.maxShiftH*60; });
 if(tooLong.length===free.length){
 const L=effLimits(tooLong[0],date);
-return "this shift pays "+fmtHrs(paidSpan(aM,bM,0,date,tooLong[0]))+", longer than the "+L.maxShiftH+"h cap on "+(L.groups[0]||"their group");
+return "this shift pays "+fmtHrs(paidSpan(aM,bM,shiftGap(slot.sh)||0,date,tooLong[0],slot.sh))+", longer than the "+L.maxShiftH+"h cap on "+(L.groups[0]||"their group");
 }
 }
 if(slot._deferred) return slot._deferred;
@@ -9649,11 +9674,11 @@ const g=shiftGap(sh), gm=g? g.to-g.from : 0;
 if(!availOk(e,dow,a,b)) return;
 if(onTimeOffShift(e.id,date,b)) return;
  
-const pay=paidSpan(a,b,gm,date,e);
+const pay=paidSpan(a,b,gm,date,e,sh);
 if(pay<=0) return;
 if(lim.maxShiftH && pay > lim.maxShiftH*60) return;
  
-if((S.requests||[]).length && reqBlocks(e, date, a, b, (st&&st.min)||0)) return;
+if((S.requests||[]).length && reqBlocks(e, date, a, b, (st&&st.min)||0, sh)) return;
 if(pay>best) best=pay;
 });
 if(best>0) lens.push(best);
@@ -9726,7 +9751,7 @@ const [a,b]=shiftMinutes(sh);
 if(!availOk(e,dow,a,b)) return;
 if(onTimeOffShift(e.id,date,b)) return;
 const g=shiftGap(sh), gm=g? g.to-g.from : 0;
-const pay=paidSpan(a,b,gm,date,e);
+const pay=paidSpan(a,b,gm,date,e,sh);
 if(pay<=0) return;
 if(lim.maxShiftH && pay > lim.maxShiftH*60) return;
 opts.push({a, b, pay});
@@ -9775,7 +9800,7 @@ if(e.avoidShiftIds.includes(slot.shiftId)) sc -= 30;
 if((e.prefDaysOff||[]).includes(dow)) sc -= 26;
 }
 const lim = effLimits(e, date);
-const after = st.min + paidEstimate(aMin,bMin);
+const after = st.min + slotPaid(slot.sh, date, e);
  
 const slack = contractSlack(e, weekStartOf(date, S.org.weekStart), st);
 const urgent = slack.owed>0? Math.pow(slack.tight, 4) : 0;
@@ -10060,20 +10085,23 @@ if(wk.assignments.some(a=>a.empId===e.id && a.date===d.date)) continue;
 if(onTimeOff(e.id, d.date)) continue;
 if(!cycleWorksOn(e, d.date)) continue;
  
+const own = multiSite()? (((e.siteIds||[]).length===1)? e.siteIds[0]
+: (!(e.siteIds||[]).length && e.homeSite)? e.homeSite : null) : null;
 let best=null, bestOverlap=-1;
 S.shifts.forEach(sh=>{
 const [a0,b0]=shiftMinutes(sh);
 if(vetoed(e.id, d.date, sh.id)) return;            
  
 if(wouldPlace(e, sh.id, null, d.date, d.dow, ws,
-{list:wk.assignments, allowTrainee:true})) return;
-const overlap=wk.assignments.filter(x=>x.date===d.date && x.startMin < b0 && x.endMin > a0).length;
+{list:wk.assignments, allowTrainee:true, siteId:own||null})) return;
+const overlap=wk.assignments.filter(x=>x.date===d.date && x.startMin < b0 && x.endMin > a0 && (!own || siteOf(x)===own)).length;
 if(overlap>bestOverlap){ bestOverlap=overlap; best=sh; }
 });
 if(!best || bestOverlap<1) continue;       
 const [aM,bM]=shiftMinutes(best);
 const rec={id:uid("a"), empId:e.id, date:d.date, dow:d.dow, shiftId:best.id,
 startMin:aM, endMin:bM, roleId:(e.roleIds||[])[0]||null, trainee:true};
+if(own && own!==mainSiteId()) rec.siteId=own;
 applyBreaks(rec);
 wk.assignments.push(rec);
 placed++;
@@ -10384,9 +10412,10 @@ matchDemand(expandDemand(dow,ws), wk.assignments.filter(a=>a.date===date))
 (wk.unfilled||[]).forEach(u=>{
 if((u.reason!=="handed back" && u.reason!=="called out") || u.heldAt==null) return;
 const sl={date:u.date, dow:parseYmd(u.date).getDay(), shiftId:u.shiftId, roleId:u.roleId||null};
+if(u.siteId) sl.siteId=u.siteId;                            
 if(out.some(o=>slotKey(o)===slotKey(sl))) return;           
 const now=wk.assignments.filter(a=>a.date===sl.date && a.shiftId===sl.shiftId
-&& (a.roleId||null)===sl.roleId).length;
+&& (a.roleId||null)===sl.roleId && (!u.heldAtSite || siteOf(a)===siteOf(sl))).length;
 if(now > u.heldAt) return;                                   
 out.push(sl);
 });
@@ -10413,23 +10442,23 @@ const otWord=(lim.otWeeklyH||40)+"h line"+(lim.otFromAgreement? " in your agreem
 : lim.otFromGroup? " for "+(((lim.otSrc||{}).weekly||{}).name
 || lim.groups[0] || "their group") : "");
  
-const mins=empWeekMinutes(e.id,ws), add=paidEstimate(aMin,bMin,{gap:shiftGap(sh), shift:sh});
+const mins=empWeekMinutes(e.id,ws), add=paidEstimate(aMin,bMin,{gap:shiftGap(sh), shift:sh, date:slot.date, emp:e});
 const total=mins+add;
 const sameDay=wk.assignments.filter(a=>a.empId===e.id && a.date===slot.date);
 const days=empDays(e.id,ws);
 
  
 if(!availOk(e,slot.dow,aMin,bMin)) return;                  
-if(minorBlock(e, slot.date, slot.dow, aMin, bMin, empWeekMinutes(e.id,ws), ws)) return;    
+if(minorBlock(e, slot.date, slot.dow, aMin, bMin, empWeekMinutes(e.id,ws), ws, sh)) return;    
 if(traineeExtra() && isTrainee(e, slot.date)) return;    
 if(!cycleWorksOn(e,slot.date)) return;                      
 if(onTimeOffShift(e.id,slot.date,bMin)) return;             
  
 if(licBlock(e, slot.date)) return;
-if(lim.maxShiftH && paidSpan(aMin,bMin,0,slot.date,e) > lim.maxShiftH*60) return; 
+if(lim.maxShiftH && paidSpan(aMin,bMin,shiftGap(sh)||0,slot.date,e,sh) > lim.maxShiftH*60) return; 
 if(apartOn() && apartBlock(e.id, slot.date, aMin, bMin, wk.assignments, slot.siteId)) return;    
 
-const reqBlock=reqBlocks(e,slot.date,aMin,bMin,mins);
+const reqBlock=reqBlocks(e,slot.date,aMin,bMin,mins,sh);
 const overCap = hasCap(lim) && total > (lim.maxH||0)*60+1;
 const overDays = days >= (lim.maxD||7) && !sameDay.length;
 let restGap=null;
@@ -10983,7 +11012,7 @@ if(minorsOn() && !opts.minorOverride){
 const sh0=shiftById(slot.shiftId);
 if(sh0){
 const [a0,b0]=shiftMinutes(sh0);
-const mb=minorBlock(e, slot.date, slot.dow, a0, b0, empWeekMinutes(e.id, ws|| curWeek()), ws);
+const mb=minorBlock(e, slot.date, slot.dow, a0, b0, empWeekMinutes(e.id, ws|| curWeek()), ws, sh0);
 if(mb){ toast(e.name+" is "+ageOnDate(e, slot.date)+" \u2014 that shift is "+mb); return; }
 }
 }
@@ -13072,11 +13101,11 @@ if(!availOk(e, sl.dow, a, b)) return DAYS[sl.dow]+" is a day they don\u2019t wor
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return "they\u2019re already on the schedule that day";
 { const ab=apartOn()? apartBlock(e.id, sl.date, a, b, getWeek(ws).assignments, sl.siteId) : null; if(ab) return apartWhy(ab); }
 {
-const mb=minorBlock(e, sl.date, sl.dow, a, b, empWeekMinutes(e.id,ws), ws);
+const mb=minorBlock(e, sl.date, sl.dow, a, b, empWeekMinutes(e.id,ws), ws, sh);
 if(mb) return "they\u2019re "+ageOnDate(e, sl.date)+" and it\u2019s "+mb;
 }
 const lim=effLimits(e, ws);
-const mins=empWeekMinutes(e.id, ws)+paidEstimate(a,b);
+const mins=empWeekMinutes(e.id, ws)+slotPaid(sh, sl.date, e);
 if(hasCap(lim) && mins/60 > (lim.maxH||0)) return "it would put them at "+fmtHrs(mins)+", "+capSay(lim);
 { const lb=licBlock(e, sl.date); if(lb) return "their "+lb+" has expired"; }
 return "a rule you set blocks it \u2014 Cover the gaps spells out which";
@@ -13245,7 +13274,7 @@ const [a,b]=shiftMinutes(sh);
 if(!availOk(e,sl.dow,a,b)) return false;
 if(onTimeOffShift(e.id,sl.date,b)) return false;
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return false;
-return !!reqBlocks(e,sl.date,a,b,empWeekMinutes(e.id,ws));
+return !!reqBlocks(e,sl.date,a,b,empWeekMinutes(e.id,ws),sh);
 });
 if(helps.length) costing.push({r, e, helps});
 });
@@ -14492,8 +14521,8 @@ if(row.roleId && !e.roleIds.includes(row.roleId)) return;
 const sh=shiftById(row.shiftId); if(!sh) return;
 const [a,b]=shiftMinutes(sh);
  
-if(L.maxShiftH && paidSpan(a, b, shiftGap(sh), null, e) > L.maxShiftH*60) return;
-lens.add(paidEstimate(a,b));
+if(L.maxShiftH && paidSpan(a, b, shiftGap(sh), null, e, sh) > L.maxShiftH*60) return;
+lens.add(slotPaid(sh, null, e));
 });
 });
  
@@ -14561,13 +14590,20 @@ why:"no combination of your "+list.map(x=>fmtHrs(x)).join(", ")+" shift"+(list.l
 function shiftPayParts(e, ws, L){
 L = L || effLimits(e, ws);
 const out={};
-const note=(aMin, bMin, paid)=>{
+ 
+const note=(aMin, bMin, paid, src)=>{
 if(!(paid>0)) return;
 const clock=bMin-aMin;
 if(out[paid] && out[paid].clock>=clock) return;
-let meals=0;
-try{ meals=computeBreaks(aMin, bMin, {}).meals.filter(m=>!m.waived).length; }catch(err){}
-out[paid]={paid:paid, clock:clock, unpaid:Math.max(0, clock-paid), meals:meals};
+const isA = !!(src && src.empId!==undefined);
+const g = src? (isA? aGap(src) : shiftGap(src)) : null;
+const gap = g? g.to-g.from : 0;
+let meals=0, mealMin=0;
+try{ const kept=(isA && src.breaks? (src.breaks.meals||[])
+: computeBreaks(aMin, bMin, {gap:g||undefined, shift:(src? (isA? shiftById(src.shiftId) : src) : null)||null, emp:e}).meals)
+.filter(m=>!m.waived);
+meals=kept.length; mealMin=kept.reduce((t,m)=>t+m.len,0); }catch(err){}
+out[paid]={paid:paid, clock:clock, gap:gap, unpaid:mealMin, meals:meals};
 };
 const D=demandOf(ws);
 Object.keys(D).forEach(dow=>{
@@ -14575,15 +14611,15 @@ Object.keys(D).forEach(dow=>{
 if(row.roleId && !e.roleIds.includes(row.roleId)) return;
 const sh=shiftById(row.shiftId); if(!sh) return;
 const [a,b]=shiftMinutes(sh);
-if(L.maxShiftH && paidSpan(a, b, shiftGap(sh), null, e) > L.maxShiftH*60) return;
-note(a, b, paidEstimate(a,b));
+if(L.maxShiftH && paidSpan(a, b, shiftGap(sh), null, e, sh) > L.maxShiftH*60) return;
+note(a, b, slotPaid(sh, null, e), sh);
 });
 });
 (peekWeek(ws).assignments||[]).forEach(a=>{
 if(a.empId!==e.id) return;
 const len=paidMinutes(a);
 if(L.maxShiftH && len > L.maxShiftH*60) return;
-note(a.startMin, a.endMin, len);
+note(a.startMin, a.endMin, len, a);
 });
 return out;
 }
@@ -14635,9 +14671,11 @@ const k = part? Math.floor(g.owe/part.paid) : 0;
 const arith = !!(part && g.maxH && k>=1 && (k+1)*part.paid > g.maxH*60);
 if(arith){
 const one=anHrs(part.clock);
+const off=[];
+if(part.gap) off.push("the "+fmtHrs(part.gap)+" unpaid break between its two blocks");
+if(part.unpaid) off.push(fmtHrs(part.unpaid)+" of unpaid meal period"+(part.meals===1? "" : "s"));
 L.push(one.charAt(0).toUpperCase()+one.slice(1)+" shift pays "+fmtHrs(part.paid)+
-(part.unpaid? " once "+fmtHrs(part.unpaid)+" of unpaid meal period"+
-(part.meals===1? "" : "s")+" comes out" : "")+".");
+(off.length? " once "+off.join(" and ")+(off.length>1? " come out" : " comes out") : "")+".");
 L.push(k+" shift"+(k===1?"":"s")+" is "+fmtHrs(k*part.paid)+", "+fmtHrs(g.owe-k*part.paid)+
 " under the guarantee; "+(k+1)+" is "+fmtHrs((k+1)*part.paid)+", "+
 fmtHrs((k+1)*part.paid-g.maxH*60)+" over the cap.");
@@ -15866,14 +15904,15 @@ dates.forEach(({date,dow})=>{
 const missing = matchDemand(expandDemand(dow, ws), wk.assignments.filter(a=>a.date===date)).missing;
 missing.forEach(s=>{
 if(s.roleId && noRoleIds.has(s.roleId)) return;           
-const u = (wk.unfilled||[]).find(x=>x.date===date&&x.shiftId===s.shiftId&&(x.roleId||null)===(s.roleId||null));
+const u = (wk.unfilled||[]).find(x=>x.date===date&&x.shiftId===s.shiftId&&(x.roleId||null)===(s.roleId||null)
+&& (x.reason!=="called out" || siteOf(x)===siteOf({siteId:s.siteId||null})));
  
 const pd = namedPerDiem({shiftId:s.shiftId, roleId:s.roleId||null, date, dow, siteId:s.siteId||null}, ws, wk.assignments);
 const shx = s.sh || shiftById(s.shiftId);
 const [sa,sb] = shx? shiftMinutes(shx) : [0,0];
 const nShort = missing.filter(x=>x.shiftId===s.shiftId && (x.roleId||null)===(s.roleId||null) && (x.siteId||null)===(s.siteId||null)).length;
  
-const rel = releasedSlot(ws, date, s.shiftId, s.roleId||null);
+const rel = releasedSlot(ws, date, s.shiftId, s.roleId||null, s.siteId||null);
 const lockNote = (rel && rel.fromLock)? "Released from a lock — whoever covers it starts unlocked." : "";
 const detail = (u && u.counted)
 ? DAYS[dow]+" "+clockRange(sa,sb)+" "+(s.roleId? roleName(s.roleId) : (shx||{label:"Shift"}).label)+" is "+nShort+" short. "+u.reason+"."+
@@ -16343,7 +16382,7 @@ DSHORT[a.dow]+" "+prettyDate(a.date)+" is a "+roleName(a.roleId)+" shift, and "+
 ((e.roleIds||[]).length? (e.roleIds||[]).map(roleName).join(" / ") : "not in any role")+".",
 {date:a.date, empId:e.id, code:"role", aId:a.id});
 if((S.requests||[]).length){
-const rb=reqBlocks(e, a.date, a.startMin, a.endMin, 0);
+const rb=reqBlocks(e, a.date, a.startMin, a.endMin, 0, a);
 if(rb && !/stay under/.test(rb))           
 push("crit","Against a request — "+e.name,
 DSHORT[a.dow]+" "+prettyDate(a.date)+": "+e.name.split(" ")[0]+" "+rb+".",
@@ -16396,7 +16435,7 @@ e.name.split(" ")[0]+" is marked as working for their own parent, who owns this 
 if(minorsOn() && e.birth){
 list.forEach(a=>{
 const soFar=mine.filter(x=>x.id!==a.id).reduce((t,x)=>t+paidMinutes(x),0);
-const why=minorBlock(e, d, dow, a.startMin, a.endMin, soFar, ws);
+const why=minorBlock(e, d, dow, a.startMin, a.endMin, soFar, ws, a);
 if(why) push("crit","Under-18 limit — "+e.name,
 DSHORT[dow]+" "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+": "+why+".",
 {date:d, empId:e.id, code:"minor", aId:a.id});
@@ -18652,7 +18691,7 @@ return lead+": "+clauses.join(", ");
 function overLine(e, slot, date, state){
 const L=effLimits(e, date);
 const [a,b]=shiftMinutes(slot.sh);
-return ((state[e.id]||{min:0}).min + paidEstimate(a,b,{date})) > (L.otWeeklyH||40)*60 + 1;
+return ((state[e.id]||{min:0}).min + slotPaid(slot.sh, date, e)) > (L.otWeeklyH||40)*60 + 1;
 }
 
  
@@ -18675,7 +18714,7 @@ save(); render();
 };
 if(!weekIsPosted(ws)){ place(); toast(first+" is on for "+when); return; }
  
-const rel=commsOff()? null : releasedSlot(ws, v.date, v.shiftId, v.roleId||null);
+const rel=commsOff()? null : releasedSlot(ws, v.date, v.shiftId, v.roleId||null, v.siteId||null);
 const pat=askedAt(rel, e.id);
 modal("Call "+first+" in?", `
     <div class="stack">
@@ -18734,9 +18773,9 @@ save(); render();
 };
 if(!weekIsPosted(ws)){ place(); toast(first+" is on for "+when+" — this week only"); return; }
  
-const rel=commsOff()? null : (releasedSlot(ws, v.date, pick.sh.id, roleId) ||
+const rel=commsOff()? null : (releasedSlot(ws, v.date, pick.sh.id, roleId, v.siteId||null) ||
 (peekWeek(ws).unfilled||[]).slice().reverse().find(u=>u.reason==="called out" && !u.filled && u.date===v.date &&
-(!roleId || (u.roleId||null)===roleId) &&
+(!roleId || (u.roleId||null)===roleId) && siteOf(u)===siteOf({siteId:v.siteId||null}) &&
 (function(){ const s2=shiftById(u.shiftId); if(!s2) return false; const [x,y]=shiftMinutes(s2); return x<bMin && y>aMin; })()) || null);
 const hslot={date:v.date, dow, shiftId:pick.sh.id, roleId, from:aMin, to:bMin};
 const pat=askedAt(rel, e.id);
@@ -19341,7 +19380,7 @@ const a=t2m(h.open), b=t2m(h.close);
 if(b>a || h.confirmedTimes===(h.open+"-"+h.close)) return "";
 const on=overnightNote(a, b); if(!on) return "";
 return `<tr class="honote"><td colspan="${cols}"><div class="banner warn onote"><div><b>${esc(DAYS[i])} ${esc(on.say.charAt(0).toLowerCase()+on.say.slice(1))}</b></div>`+
-`<div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-hfix="${i}" data-hs="${on.fixedStart}" data-he="${on.fixedEnd}">${esc(on.btn)}</button>`+
+`<div class="row" style="gap:8px;flex-wrap:wrap">${on.btn? `<button type="button" class="btn sm" data-hfix="${i}" data-hs="${on.fixedStart}" data-he="${on.fixedEnd}">${esc(on.btn)}</button>` : ""}`+
 `<button type="button" class="btn sm" data-hkeep="${i}">It’s right as entered</button></div></div></td></tr>`;
 }
 document.addEventListener("click", ev=>{
@@ -19364,9 +19403,9 @@ const on=(sEl.value && eEl.value && !sEl.disabled && t2m(eEl.value)<=t2m(sEl.val
 overnightNote(t2m(sEl.value), t2m(eEl.value)) : null;
 if(!on){ box.style.display="none"; box.innerHTML=""; return; }
 box.style.display="";
-box.innerHTML=`<div><b>${esc(on.say)}</b></div><div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-onfix>${esc(on.btn)}</button><button type="button" class="btn sm" data-onkeep>It’s right as entered</button></div>`;
-box.querySelector("[data-onfix]").onclick=()=>{ sEl.value=m2t(on.fixedStart); eEl.value=m2t(on.fixedEnd);
-eEl.dispatchEvent(new Event("change",{bubbles:true})); paint(); };
+box.innerHTML=`<div><b>${esc(on.say)}</b></div><div class="row" style="gap:8px;flex-wrap:wrap">${on.btn? `<button type="button" class="btn sm" data-onfix>${esc(on.btn)}</button>` : ""}<button type="button" class="btn sm" data-onkeep>It’s right as entered</button></div>`;
+{ const fx=box.querySelector("[data-onfix]"); if(fx) fx.onclick=()=>{ sEl.value=m2t(on.fixedStart); eEl.value=m2t(on.fixedEnd);
+eEl.dispatchEvent(new Event("change",{bubbles:true})); paint(); }; }
 box.querySelector("[data-onkeep]").onclick=()=>{ confirmed=typed; paint(); };
 };
 sEl.addEventListener("input", paint); eEl.addEventListener("input", paint);
@@ -19384,8 +19423,14 @@ return h+(min? ":"+String(min).padStart(2,"0"):"")+" "+ap; };
 const fmtSpan=m=>{ const h=Math.floor(m/60), r=m%60; return r? h+" h "+r+" min" : h+(h===1?" hour":" hours"); };
 const flippedEnd=flip(endMin);
  
+ 
+const night={ which:null, fixedStart:startMin, fixedEnd:endMin, spanMin:span,
+say:"Runs overnight — "+fmtSpan(span)+", until "+fmtClock(endMin)+" the next day.", btn:"" };
+if(startMin>=720 && endMin<720 && span<=14*60) return night;
+const sane=len=>len>=2*60 && len<=14*60;
 let which="start", fixedStart=flip(startMin), fixedEnd=endMin;
-if(flippedEnd>startMin && (flippedEnd-startMin)<=14*60){ which="end"; fixedStart=startMin; fixedEnd=flippedEnd; }
+if(flippedEnd>startMin && sane(flippedEnd-startMin)){ which="end"; fixedStart=startMin; fixedEnd=flippedEnd; }
+else if(!(fixedStart<endMin && sane(endMin-fixedStart))) return night;
 const shown = which==="end"? fixedEnd : fixedStart;
 const clock = fmtClock(shown);
 return { which, fixedStart, fixedEnd, spanMin:span,
@@ -19480,9 +19525,11 @@ if(!wasProject) try{ (validate(ws)||[]).forEach(v=>{ const k=sig2(v); beforeCoun
 wk.assignments=(wk.assignments||[]).filter(x=>x.id!==a.id);
 wk.unfilled=wk.unfilled||[];
 const heldAt=wk.assignments.filter(x=>x.date===slot.date && x.shiftId===slot.shiftId
-&& (x.roleId||null)===slot.roleId).length;
+&& (x.roleId||null)===slot.roleId && (!multiSite() || siteOf(x)===siteOf(slot))).length;
 wk.unfilled.push(Object.assign({date:slot.date, shiftId:slot.shiftId, roleId:slot.roleId, reason:"called out", heldAt, outBy:a.empId||null},
-wasLocked? {fromLock:true} : {}, a.coLine? {history:[a.coLine]} : {}));
+wasLocked? {fromLock:true} : {}, a.coLine? {history:[a.coLine]} : {},
+slot.siteId? {siteId:slot.siteId} : {},         
+multiSite()? {heldAtSite:true} : {}));           
 let severity="none", presence=false;
 if(!wasProject){
 let after=[]; try{ after=validate(ws)||[]; }catch(e){}
@@ -19510,14 +19557,16 @@ empName:(empById(a.empId)||{name:"Someone"}).name};
 }
 
  
-function releasedSlot(ws, date, shiftId, roleId){
+function releasedSlot(ws, date, shiftId, roleId, siteId){
 const wk=peekWeek(ws);
+ 
 return (wk.unfilled||[]).slice().reverse().find(u=>u.reason==="called out" && !u.filled && u.date===date &&
-u.shiftId===shiftId && (u.roleId||null)===(roleId||null))||null;
+u.shiftId===shiftId && (u.roleId||null)===(roleId||null) &&
+(siteId===undefined || siteOf(u)===siteOf({siteId})))||null;
 }
  
 function coverFromRelease(ws, rec){
-const rel=releasedSlot(ws, rec.date, rec.shiftId, rec.roleId||null);
+const rel=releasedSlot(ws, rec.date, rec.shiftId, rec.roleId||null, rec.siteId||null);
 if(!rel) return;
 if((rel.history||[]).length) rec.history=(rec.history||[]).concat(rel.history);
  
@@ -19562,7 +19611,7 @@ function askToCover(ws, slot, emp, release, after){
 if(!emp) return;
 ws = ws || weekStartOf(slot.date, S.org.weekStart);
 const rel=(release && release.reason==="called out")? release
-: releasedSlot(ws, slot.date, slot.shiftId, slot.roleId||null);
+: releasedSlot(ws, slot.date, slot.shiftId, slot.roleId||null, slot.siteId||null);
 const outId=(release && release.reason!=="called out" && release.empId) || (rel && rel.outBy) || null;
 const out=outId? empById(outId) : null;
 const who=(out && out.name)? out.name.split(" ")[0] : "somebody";
@@ -19664,7 +19713,7 @@ const grace=postPending(wk);
 const posted=!!wk.published;
  
 const ask=posted && !commsOff();
-const rel=releasedSlot(ws, slot.date, slot.shiftId, slot.roleId||null);
+const rel=releasedSlot(ws, slot.date, slot.shiftId, slot.roleId||null, slot.siteId||null);
 const asked=rel? askedLine(rel) : "";
  
 const cands=candidatesFor(slot.shiftId, slot.date, slot.dow, slot.roleId, release.empId||null, slot.siteId||null);
@@ -19714,6 +19763,7 @@ const assign=(empId)=>{
 const emp=empById(empId); if(!emp) return;
 const rec={id:uid("a"), empId, date:slot.date, dow:slot.dow, shiftId:slot.shiftId, startMin:aMin, endMin:bMin,
 roleId:slot.roleId||(emp.roleIds||[])[0]||null, locked:false};
+if(multiSite() && slot.siteId && slot.siteId!==mainSiteId()) rec.siteId=slot.siteId;
 if(typeof applyBreaks==="function") applyBreaks(rec);
 coverFromRelease(ws, rec);
 const w=getWeek(ws);
@@ -22687,8 +22737,8 @@ const on=(rawB<=rawA && confirmed!==typed)? overnightNote(rawA, rawB) : null;
 const obanner=root.querySelector("#overnight");
 if(on){
 obanner.style.display="";
-obanner.innerHTML=`<div><b>${esc(on.say)}</b></div><div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" id="fixampm">${esc(on.btn)}</button><button type="button" class="btn sm" id="keepampm">It’s right as entered</button></div>`;
-root.querySelector("#fixampm").onclick=()=>{
+obanner.innerHTML=`<div><b>${esc(on.say)}</b></div><div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">${on.btn? `<button type="button" class="btn sm" id="fixampm">${esc(on.btn)}</button>` : ""}<button type="button" class="btn sm" id="keepampm">It’s right as entered</button></div>`;
+if(root.querySelector("#fixampm")) root.querySelector("#fixampm").onclick=()=>{
 root.querySelector("#ss").value=m2t(on.fixedStart);
 root.querySelector("#se").value=m2t(on.fixedEnd);
 root.querySelector("#se").dispatchEvent(new Event("input",{bubbles:true}));
@@ -24483,7 +24533,7 @@ return `<div style="border:1px solid var(--line);border-radius:var(--r);overflow
               ${peakOf(i).length? `<span class="chip acc" title="Busy stretch">${esc(peakWords(i))}</span>`:""}
               <button class="btn sm" data-adddem="${i}">Add a shift</button>
               <button class="btn sm" data-peak="${i}">${peakOf(i).length?"Busy stretch":"Set a busy stretch"}</button>
-              ${i>0?`<button class="btn sm" data-copydem="${i}">Copy from ${DSHORT[i-1]}</button>`:""}</div>
+              <button class="btn sm" data-copydem="${i}">Copy from ${DSHORT[(i+6)%7]}</button></div>
           </div>
           ${rows.length? `<div class="demlist">${rows.map((r,ri)=>{
 const sh=shiftById(r.shiftId); if(!sh) return "";
@@ -24595,7 +24645,8 @@ root.querySelectorAll("[data-deldem]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropa
 const [d,i]=b.dataset.deldem.split(":").map(Number); demSetFor(d).splice(i,1); save(); render(); });
 root.querySelectorAll("[data-copydem]").forEach(b=>b.onclick=()=>{
 const i=+b.dataset.copydem; const D=editDemand();
-D[i]=JSON.parse(JSON.stringify(D[i-1]||[])); save(); render(); toast("Copied from "+DAYS[i-1]); });
+const from=(i+6)%7;       
+D[i]=JSON.parse(JSON.stringify(D[from]||[])); save(); render(); toast("Copied from "+DAYS[from]); });
 const ps=root.querySelector("#patsel");
 if(ps) ps.onchange=()=>{ setEditPat(ps.value); render(); };
 const du=root.querySelector("#demusethis");
@@ -25547,6 +25598,9 @@ modal("Add a shift for "+e.name,`
 const ok=availOk(e,dow,a,b);
 return `<option value="${s.id}">${esc(s.label)} · ${m2disp(a)}–${m2disp(b)}${ok?"":"  (outside stated availability)"}</option>`;}).join("")}</select></div>
       <div class="field"><label>Working as</label><select id="nr">${e.roleIds.map(id=>`<option value="${id}">${esc(roleName(id))}</option>`).join("")||'<option value="">No role set</option>'}</select></div>
+      ${multiSite()? (()=>{ const at=sitesList().filter(z=>empAtSite(e, z.id));
+const pick=[WEEK_SITE, e.homeSite, mainSiteId()].find(id=>id && at.some(z=>z.id===id)) || (at[0]||{}).id;
+return `<div class="field"><label>Location</label><select id="nsite">${at.map(z=>`<option value="${z.id}" ${z.id===pick?"selected":""}>${esc(siteName(z.id)||"Main location")}</option>`).join("")}</select></div>`; })() : ""}
       <label class="switch"><input type="checkbox" id="nl"> Lock it — keep this when I rebuild the week</label>
       <div class="mini" id="nimpact"></div>
     </div>`,
@@ -25560,6 +25614,7 @@ r.querySelector("#savena").onclick=()=>{
 const sh=shiftById(r.querySelector("#ns").value); const [a,b]=shiftMinutes(sh);
 const rec={id:uid("a"),empId,date,dow,shiftId:sh.id,startMin:a,endMin:b,
 roleId:r.querySelector("#nr").value||null,locked:r.querySelector("#nl").checked};
+{ const sv=r.querySelector("#nsite"); if(sv && sv.value && sv.value!==mainSiteId()) rec.siteId=sv.value; }
 closeModal();
 headsUp(()=>{
 applyBreaks(rec); getWeek().assignments.push(rec);
@@ -26482,9 +26537,18 @@ return `
           <div class="mini">${h.closed?"Closed":m2disp(t2m(h.open))+" – "+m2disp(t2m(h.close))} · ${list.length} scheduled</div></div>
       </div>
       <div class="row">
-        ${gapPts.length? `<button class="chip crit" id="dayjumpgap" title="Jump to where it dips">${
-esc(spanTxt(gapPts.length*STEP))} ${gapPts.every(p=>!p.staff)? "with nobody on":"short-handed"}</button>`
-:`<span class="chip ok">coverage holds all day</span>`}
+        ${gapPts.length? `<button class="chip ${gapPts.some(p=>(p.detail||[]).some(d=>isPresenceRule(d.rule)))? "crit":"warn"}" id="dayjumpgap" title="Jump to where it dips">${
+esc(spanTxt(gapPts.length*STEP))} ${gapPts.every(p=>!p.staff)? "with nobody on":"short-handed"}</button>` : ""}
+        ${postGaps.length? `${(list.length && prof)? `<button class="chip warn" id="dayjumppost" title="Jump to the post's hour">` : `<span class="chip warn">`}${esc((()=>{
+ 
+const key=v=>v.stationId+"|"+(v.siteId||"");
+const posts=[...new Set(postGaps.map(key))];
+if(posts.length>1) return posts.length+" posts uncovered";
+const mine=postGaps.filter(v=>key(v)===posts[0]);
+const where=(multiSite() && mine[0].siteId)? " \u2014 "+siteName(mine[0].siteId) : "";
+return postWord(mine[0])+" "+(mine.length<=2? mine.map(v=>clockRange(v.from, v.to)).join(", ") : mine.length+" times")+where;
+})())}${(list.length && prof)? "</button>" : "</span>"}` : ""}
+        ${(!gapPts.length && !postGaps.length)? `<span class="chip ok">coverage holds all day</span>` : ""}
         ${(()=>{const c=lunchClosure(dow, date); return c? `<span class="chip">doors shut ${m2disp(c.from)}–${m2disp(c.to)}</span>`:"";})()}
         ${(S.stations||[]).length? `<button class="btn" id="dayrot">Rotate the posts</button>`:`<button class="btn" data-go="stations">Set up the posts</button>`}
         <button class="btn" id="dayredo" title="Lay out posts, meals and rest breaks again for this day only. Who works stays exactly as it is.">Redo the day sheet</button>
@@ -26842,9 +26906,9 @@ for(let clock=wantPaid; clock<=wantPaid+150; clock+=5){
 const s2 = moveStart? a.endMin-clock-gapM : a.startMin;
 const e2 = moveStart? a.endMin : a.startMin+clock+gapM;
 if(s2<0) continue;
-const paid=paidEstimate(s2,e2)-gapM;
+const paid=paidEstimate(s2,e2,{shift:sh, date:a.date})-gapM;
 if(Math.abs(paid-wantPaid)<=2){ best={s2,e2}; break; }
-if(!best || Math.abs(paid-wantPaid) < Math.abs((paidEstimate(best.s2,best.e2)-gapM)-wantPaid)) best={s2,e2};
+if(!best || Math.abs(paid-wantPaid) < Math.abs((paidEstimate(best.s2,best.e2,{shift:sh, date:a.date})-gapM)-wantPaid)) best={s2,e2};
 }
 if(!best) return false;
 a.startMin=best.s2; a.endMin=best.e2; a.locked=true; a.resized=true;
@@ -27015,7 +27079,7 @@ const hoursLink=()=>later("Change our opening hours", "If you are not really ope
 const lengthFixes=(x, direction)=>{
 if(!x) return;
 const paid=paidMinutes(x); const sh=shiftById(x.shiftId); if(!sh) return;
-const [sa,sb]=shiftMinutes(sh); const usual=paidSpan(sa,sb,aGap(x)||gapMin(x),x.date,empById(x.empId));
+const [sa,sb]=shiftMinutes(sh); const usual=paidSpan(sa,sb,aGap(x)||gapMin(x),x.date,empById(x.empId),sh);
 const who=ownerOf(x), day=DSHORT[x.dow];
 const opts=[];
 if(Math.abs(paid-480)>5) opts.push(480);
@@ -27932,6 +27996,9 @@ clearAdmin(e.date); assignStations(e.date); save(); render(); toast("Stations ha
 const jg=root.querySelector("#dayjumpgap");
 if(jg) jg.onclick=()=>{ const c=root.querySelector("#daydips");
 if(c) c.scrollIntoView({behavior:"smooth", block:"center"}); };
+{ const jp=root.querySelector("#dayjumppost");
+if(jp) jp.onclick=()=>{ const c=root.querySelector(".covbar")||root.querySelector("#daydips");
+if(c) c.scrollIntoView({behavior:"smooth", block:"center"}); }; }
 const p=root.querySelector("#dayprint"); if(p) p.onclick=()=>printModal();
 const pd=root.querySelector("#daypdf"); if(pd) pd.onclick=()=>exportDayPDF().catch(()=>pdfUnavailable());
 };
@@ -29049,7 +29116,7 @@ minorBlock(e,a.date,a.dow,a.startMin,a.endMin,
 all.filter(x=>x.empId===a.empId && x.id!==a.id &&
 weekStartOf(x.date,S.org.weekStart)===weekStartOf(a.date,S.org.weekStart))
 .reduce((t,x)=>t+paidMinutes(x),0),
-weekStartOf(a.date,S.org.weekStart))? '<b class="bad">check</b>':"ok"]);
+weekStartOf(a.date,S.org.weekStart), a)? '<b class="bad">check</b>':"ok"]);
 });
 body=repTable(["Date","Person","Age","Day","Shift","Hours","Limit that applied","\u00a0"], rows)+
 '<p class="foot">Federal law is the floor everywhere and a state may only be stricter, so the limit shown is whichever was tighter. Work permits and the hazardous-job list are not covered here.</p>';
@@ -30833,7 +30900,7 @@ return `<div class="wshiftrow">
             <button type="button" class="btn sm" style="margin-left:auto" data-wsdel="${i}" aria-label="Remove ${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}">Remove</button>
             </div>
             <div class="tablabel wsdesire">Guessed: ${esc((DESIRE_LABEL[sh.desire]||"Neutral").toLowerCase())}</div>
-            ${note? `<div class="banner warn wsonote"><div>${esc(note.say)} <button type="button" class="btn sm" data-wsfix="${i}" data-wswhich="${esc(note.which)}" data-wsstart="${note.fixedStart}" data-wsend="${note.fixedEnd}">${esc(note.btn)}</button></div></div>` : ""}
+            ${note? `<div class="banner warn wsonote"><div>${esc(note.say)}${note.btn? ` <button type="button" class="btn sm" data-wsfix="${i}" data-wswhich="${esc(note.which)}" data-wsstart="${note.fixedStart}" data-wsend="${note.fixedEnd}">${esc(note.btn)}</button>` : ""}</div></div>` : ""}
           </div>`;}).join("")}
           <div class="help">Wanted or unwanted is guessed from the shape; see Who gets first pick.</div>
         </div>`:""}
@@ -31470,7 +31537,7 @@ if(!s||!e) return;
 const note=(typeof overnightNote==="function")? overnightNote(t2m(s.value), t2m(e.value)) : null;
 let banner=row.querySelector(".wsonote");
 if(note){
-const html=esc(note.say)+' <button type="button" class="btn sm" data-wsfix="'+i+'" data-wswhich="'+esc(note.which)+'" data-wsstart="'+note.fixedStart+'" data-wsend="'+note.fixedEnd+'">'+esc(note.btn)+"</button>";
+const html=esc(note.say)+(note.btn? ' <button type="button" class="btn sm" data-wsfix="'+i+'" data-wswhich="'+esc(note.which)+'" data-wsstart="'+note.fixedStart+'" data-wsend="'+note.fixedEnd+'">'+esc(note.btn)+"</button>" : "");
 if(!banner){ banner=document.createElement("div"); banner.className="banner warn wsonote"; banner.innerHTML="<div></div>"; row.appendChild(banner); }
 banner.querySelector("div").innerHTML=html;
 const fresh=banner.querySelector("[data-wsfix]"); if(fresh) wireFix(fresh);
@@ -34524,8 +34591,8 @@ if(src==="shifts") return base.concat([
 {k:"station", n:"Post", get:r=>r.station? ((stationById(r.station)||{}).name||"") : ""},
 {k:"start", n:"Start", get:r=>m2disp(r.startMin)},
 {k:"end", n:"End", get:r=>m2disp(r.endMin)},
-{k:"clock", n:"Clock hours", num:true, get:r=>Math.round((r.endMin-r.startMin)/6)/10},
-{k:"paid", n:"Paid hours", num:true, get:r=>Math.round(paidMinutes(r)/6)/10},
+{k:"clock", n:"Clock hours", num:true, get:r=>Math.round((r.endMin-r.startMin)/6)/10, raw:r=>(r.endMin-r.startMin)/60},
+{k:"paid", n:"Paid hours", num:true, get:r=>Math.round(paidMinutes(r)/6)/10, raw:r=>paidMinutes(r)/60},
 {k:"meal", n:"Meal minutes", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>!m.waived).reduce((t,m)=>t+m.len,0)},
  
 {k:"mealw", n:"Meals waived", num:true, get:r=>((r.breaks||{}).meals||[]).filter(m=>m.waived).length},
@@ -34542,10 +34609,10 @@ if(src==="hours") return [
 {k:"role", n:"Home role", get:r=>{ const e=empById(r.empId); return e&&e.roleIds[0]? roleName(e.roleIds[0]) : ""; }},
 {k:"shifts", n:"Shifts", num:true, get:r=>r.shifts},
 {k:"days", n:"Days", num:true, get:r=>r.days},
-{k:"paid", n:"Paid hours", num:true, get:r=>Math.round(r.mins/6)/10},
+{k:"paid", n:"Paid hours", num:true, get:r=>Math.round(r.mins/6)/10, raw:r=>r.mins/60},
 {k:"guar", n:"Guaranteed", num:true, get:r=>r.minH},
 {k:"cap", n:"Cap", num:true, get:r=>r.maxH},
-{k:"delta", n:"Over / under guarantee", num:true, get:r=>Math.round((r.mins/60-r.minH)*10)/10},
+{k:"delta", n:"Over / under guarantee", num:true, get:r=>Math.round((r.mins/60-r.minH)*10)/10, raw:r=>r.mins/60-r.minH},
  
 {k:"wknd", n:"Weekend shifts", num:true, get:r=>r.weekend}
 ];
@@ -34583,6 +34650,10 @@ return [
 {k:"who", n:"By", get:r=>r.who||""}
 ];
 }
+ 
+const RB_RAW="__raw_";
+function rbNum(r, c){ const k=RB_RAW+c.k; return (k in r)? (+r[k]||0) : (+r[c.k]||0); }
+function rbRound(c, v){ return c.raw? Math.round(v*10)/10 : Math.round(v*100)/100; }
  
 function rbRows(src, from, to){
 const inR=d=>d>=from && d<=to;
@@ -34639,7 +34710,7 @@ if(has(F.status)){ const st = spec.source==="requests"? (r.status||"open") : spe
 return true;
 });
 const want=(spec.cols&&spec.cols.length? spec.cols : cols.map(c=>c.k)).map(k=>cols.find(c=>c.k===k)).filter(Boolean);
-const table=rows.map(r=>{ const o={}; want.forEach(c=>{ o[c.k]=c.get(r); }); if(spec.groupBy && !(spec.groupBy in o)){ const gc=cols.find(c=>c.k===spec.groupBy); if(gc) o[spec.groupBy]=gc.get(r); } return o; });
+const table=rows.map(r=>{ const o={}; want.forEach(c=>{ o[c.k]=c.get(r); if(c.raw) o[RB_RAW+c.k]=c.raw(r); }); if(spec.groupBy && !(spec.groupBy in o)){ const gc=cols.find(c=>c.k===spec.groupBy); if(gc) o[spec.groupBy]=gc.get(r); } return o; });
 const sk=spec.sortBy && cols.find(c=>c.k===spec.sortBy)? spec.sortBy : (want[0]&&want[0].k);
 const dir=spec.sortDir==="desc"? -1 : 1;
 const numCols=new Set(cols.filter(c=>c.num).map(c=>c.k));
@@ -34656,14 +34727,15 @@ return src.n+" · "+per;
 function rbHTML(res, spec){
 const fmt=(c,v)=> c.money? money(+v||0) : (v==null? "" : String(v));
 const groups=[]; if(res.groupBy){ res.rows.forEach(r=>{ const g=String(r[res.groupBy]==null?"":r[res.groupBy]); let G=groups[groups.length-1]; if(!G || G.key!==g){ G={key:g, rows:[]}; groups.push(G); } G.rows.push(r); }); } else groups.push({key:null, rows:res.rows});
-const sums=rows=>res.cols.map(c=> c.num? rows.reduce((t,r)=>t+(+r[c.k]||0),0) : null);
-const totalRow=(rows,label)=>{ const S2=sums(rows); return `<tr class="rbsum">${res.cols.map((c,i)=>`<td class="${c.num?"num":""}">${i===0 && !c.num? "<b>"+esc(label)+"</b>" : c.num? "<b>"+(i===0? esc(label)+" ":"")+fmt(c, Math.round(S2[i]*100)/100)+"</b>" : ""}</td>`).join("")}</tr>`; };
+const sums=rows=>res.cols.map(c=> c.num? rows.reduce((t,r)=>t+rbNum(r,c),0) : null);
+const totalRow=(rows,label)=>{ const S2=sums(rows); return `<tr class="rbsum">${res.cols.map((c,i)=>`<td class="${c.num?"num":""}">${i===0 && !c.num? "<b>"+esc(label)+"</b>" : c.num? "<b>"+(i===0? esc(label)+" ":"")+fmt(c, rbRound(c, S2[i]))+"</b>" : ""}</td>`).join("")}</tr>`; };
 const body=groups.map(G=>`${G.key!=null? `<tr class="rbgrp"><td colspan="${res.cols.length}"><b>${esc(res.groupName||res.groupBy)}: ${esc(G.key||"—")}</b> <span class="mini">${G.rows.length} row${G.rows.length===1?"":"s"}</span></td></tr>`:""}
     ${G.rows.map(r=>`<tr>${res.cols.map(c=>`<td class="${c.num?"num":""}">${esc(fmt(c, r[c.k]))}</td>`).join("")}</tr>`).join("")}
     ${G.key!=null && res.cols.some(c=>c.num)? totalRow(G.rows, "Subtotal") : ""}`).join("");
 const head=`<div class="rbhead"><b>${esc(spec.name||rbSpecLabel(spec))}</b> <span class="mini">${esc(rbSpecLabel(spec))} · ${esc(prettyDate(res.from))} – ${esc(prettyDate(res.to))} · ${res.rows.length} row${res.rows.length===1?"":"s"} · run ${esc(res.at.toLocaleString([], {dateStyle:"medium", timeStyle:"short"}))}</span></div>`;
 return head+`<div class="scroll"><table class="rbtable"><thead><tr>${res.cols.map(c=>`<th class="${c.num?"num":""}">${esc(c.n)}</th>`).join("")}</tr></thead>
-    <tbody>${body||`<tr><td colspan="${res.cols.length}"><div class="empty">Nothing matches.</div></td></tr>`}${res.rows.length && res.cols.some(c=>c.num)? totalRow(res.rows, "Total") : ""}</tbody></table></div>`;
+    <tbody>${body||`<tr><td colspan="${res.cols.length}"><div class="empty">Nothing matches.</div></td></tr>`}${res.rows.length && res.cols.some(c=>c.num)? totalRow(res.rows, "Total") : ""}</tbody></table></div>`+
+(res.rows.length>1 && res.cols.some(c=>c.raw)? `<div class="mini rbnote" style="margin-top:6px">Totals add the exact minutes, so they may not equal the sum of the rounded rows.</div>` : "");
 }
 function rbCSV(res){
 const lines=[csvRow(res.cols.map(c=>c.n))];
@@ -34690,7 +34762,7 @@ return rec? rec.id : list[list.length-1].id;
 function rbSheetRows(res){
 const rows=[res.cols.map(c=>c.n)];
 const num=(c,v)=> c.num? (Math.round((+v||0)*100)/100) : (v==null? "" : String(v));
-const sums=list=>res.cols.map(c=> c.num? Math.round(list.reduce((t,r)=>t+(+r[c.k]||0),0)*100)/100 : null);
+const sums=list=>res.cols.map(c=> c.num? rbRound(c, list.reduce((t,r)=>t+rbNum(r,c),0)) : null);
 const groups=[];
 if(res.groupBy){
 res.rows.forEach(r=>{ const g=String(r[res.groupBy]==null?"":r[res.groupBy]);
@@ -36155,7 +36227,7 @@ blocks.push(av&&av.ok? "only free "+m2disp(t2m(av.from))+"–"+m2disp(t2m(av.to)
 if(onTimeOff(e.id,date)) blocks.push("on "+((timeOffFor(e.id,date)||{}).type||"time off"));
 if(empLicensed(e) && e.licExp && date > e.licExp)
 blocks.push((e.licLabel||"their license")+" expired "+prettyDate(e.licExp));
-if(minorBlock(e, date, dow, aMin, bMin, empWeekMinutes(e.id, ws), ws))
+if(minorBlock(e, date, dow, aMin, bMin, empWeekMinutes(e.id, ws), ws, sh))
 blocks.push("under-18 hour limits");
 if(!cycleWorksOn(e, date)) blocks.push("not on their work pattern that day");
 const sameDay = wk.assignments.filter(a=>a.empId===e.id && a.date===date);
@@ -36164,7 +36236,7 @@ if(sameDay.length) blocks.push("already on "+(shiftById(sameDay[0].shiftId)||{la
 if(ab) blocks.push("kept apart from "+(empById(ab.other)||{name:"someone"}).name); }
  
 const LIM = effLimits(e, ws);
-const mins = empWeekMinutes(e.id,ws), add = paidEstimate(aMin,bMin,{shift:sh});
+const mins = empWeekMinutes(e.id,ws), add = slotPaid(sh, date, e);
 const capH = LIM.maxH || 0;
 if(LIM.capSpent && !capH) blocks.push("their averaging period is already fully spent");
 else if(capH && mins+add > capH*60+1)
@@ -36175,7 +36247,7 @@ blocks.push("would hit "+fmtHrs(mins+add)+" against a "+fmtHrs(capH*60)+" cap"
 const days = empDays(e.id,ws);
 if(LIM.maxD && days>=LIM.maxD && !sameDay.length) blocks.push(days+" days already, cap is "+LIM.maxD);
 { const g=shiftGap(sh), gm=g? g.to-g.from : 0;
-if(LIM.maxShiftH && paidSpan(aMin,bMin,g||gm,date,e) > LIM.maxShiftH*60)    
+if(LIM.maxShiftH && paidSpan(aMin,bMin,g||gm,date,e,sh) > LIM.maxShiftH*60)    
 blocks.push("longer than their "+LIM.maxShiftH+"h shift limit"); }
 const prev = wk.assignments.filter(a=>a.empId===e.id && a.date===addDays(date,-1));
 if(prev.length){
@@ -36329,7 +36401,7 @@ modal("Save this week as a template",
 r=>{ r.querySelector("#tsave").onclick=()=>{
 S.templates = S.templates||[];
 S.templates.push({id:uid("tpl"), name:r.querySelector("#tn").value.trim()||"Template",
-rows: wk.assignments.map(a=>({empId:a.empId,dow:a.dow,shiftId:a.shiftId,roleId:a.roleId})), at:Date.now()});
+rows: wk.assignments.map(a=>({empId:a.empId,dow:a.dow,shiftId:a.shiftId,roleId:a.roleId,siteId:a.siteId||null})), at:Date.now()});
 save(); closeModal(); render(); toast("Template saved");
 }; });
 }
@@ -36344,6 +36416,8 @@ if(!empById(r.empId)) return;
 if(wk.assignments.some(a=>a.empId===r.empId && a.date===d.date)) return;
 const [aM,bM]=shiftMinutes(sh);
 const rec={id:uid("a"),empId:r.empId,date:d.date,dow:r.dow,shiftId:r.shiftId,startMin:aM,endMin:bM,roleId:r.roleId,locked:false};
+ 
+if(r.siteId && multiSite() && r.siteId!==mainSiteId() && siteById(r.siteId).id===r.siteId) rec.siteId=r.siteId;
 applyBreaks(rec); wk.assignments.push(rec);
 });
 dates.forEach(({date})=>staggerDay(wk.assignments.filter(a=>a.date===date && !a.locked), wk.assignments.filter(a=>a.date===date)));
@@ -36648,7 +36722,7 @@ const sh=shiftById(shiftId)||{label:"Shift"};
 const [aMin,bMin]=shiftMinutes(sh);
 const cands=candidatesFor(shiftId,date,dow,roleId,null, siteId||null);
 const free=cands.filter(c=>!c.blocks.length), blocked=cands.filter(c=>c.blocks.length);
-const rel=releasedSlot(weekStartOf(date,S.org.weekStart), date, shiftId, roleId||null);
+const rel=releasedSlot(weekStartOf(date,S.org.weekStart), date, shiftId, roleId||null, siteId||null);
 const fromLock=!!(rel && rel.fromLock);
  
 const wsx=weekStartOf(date,S.org.weekStart);
@@ -36674,6 +36748,7 @@ r.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{
 const empId=b.dataset.pick, e=empById(empId);
 const rec={id:uid("a"),empId,date,dow,shiftId,startMin:aMin,endMin:bMin,
 roleId:roleId||e.roleIds[0]||null,locked:!fromLock};
+if(multiSite() && siteId && siteId!==mainSiteId()) rec.siteId=siteId;
 applyBreaks(rec);
 coverFromRelease(weekStartOf(date,S.org.weekStart), rec);
 const wk=getWeek(weekStartOf(date,S.org.weekStart));
