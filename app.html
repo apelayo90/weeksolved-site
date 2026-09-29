@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 3d244a52 2026-09-29 07:49 UTC -->
+<!-- build d299d37a 2026-09-29 11:15 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -591,7 +591,7 @@ ol.a2hs li{padding-left:2px}
 .tlrow{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .tlrow:last-child{border-bottom:0}
 .tlname{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tlname small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.tlname small{display:block;font-weight:400;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis}
 /* A shift name is the one thing on a sheet that answers "why is THIS shift
    here" \u2014 reported 7 Sept 2026, a shift named Saturday on a Monday with no
    way in. Every printed shift name is now the way into that shift. Kept looking
@@ -3909,8 +3909,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "3d244a52";       
-const BUILD_AT = "2026-09-29 07:49 UTC";       
+const BUILD_ID = "d299d37a";       
+const BUILD_AT = "2026-09-29 11:15 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -6467,7 +6467,8 @@ const totals={}; rows.forEach(r=>{ totals[r.empId]=(totals[r.empId]||0)+1; });
 s.holidays.result=Object.assign({}, R, {result:rows, totals, dropped, unfilled:(R.unfilled||[]).filter(u=>!drop.has(u.holidayId))});
  
 const off={}; R.result.forEach(r=>{ if(drop.has(r.holidayId) && !on.has(r.empId)) (off[r.holidayId]=off[r.holidayId]||[]).push(r.empId); });
-holDrawUnlock(s.weeks, drop, off, s.holidays.list);
+ 
+holDrawUnlock(s.weeks, drop, off, s.holidays.list, !(Array.isArray(s.sites) && s.sites.length>1));
 }
 }
 if(s.intake && (typeof s.intake!=="object" || !s.intake.token)) delete s.intake;
@@ -7059,6 +7060,15 @@ function covOn(r, dow){
 return !r || !Array.isArray(r.days) || !r.days.length || r.days.includes(dow);
 }
 function dayShortfall(day, dow){
+ 
+if(multiSite()){
+const date=(day && day[0])? day[0].date : null;
+const winAt=z=>{ if(z) return siteWindowOnDate(date, dow, z);
+const open=sitesList().map(x=>siteWindowOnDate(date, dow, x.id)).filter(Boolean);
+return open.length? [Math.min.apply(null, open.map(w=>w[0])), Math.max.apply(null, open.map(w=>w[1]))] : null; };
+return (S.coverage||[]).filter(r=>covOn(r,dow)).reduce((t,r)=>t+covSites(r).reduce((u,z)=>{
+const w=winAt(z); return w? u+ruleShort(day, z? Object.assign({}, r, {siteId:z}) : r, w[0], w[1]) : u; }, 0), 0);
+}
 const win=dayWindow(dow);
 if(!win) return 0;                        
 return (S.coverage||[]).filter(r=>covOn(r,dow))
@@ -7645,12 +7655,12 @@ if(!rows.length && !Object.keys(dropped).length){ S.holidays.result=null; return
 const totals={}; rows.forEach(r=>{ totals[r.empId]=(totals[r.empId]||0)+1; });
 S.holidays.result=Object.assign({}, R, {result:rows, totals, dropped, unfilled:(R.unfilled||[]).filter(u=>!ids.has(u.holidayId))});
 const list=(S.holidays.list||[]).filter(h=>had.has(h.id));
-const u=holDrawUnlock(S.weeks, had, cause==="cant"? (ids.by||{}) : null, S.holidays.list);
+const u=holDrawUnlock(S.weeks, had, cause==="cant"? (ids.by||{}) : null, S.holidays.list, !multiSite());
 list.off=u.off; list.by=cause==="cant"? (ids.by||{}) : {};
 return list;
 }
  
-function holDrawUnlock(weeks, hids, off, list){
+function holDrawUnlock(weeks, hids, off, list, keep){
 const out={}, dateOf={};
 (list||[]).forEach(h=>{ if(h && hids.has(h.id)) dateOf[h.id]=h.date; });
 const mine=a=>!!(a && a.holAssign && hids.has(a.holAssign) && dateOf[a.holAssign] && a.date===dateOf[a.holAssign]);
@@ -7659,7 +7669,7 @@ if(!w || w.published || !Array.isArray(w.assignments) || !w.assignments.some(min
 w.assignments=w.assignments.filter(a=>{
 if(!mine(a)) return true;
 if(((off||{})[a.holAssign]||[]).includes(a.empId)){ const o=out[a.holAssign]=out[a.holAssign]||[]; if(!o.includes(a.empId)) o.push(a.empId); return false; }
-delete a.locked; return true; });
+if(!keep) delete a.locked; return true; });
 });
 return {off:out};
 }
@@ -7703,11 +7713,12 @@ const head=cleared? "The holiday split is cleared"
 const off=list.off||{}, by=list.by||{}, first=id=>String((empById(id)||{}).name||"Someone").split(" ")[0];
 const bits=[];
 list.forEach(h=>{
-const gone=(off[h.id]||[]).map(first);
+ 
+const w=(S.weeks||{})[weekStartOf(h.date, S.org.weekStart)], on=id=>!!w && (w.assignments||[]).some(a=>a.empId===id && a.date===h.date);
+const gone=(off[h.id]||[]).filter(id=>!on(id)).map(first);
 if(gone.length) bits.push(numsWord(gone)+" "+(gone.length===1? "comes" : "come")+" off "+(h.name||"that day")+" in the drafted week");
-const w=(S.weeks||{})[weekStartOf(h.date, S.org.weekStart)];
 if(!w) return;
-const stay=(by[h.id]||[]).filter(id=>(w.assignments||[]).some(a=>a.empId===id && a.holAssign===h.id && a.date===h.date)).map(first);
+const stay=(by[h.id]||[]).filter(on).map(first);
 if(!stay.length) return;
 if(w.published) bits.push(numsWord(stay)+" "+(stay.length===1? "stays" : "stay")+" on "+(h.name||"that day")+" in the "+(postPending(w)? "week going up" : "posted week"));
 else bits.push(numsWord(stay)+" "+(stay.length===1? "is" : "are")+" still on "+(h.name||"that day")+" in the drafted week");
@@ -7720,7 +7731,12 @@ const s=subj||"that day", dow=parseYmd(h.date).getDay(), P=holDraftsVerb(h, dow)
 const w=(S.weeks||{})[weekStartOf(h.date, S.org.weekStart)];
 if(w && w.published) return "the "+(postPending(w)? "week going up" : "posted week")+" keeps who is on "+s;
 const rows=w? (w.assignments||[]).filter(a=>a && a.holAssign===h.id && a.date===h.date) : [], own=s==="that day"? "that day’s" : s+"’s";
-if(rows.some(a=>a.locked)) return "the drafted week still holds "+own+" drawn shifts, locked";
+const lk=rows.filter(a=>a.locked).length;    
+ 
+const W=(lk && /^fills/.test(P.f))? expandDemand(dow, weekStartOf(h.date, S.org.weekStart)) : [];
+const top=(W.length && rows.some(a=>a.locked && !W.some(x=>x.siteId===siteOf(a) && x.shiftId===a.shiftId)))? ", and a new draft "+P.f+" on top of them" : "";
+if(lk && lk<rows.length) return "the drafted week still holds "+own+" drawn shifts, "+lk+" of "+rows.length+" locked"+top;
+if(rows.some(a=>a.locked)) return "the drafted week still holds "+own+" drawn shifts, locked"+top;
 if(rows.length) return "the drafted week keeps "+own+" drawn shifts as ordinary ones \u2014 a new draft "+P.f;
 return s+" "+P.v;
 }
@@ -10843,7 +10859,8 @@ const listed=(S.holidays && S.holidays.list) || [];
 const noList=!listed.length;
 const shared=(S.holidays && S.holidays.demand) || [];
 weekDates(ws).forEach(({date,dow})=>{
-if(!dayOpen(date, dow)) return;                  
+ 
+if(!(multiSite()? openAnywhere(date, dow) : dayOpen(date, dow))) return;    
 const h=listed.find(x=>x.date===date);
 const p=presetHolidayOn(date);
 if(h){
@@ -10852,7 +10869,8 @@ if(holSitesSet(h)) return;
 const hrs=(typeof holHoursOf==="function")? holHoursOf(h) : {from:""};
 const need=holNeedRows(h);
 if(hrs.from || need || (holMode(h)!=="normal" && shared.length)) return;
-if(h.hmode==="normal") return;                 
+ 
+if(h.hmode || holMode(h)!=="normal") return;
 if(p && p.common==="normal") return;           
 out.push({name:h.name || (p&&p.n) || "A holiday", date, dow,
 detail:"It is on your holiday list, but nothing says how you run it \u2014 no holiday hours and "+
@@ -16419,19 +16437,51 @@ why+(gap? ". The draw doesn\u2019t say which location, so none was guessed; a sh
 {date:u.date, dow:u.dow, empId:u.empId, code:"holdraw", holidayId:u.holidayId, siteGap:gap, free, posted:!!wk.published && !postPending(wk)});
 });
  
-(wk.assignments||[]).forEach(a=>{
-if(!a || !a.holAssign || !dates.some(x=>x.date===a.date) || drawStands({holidayId:a.holAssign, empId:a.empId})) return;
-const h=(S.holidays.list||[]).find(x=>x.id===a.holAssign); if(!h || h.date!==a.date) return;
+{ const today=ymd(new Date()), named={}, A=(wk.assignments||[]).filter(Boolean), HR=S.holidays.result,
+own=a=>!!a.holAssign && (S.holidays.list||[]).find(x=>x.id===a.holAssign && x.date===a.date),
+ 
+hadDraw=h=>holPolled(h) || !!(HR && HR.dropped && HR.dropped[h.id]) || A.some(x=>x.holAssign===h.id && x.date===h.date);
+A.filter(own).concat(A.filter(a=>!own(a))).forEach(a=>{
+if(!dates.some(x=>x.date===a.date)) return;
+const drawn=own(a);
+(drawn? [drawn] : (S.holidays.list||[]).filter(x=>x.date===a.date && hadDraw(x))).forEach(h=>{
+if(h.date<today || named[a.empId+"|"+a.date] || drawStands({holidayId:h.id, empId:a.empId})) return;
 const r=(S.holidays.responses||[]).find(x=>x.empId===a.empId);
 if(!r || !(r.cant||[]).includes(h.id)) return;
 if((S.holidays.tweaks||[]).some(t=>t.kind==="must" && t.empId===a.empId && t.holidayId===h.id)) return;    
-const e=empById(a.empId), name=(e && e.name)||"Somebody";
+named[a.empId+"|"+a.date]=1;    
+const e=empById(a.empId), name=(e && e.name)||"Somebody", now=drawn? "now " : "", mine=[a].concat(A.filter(x=>x!==a && x.empId===a.empId && x.date===a.date
+&& !(x.holAssign && x.holAssign!==h.id && drawStands({holidayId:x.holAssign, empId:x.empId}))));    
 push("warn", "On a holiday they say they can’t work — "+name.split(" ")[0],
 wk.published? name+" is on "+(h.name||"this holiday")+" in this "+(postPending(wk)? "week going up" : "posted week")+
-", and their holiday answer now says they can’t work it. The week keeps who is on it, so a change by hand is what takes them off."
-: name+" is on "+(h.name||"this holiday")+" in this draft from the holiday draw, and their holiday answer now says they can’t work it. The shift stays theirs until it is taken off.",
-{date:a.date, dow:a.dow, empId:a.empId, code:"holcant", holidayId:h.id, aId:a.id});
+", and their holiday answer "+now+"says they can’t work it. The week keeps who is on it, so a change by hand is what takes them off."
+: name+" is on "+(h.name||"this holiday")+(drawn? " in this draft from the holiday draw" : " in this draft")+", and their holiday answer "+now+"says they can’t work it. "+(mine.length>1? "Their "+mine.length+" shifts that day stay theirs until they are taken off." : "The shift stays theirs until it is taken off."),
+{date:a.date, dow:a.dow, empId:a.empId, code:"holcant", holidayId:h.id, aId:a.id, aIds:mine.map(x=>x.id), posted:!!wk.published});
+}); }); }
+ 
+{ const today=ymd(new Date());
+dates.forEach(({date, dow})=>{
+const day=(wk.assignments||[]).filter(a=>a && a.date===date), m=matchDemand(expandDemand(dow, ws), day);
+ 
+(S.holidays.list||[]).filter(h=>h.date===date && h.date>=today && !holPolled(h)).forEach(h=>{ const at={};
+m.spare.filter(a=>a.holAssign===h.id).forEach(a=>{ (at[siteOf(a)]=at[siteOf(a)]||[]).push(a); });
+Object.keys(at).forEach(z=>{
+const kept=at[z], on=day.filter(a=>coversFloor(a) && siteOf(a)===z).length, asked=m.want.filter(w=>w.siteId===z).length;
+if(!asked || m.missing.some(w=>w.siteId===z) || on<=asked || on===kept.length) return;
+const where=multiSite()? " at "+siteName(z) : "", n=day.filter(a=>a.holAssign===h.id && coversFloor(a) && siteOf(a)===z).length,    
+asks=a=>m.want.some(w=>w.siteId===z && w.shiftId===a.shiftId), extra=kept.filter(asks), none=kept.filter(a=>!asks(a)),
+why=[none.length? (none.length===n? (n===1? "it is not one of the shifts" : "they are not among the shifts") : none.length===1? "1 of those is not one of the shifts" : none.length+" of those are not among the shifts")+
+" the day asks for"+(wk.published? "" : ", so a draft fills the day on top of "+(none.length===1? "it" : "them")) : "",
+extra.length? "the day asks for fewer "+numsWord([...new Set(extra.map(a=>(aShift(a)||{}).label||"shift"))])+" shifts than the draw kept" : ""].filter(Boolean).join(", and ");
+push("warn", "More on than the day asks for — "+(h.name||"a holiday"),
+(h.name||"This holiday")+" asks for "+asked+where+" and has "+on+" on"+(multiSite()? " there" : "")+
+(wk.published? " in this "+(postPending(wk)? "week going up" : "posted week") : "")+". "+
+(n===1? "One of them is a shift" : n+" of them are shifts")+" from its draw, kept after the draw went; "+why+"."+
+(wk.published? " The week keeps who is on it, so a change by hand is what takes anyone off." : ""),
+{date, dow, code:"holdouble", holidayId:h.id, siteId:z, aIds:kept.slice(0, on-asked).map(a=>a.id), posted:!!wk.published});
+}); });
 });
+}
  
 if(multiSite() && traineeExtra() && (wk.trainGap||[]).length){
 const byEmp={};
@@ -16471,20 +16521,31 @@ if(holMode(h)!=="reduced" || hrows.length) return;
 const any=((S.holidays&&S.holidays.demand)||[]).length>0;
 push("crit", (h.name||"A holiday")+" has no holiday cover \u2014 "+DSHORT[dow],
 (h.name||"This holiday")+" runs with fewer people. With more than one location that cover comes from the Holidays rows under Coverage needs, which say where each shift is, and "+
-(any? "none of them is at a location open that day" : "there are none")+", so nobody is drafted on "+prettyDate(date)+".",
+(any? "none of them is at a location open that day" : "there are none")+holNoneSay(date),
 {date, dow, code:"holnorows", act:"go:demand"});
 });
 }
  
-if(anyPeak()) try{
+if(!multiSite()){
 dates.forEach(({date,dow})=>{
-const P=peakOf(dow); if(!P.length) return;
-if(!dayOpen(date,dow)) return;
-let win=dayWindow(dow); if(!win) return;
 const h=(S.holidays.list||[]).find(x=>x.date===date);
+if(!h || holPolled(h) || holMode(h)!=="reduced" || !dayOpen(date, dow) || demandLive(dow, ws, date).length) return;
+push("crit", (h.name||"A holiday")+" has no holiday cover \u2014 "+DSHORT[dow],
+(h.name||"This holiday")+" runs with fewer people, and neither its own Coverage needed on the Holidays page nor the Holidays rows under Coverage needs ask for anybody"+holNoneSay(date),
+{date, dow, code:"holnorows", act:"go:demand"});
+});
+}
+ 
+ 
+if(anyPeak()) try{
+dates.forEach(({date,dow})=>{ (multiSite()? sitesList().map(z=>z.id) : [null]).forEach(z=>{
+const P=peakOf(dow); if(!P.length) return;
+if(!(z? siteOpenOn(date, dow, z) : dayOpen(date,dow))) return;
+let win=z? dayWindowOn(date, dow, z) : dayWindow(dow); if(!win) return;
+const h=z? null : (S.holidays.list||[]).find(x=>x.date===date);
 if(h && h.hours){ const m=/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec(String(h.hours).trim());
 if(m){ let a0=(+m[1])*60+(+m[2]), b0=(+m[3])*60+(+m[4]); if(b0<=a0) b0+=1440; win=[a0,b0]; } }
-const on=wk.assignments.filter(a=>a.date===date);
+const on=wk.assignments.filter(a=>a.date===date && (!z || siteOf(a)===z));
 if(!on.length) return;
 const at=t=>onDutyAt(on, t, null, {ignoreMeals:true});
 let peakLow=Infinity, restHigh=0, restAny=false;
@@ -16497,14 +16558,23 @@ else { restHigh=Math.max(restHigh,k); restAny=true; }
 }
 if(peakLow===Infinity || !restAny) return;
 if(peakLow < restHigh){
-push("warn","Your busy stretch is your thinnest \u2014 "+DAYS[dow],
-"You marked "+DAYS[dow]+" "+peakWords(dow)+" as the busy stretch, but only "+peakLow+
-" "+(peakLow===1?"person is":"people are")+" on the floor then, against "+restHigh+
-" at the quietest part of the rest of the day. A busy stretch never adds anybody on its own \u2014 it only decides where spare people go first. "+
-"To put more people on the rush, add a shift covering "+peakWords(dow)+" under Coverage needs for "+DAYS[dow]+".",
-{code:"peakthin", act:"go:demand"});
+const where=z? " at "+siteName(z) : "";
+ 
+let pw=peakWords(dow);
+ 
+if(z || (h && h.hours)){ const rng=[]; const raw=[];
+P.forEach(p=>[0, -1440].forEach(o=>{ const x=Math.max(p.from+o, win[0]), y=Math.min(p.to+o, win[1]); if(x<y) raw.push([x, y]); }));
+raw.sort((p,q)=>p[0]-q[0]).forEach(r=>{ const l=rng[rng.length-1]; if(l && r[0]<=l[1]) l[1]=Math.max(l[1], r[1]); else rng.push(r); });
+if(rng.reduce((n,x)=>n+x[1]-x[0], 0) < P.reduce((n,p)=>n+p.to-p.from, 0))
+pw=rng.map(([x,y])=>m2disp(x)+"\u2013"+m2disp(y%1440)+(y>=1440? " +1d":"")).join(", "); }
+push("warn","Your busy stretch has fewer people on than another part of the day \u2014 "+DAYS[dow]+where,
+"You marked "+DAYS[dow]+" "+peakWords(dow)+" as the busy stretch"+(pw===peakWords(dow)? "" : z? ", and "+siteName(z)+" is open for "+pw+" of it" : ", and you are open for "+pw+" of it")+
+", but at its thinnest only "+peakLow+" "+(peakLow===1?"person is":"people are")+" on the floor"+where+" then, against "+restHigh+
+" at the busiest part of the rest of the day"+(z? " there" : "")+". A busy stretch never adds anybody on its own \u2014 it only decides where spare people go first. "+
+"A shift covering "+pw+where+" under Coverage needs for "+DAYS[dow]+" would put more people on the rush.",
+Object.assign({code:"peakthin", act:"go:demand"}, z? {siteId:z} : {}));
 }
-});
+}); });
 }catch(e){}
  
 dates.forEach(({date,dow})=>{
@@ -16538,12 +16608,17 @@ code:"open", shiftId:s.shiftId, roleId:s.roleId||null, siteId:s.siteId||null, pd
  
 { const bare=[];
 dates.forEach(({date,dow})=>{
-if(!dayOpen(date, dow) || !openAnywhere(date, dow)) return;
+ 
+if(!openAnywhere(date, dow)) return;
 const h=(S.holidays.list||[]).find(x=>x.date===date);
 if(h && holPolled(h)) return;                           
+ 
+const readsWk=z=>{ if(!h) return true; const o=multiSite()? holSiteOverride(h, z) : null; return (o? o.mode : holMode(h))==="normal"; };
+if(h && !sitesList().some(z=>readsWk(z.id) && (!multiSite() || siteOpenOn(date, dow, z.id)))) return;
 if(demandLive(dow, ws).length) return;
-const asks = (S.coverage||[]).some(r=>(r.kind||"min")==="min" && covOn(r, dow))
-|| (S.stations||[]).some(st=>st.critical && !st.off && st.kind!=="admin" && (!(st.days||[]).length || st.days.includes(dow)));
+const openAt=z=>(!multiSite() || !z || siteOpenOn(date, dow, z)) && (!z || readsWk(z));
+const asks = (S.coverage||[]).some(r=>(r.kind||"min")==="min" && covOn(r, dow) && covSites(r).some(openAt))
+|| (S.stations||[]).some(st=>st.critical && !st.off && st.kind!=="admin" && (!(st.days||[]).length || st.days.includes(dow)) && openAt(siteOf(st)));
 if(asks) bare.push({date, dow});
 });
 const say="Posts and hourly minimums don’t bring anyone in, so only guaranteed hours are scheduled.";
@@ -19474,7 +19549,11 @@ else toast(e.name.split(" ")[0]+" added "+clockRange(aMin,bMin)+" — this week 
  
 function rowsFromPosts(ws, days){
 const out={};
+ 
+const many=multiSite(), main=mainSiteId();
+const tag=z=>(many && z && z!==main)? z : null;
 days.forEach(dow=>{
+const openAt=z=>!!siteDayWindow(z, dow);
 const pool=(S.shifts||[]).filter(sh=>!Array.isArray(sh.days) || !sh.days.length || sh.days.includes(dow));
 const shiftFor=(a,b)=>{
 const s=pool.map(sh=>{ const [x,y]=shiftMinutes(sh);
@@ -19484,21 +19563,25 @@ return {sh, ov:Math.max(0, Math.min(y,b)-Math.max(x,a)), span:(x<=a && y>=b), le
 return s[0]? s[0].sh : null;
 };
 const rows=[];
-const add=(sh, roleId, n, from)=>{
+const add=(sh, roleId, n, from, z)=>{
 if(!sh) return;
-const k=sh.id+"|"+(roleId||"");
+const k=sh.id+"|"+(roleId||"")+(z? "|"+z : "");
 const had=rows.find(r=>r.k===k);
 if(had){ had.count=Math.max(had.count, n); had.max=had.count; had.from.push(from); return; }
-rows.push({k, shiftId:sh.id, roleId:roleId||null, count:n, max:n, from:[from]});
+rows.push(Object.assign({k, shiftId:sh.id, roleId:roleId||null, count:n, max:n, from:[from]}, z? {siteId:z} : {}));
 };
 (S.coverage||[]).filter(r=>(r.kind||"min")==="min" && covOn(r, dow)).forEach(r=>{
 let a=t2m(r.start), b=t2m(r.end); if(b<=a) b+=1440;
-add(shiftFor(a,b), r.roleId||null, Math.max(1, r.min||1), r.label||ruleSentence(r));
+const at=!many? [null] : covSites(r)[0]===null? [openAt(main)? main : (sitesList().find(z=>openAt(z.id))||{}).id].filter(Boolean)
+: covSites(r).filter(openAt);
+at.forEach(z=>{ const w=many? siteDayWindow(z, dow) : null;        
+const a2=w? Math.max(a, w[0]) : a, b2=w? Math.min(b, w[1]) : b; if(b2<=a2) return;
+add(shiftFor(a2,b2), r.roleId||null, Math.max(1, r.min||1), r.label||ruleSentence(r), tag(z)); });
 });
 (S.stations||[]).filter(st=>st.critical && !st.off && st.kind!=="admin" && (!(st.days||[]).length || st.days.includes(dow))).forEach(st=>{
-const win=dayWindow(dow); if(!win) return;
+const win=many? siteDayWindow(siteOf(st), dow) : dayWindow(dow); if(!win) return;
 let a=st.from? t2m(st.from) : win[0], b=st.to? t2m(st.to) : win[1]; if(b<=a) b+=1440;
-add(shiftFor(a,b), st.roleId||null, 1, st.name);
+add(shiftFor(a,b), st.roleId||null, 1, st.name, tag(siteOf(st)));
 });
 if(rows.length) out[dow]=rows;
 });
@@ -19516,7 +19599,7 @@ go("demand"); return;
 const body=keys.map(dow=>'<div class="fixgrp"><div class="lab">'+esc(DAYS[dow])+"</div>"+
 plan[dow].map(r=>{ const sh=shiftById(r.shiftId); const [a,b]=shiftMinutes(sh);
 return '<div class="hrow"><span class="rowmain"><span class="rowt">'+esc(sh.label)+" · "+esc(clockRange(a,b))+
-" · "+(r.roleId? esc(roleName(r.roleId)) : "anyone on the roster")+", exactly "+r.count+"</span>"+
+" · "+(r.roleId? esc(roleName(r.roleId)) : "anyone on the roster")+", exactly "+r.count+(multiSite()? " at "+esc(siteName(r.siteId||mainSiteId())) : "")+"</span>"+
 '<span class="rowsub">From '+esc(r.from.join(", "))+"</span></span></div>"; }).join("")+"</div>").join("");
 modal("Coverage needs from posts and minimums", `
     <div class="stack">
@@ -19527,7 +19610,7 @@ modal("Coverage needs from posts and minimums", `
 r=>{ r.querySelector("#rowsgo").onclick=()=>{
 const D=demandOf(ws);
 keys.forEach(dow=>{ D[dow]=D[dow]||[];
-plan[dow].forEach(x=>D[dow].push({shiftId:x.shiftId, roleId:x.roleId, count:x.count, max:x.max})); });
+plan[dow].forEach(x=>D[dow].push(Object.assign({shiftId:x.shiftId, roleId:x.roleId, count:x.count, max:x.max}, x.siteId? {siteId:x.siteId} : {}))); });
 save(); closeModal(true); render();
 toast(keys.length===1? DAYS[keys[0]]+" has coverage needs now — Draft again to use them"
 : "Coverage needs written for "+keys.length+" days — Draft again to use them");
@@ -23414,13 +23497,17 @@ return 8*60 + mealLenFor(null);
  
  
  
-function demandTablesFor(ws){
+ 
+function demandTablesFor(ws, shiftId){
 const T=[S.demand||{}], D=ws? demandOf(ws) : null;
 if(D && D!==S.demand) T.push(D);
+const asks=t=>[0,1,2,3,4,5,6].some(d=>((t&&t[d])||[]).some(r=>r.shiftId===shiftId));
+if(shiftId && !T.some(asks))
+(S.patterns||[]).forEach(p=>{ if(p && p.demand && !T.includes(p.demand) && asks(p.demand)) T.push(p.demand); });
 return T;
 }
 function shiftAskedOn(shiftId, ws){
-const days=[], T=demandTablesFor(ws);
+const days=[], T=demandTablesFor(ws, shiftId);
 for(let d=0; d<7; d++) if(T.some(t=>((t[d])||[]).some(r=>r.shiftId===shiftId))) days.push(d);
 return days;
 }
@@ -23453,20 +23540,25 @@ return null;
  
 function shiftHolidayMisfits(sh, a, b, from){
 const H=(S.holidays&&S.holidays.demand)||[];
-if(!sh || !H.some(r=>r.shiftId===sh.id)) return [];
+ 
+const own=h=>{ const n=holNeedRows(h); return !!(n && n.some(r=>r.shiftId===sh.id)); };
+if(!sh || !(H.some(r=>r.shiftId===sh.id) || ((S.holidays&&S.holidays.list)||[]).some(own))) return [];
 const many=multiSite(), wsd=(S.org&&S.org.weekStart)||0, out=[];
 const hi=w=>(w[1]===1439)? 1440 : w[1];               
 ((S.holidays&&S.holidays.list)||[]).forEach(h=>{
 if(!h || !/^\d{4}-\d{2}-\d{2}$/.test(String(h.date||""))) return;
 if(from && h.date<from) return;
 const dow=parseYmd(h.date).getDay();
-const rows=demandLive(dow, weekStartOf(h.date, wsd), h.date).filter(r=>r.shiftId===sh.id && H.includes(r));
+ 
+const hws=weekStartOf(h.date, wsd), wkRows=(demandOf(hws)[dow])||[];
+const rows=demandLive(dow, hws, h.date).filter(r=>r.shiftId===sh.id && (H.includes(r) || !wkRows.includes(r)));
 [...new Set(rows.map(r=>siteOf(r)))].forEach(z=>{
 const w=dayWindowOn(h.date, dow, many? z : null); if(!w) return;
 if(a>=w[0] && b<=hi(w)) return;                   
 const wn=many? siteDayWindow(z, (dow+1)%7) : dayWindow((dow+1)%7);
 const pieces = b<=1440? [[a, b, w]] : [[a, 1440, w], [0, b-1440, wn]];
-if(pieces.some(([pa, pb, pw])=>!pw || pa<pw[0] || pb>hi(pw))) out.push({h, z:many? z : null, w});
+if(pieces.some(([pa, pb, pw])=>!pw || pa<pw[0] || pb>hi(pw)))
+out.push({h, z:many? z : null, w, own:rows.some(r=>siteOf(r)===z && !H.includes(r))});
 });
 });
 return out;
@@ -23518,7 +23610,7 @@ if(!asked.length && holRow){
 const z=siteOf(sh); if(!siteDayWindow(z, d)) return;
 const w=shiftFitsSite(a, b, d, z); if(w) bad.push({d, z, w});
 } else if(asked.length){
-const at=[...new Set(demandTablesFor(ws||curWeek()).reduce((acc,t)=>acc.concat((t[d])||[]), []).filter(r=>r.shiftId===sh.id).map(r=>siteOf(r)))].filter(z=>!!siteDayWindow(z, d));
+const at=[...new Set(demandTablesFor(ws||curWeek(), sh.id).reduce((acc,t)=>acc.concat((t[d])||[]), []).filter(r=>r.shiftId===sh.id).map(r=>siteOf(r)))].filter(z=>!!siteDayWindow(z, d));
 at.forEach(z=>{ const w=shiftFitsSite(a, b, d, z); if(w) bad.push({d, z, w}); });
 } else {
 const op=openSites(d);
@@ -23556,9 +23648,19 @@ hb.forEach(x=>{ const k=(x.z||"")+"|"+x.w[0]+"-"+x.w[1]; let g=groups.find(g=>g.
 if(!g){ g={k, z:x.z, w:x.w, names:[]}; groups.push(g); }
 const nm=x.h.name || prettyDate(x.h.date); if(!g.names.includes(nm)) g.names.push(nm); });
 const names=ns=>ns.length<=3? ns.join(", ") : ns.slice(0,3).join(", ")+" and "+(ns.length-3)+" more";
+ 
+const whyOf=h=>{ const hr=holHoursOf(h); if(!hr.from || !hr.to) return "nohours";
+return Math.max(0, Math.min(b, t2m(hr.to))-Math.max(a, t2m(hr.from)))>0? "most" : "none"; };
+const ownBy={most:[], none:[], nohours:[]};
+hb.filter(x=>x.own).forEach(x=>{ const nm=x.h.name || prettyDate(x.h.date), k=whyOf(x.h); if(!ownBy[k].includes(nm)) ownBy[k].push(nm); });
+const its=L=>L.length===1? "its" : "their", setOn=L=>" The Coverage needed set on "+names(L)+" is drafted on it, as ";
+const ownSay=(ownBy.most.length? setOn(ownBy.most)+"the shift overlapping "+its(ownBy.most)+" hours most." : "")+
+(ownBy.none.length? setOn(ownBy.none)+"the first shift on the list, since no shift runs during "+its(ownBy.none)+" hours." : "")+
+(ownBy.nohours.length? setOn(ownBy.nohours)+"the first shift on the list, since "+(ownBy.nohours.length===1? "it has" : "they have")+" no hours of "+its(ownBy.nohours)+" own." : "");
 out.push({kind:"window", hol:true, say:"It runs "+m2disp(a)+" to "+m2disp(b>1440? b-1440 : b)+(b>1440? " the next morning":"")+
 ", outside the hours "+groups.map(g=>(g.z? "at "+siteName(g.z)+" " : "")+"on "+names(g.names)+
-" ("+m2disp(g.w[0])+" to "+m2disp(g.w[1]>1440? g.w[1]-1440 : g.w[1])+")").join(", and ")+"."});
+" ("+m2disp(g.w[0])+" to "+m2disp(g.w[1]>1440? g.w[1]-1440 : g.w[1])+")").join(", and ")+"."+
+ownSay});
 } }
  
 const ot=otDailyMin(), dt=dtDailyMin();
@@ -25369,6 +25471,11 @@ function holCoverOwn(){ return (S.holidays&&S.holidays.mode)==="custom"; }
  
 function holNoExtra(){ return !!(S.holidays && S.holidays.noExtra); }
  
+function holNoneSay(date){
+return holNoExtra()? ", so nobody is drafted on "+prettyDate(date)+"."
+: ", so nothing is asked for on "+prettyDate(date)+", and only the passes that add people beyond cover (hours owed, project time, trainees) can put anyone on that day.";
+}
+ 
 function holCapped(h){
 if(!h) return false;
  
@@ -26484,7 +26591,8 @@ a.startMin=t2m(r.querySelector("#as").value);
 a.endMin=t2m(r.querySelector("#ae").value); if(a.endMin<=a.startMin) a.endMin+=1440;
 a.roleId=r.querySelector("#ar").value||null;
  
-{ const pick=r.querySelector("#am").value; if(pick) a.empId=pick; }
+ 
+{ const pick=r.querySelector("#am").value; if(pick && pick!==a.empId){ a.empId=pick; delete a.holAssign; } }
 a.locked=r.querySelector("#al").checked;
 applyBreaks(a);
 r.querySelectorAll(".bm").forEach(inp=>{ const i=+inp.dataset.i; if(a.breaks.meals[i]){ { let v=t2m(inp.value);
@@ -26529,6 +26637,7 @@ r.querySelector("#candbox").innerHTML =
 (free.length? `<div class="lab" style="margin:8px 0 6px">Clear to take it</div>`+candidateHTML(free,"data-swap") : `<div class="banner warn" style="margin-top:8px"><div>Nobody else clears every limit for this shift.</div></div>`)+
 (blocked.length? `<div class="lab" style="margin:12px 0 6px">Blocked, and by what</div>`+candidateHTML(blocked,"data-swap") : "");
 r.querySelectorAll("[data-swap]").forEach(b=>b.onclick=()=>{
+if(a.empId!==b.dataset.swap) delete a.holAssign;
 a.empId=b.dataset.swap;
 const ne=empById(a.empId);
 if(ne && !ne.roleIds.includes(a.roleId)) a.roleId = ne.roleIds[0]||null;
@@ -27327,14 +27436,15 @@ const date=entry.date, dow=entry.dow;
 const h=S.hours[dow] || {closed:true, open:"09:00", close:"17:00"};    
 const list = wk.assignments.filter(a=>a.date===date).sort((a,b)=>a.startMin-b.startMin || (empById(a.empId)||{name:""}).name.localeCompare((empById(b.empId)||{name:""}).name));
 const L=law();
-const win = dayWindow(dow) || [t2m("08:00"),t2m("18:00")];
+ 
+const prof = coverageProfile(date,dow,ws);
+const win = ((multiSite() && prof)? [prof.open, prof.close] : dayWindow(dow)) || [t2m("08:00"),t2m("18:00")];
 let lo = Math.min.apply(null,[win[0]].concat(list.map(a=>a.startMin)))-30;
 let hi = Math.max.apply(null,[win[1]].concat(list.map(a=>a.endMin)))+30;
 lo=Math.floor(lo/60)*60; hi=Math.ceil(hi/60)*60;
 const span = Math.max(60,hi-lo);
 const pct = m => ((m-lo)/span*100);
 const ticks=[]; for(let t=lo;t<=hi;t+=60) ticks.push(t);
-const prof = coverageProfile(date,dow,ws);
 const gapPts = prof? prof.pts.filter(p=>p.gap>0):[];
  
 const postGaps = wk.assignments.length? homeProblems(ws).V.filter(v=>v.code==="stationgap" && v.date===date) : [];
@@ -27397,7 +27507,8 @@ return postWord(mine[0])+" "+(mine.length<=2? mine.map(v=>clockRange(v.from, v.t
 return [Object.assign({_siteHead:true}, z)].concat(rows); })
 : list
 ).map(a=>{
-if(a._siteHead) return `<div class="tlrow tlsite" data-site="${esc(a.id)}"><div class="tlname"><strong>${esc(siteName(a.id))}</strong><small>${list.filter(x=>siteOf(x)===a.id).length} on today</small></div><div class="tltrack" style="background:transparent"></div></div>`;
+if(a._siteHead) return `<div class="tlrow tlsite" data-site="${esc(a.id)}"><div class="tlname"><strong>${esc(siteName(a.id))}</strong><small>${(()=>{ const w=siteOpenOn(date, dow, a.id)? dayWindowOn(date, dow, a.id) : null;
+return w? esc(m2disp(w[0])+"\u2013"+m2disp(w[1])) : "Closed"; })()} · ${list.filter(x=>siteOf(x)===a.id).length} on today</small></div><div class="tltrack" style="background:transparent"></div></div>`;
 const e=empById(a.empId)||{name:"—",roleIds:[]};
 const sh=aShift(a);
 const b=a.breaks||{meals:[],rests:[]};
@@ -27808,10 +27919,11 @@ const handOff=(x,rec)=>{ if(!x) return; now("Hand "+ownerOf(x)+"’s "+DSHORT[x.
  
 const takeOff=(x, rec, why)=>{
 if(!x) return;
-const who=ownerOf(x), lab=(aShift(x)||{}).label||"shift";
+const who=ownerOf(x), lab=(aShift(x)||{}).label||"shift", pub0=!!(S.weeks[ws]||{}).published;
 now("Take "+who+"\u2019s "+DSHORT[x.dow]+" "+m2disp(x.startMin)+"\u2013"+m2disp(x.endMin)+" off",
 why || ("Frees "+fmtHrs(paidMinutes(x))+". Anything it would cause is shown before it happens."),
 ()=>{
+if(!!(S.weeks[ws]||{}).published!==pub0){ toast("That week has changed since, so nothing was taken off"); return; }    
 const cut=()=>{ const w=S.weeks[ws]; if(w) w.assignments=w.assignments.filter(y=>y.id!==x.id); };
 const c=consequencesOf(ws, cut);
 if(!c.added.length){ cut(); save(); render(); toast(who+"\u2019s "+DSHORT[x.dow]+" shift removed"); return; }
@@ -27829,6 +27941,23 @@ modal("Take this shift off?", `
 `<button class="btn" data-close>Leave it as it is</button><button class="btn danger" id="tkyes">Take it off anyway</button>`,
 rr=>{ rr.querySelector("#tkyes").onclick=()=>{ closeModal(true); cut(); save(); render();
 toast("Shift removed \u2014 "+c.added.length+" new thing"+(c.added.length===1?"":"s")+" flagged"); }; });
+}, rec);
+};
+ 
+const takeOffRows=(xs, t, d, rec)=>{
+if(!xs.length) return;
+const who=numsWord([...new Set(xs.map(ownerOf))]), pub0=!!(S.weeks[ws]||{}).published;
+now(t, d, ()=>{
+if(!!(S.weeks[ws]||{}).published!==pub0){ toast("That week has changed since, so nothing was taken off"); return; }
+const ids=new Set(xs.map(x=>x.id)), cut=()=>{ const w=S.weeks[ws]; if(w) w.assignments=w.assignments.filter(y=>!ids.has(y.id)); };
+const c=consequencesOf(ws, cut), done=()=>{ cut(); save(); render(); toast((xs.length===1? "Shift" : xs.length+" shifts")+" removed"+(c.added.length? " \u2014 "+c.added.length+" new thing"+(c.added.length===1? "" : "s")+" flagged" : "")); };
+if(!c.added.length){ done(); return; }
+modal("Take "+(xs.length===1? "this shift" : "these shifts")+" off?", `<div class="stack">
+        <p class="whead">Taking ${esc(who)} off ${esc(prettyDate(xs[0].date))} also causes this:</p>
+        ${c.added.slice(0,5).map(z=>`<div class="look"><span class="sv ${esc(z.sev||"warn")}"></span><div style="flex:1"><strong>${esc(z.title)}</strong>${z.detail? `<div class="mini">${esc(z.detail)}</div>`:""}</div></div>`).join("")}
+        <div class="mini">Nothing has changed yet.</div></div>`,
+`<button class="btn" data-close>Leave it as it is</button><button class="btn danger" id="hdyes">Take ${xs.length===1? "it" : "them"} off anyway</button>`,
+rr=>{ rr.querySelector("#hdyes").onclick=()=>{ closeModal(true); done(); }; });
 }, rec);
 };
 const bringIn=(date,rec)=>{ if(!date) return; now("Bring someone else in on "+DSHORT[parseYmd(date).getDay()], "Pick a name, then one of your shifts. Anything it would break is flagged before you save.", ()=>addToDayModal(date, parseYmd(date).getDay()), rec); };
@@ -28245,7 +28374,19 @@ break;
 }
 case "holcant": {
  
-takeOff(v.aId? byId(v.aId) : null, true);
+ 
+if(!v.posted){ const xs=(v.aIds||[v.aId]).map(byId).filter(Boolean);
+if(xs.length>1) takeOffRows(xs, "Take "+ownerOf(xs[0])+"\u2019s "+DSHORT[xs[0].dow]+" "+numsWord(xs.map(x=>m2disp(x.startMin)+"\u2013"+m2disp(x.endMin)))+" off",
+"Frees "+fmtHrs(xs.reduce((t,x)=>t+paidMinutes(x), 0))+". Anything it would cause is shown before it happens.", true);
+else takeOff(xs[0]||null, true); }
+dayLink();
+break;
+}
+case "holdouble": {
+ 
+const xs=(v.aIds||[]).map(byId).filter(Boolean), who=numsWord([...new Set(xs.map(ownerOf))]);
+if(xs.length && !v.posted) takeOffRows(xs, "Take the draw’s kept shift"+(xs.length===1? "" : "s")+" off "+DSHORT[dow],
+who+(xs.length===1? "’s shift comes" : " come")+" off; the day keeps what it asks for. Anything it would cause is shown before it happens.", true);
 dayLink();
 break;
 }
@@ -28255,7 +28396,7 @@ profile("Set where "+first+" works", "Their locations, and the one they call hom
 break;
 }
 case "holnorows": {
-now("Open Coverage needs", "Add the Holidays rows: which shift, how many, and at which location.", ()=>go("demand"), true);
+now("Open Coverage needs", "Add the Holidays rows: which shift"+(multiSite()? ", how many, and at which location." : " and how many."), ()=>go("demand"), true);
 dayLink();
 break;
 }
@@ -37523,7 +37664,7 @@ let checked=null;
 const box=r.querySelector("#swout"), go=r.querySelector("#swgo");
 const reset=()=>{ checked=null; go.disabled=true; box.innerHTML=""; };
 r.querySelector("#sw1").onchange=reset; r.querySelector("#sw2").onchange=reset;
-const doSwap=(x,y)=>{ const t=x.empId; x.empId=y.empId; y.empId=t;
+const doSwap=(x,y)=>{ const t=x.empId; x.empId=y.empId; y.empId=t; delete x.holAssign; delete y.holAssign;
 const ex=empById(x.empId), ey=empById(y.empId);
 if(x.roleId && ex && !ex.roleIds.includes(x.roleId)) x.roleId=ex.roleIds[0]||null;
 if(y.roleId && ey && !ey.roleIds.includes(y.roleId)) y.roleId=ey.roleIds[0]||null;
@@ -37539,12 +37680,14 @@ box.innerHTML='<div class="banner warn"><div><b>'+esc(e2.name)+"</b> isn't a "+e
 if(a2.roleId && e1 && !e1.roleIds.includes(a2.roleId)){
 box.innerHTML='<div class="banner warn"><div><b>'+esc(e1.name)+"</b> isn't a "+esc(roleName(a2.roleId).toLowerCase())+", which that shift requires. The trade can't work as-is.</div></div>"; return; }
 const before=new Set(validate(ws).map(vKey));
-const keep1={empId:a1.empId,roleId:a1.roleId}, keep2={empId:a2.empId,roleId:a2.roleId};
-doSwap(a1,a2);
-const fresh=validate(ws).filter(v=>!before.has(vKey(v)));
+const keep1={empId:a1.empId,roleId:a1.roleId,h:a1.holAssign}, keep2={empId:a2.empId,roleId:a2.roleId,h:a2.holAssign};
+let fresh=[];
+try{ doSwap(a1,a2); fresh=validate(ws).filter(v=>!before.has(vKey(v))); }
+finally{
  
 a1.empId=keep1.empId; a1.roleId=keep1.roleId; a2.empId=keep2.empId; a2.roleId=keep2.roleId;
-applyBreaks(a1); applyBreaks(a2);
+if(keep1.h) a1.holAssign=keep1.h; if(keep2.h) a2.holAssign=keep2.h;
+applyBreaks(a1); applyBreaks(a2); }
 if(!fresh.length){
 box.innerHTML='<div class="banner info"><div><b>Clean trade.</b> Every rule still holds with '+esc(e1.name.split(" ")[0])+" and "+esc(e2.name.split(" ")[0])+" swapped.</div></div>";
 checked={a1,a2}; go.disabled=false;
@@ -37731,6 +37874,7 @@ const wk=getWeek(); const a=wk.assignments.find(x=>x.id===DRAG); if(!a) return;
 if(wk.assignments.some(x=>x.id!==a.id && x.empId===t.empId && x.date===t.date)){
 toast((empById(t.empId)||{name:"They"}).name+" is already on that day"); return;
 }
+if(a.empId!==t.empId) delete a.holAssign;
 a.empId=t.empId; a.date=t.date; a.dow=t.dow;
 const e=empById(t.empId);
 if(e && !e.roleIds.includes(a.roleId)) a.roleId = e.roleIds[0]||null;
