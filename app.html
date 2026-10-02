@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 6aa62a3a 2026-10-01 19:39 UTC -->
+<!-- build 54fc8368 2026-10-02 12:55 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -938,6 +938,7 @@ ol.a2hs li{padding-left:2px}
 .wopt.on .wt{color:var(--accent-ink)}
 .wopt .wd{font-size:12px;color:var(--muted);line-height:1.45}
 .wopt.on .wd{color:var(--accent-ink);opacity:.85}
+#wmealpaid .wopt{min-height:44px;justify-content:center}
 
 /* ---------- home ---------- */
 .home .hero{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
@@ -3081,7 +3082,7 @@ mealClose:{from:"13:00", to:"14:00", when:"all", days:[0,6]},
 useDaySheet:true, stationRotation:"fair", stationSpan:"day", stationFamilies:true, useCycles:false,
 skillsOn:false, skillsWhen:"always", skillsStrength:"medium",
 fillMode:"demand", topUpLabel:"Project time",
-allowMealWaiver:true, mealWaiverMode:"manual", honorPrefs:true, fairness:true, advanceNoticeDays:14 },
+allowMealWaiver:true, mealWaiverMode:"manual", mealsPaid:false, honorPrefs:true, fairness:true, advanceNoticeDays:14 },
 weeks:{}, currentWeek:null, setupDone:false, horizon:1, ui:{advanced:false, anWeeks:8},
 gone:[],
 bugs:[], callouts:[], audit:[], support:{email:"weeksolved@gmail.com", lastSent:0, remind:true},
@@ -4147,7 +4148,7 @@ modal("A few new questions from the latest update", `
           <option value="extra" ${traineeExtra()?"selected":""}>Yes \u2014 schedule them as an extra</option>
         </select>
         <span class="mini">New: an \u201cIn training\u201d employment type. Set it on their profile and, as an extra, they\u2019re added on top of the people you asked for \u2014 never filling a gap, never alone, and the day sheet names who they\u2019re with. Give them a finish date and the profile moves itself on.</span></div>
-      ${waiverPossible()? `<div class="field"><label>Meal waivers \u2014 skipping the unpaid meal on a short shift</label>
+      ${waiverPossible()? `<div class="field"><label>Meal waivers \u2014 skipping the meal on a short shift</label>
         <select id="u_wv">
           <option value="off" ${waiverMode()==="off"?"selected":""}>Not used \u2014 every meal goes on the schedule</option>
           <option value="manual" ${waiverMode()==="manual"?"selected":""}>Only when I waive one myself</option>
@@ -4324,8 +4325,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "6aa62a3a";       
-const BUILD_AT = "2026-10-01 19:39 UTC";       
+const BUILD_ID = "54fc8368";       
+const BUILD_AT = "2026-10-02 12:55 UTC";       
 const TERMS_VERSION = "3";                  
 const TERMS_HASH = "61c8a68f59ff3c73";
 const TERMS_DATE = "September 12, 2026";
@@ -6907,6 +6908,11 @@ if(typeof s.rules.mealClose.mins!=="number") s.rules.mealClose.mins=0;
 if(typeof s.rules.maxSpanH!=="number") s.rules.maxSpanH=0;
 if(typeof s.rules.mealEarliestMin!=="number") s.rules.mealEarliestMin=0;
 if(typeof s.rules.mealLengthMin!=="number") s.rules.mealLengthMin=0;
+s.rules.mealsPaid = s.rules.mealsPaid===true;    
+ 
+Object.keys(s.weeks||{}).forEach(k=>{ (((s.weeks[k]||{}).assignments)||[]).forEach(a=>{
+const ms=a && a.breaks && a.breaks.meals;
+if(Array.isArray(ms)) ms.forEach(m=>{ if(m && ("paid" in m)) m.paid = m.paid===true; }); }); });
 s.shifts.forEach(x=>{ if(x.gapFrom===undefined) x.gapFrom=""; if(x.gapTo===undefined) x.gapTo="";
  
 if(x.flex!=="none"){ x.flex="none"; x.lenMinH=0; x.lenMaxH=0; }
@@ -7389,6 +7395,7 @@ const fit = (t, len) => (g && t < g.to && t+len > g.from)? g.to : t;
 
 const mealMode = S.rules.breakMode;   
 const restMode = S.rules.restMode;
+const stamp = (typeof opts.paid==="boolean")? opts.paid : stampAt(opts.date);    
 
  
  
@@ -7414,7 +7421,7 @@ let target = fit(round5(W2C(tw)), len);
 target = fit(mealTarget(startMin, endMin, target, deadline, len, opts, earlyClock), len);
 out.meals.push({start:target,end:target+len,len,waivable,waived:waived1,auto:waived1 && ov[1]!==true,deadline,
 earliest:earlyClock, mustEndBy:(M.mustEndByMin!=null? W2C(M.mustEndByMin) : null),
-late:target>deadline,idx:1});
+late:target>deadline,idx:1,paid:stamp});
 
  
 const sec = M.second;
@@ -7438,7 +7445,7 @@ if(ok.length) t2 = mealPlan()==="slotsrandom"
 : ok.reduce((b,x)=>Math.abs(x-t2)<Math.abs(b-t2)?x:b, ok[0]);
 }
 out.meals.push({start:t2,end:t2+len,len,waivable:!!w2,waived:waived2,auto:waived2 && ov[2]!==true,deadline:dl2,
-earliest:null, mustEndBy:null, late:t2>dl2,idx:2});
+earliest:null, mustEndBy:null, late:t2>dl2,idx:2,paid:stamp});
 }
 }
 
@@ -7646,7 +7653,7 @@ function breakRebuildNote(done){
 if(!done) return;
 const d=(done.drafts||[]).length, p=(done.posted||[]).length;
 if(!d && !p) return;
-toast((d? d+" drafted week"+(d===1?"":"s")+" redone to match"
+toast((d? d+" drafted week"+(d===1?"":"s")+(done.stamp? " now count"+(d===1?"s":"")+" meals as "+done.stamp : " redone to match")
 : "No drafted week needed changing")
 + (p? " \u00b7 "+p+" posted week"+(p===1?"":"s")+" left exactly as posted" : ""));
 }
@@ -7714,8 +7721,10 @@ if(!next[nk]) next[nk]={assignments:[], published:false, generatedAt:null};
 mergeInto(next[nk], w);
 });
 S.weeks=next;
+let restamped=0;
+Object.keys(next).forEach(k=>{ restamped+=restampWeek(next[k]); });    
 S.currentWeek=weekStartOf(curWeek(), newStart);
-return {moved:rows.length, unposted:Object.keys(wasPosted).length};
+return {moved:rows.length, unposted:Object.keys(wasPosted).length, restamped:restamped};
 }
  
 const empById = id => S.employees.find(e=>e.id===id) || goneById(id);
@@ -7874,45 +7883,143 @@ g = sh? shiftGap(sh) : null;
 return (g && g.to>g.from && g.from>=a.startMin && g.to<=a.endMin)? g : null;
 }
 function gapMin(a){ const g=aGap(a); return g? g.to-g.from : 0; }
-function paidMinutes(a){
-const gross = (a.endMin-a.startMin) + aClockShift(a) - gapMin(a);
-const unpaid = (a.breaks?a.breaks.meals:[]).filter(m=>!m.waived).reduce((t,m)=>t+m.len,0);
-return gross-unpaid;
+ 
+function mealsPaid(){ return !!(S.rules && S.rules.mealsPaid); }
+ 
+function weekMealStamp(wk){
+let any=false;
+const list=(wk && wk.assignments)||[];
+for(let i=0;i<list.length;i++){
+const ms=(list[i].breaks && list[i].breaks.meals)||[];
+for(let j=0;j<ms.length;j++){ any=true; if(ms[j].paid) return true; }
+}
+return any? false : null;
 }
  
-function paidSpan(aMin, bMin, gap, date, emp, shift){
+let STAMP_WEEK=null;
+const STAMP_WS=new Map();
+function stampAt(date){
+let ws=null;
+if(date){
+const k=date+"|"+S.org.weekStart;
+ws=STAMP_WS.get(k);
+if(ws===undefined){ if(STAMP_WS.size>4000) STAMP_WS.clear(); ws=weekStartOf(date, S.org.weekStart); STAMP_WS.set(k, ws); }
+} else ws=STAMP_WEEK;
+if(ws){
+const wk=(S.weeks||{})[ws];
+if(wk && wk.published){
+ 
+if(typeof wk.mealStamp==="boolean") return wk.mealStamp;
+const st=weekMealStamp(wk); return st!==null? st : false;
+}
+}
+return mealsPaid();
+}
+ 
+function keepMealStamp(wk){
+if(!wk || (wk.published && typeof wk.mealStamp==="boolean")) return;
+const st=weekMealStamp(wk);
+wk.mealStamp = st!==null? st : mealsPaid();
+}
+ 
+function restampWeek(wk){
+const want=mealsPaid(); let n=0;
+((wk && wk.assignments)||[]).forEach(a=>{
+((a.breaks && a.breaks.meals)||[]).forEach(m=>{ if(!!m.paid!==want){ m.paid=want; n++; } });
+});
+ 
+if(wk){ if(wk.published) wk.mealStamp=want; else delete wk.mealStamp; }
+return n;
+}
+ 
+function restampDrafts(){
+const done = {drafts:[], posted:[], stamp:mealsPaid()? "paid" : "unpaid"};
+Object.keys(S.weeks||{}).forEach(ws=>{
+const wk=S.weeks[ws]; if(!wk || !wk.assignments || !wk.assignments.length) return;
+if(wk.published){ done.posted.push(ws); return; }
+done.drafts.push(ws); restampWeek(wk);
+});
+return done;
+}
+ 
+function mealMinPaid(meals){
+return (meals||[]).reduce((t,m)=>t+((!m.waived && m.paid)? m.len : 0), 0);
+}
+ 
+function mealMinTaken(meals){
+return (meals||[]).reduce((t,m)=>t+(m.waived? 0 : m.len), 0);
+}
+ 
+function mealMinOff(meals){ return mealMinTaken(meals) - mealMinPaid(meals); }
+function workedMinutes(a){
+const gross = (a.endMin-a.startMin) + aClockShift(a) - gapMin(a);
+const taken = (a.breaks?a.breaks.meals:[]).filter(m=>!m.waived).reduce((t,m)=>t+m.len,0);
+return gross-taken;
+}
+function paidMinutes(a){
+return workedMinutes(a) + mealMinPaid(a.breaks? a.breaks.meals : null);
+}
+ 
+function stPut(st, a){
+st.min += workedMinutes(a);
+st.pm = (st.pm||0) + mealMinPaid(a.breaks? a.breaks.meals : null);
+}
+function stPaid(st){ return st? (st.min||0)+(st.pm||0) : 0; }
+ 
+function workedWord(workedMin, paidMin){ return paidMin!==workedMin? " worked" : ""; }
+ 
+function spanOpts(aMin, bMin, gap, date, emp, shift){
 const o={};
 if(gap && typeof gap==="object" && gap.to>gap.from) o.gap=gap;
 else { const gm=+gap||0;
 if(gm>0 && gm < (bMin-aMin)){ const from=aMin+Math.floor(((bMin-aMin)-gm)/2); o.gap={from, to:from+gm}; }
-else if(gm>0) return 0; }           
+else if(gm>0) return null; }        
 if(date) o.date=date;
 if(emp)  o.emp=emp;
 if(shift) o.shift=shift;               
-return paidEstimate(aMin, bMin, o);
+return o;
+}
+function workedSpan(aMin, bMin, gap, date, emp, shift){
+const o=spanOpts(aMin, bMin, gap, date, emp, shift);
+return o? workedEstimate(aMin, bMin, o) : 0;
+}
+function paidSpan(aMin, bMin, gap, date, emp, shift){
+const o=spanOpts(aMin, bMin, gap, date, emp, shift);
+return o? paidEstimate(aMin, bMin, o) : 0;
 }
  
-function paidEstimate(aMin,bMin,opts){
+function estParts(aMin,bMin,opts){
 opts=opts||{};
 const b = computeBreaks(aMin,bMin,opts);
 const gapM = opts.gap? (opts.gap.to-opts.gap.from) : 0;
  
 const dst = opts.date? clockShiftMin(opts.date, aMin, bMin) : 0;
-return (bMin-aMin) + dst - gapM - b.meals.filter(m=>!m.waived).reduce((t,m)=>t+m.len,0);
+return {worked:(bMin-aMin) + dst - gapM - b.meals.filter(m=>!m.waived).reduce((t,m)=>t+m.len,0),
+paidMeal:mealMinPaid(b.meals)};
 }
  
-function slotPaid(sh, date, emp){
-if(!sh) return 0;
-const [a,b]=shiftMinutes(sh);
+function workedEstimate(aMin,bMin,opts){ return estParts(aMin,bMin,opts).worked; }
+function paidEstimate(aMin,bMin,opts){ const x=estParts(aMin,bMin,opts); return x.worked+x.paidMeal; }
+ 
+function slotOpts(sh, date, emp){
 const o={shift:sh};
 const g=shiftGap(sh); if(g) o.gap=g;
 if(date) o.date=date;
 if(emp) o.emp=emp;
-return paidEstimate(a,b,o);
+return o;
+}
+function slotWorked(sh, date, emp){
+if(!sh) return 0;
+const [a,b]=shiftMinutes(sh);
+return workedEstimate(a,b,slotOpts(sh, date, emp));
+}
+function slotPaid(sh, date, emp){
+if(!sh) return 0;
+const [a,b]=shiftMinutes(sh);
+return paidEstimate(a,b,slotOpts(sh, date, emp));
 }
  
-function paidFor(aMin, bMin, date, emp, src){
-if(src && src.empId!==undefined && src.startMin===aMin && src.endMin===bMin && src.breaks) return paidMinutes(src);
+function forOpts(aMin, bMin, date, emp, src){
 const o={date, emp};
 if(src){
 const isA = src.empId!==undefined;
@@ -7920,10 +8027,22 @@ o.shift = isA? shiftById(src.shiftId) : src;
 const g = isA? aGap(src) : shiftGap(src);
 if(g && g.from>aMin && g.to<bMin) o.gap=g;
 }
-return paidEstimate(aMin, bMin, o);
+return o;
+}
+function workedFor(aMin, bMin, date, emp, src){
+if(src && src.empId!==undefined && src.startMin===aMin && src.endMin===bMin && src.breaks) return workedMinutes(src);
+return workedEstimate(aMin, bMin, forOpts(aMin, bMin, date, emp, src));
+}
+function paidFor(aMin, bMin, date, emp, src){
+if(src && src.empId!==undefined && src.startMin===aMin && src.endMin===bMin && src.breaks) return paidMinutes(src);
+return paidEstimate(aMin, bMin, forOpts(aMin, bMin, date, emp, src));
 }
 function empWeekMinutes(empId, ws){
 return peekWeek(ws).assignments.filter(a=>a.empId===empId).reduce((t,a)=>t+paidMinutes(a),0);
+}
+ 
+function empWeekWorked(empId, ws){
+return peekWeek(ws).assignments.filter(a=>a.empId===empId).reduce((t,a)=>t+workedMinutes(a),0);
 }
 function empDays(empId, ws){
 return new Set(peekWeek(ws).assignments.filter(a=>a.empId===empId).map(a=>a.date)).size;
@@ -8331,7 +8450,7 @@ if(multiSite() && !drawSite) return {siteGap:true};
 if(multiSite() && !siteOpenOn(d.date, d.dow, drawSite)) return {why:siteName(drawSite)+" is closed that day"};
 const [aMin, bMin]=holDrawSpan(h, drawSite, d.dow);      
  
-const sofar=assignments.filter(x=>x.empId===e.id).reduce((t,x)=>t+paidMinutes(x),0);
+const sofar=assignments.filter(x=>x.empId===e.id).reduce((t,x)=>t+workedMinutes(x),0);
 const match=S.shifts.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===aMin&&y===bMin; });
 if(minorsOn()){ const mb=minorBlock(e, d.date, d.dow, aMin, bMin, sofar, ws, match||null);
 if(mb) return {why:"the under-18 limits don\u2019t allow it ("+mb+")"}; }
@@ -8543,7 +8662,7 @@ if(!r.hard) continue;
 if(r.kind==="off") return "asked for "+prettyDate(date)+" off";
 if(r.kind==="late" && aMin < t2m(r.time)) return "can't start before "+m2disp(t2m(r.time))+" that day";
 if(r.kind==="early" && bMin > t2m(r.time)) return "has to be gone by "+m2disp(t2m(r.time))+" that day";
-if(r.kind==="maxh" && r.num && (weekMins||0)+paidFor(aMin,bMin,date,e,src) > r.num*60+1)
+if(r.kind==="maxh" && r.num && (weekMins||0)+workedFor(aMin,bMin,date,e,src) > r.num*60+1)
 return "asked to stay under "+r.num+"h";
 }
 return null;
@@ -8593,14 +8712,15 @@ case "early": { const bad=hit.filter(a=>a.endMin > t2m(r.time));
 return bad.length? {ok:false, say:"Runs to "+m2disp(bad[0].endMin)+" on "+DSHORT[bad[0].dow]} : {ok:true, say:"Out in time every day"}; }
 case "maxh":  {
  
-const byWeek={};
-hit.forEach(a=>{ const k=weekStartOf(a.date, S.org.weekStart); byWeek[k]=(byWeek[k]||0)+paidMinutes(a); });
+const byWeek={}, byWeekPaid={};    
+hit.forEach(a=>{ const k=weekStartOf(a.date, S.org.weekStart); byWeek[k]=(byWeek[k]||0)+workedMinutes(a); byWeekPaid[k]=(byWeekPaid[k]||0)+paidMinutes(a); });
 const over=Object.keys(byWeek).filter(k=>byWeek[k] > r.num*60+1);
 if(!over.length){
 const worst=Math.max.apply(null,[0].concat(Object.values(byWeek)));
-return {ok:true, say:fmtHrs(worst)+" of "+r.num+"h in their busiest week"};
+const worstWk=Object.keys(byWeek).find(k=>byWeek[k]===worst);
+return {ok:true, say:fmtHrs(worst)+(worstWk? workedWord(worst, byWeekPaid[worstWk]) : "")+" of "+r.num+"h in their busiest week"};
 }
-return {ok:false, say:fmtHrs(byWeek[over[0]])+" in the week of "+prettyDate(over[0])+", over the "+r.num+"h they asked for"}; }
+return {ok:false, say:fmtHrs(byWeek[over[0]])+workedWord(byWeek[over[0]], byWeekPaid[over[0]])+" in the week of "+prettyDate(over[0])+", over the "+r.num+"h they asked for"}; }
 default: return {ok:null, say:"Noted"};
 }
 }
@@ -8653,7 +8773,7 @@ const spent=()=> work>BUDGET;
 
  
 const deficit=(e, st)=>{ const goal=owedFloorMin(e, ws);
-return goal? Math.round(goal - ((st&&st.min)||0)) : 0; };
+return goal? Math.round(goal - stPaid(st)) : 0; };
 
 const place=(e, shiftId, roleId, date, dow, list, ignore, siteId)=>{
 work++;
@@ -8681,7 +8801,7 @@ const mine=assignments.filter(a=>a.empId===e.id && !a.locked && !a.holAssign);
 if(!mine.length) continue;
  
 const near=mine.filter(a=>a.date===u.date || a.date===addDays(u.date,-1) || a.date===addDays(u.date,1));
-const longest=mine.slice().sort((a,b)=>paidMinutes(b)-paidMinutes(a))[0];
+const longest=mine.slice().sort((a,b)=>workedMinutes(b)-workedMinutes(a))[0];
 const tryA=[]; near.forEach(a=>{ if(tryA.indexOf(a)<0) tryA.push(a); });
 if(longest && tryA.indexOf(longest)<0) tryA.push(longest);
 
@@ -8802,6 +8922,7 @@ function generateScheduleInner(ws, opts){
 opts = opts||{};
 ws = ws || curWeek();
 const wk = getWeek(ws);
+if(!wk.published || postPending(wk)) restampWeek(wk);    
 SHUFFLE = wk.seed||0;
  
  
@@ -8814,7 +8935,7 @@ const state = {};
 S.employees.forEach(e=>{ state[e.id] = {min:0, days:new Set(), byDate:{}, lastEnd:{}, weekend:0}; });
 assignments.forEach(a=>{
 const st=state[a.empId]; if(!st) return;
-st.min += paidMinutes(a); st.days.add(a.date); (st.byDate[a.date]=st.byDate[a.date]||[]).push(a);
+stPut(st, a); st.days.add(a.date); (st.byDate[a.date]=st.byDate[a.date]||[]).push(a);
 if(a.dow===0||a.dow===6) st.weekend++;
 });
  
@@ -8841,7 +8962,7 @@ const a=rowOf(e, t);
 assignments.push(a);
  
 { const st=state[e.id];
-if(st){ st.min += paidMinutes(a); st.days.add(d.date);
+if(st){ stPut(st, a); st.days.add(d.date);
 (st.byDate[d.date]=st.byDate[d.date]||[]).push(a);
 st.lastEnd[d.date]=t.bMin; if(d.dow===0||d.dow===6) st.weekend++; } }
 };
@@ -8907,7 +9028,7 @@ if(multiSite() && slot.siteId && slot.siteId!==mainSiteId()) a.siteId=slot.siteI
 applyBreaks(a);
 assignments.push(a);
 const st=state[e.id];
-st.min += paidMinutes(a); st.days.add(date); (st.byDate[date]=st.byDate[date]||[]).push(a);
+stPut(st, a); st.days.add(date); (st.byDate[date]=st.byDate[date]||[]).push(a);
 st.lastEnd[date]=bMin; if(dow===0||dow===6) st.weekend++;
 return a;
 };
@@ -9220,14 +9341,16 @@ const lim=effLimits(e, date);
 const pin = f.end? a.startMin : a.endMin;
 const others=day.filter(x=>x!==a);
 const mine=wk.assignments.filter(x=>x.empId===a.empId);
-const weekElse=mine.filter(x=>x!==a).reduce((t,x)=>t+paidMinutes(x),0);
+ 
+const weekElse=mine.filter(x=>x!==a).reduce((t,x)=>t+workedMinutes(x),0);
+const weekElseP=mine.filter(x=>x!==a).reduce((t,x)=>t+paidMinutes(x),0);
 const owed=target(e);
  
 const flexCount=mine.filter(isFlex).length || 1;
 const fixedMin=mine.filter(x=>!isFlex(x)).reduce((t,x)=>t+paidMinutes(x),0);
 const share = !owed ? 0
 : sweep===0 ? Math.max(0, owed-fixedMin)/flexCount
-: Math.max(0, owed-weekElse);
+: Math.max(0, owed-weekElseP);
 const gapM = gapMin(a);
  
 const g0 = aGap(a);
@@ -9250,12 +9373,13 @@ const e2 = f.end? pin+total : pin;
 if(s2<0) return;
  
 if(!availOk(e, dow, s2, e2)) return;
-if(lim.maxShiftH && (paidEstimate(s2,e2)-gapM) > lim.maxShiftH*60) return;
+const est = estParts(s2,e2), work = est.worked - gapM;
+if(lim.maxShiftH && work > lim.maxShiftH*60) return;
 if(lim.maxSpanH && (e2-s2) > lim.maxSpanH*60) return;
 if(minorsOn() && minorBlock(e, date, dow, s2, e2, weekElse, ws)) return;
-const paid = paidEstimate(s2,e2) - gapM;
-if(hasCap(lim) && weekElse + paid > (lim.maxH||0)*60 + 1) return;
-if(lim.exactH && weekElse + paid > target(e) + 5) return;    
+const paid = work + est.paidMeal;
+if(hasCap(lim) && weekElse + work > (lim.maxH||0)*60 + 1) return;
+if(lim.exactH && weekElseP + paid > target(e) + 5) return;    
  
 if(prevA.length){
 const pe=Math.max.apply(null, prevA.map(x=>x.endMin));
@@ -9551,7 +9675,7 @@ const L=effLimits(e, ws);
 return (L.exactH || L.minH) > 0;
 });
 const exhausted=new Set();
-const deficit=e=>owedFloorMin(e, ws) - state[e.id].min;
+const deficit=e=>owedFloorMin(e, ws) - stPaid(state[e.id]);
 const mineTag=a=> guaranteeMode? !!a.guarantee : !!a.topUp;
 const soFar=e=>assignments.filter(a=>a.empId===e.id && mineTag(a)).length;
 let guard=0;
@@ -9692,7 +9816,7 @@ return hardOk(e, {shiftId:x.shiftId, roleId:rs.roleId, sh:osh, siteId:rs.siteId,
 for(const sh of dayShifts){
 if((owes || phase==="required") && !mustFirst.has(sh.id)) continue;
 const [aMin,bMin]=shiftMinutes(sh);
-if(floorMin && paidSpan(aMin,bMin,shiftGap(sh)||0,d.date,e,sh) < floorMin) continue;    
+if(floorMin && workedSpan(aMin,bMin,shiftGap(sh)||0,d.date,e,sh) < floorMin) continue;    
  
 if(guaranteeMode && !relaxed){ const fl=fitLen(sh); const over=fl-want;
 if(over > 60 && over > fl/2) continue; }
@@ -9716,7 +9840,7 @@ if(guaranteeMode && gDays && !gDays.includes(d.dow)) a.offDays=true;
 applyBreaks(a);
 assignments.push(a);
 const st=state[e.id];
-st.min += paidMinutes(a); st.days.add(d.date);
+stPut(st, a); st.days.add(d.date);
 (st.byDate[d.date]=st.byDate[d.date]||[]).push(a);
 if(d.dow===0||d.dow===6) st.weekend++;
 placed=true; break outer;
@@ -9733,14 +9857,14 @@ if(only) return [];
  
 const short = pool.filter(e=>deficit(e) > 30).map(e=>({
 empId:e.id, deficit:deficit(e), owed:(effLimits(e,ws).exactH||effLimits(e,ws).minH),
-have:state[e.id].min, why:whyNotPlaced(e, ws, state, assignments, dates)
+have:stPaid(state[e.id]), why:whyNotPlaced(e, ws, state, assignments, dates)
 }));
  
 if(!guaranteeMode) S.employees.filter(e=>e.active && !e.onCall && projectOk(e)==="no").forEach(e=>{
 const L=effLimits(e, ws);
-if(owedFloorMin(e, ws) - state[e.id].min > 30)
-short.push({empId:e.id, deficit:owedFloorMin(e, ws)-state[e.id].min,
-owed:(L.exactH||L.minH), have:state[e.id].min, held:true,
+if(owedFloorMin(e, ws) - stPaid(state[e.id]) > 30)
+short.push({empId:e.id, deficit:owedFloorMin(e, ws)-stPaid(state[e.id]),
+owed:(L.exactH||L.minH), have:stPaid(state[e.id]), held:true,
 why:"they're set to stay on the floor rather than take "+projectLabel().toLowerCase()});
 });
 return short;
@@ -9775,7 +9899,7 @@ const st=stateFrom(ws, list), out={};
 const short=(S.employees||[]).map(e=>{
 if(!e.active || e.onCall) return null;
 const L=effLimits(e, ws); if(!((L.exactH || L.minH) > 0)) return null;
-const d=owedFloorMin(e, ws)-((st[e.id]||{min:0}).min);
+const d=owedFloorMin(e, ws)-stPaid(st[e.id]);
 return d>30? {e, d} : null; }).filter(Boolean).sort((p,q)=>q.d-p.d);
 if(short.length){
 const A=list.slice(), SA=stateFrom(ws, A), miss=new Map();
@@ -9789,16 +9913,16 @@ if(B.length>list.length) return; }
 const add=[], owed=owedFloorMin(e, ws);
  
 const own={list:list.slice(), st:Object.assign({}, st, {[e.id]:SA[e.id]})};
-for(let g=0; g<7 && owed-(SA[e.id]||{min:0}).min>30; g++){
+for(let g=0; g<7 && owed-stPaid(SA[e.id])>30; g++){
 const open=days.some(d=>missOn(d).some(w=>!empAtSite(e, w.siteId||mainSiteId())));    
-const want=owed-(SA[e.id]||{min:0}).min;
+const want=owed-stPaid(SA[e.id]);
 const s=(open && topUpRoomAt(e, ws, days, A, SA, true, asked, want, own)) || topUpRoomAt(e, ws, days, A, SA, true, null, want, own);
 if(!s) break;
 const [aMin,bMin]=shiftMinutes(s.sh);
 const a={id:uid("a"), empId:e.id, date:s.d.date, dow:s.d.dow, shiftId:s.sh.id, startMin:aMin, endMin:bMin, gap:shiftGap(s.sh), roleId:s.rid, locked:false};
 if(s.z!==mainSiteId()) a.siteId=s.z;
 applyBreaks(a); A.push(a); own.list.push(a); add.push(a); miss.delete(a.date);
-const t=SA[e.id]; t.min+=paidMinutes(a); t.days.add(a.date); (t.byDate[a.date]=t.byDate[a.date]||[]).push(a); if(a.dow===0||a.dow===6) t.weekend++;
+const t=SA[e.id]; stPut(t, a); t.days.add(a.date); (t.byDate[a.date]=t.byDate[a.date]||[]).push(a); if(a.dow===0||a.dow===6) t.weekend++;
 }
 if(add.length) out[e.id]=add.sort((p,q)=>p.date.localeCompare(q.date) || p.startMin-q.startMin);
 });
@@ -9806,12 +9930,12 @@ if(add.length) out[e.id]=add.sort((p,q)=>p.date.localeCompare(q.date) || p.start
  
 Object.keys(out).forEach(id=>{
 const e=empById(id), C=list.slice(), t0=st[id]||{min:0, days:new Set(), byDate:{}, lastEnd:{}, weekend:0};
-const mine={min:t0.min, days:new Set(t0.days), byDate:Object.assign({}, t0.byDate), lastEnd:Object.assign({}, t0.lastEnd), weekend:t0.weekend};
+const mine={min:t0.min, pm:t0.pm||0, days:new Set(t0.days), byDate:Object.assign({}, t0.byDate), lastEnd:Object.assign({}, t0.lastEnd), weekend:t0.weekend};
 const S1=Object.assign({}, st, {[id]:mine});
 const keep=out[id].filter(a=>{ const sh=shiftById(a.shiftId);
 if(!sh || !shiftRoom(a.shiftId, a.roleId, a.date, a.dow, ws, C, true, siteOf(a)) ||
 !hardOk(e, {shiftId:a.shiftId, roleId:a.roleId, sh, siteId:siteOf(a), _allowSite:true}, a.date, a.dow, S1, C)) return false;
-C.push(a); mine.min+=paidMinutes(a); mine.days.add(a.date); mine.byDate[a.date]=(mine.byDate[a.date]||[]).concat([a]);
+C.push(a); stPut(mine, a); mine.days.add(a.date); mine.byDate[a.date]=(mine.byDate[a.date]||[]).concat([a]);
 if(a.dow===0||a.dow===6) mine.weekend++;
 return true; });
 if(keep.length) out[id]=keep; else delete out[id];
@@ -9892,9 +10016,9 @@ if(!availOk(e,d.dow,aMin,bMin)){ note("that shift falls outside the hours they c
 const mb=minorsOn()? minorBlock(e, d.date, d.dow, aMin, bMin, state[e.id].min, null, sh) : null;
 if(mb){ note("they\u2019re under 18 and it\u2019s "+mb); return; }
 }
-if(L.maxShiftH && paidSpan(aMin, bMin, gapM, d.date, e, sh) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
+if(L.maxShiftH && workedSpan(aMin, bMin, gapM, d.date, e, sh) > L.maxShiftH*60){ note("every remaining shift is longer than they may work"); return; }
 if(L.maxSpanH && (bMin-aMin) > L.maxSpanH*60){ note("that shift keeps them at work longer than their span allows"); return; }
-if(hasCap(L) && state[e.id].min + slotPaid(sh, d.date, e) > (L.maxH||0)*60+1){
+if(hasCap(L) && state[e.id].min + slotWorked(sh, d.date, e) > (L.maxH||0)*60+1){
 note("another shift would take them past their "+(L.maxH||0)+"h cap"); return; }
 if(reqBlocks(e,d.date,aMin,bMin,state[e.id].min,sh)){ note("a request of theirs rules those days out"); return; }
 if(L.noSplit && shiftGap(sh)){ note(unionLabel()+" does not allow a day broken in two, and that shift is"); return; }
@@ -10350,12 +10474,12 @@ const band=minorBand(e, date);
 const R=minorRule(band, date, exempt);
 if(!R) return null;                           
 const sd=schoolDayOn(date), sw=schoolWeekOn(ws||weekStartOf(date, S.org.weekStart));
-const hrs=paidFor(aMin,bMin,date,e,src)/60;       
+const hrs=workedFor(aMin,bMin,date,e,src)/60;       
 const dayCap = sd? R.sd : R.nd;
 if(dayCap && hrs > dayCap+0.001)
 return "over the "+dayCap+"-hour limit for a "+(sd?"school day":"non-school day")+" at "+a;
 const weekCap = sw? R.sw : R.nw;
-if(weekCap && (minsSoFar+paidFor(aMin,bMin,date,e,src))/60 > weekCap+0.001)
+if(weekCap && (minsSoFar+workedFor(aMin,bMin,date,e,src))/60 > weekCap+0.001)
 return "past the "+weekCap+"-hour limit for a "+(sw?"school week":"non-school week")+" at "+a;
  
 const from=R.from, to=(R.summerTo && !sd)? R.summerTo : R.to;
@@ -10493,7 +10617,7 @@ const state={};
 (list||[]).forEach(a=>{
 if(skip && skip.has(a.id)) return;
 const st=state[a.empId]; if(!st) return;
-st.min += paidMinutes(a); st.days.add(a.date); (st.byDate[a.date]=st.byDate[a.date]||[]).push(a);
+stPut(st, a); st.days.add(a.date); (st.byDate[a.date]=st.byDate[a.date]||[]).push(a);
 if(a.dow===0||a.dow===6) st.weekend++;
 });
  
@@ -10573,17 +10697,18 @@ if(ab && say("apart","they are kept apart from "+((empById(ab.other)||{name:"som
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)
 && say("maxD","that is more days than their limit of "+lim.maxD,
 st.days.size+1-(lim.maxD||7), st.days.size+1)) return out;
-{ const capMin=placeCapMin(lim, slot._allowExtra), would=st.min + slotPaid(slot.sh, date, e);
+{ const capMin=placeCapMin(lim, slot._allowExtra), would=st.min + slotWorked(slot.sh, date, e);
 if(capped(lim, slot._allowExtra, capMin) && would > capMin + 1
 && say("cap","it puts them over their "+lim.maxH+"h cap", would-capMin, would)) return out; }
 if(lim.exactH){
 const credit = holCreditLive(e, date, st);
-const room = Math.max(0, lim.exactH*60 - credit), would = st.min + slotPaid(slot.sh, date, e);
-if(credit && would > room + 1
-&& say("exact","it puts them past their "+lim.exactH+"h contract \u2014 "+fmtHrs(credit)+" of it is holiday pay this week",
+const room = Math.max(0, lim.exactH*60 - credit), would = stPaid(st) + slotPaid(slot.sh, date, e);
+const paidMeals = would > st.min + slotWorked(slot.sh, date, e);    
+if((credit || (paidMeals && !slot._allowExtra)) && would > room + 1
+&& say("exact","it puts them past their "+lim.exactH+"h contract"+(credit? " — "+fmtHrs(credit)+" of it is holiday pay this week" : paidMeals? " — a paid meal counts toward it" : ""),
 would-room, would)) return out;
 }
-{ const worked=paidSpan(aMin,bMin,gapM,date,e,slot.sh);
+{ const worked=workedSpan(aMin,bMin,gapM,date,e,slot.sh);
 if(lim.maxShiftH && worked > lim.maxShiftH*60
 && say("shiftlen","the shift is longer than their "+lim.maxShiftH+"h limit",
 worked-lim.maxShiftH*60, worked)) return out; }
@@ -10641,16 +10766,18 @@ const st = state[e.id], lim = effLimits(e, date);
 if(st.byDate[date] && st.byDate[date].length) return false;            
 if(apartOn() && apartBlockWith(e.id, aMin, bMin, id=>(state[id]||{byDate:{}}).byDate[date]||[], slot.siteId)) return false;   
 if(st.days.size >= (lim.maxD||7) && !st.days.has(date)) return false;  
-const add = slotPaid(slot.sh, date, e);
+const add = slotWorked(slot.sh, date, e);
  
 { const capMin=placeCapMin(lim, slot._allowExtra);
 if(capped(lim, slot._allowExtra, capMin) && (st.min + add) > capMin + 1) return false; }   
  
 if(lim.exactH){
 const credit = holCreditLive(e, date, st);
-if(credit && (st.min + add) > Math.max(0, lim.exactH*60 - credit) + 1) return false;
+ 
+const paidWould = stPaid(st) + slotPaid(slot.sh, date, e);
+if((credit || (paidWould > st.min + add && !slot._allowExtra)) && paidWould > Math.max(0, lim.exactH*60 - credit) + 1) return false;
 }
-if(lim.maxShiftH && paidSpan(aMin, bMin, gapM, date, e, slot.sh) > lim.maxShiftH*60) return false;
+if(lim.maxShiftH && workedSpan(aMin, bMin, gapM, date, e, slot.sh) > lim.maxShiftH*60) return false;
 if(lim.maxSpanH && (bMin-aMin) + clockShiftMin(date, aMin, bMin) > lim.maxSpanH*60) return false;
 if(lim.noSplit && gapM>0) return false;                               
 if(lim.maxStretchH && estStretch(aMin,bMin,gapM) > lim.maxStretchH*60) return false;
@@ -10713,10 +10840,12 @@ if(free.length){
 const [aM,bM]=shiftMinutes(slot.sh);
 const why=free.map(e=>reqBlocks(e,date,aM,bM,state[e.id].min,slot.sh)).filter(Boolean);
 if(why.length===free.length) return "everyone who could take it "+(why.length===1? why[0] : "asked not to be scheduled then");
-const tooLong=free.filter(e=>{ const L=effLimits(e,date); return L.maxShiftH && paidSpan(aM,bM,shiftGap(slot.sh)||0,date,e,slot.sh) > L.maxShiftH*60; });
+const tooLong=free.filter(e=>{ const L=effLimits(e,date); return L.maxShiftH && workedSpan(aM,bM,shiftGap(slot.sh)||0,date,e,slot.sh) > L.maxShiftH*60; });
 if(tooLong.length===free.length){
 const L=effLimits(tooLong[0],date);
-return "this shift pays "+fmtHrs(paidSpan(aM,bM,shiftGap(slot.sh)||0,date,tooLong[0],slot.sh))+", longer than the "+L.maxShiftH+"h cap on "+(L.groups[0]||"their group");
+ 
+const wkd=workedSpan(aM,bM,shiftGap(slot.sh)||0,date,tooLong[0],slot.sh), pd=paidSpan(aM,bM,shiftGap(slot.sh)||0,date,tooLong[0],slot.sh);
+return (wkd===pd? "this shift pays "+fmtHrs(wkd) : "this shift is "+fmtHrs(wkd)+" of work")+", longer than the "+L.maxShiftH+"h cap on "+(L.groups[0]||"their group");
 }
 }
 if(slot._deferred) return slot._deferred;
@@ -10732,7 +10861,7 @@ return "nobody who holds the role can take it";
 
  
 function contractSlack(e, ws, st){
-const owed = Math.max(0, owedFloorMin(e, ws) - ((st&&st.min)||0));
+const owed = Math.max(0, owedFloorMin(e, ws) - stPaid(st));
 if(owed<=0) return {owed:0, reach:0, tight:0};
 const days = (st&&st.days)? st.days : new Set();
 const lim = effLimits(e, ws);
@@ -10763,7 +10892,7 @@ if(onTimeOffShift(e.id,date,b) || holCantOn(e.id,date,b)) return;
  
 const pay=paidSpan(a,b,gm,date,e,sh);
 if(pay<=0) return;
-if(lim.maxShiftH && pay > lim.maxShiftH*60) return;
+if(lim.maxShiftH && workedSpan(a,b,gm,date,e,sh) > lim.maxShiftH*60) return;
  
 if((S.requests||[]).length && reqBlocks(e, date, a, b, (st&&st.min)||0, sh)) return;
 if(pay>best) best=pay;
@@ -10840,7 +10969,7 @@ if(onTimeOffShift(e.id,date,b) || holCantOn(e.id,date,b)) return;
 const g=shiftGap(sh), gm=g? g.to-g.from : 0;
 const pay=paidSpan(a,b,gm,date,e,sh);
 if(pay<=0) return;
-if(lim.maxShiftH && pay > lim.maxShiftH*60) return;
+if(lim.maxShiftH && workedSpan(a,b,gm,date,e,sh) > lim.maxShiftH*60) return;
 opts.push({a, b, pay});
 });
 if(opts.length) days.push({date, opts});
@@ -10867,7 +10996,7 @@ if(!lim || !lim.exactH || !(goal>0) || !st) return false;
 if(exactFlexWeek(e, ws)) return false;
 const maxD = lim.maxD||7;
 const used = st.days? st.days.size : 0;
-const before = goal - (st.min||0);
+const before = goal - stPaid(st);
 if(before<=5) return false;                                
 if(!exactReachable(e, ws, st, before, maxD-used, null)) return false;
 const newDay = !(st.days && st.days.has(date));
@@ -10887,22 +11016,22 @@ if(e.avoidShiftIds.includes(slot.shiftId)) sc -= 30;
 if((e.prefDaysOff||[]).includes(dow)) sc -= 26;
 }
 const lim = effLimits(e, date);
-const after = st.min + slotPaid(slot.sh, date, e);
+const had = stPaid(st), after = had + slotPaid(slot.sh, date, e);    
  
 const slack = contractSlack(e, weekStartOf(date, S.org.weekStart), st);
 const urgent = slack.owed>0? Math.pow(slack.tight, 4) : 0;
 if(lim.exactH){
  
 const goal = target[e.id] || lim.exactH*60;
-const before = Math.abs(goal - st.min), now = Math.abs(goal - after);
+const before = Math.abs(goal - had), now = Math.abs(goal - after);
 sc += (before - now)/60 * 55;                  
 if(after > goal + 1) sc -= 200;                
 sc += SLACK_WEIGHT * urgent;                   
  
-if(exactTrap(e, weekStartOf(date, S.org.weekStart), st, date, aMin, bMin, after - st.min, goal, lim)) sc -= EXACT_TRAP;
+if(exactTrap(e, weekStartOf(date, S.org.weekStart), st, date, aMin, bMin, after - had, goal, lim)) sc -= EXACT_TRAP;
 } else {
 const t = target[e.id]||0;
-if(lim.minH && st.min < lim.minH*60) sc += 40 * (1 - st.min/Math.max(1,lim.minH*60));
+if(lim.minH && had < lim.minH*60) sc += 40 * (1 - had/Math.max(1,lim.minH*60));
 if(t) sc += 22 * (1 - clamp(after/Math.max(1,t),0,2));
  
 sc += SLACK_WEIGHT * urgent;
@@ -11607,21 +11736,24 @@ const otWord=(lim.otWeeklyH||40)+"h line"+(lim.otFromAgreement? " in your agreem
 : lim.otFromGroup? " for "+(((lim.otSrc||{}).weekly||{}).name
 || lim.groups[0] || "their group") : "");
  
-const mins=empWeekMinutes(e.id,ws), add=paidEstimate(aMin,bMin,{gap:shiftGap(sh), shift:sh, date:slot.date, emp:e});
-const total=mins+add;
+ 
+const addParts=estParts(aMin,bMin,{gap:shiftGap(sh), shift:sh, date:slot.date, emp:e});
+const mins=empWeekWorked(e.id,ws), add=addParts.worked, addPay=addParts.worked+addParts.paidMeal;
+const minsPaid=empWeekMinutes(e.id,ws);
+const total=mins+add, totalWord=workedWord(total, minsPaid+addPay);
 const sameDay=wk.assignments.filter(a=>a.empId===e.id && a.date===slot.date);
 const days=empDays(e.id,ws);
 
  
 if(!availOk(e,slot.dow,aMin,bMin)) return;                  
-if(minorBlock(e, slot.date, slot.dow, aMin, bMin, empWeekMinutes(e.id,ws), ws, sh)) return;    
+if(minorBlock(e, slot.date, slot.dow, aMin, bMin, empWeekWorked(e.id,ws), ws, sh)) return;    
 if(traineeExtra() && isTrainee(e, slot.date)) return;    
 if(!cycleWorksOn(e,slot.date)) return;                      
 if(onTimeOffShift(e.id,slot.date,bMin)) return;             
 if(holCantOn(e.id, slot.date, bMin)) return;                      
  
 if(licBlock(e, slot.date)) return;
-if(lim.maxShiftH && paidSpan(aMin,bMin,shiftGap(sh)||0,slot.date,e,sh) > lim.maxShiftH*60) return; 
+if(lim.maxShiftH && workedSpan(aMin,bMin,shiftGap(sh)||0,slot.date,e,sh) > lim.maxShiftH*60) return; 
 if(apartOn() && apartBlock(e.id, slot.date, aMin, bMin, wk.assignments, slot.siteId)) return;    
 
 const reqBlock=reqBlocks(e,slot.date,aMin,bMin,mins,sh);
@@ -11646,8 +11778,8 @@ if(!reqBlock && !restGap)
 out.push({kind:"percall", emp:e, rank:1,
 title:"Call in "+e.name,
 why:(e.type==="PRN"? "Per diem — no guaranteed hours. " : "Kept on call. ")+
-fmtHrs(mins)+" so far this week"+(overCap? ", so this one is on top of their usual":"")+".",
-cost: e.rate? add/60*e.rate : 0,
+fmtHrs(mins)+workedWord(mins, minsPaid)+" so far this week"+(overCap? ", so this one is on top of their usual":"")+".",
+cost: e.rate? addPay/60*e.rate : 0,
 apply:()=>placeInSlot(e,slot,ws,{allowOnCall:true})});
 return;
 }
@@ -11658,7 +11790,7 @@ const req=reqsFor(e.id,slot.date).find(r=>r.hard);
 if(req && !sameDay.length) out.push({kind:"deny", emp:e, rank:5, req,
 title:"Decline "+e.name.split(" ")[0]+"'s request",
 why:"They "+reqBlock+". Declining it puts them back in the frame for "+sh.label+", "+when+".",
-cost: e.rate? add/60*e.rate : 0,
+cost: e.rate? addPay/60*e.rate : 0,
  
 apply:()=>{ req.status="declined"; req.deniedAt=Date.now();
 placeInSlot(e,slot,ws,{overrode:"a request declined"});
@@ -11691,7 +11823,9 @@ const already={};
 had.forEach(o=>{ if(!NEVER_WAIVE[o.rule] && (already[o.rule]==null || o.value>already[o.rule])) already[o.rule]=o.value; });
 let live=hit.filter(o=> already[o.rule]==null || o.value > already[o.rule] + 0.5);
 
-const moveAdd=add-paidMinutes(other);
+const moveAdd=add-workedMinutes(other);
+const sameFig=(addPay-paidMinutes(other))===moveAdd;    
+const moveWord=workedWord(mins+moveAdd, minsPaid+addPay-paidMinutes(other));
 const moveTotal=mins+moveAdd;
 const moveOT=Math.max(0, moveTotal - otLine);
  
@@ -11722,13 +11856,13 @@ applyBreaks(hypo);
 const payFor=rows=>weekCostDetail(ws, rows).byPerson[e.id]||0;
 const moveCost = e.rate? payFor(board.concat([hypo])) - payFor(wk.assignments) : 0;
 const moveHours = moveAdd>1
-? " It adds "+fmtHrs(moveAdd)+" of paid time, taking them to "+fmtHrs(moveTotal)+
+? " It adds "+fmtHrs(moveAdd)+(sameFig? " of paid time" : " of time worked")+", taking them to "+fmtHrs(moveTotal)+moveWord+
 (moveOT>1? " — "+fmtHrs(moveOT)+" past the "+otWord : "")+
 (e.rate? ", about "+money(moveCost)+" more on the week":"")+"."
 : moveAdd<-1
-? " It takes "+fmtHrs(-moveAdd)+" of paid time off, leaving them on "+fmtHrs(moveTotal)+
+? " It takes "+fmtHrs(-moveAdd)+(sameFig? " of paid time off" : " of time worked off")+", leaving them on "+fmtHrs(moveTotal)+moveWord+
 (e.rate? " and saving about "+money(-moveCost):"")+"."
-: " Their paid hours don't change.";
+: (sameFig? " Their paid hours don't change." : " Their time worked doesn't change.");
 const askSay = askExtra
 ? " That is past the "+(lim.askAbove||lim.maxH)+"h they are guaranteed"+
 (lim.couldBe? " and inside the "+lim.couldBe+"h their profile allows" : "")+
@@ -11744,12 +11878,12 @@ spoken=softCap;
 if(moveOT > 1){
 kind="moveOvertime"; rank=6.4; put={overtime:true};
 title="Ask "+e.name+" to work overtime — off "+otherSh.label;
-tail=" Would take them to "+fmtHrs(moveTotal)+" — "+fmtHrs(moveOT)+" past the "+otWord+
+tail=" Would take them to "+fmtHrs(moveTotal)+moveWord+" — "+fmtHrs(moveOT)+" past the "+otWord+
 (e.rate? ", about "+money(moveCost)+" on the week":"")+".";
 } else {
 kind="moveExtra"; rank=6.2; put={extra:true};
 title="Ask "+e.name+" to take the extra hours — off "+otherSh.label;
-tail=" Would take them to "+fmtHrs(moveTotal)+" — "+
+tail=" Would take them to "+fmtHrs(moveTotal)+moveWord+" — "+
 (lim.capSpent? capSay(lim)
 : fmtHrs(Math.max(0, moveTotal-(lim.maxH||0)*60))+" past their usual "+lim.maxH+"h"+
 (lim.exactH? " contract":""))+". Still under the "+otWord+", so it's paid at the normal rate.";
@@ -11792,7 +11926,7 @@ if(restGap!==null){
 if(restGap>=8*60) out.push({kind:"rest", emp:e, rank:7,
 title:"Give "+e.name.split(" ")[0]+" a shorter turnaround",
 why:"They'd have "+fmtHrs(restGap)+" off instead of your usual "+lim.minRestH+"h. It's the kind of thing people notice.",
-cost: e.rate? add/60*e.rate : 0,
+cost: e.rate? addPay/60*e.rate : 0,
 apply:()=>placeInSlot(e,slot,ws,{shortRest:true})});
 return;
 }
@@ -11805,9 +11939,9 @@ const overOT=Math.max(0, total - otLine);
 if(overOT > 1){
 out.push({kind:"overtime", emp:e, rank:4,
 title:"Ask "+e.name+" to work overtime",
-why:"Would take them to "+fmtHrs(total)+" \u2014 "+fmtHrs(overOT)+" past the "+otWord
+why:"Would take them to "+fmtHrs(total)+totalWord+" \u2014 "+fmtHrs(overOT)+" past the "+otWord
 +(e.rate? ", about "+money(overOT/60*e.rate*1.5)+" at time and a half":"")+".",
-cost: e.rate? (add-overOT)/60*e.rate + overOT/60*e.rate*1.5 : 0,
+cost: e.rate? (addPay-overOT)/60*e.rate + overOT/60*e.rate*1.5 : 0,
 apply:()=>placeInSlot(e,slot,ws,{overtime:true})});
 } else {
 const bits=[];
@@ -11817,9 +11951,9 @@ if(overCap) bits.push(lim.capSpent? capSay(lim)
 if(overDays) bits.push("a "+(days+1)+(days+1===6?"th":days+1===7?"th":"th")+" day, one more than they normally do");
 out.push({kind:"extra", emp:e, rank:2,
 title:"Ask "+e.name+" to pick up an extra shift",
-why:"Would take them to "+fmtHrs(total)+" \u2014 "+bits.join(" and ")+". Still under the "+
-otWord+", so it's paid at the normal rate"+(e.rate? " (about "+money(add/60*e.rate)+")":"")+".",
-cost: e.rate? add/60*e.rate : 0,
+why:"Would take them to "+fmtHrs(total)+totalWord+" \u2014 "+bits.join(" and ")+". Still under the "+
+otWord+", so it's paid at the normal rate"+(e.rate? " (about "+money(addPay/60*e.rate)+")":"")+".",
+cost: e.rate? addPay/60*e.rate : 0,
 apply:()=>placeInSlot(e,slot,ws,{extra:true})});
 }
 return;
@@ -11829,7 +11963,7 @@ return;
 out.push({kind:"free", emp:e, rank:0,
 title:"Put "+e.name+" on it",
 why:"Free that day and inside every limit — a coverage rule was what kept them off, so check it still holds after.",
-cost: e.rate? add/60*e.rate : 0,
+cost: e.rate? addPay/60*e.rate : 0,
 apply:()=>placeInSlot(e,slot,ws,{})});
 });
 
@@ -11898,8 +12032,8 @@ for(let i=0;i<chain.length;i++){
 const e=empById(chain[i].empId);
 if(!e || asked[e.id]) continue;
 asked[e.id]=1;
-const was=empWeekMinutes(e.id, ws);
-const now=rows.filter(a=>a.empId===e.id).reduce((t,a)=>t+paidMinutes(a), 0);
+const was=empWeekWorked(e.id, ws);
+const now=rows.filter(a=>a.empId===e.id).reduce((t,a)=>t+workedMinutes(a), 0);
 if(now > (effLimits(e, ws).otWeeklyH||40)*60 + 1 && now > was) return false;
 }
 return true;
@@ -12179,7 +12313,7 @@ if(minorsOn() && !opts.minorOverride){
 const sh0=shiftById(slot.shiftId);
 if(sh0){
 const [a0,b0]=shiftMinutes(sh0);
-const mb=minorBlock(e, slot.date, slot.dow, a0, b0, empWeekMinutes(e.id, ws|| curWeek()), ws, sh0);
+const mb=minorBlock(e, slot.date, slot.dow, a0, b0, empWeekWorked(e.id, ws|| curWeek()), ws, sh0);
 if(mb){ toast(e.name+" is "+ageOnDate(e, slot.date)+" \u2014 that shift is "+mb); return; }
 }
 }
@@ -14271,12 +14405,12 @@ if(!availOk(e, sl.dow, a, b)) return DAYS[sl.dow]+" is a day they don\u2019t wor
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return "they\u2019re already on the schedule that day";
 { const ab=apartOn()? apartBlock(e.id, sl.date, a, b, getWeek(ws).assignments, sl.siteId) : null; if(ab) return apartWhy(ab); }
 {
-const mb=minorBlock(e, sl.date, sl.dow, a, b, empWeekMinutes(e.id,ws), ws, sh);
+const mb=minorBlock(e, sl.date, sl.dow, a, b, empWeekWorked(e.id,ws), ws, sh);
 if(mb) return "they\u2019re "+ageOnDate(e, sl.date)+" and it\u2019s "+mb;
 }
 const lim=effLimits(e, ws);
-const mins=empWeekMinutes(e.id, ws)+slotPaid(sh, sl.date, e);
-if(hasCap(lim) && mins/60 > (lim.maxH||0)) return "it would put them at "+fmtHrs(mins)+", "+capSay(lim);
+const mins=empWeekWorked(e.id, ws)+slotWorked(sh, sl.date, e);
+if(hasCap(lim) && mins/60 > (lim.maxH||0)) return "it would put them at "+fmtHrs(mins)+workedWord(mins, empWeekMinutes(e.id, ws)+slotPaid(sh, sl.date, e))+", "+capSay(lim);
 { const lb=licBlock(e, sl.date); if(lb) return "their "+lb+" has expired"; }
 return "a rule you set blocks it \u2014 Cover the gaps spells out which";
 }
@@ -14448,7 +14582,7 @@ const [a,b]=shiftMinutes(sh);
 if(!availOk(e,sl.dow,a,b)) return false;
 if(onTimeOffShift(e.id,sl.date,b)) return false;
 if(getWeek(ws).assignments.some(x=>x.empId===e.id && x.date===sl.date)) return false;
-return !!reqBlocks(e,sl.date,a,b,empWeekMinutes(e.id,ws),sh);
+return !!reqBlocks(e,sl.date,a,b,empWeekWorked(e.id,ws),sh);
 });
 if(helps.length) costing.push({r, e, helps});
 });
@@ -15370,7 +15504,7 @@ return {weeks, hours:c.hours||80, start, list, idx};
  
 function cycleWeekCap(e, ws){
 const p=cyclePeriod(e, ws); if(!p) return null;
-const used=p.list.filter(k=>k!==ws).reduce((t,k)=>t+empWeekMinutes(e.id,k),0);
+const used=p.list.filter(k=>k!==ws).reduce((t,k)=>t+empWeekWorked(e.id,k),0);
 return Math.max(0, p.hours*60 - used)/60;
 }
 function cycleLabel(e){
@@ -15409,10 +15543,10 @@ function cycleStatus(e, ws){
 const c=cycleOf(e); if(!c) return null;
 if(c.type==="average"){
 const p=cyclePeriod(e,ws); if(!p) return null;
-const used=p.list.reduce((t,k)=>t+empWeekMinutes(e.id,k),0);
+const used=p.list.reduce((t,k)=>t+empWeekWorked(e.id,k),0);
 const cap=cycleWeekCap(e,ws);
 return {label:cycleLabel(e),
-detail:"Week "+(p.idx+1)+" of "+p.weeks+" · "+fmtHrs(used)+" of "+p.hours+"h used across the period"+
+detail:"Week "+(p.idx+1)+" of "+p.weeks+" · "+fmtHrs(used)+workedWord(used, p.list.reduce((t,k)=>t+empWeekMinutes(e.id,k),0))+" of "+p.hours+"h used across the period"+
 (cap!=null? ", up to "+fmtHrs(cap*60)+" left for this one":"")};
 }
 const dates=weekDates(ws);
@@ -15734,7 +15868,7 @@ if(row.roleId && !e.roleIds.includes(row.roleId)) return;
 const sh=shiftById(row.shiftId); if(!sh) return;
 const [a,b]=shiftMinutes(sh);
  
-if(L.maxShiftH && paidSpan(a, b, shiftGap(sh), null, e, sh) > L.maxShiftH*60) return;
+if(L.maxShiftH && workedSpan(a, b, shiftGap(sh), null, e, sh) > L.maxShiftH*60) return;
 lens.add(slotPaid(sh, null, e));
 });
 });
@@ -15743,7 +15877,7 @@ lens.add(slotPaid(sh, null, e));
 if(a.empId!==e.id) return;
  
 const len=paidMinutes(a);
-if(L.maxShiftH && len > L.maxShiftH*60) return;
+if(L.maxShiftH && workedMinutes(a) > L.maxShiftH*60) return;
 if(len>0) lens.add(len);
 });
 return [...lens].filter(x=>x>0).sort((a,b)=>a-b);
@@ -15783,14 +15917,19 @@ if(!list.length) return {ok:false, why:"there is nothing in the week "+e.name.sp
  
 const cap = L.exactH ? goal+240 : ((L.maxH||0) ? L.maxH*60 : goal+240);
  
-let reach=new Set([0]);
+const capWorked = !L.exactH && (L.maxH||0)>0;
+const parts = (capWorked && stampAt(ws))? shiftPayParts(e, ws, L) : null;
+const wOf = l => parts? l-(((parts[l]||{}).paidMeal)||0) : l;
+ 
+let reach=new Map([[0,0]]);
 for(let k=0;k<maxD;k++){
-const next=new Set(reach);
-reach.forEach(v=>list.forEach(l=>{ if(v+l<=cap) next.add(v+l); }));
+const next=new Map(reach);
+reach.forEach((w,v)=>list.forEach(l=>{ const w2=w+wOf(l);
+if((capWorked? w2 : v+l)<=cap){ const o=next.get(v+l); if(o===undefined || o>w2) next.set(v+l, w2); } }));
 reach=next;
-if(L.exactH ? reach.has(goal) : [...reach].some(v=>v>=goal)) return {ok:true, lens:list};
+if(L.exactH ? reach.has(goal) : [...reach.keys()].some(v=>v>=goal)) return {ok:true, lens:list};
 }
-const all=[...reach].filter(v=>v>0).sort((a,b)=>Math.abs(a-goal)-Math.abs(b-goal));
+const all=[...reach.keys()].filter(v=>v>0).sort((a,b)=>Math.abs(a-goal)-Math.abs(b-goal));
 const near=all.slice(0,2).sort((a,b)=>a-b);
  
 return {ok:false, lens:list, near,
@@ -15811,12 +15950,14 @@ if(out[paid] && out[paid].clock>=clock) return;
 const isA = !!(src && src.empId!==undefined);
 const g = src? (isA? aGap(src) : shiftGap(src)) : null;
 const gap = g? g.to-g.from : 0;
-let meals=0, mealMin=0;
-try{ const kept=(isA && src.breaks? (src.breaks.meals||[])
-: computeBreaks(aMin, bMin, {gap:g||undefined, shift:(src? (isA? shiftById(src.shiftId) : src) : null)||null, emp:e}).meals)
-.filter(m=>!m.waived);
-meals=kept.length; mealMin=kept.reduce((t,m)=>t+m.len,0); }catch(err){}
-out[paid]={paid:paid, clock:clock, gap:gap, unpaid:mealMin, meals:meals};
+ 
+let meals=0, mealMin=0, paidMeal=0, paidMeals=0;
+try{ const all=(isA && src.breaks? (src.breaks.meals||[])
+: computeBreaks(aMin, bMin, {gap:g||undefined, shift:(src? (isA? shiftById(src.shiftId) : src) : null)||null, emp:e}).meals);
+mealMin=mealMinOff(all); paidMeal=mealMinPaid(all);
+meals=mealMin>0? all.filter(m=>!m.waived).length : 0;                  
+paidMeals=paidMeal>0? all.filter(m=>!m.waived).length : 0; }catch(err){}
+out[paid]={paid:paid, clock:clock, gap:gap, unpaid:mealMin, meals:meals, paidMeal:paidMeal, paidMeals:paidMeals};
 };
 const D=demandOf(ws);
 Object.keys(D).forEach(dow=>{
@@ -15824,14 +15965,14 @@ Object.keys(D).forEach(dow=>{
 if(row.roleId && !e.roleIds.includes(row.roleId)) return;
 const sh=shiftById(row.shiftId); if(!sh) return;
 const [a,b]=shiftMinutes(sh);
-if(L.maxShiftH && paidSpan(a, b, shiftGap(sh), null, e, sh) > L.maxShiftH*60) return;
+if(L.maxShiftH && workedSpan(a, b, shiftGap(sh), null, e, sh) > L.maxShiftH*60) return;
 note(a, b, slotPaid(sh, null, e), sh);
 });
 });
 (peekWeek(ws).assignments||[]).forEach(a=>{
 if(a.empId!==e.id) return;
 const len=paidMinutes(a);
-if(L.maxShiftH && len > L.maxShiftH*60) return;
+if(L.maxShiftH && workedMinutes(a) > L.maxShiftH*60) return;
 note(a.startMin, a.endMin, len, a);
 });
 return out;
@@ -15881,17 +16022,19 @@ L.push(fmtHrs(g.owe)+" guaranteed this week"+(g.maxH? ", against a cap of "+g.ma
 const only = g.lens.length===1? g.lens[0] : null;
 const part = only!=null? g.parts[only] : null;
 const k = part? Math.floor(g.owe/part.paid) : 0;
-const arith = !!(part && g.maxH && k>=1 && (k+1)*part.paid > g.maxH*60);
+const wk1 = part? part.paid-(part.paidMeal||0) : 0;       
+const arith = !!(part && g.maxH && k>=1 && (k+1)*wk1 > g.maxH*60);
 if(arith){
 const one=anHrs(part.clock);
 const off=[];
 if(part.gap) off.push("the "+fmtHrs(part.gap)+" unpaid break between its two blocks");
 if(part.unpaid) off.push(fmtHrs(part.unpaid)+" of unpaid meal period"+(part.meals===1? "" : "s"));
 L.push(one.charAt(0).toUpperCase()+one.slice(1)+" shift pays "+fmtHrs(part.paid)+
+(part.paidMeal? ", "+fmtHrs(part.paidMeal)+(part.paidMeals===1? " of it a paid meal period" : " of it paid meal periods") : "")+
 (off.length? " once "+off.join(" and ")+(off.length>1? " come out" : " comes out") : "")+".");
 L.push(k+" shift"+(k===1?"":"s")+" is "+fmtHrs(k*part.paid)+", "+fmtHrs(g.owe-k*part.paid)+
-" under the guarantee; "+(k+1)+" is "+fmtHrs((k+1)*part.paid)+", "+
-fmtHrs((k+1)*part.paid-g.maxH*60)+" over the cap.");
+" under the guarantee; "+(k+1)+" is "+fmtHrs((k+1)*wk1)+(wk1!==part.paid? " worked" : "")+", "+
+fmtHrs((k+1)*wk1-g.maxH*60)+" over the cap.");
  
 L.push(g.owe===g.maxH*60
 ? "No whole number of "+fmtHrs(part.clock)+" shifts comes to "+fmtHrs(g.owe)+"."
@@ -15901,7 +16044,7 @@ fmtHrs(g.owe)+" and "+g.maxH+"h.");
 L.push(g.why.charAt(0).toUpperCase()+g.why.slice(1)+".");
 }
 L.push(drafted);
-let where = "Paid hours per shift rest on how many unpaid meal periods a shift carries, "+
+let where = "Paid hours per shift rest on the meal periods a shift carries and on whether meals are paid here, "+
 "which comes from Ground rules \u2192 Meals and rest breaks together with the state named "+
 "under Where you operate.";
 if(arith && part.meals>1){
@@ -15936,6 +16079,7 @@ if(!wk || !wk.assignments.length){ q.status="empty"; return false; }
 if(wk.published && !postPending(wk)){ q.status="already"; return false; }
 clearPending(wk);
  
+keepMealStamp(wk);
 wk.published=true; wk.publishedAt=Date.now();
 auditPost(q.ws, q.notify||null, wk.postedOnce? weekDiff(q.ws) : []);
 wk.postedOnce=true; snapWeek(wk);
@@ -16421,6 +16565,7 @@ const wk=peekWeek(ws); if(!wk || !postPending(wk)) return false;
 const secs=(wk.graceSec||0)-postSecsLeft(wk);
 const keep=new Set(wk.pendingLocks||[]);
 wk.published=false;
+restampWeek(wk);    
  
 wk.assignments.forEach(a=>{ a.locked = keep.has(a.id); });
 clearPending(wk);
@@ -16653,6 +16798,7 @@ const diff = wasPosted? weekDiff(ws) : [];
 clearPending(wk);
  
 cancelQueued(ws, "post");
+keepMealStamp(wk);
 wk.published=true;
 const g=graceSec();
 if(g>0){
@@ -16674,9 +16820,10 @@ delete wk.pendingDiff; delete wk.pendingLocks;
 function unpostWeek(ws, say){
 const wk=peekWeek(ws); if(!wk) return;
 wk.published=false; clearPending(wk);
+const restamped=restampWeek(wk);    
 wk.assignments.forEach(a=>a.locked=false);
 save(); render();
-if(say!==false) toast(say||"Open for edits again");
+if(say!==false) toast((say||"Open for edits again")+(restamped? " · its meals are now "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : ""));
 }
 function auditPost(ws, choice, diff){
 const wk=peekWeek(ws);
@@ -16728,12 +16875,15 @@ function weekImpact(empId, ws, excludeAid, addStart, addEnd, date, gap, shift){
 ws = ws || curWeek();
 const wk=peekWeek(ws);
 const keep=wk.assignments.filter(a=>a.id!==excludeAid);
-const base=keep.filter(a=>a.empId===empId).reduce((t,a)=>t+paidMinutes(a),0);
+ 
+const base=keep.filter(a=>a.empId===empId).reduce((t,a)=>t+workedMinutes(a),0);
+const basePaid=keep.filter(a=>a.empId===empId).reduce((t,a)=>t+paidMinutes(a),0);
 const end=addEnd<=addStart? addEnd+1440 : addEnd;
  
  
-const add=addStart!=null? paidEstimate(addStart, end, {date, gap, shift}) : 0;
-const tot=base+add;
+const addParts=addStart!=null? estParts(addStart, end, {date, gap, shift}) : {worked:0, paidMeal:0};
+const add=addParts.worked;
+const tot=base+add, totPaid=basePaid+add+addParts.paidMeal;
 const e=empById(empId);
 const lim=e? effLimits(e, ws) : {};
 const otH=lim.otWeeklyH||40, srcW=(lim.otSrc||{}).weekly;
@@ -16750,7 +16900,7 @@ anyDt=(a2.dtMin[empId]||0)>0;
 } else if(haveRates() && e && e.rate && ot>0){
 extra=ot/60*e.rate*0.5;
 }
-let msg="Takes them to "+fmtHrs(tot)+" this week";
+let msg="Takes them to "+fmtHrs(tot)+(totPaid!==tot? " worked" : "")+" this week";    
 if(ot>0) msg+=" — "+fmtHrs(ot)+" past the "+otH+"h line"+otLineWhere(srcW);
 if(extra>0.5) msg+=(ot>0? ", about " : " — about ")+money(extra)+" extra at "+(anyDt? "premium rates" : "time-and-a-half");
 return {tot, ot, extra, msg: msg+"."};
@@ -16761,7 +16911,7 @@ function ptoOn(){ return !!S.org.trackPto; }
 function ptoWorkedMin(empId, from, to){
 let t=0;
 Object.keys(S.weeks).forEach(k=>{
-S.weeks[k].assignments.forEach(a=>{ if(a.empId===empId && a.date>=from && a.date<=to) t+=paidMinutes(a); });
+S.weeks[k].assignments.forEach(a=>{ if(a.empId===empId && a.date>=from && a.date<=to) t+=workedMinutes(a); });
 });
 return t;
 }
@@ -17051,7 +17201,12 @@ const out=[]; let d=addDays(ws,-1);
 while(has.has(d) && out.length<21){ out.unshift(d); d=addDays(d,-1); }
 return out;
 }
+ 
 function validate(ws){
+const was=STAMP_WEEK; STAMP_WEEK=ws||curWeek();
+try{ return validateInner(ws); } finally { STAMP_WEEK=was; }
+}
+function validateInner(ws){
 ws = ws|| curWeek();
 const wk=peekWeek(ws), L=law(), V=[];
 const dates = weekDates(ws);
@@ -17210,7 +17365,7 @@ if(multiSite() && !wk.published){ const EW=elsewhereAll(ws)||{}, st0=Object.keys
 if(st0) (S.employees||[]).forEach(e=>{
 const add=EW[e.id]; if(!add) return;
 const T=elsewhereSay(add), first=(e.name||"Somebody").split(" ")[0];
-const owed=owedFloorMin(e, ws), have=(st0[e.id]||{min:0}).min;
+const owed=owedFloorMin(e, ws), have=stPaid(st0[e.id]);
 const own=sitesList().filter(z=>empAtSite(e, z.id)).map(z=>siteName(z.id));
 push("warn", "Room at another location \u2014 "+e.name,
 first+" is "+fmtHrs(owed-have)+" short of their hours owed this week ("+fmtHrs(have)+" of "+fmtHrs(owed)+"), and "+numsWord(own)+
@@ -17513,11 +17668,13 @@ S.employees.forEach(e=>{
  
 const mine = wk.assignments.filter(a=>a.empId===e.id).sort((a,b)=>a.date.localeCompare(b.date)||a.startMin-b.startMin);
 const lastOut=L=>L.length? L.filter(x=>x.date===L[L.length-1].date).reduce((p,x)=>x.endMin>p.endMin? x : p) : null;
-const mins = mine.reduce((t,a)=>t+paidMinutes(a),0);
+ 
+const mins = mine.reduce((t,a)=>t+workedMinutes(a),0);
+const paidMins = mine.reduce((t,a)=>t+paidMinutes(a),0);
  
 const holMin = holCreditMin(e.id, ws);
-const empPaidMins = mins + holMin;
-const holSay = holMin? " (" + fmtHrs(mins) + " on the floor + " + fmtHrs(holMin) + " holiday pay)" : "";
+const empPaidMins = paidMins + holMin;
+const holSay = holMin? " (" + fmtHrs(paidMins) + " on shifts + " + fmtHrs(holMin) + " holiday pay)" : "";
 const lim = effLimits(e, ws);
  
 if(e.active===false){
@@ -17570,10 +17727,10 @@ DSHORT[a.dow]+" "+prettyDate(a.date)+" is at "+siteName(siteOf(a))+", which is n
  
 mine.forEach(a=>{
  
-const paid=paidMinutes(a);
+const paid=workedMinutes(a);
 if(lim.maxShiftH && paid > lim.maxShiftH*60)
 push("crit","Shift too long — "+e.name,
-DSHORT[a.dow]+" "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+" is "+fmtHrs(paid)+
+DSHORT[a.dow]+" "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+" is "+fmtHrs(paid)+workedWord(paid, paidMinutes(a))+
 ", past the "+lim.maxShiftH+"h limit"+(lim.groups.length? " set by the "+lim.groups.join(" and ")+" group":"")+
 ". The drafter will not place this, so a redraft removes it.",
 {empId:e.id, date:a.date, dow:a.dow, code:"shiftlen", aId:a.id});
@@ -17598,22 +17755,27 @@ daysOn+" days this week against a limit of "+lim.maxD+
 if(hasCap(lim) && mins > (lim.maxH||0)*60+1)
 push("warn", (lim.capSpent? "No hours left in the period — " : "Over hour cap — ")+e.name,
 (lim.capSpent
-? fmtHrs(mins)+" scheduled here, but "+cycleLabel(e)+" is already fully spent in the other week"+
+? fmtHrs(mins)+(paidMins!==mins? " of work" : "")+" scheduled here, but "+cycleLabel(e)+" is already fully spent in the other week"+
 ((cyclePeriod(e, ws)||{list:[]}).list.length>2? "s":"")+" of the period, so there is nothing left for this one"
-: fmtHrs(mins)+" scheduled against a "+(lim.maxH||0)+"h cap")+
+: fmtHrs(mins)+(paidMins!==mins? " of work" : "")+" scheduled against a "+(lim.maxH||0)+"h cap")+
 (lim.groups.length&&lim.maxH!==e.maxH? " (set by the "+lim.groups.join(" and ")+" group)":"")+".", {empId:e.id, code:"cap"});
 if(cyclesOn()){
 const p=cyclePeriod(e, ws);
 if(p && ws===p.list[p.list.length-1]){
-const used=p.list.reduce((t,k)=>t+empWeekMinutes(e.id,k),0);
-const diff=used - p.hours*60;
-if(Math.abs(diff) > 60)
-push(diff>0? "warn":"info", (diff>0?"Over the period":"Under the period")+" — "+e.name,
-fmtHrs(used)+" across the "+p.weeks+" weeks from "+prettyDate(p.start)+", against "+p.hours+"h averaged.",
+ 
+const used=p.list.reduce((t,k)=>t+empWeekWorked(e.id,k),0);
+const usedPaid=p.list.reduce((t,k)=>t+empWeekMinutes(e.id,k),0);
+if(used - p.hours*60 > 60)
+push("warn", "Over the period — "+e.name,
+fmtHrs(used)+workedWord(used, usedPaid)+" across the "+p.weeks+" weeks from "+prettyDate(p.start)+", against "+p.hours+"h averaged.",
+{empId:e.id, code:"period"});
+else if(p.hours*60 - usedPaid > 60)
+push("info", "Under the period — "+e.name,
+fmtHrs(usedPaid)+" across the "+p.weeks+" weeks from "+prettyDate(p.start)+", against "+p.hours+"h averaged.",
 {empId:e.id, code:"period"});
 }
 }
-if(lim.exactH && e.onCall && mins < Math.round(lim.exactH*60*minHFactor(e.id, ws))){
+if(lim.exactH && e.onCall && paidMins < Math.round(lim.exactH*60*minHFactor(e.id, ws))){
 push("info","On call, but a fixed contract — "+e.name,
 e.name.split(" ")[0]+" is only called in when the week is short, so the drafter never fills a contract for them \u2014 yet their profile says exactly "+lim.exactH+"h. One or the other needs to change.",
 {empId:e.id, code:"oncallguar"});
@@ -17732,7 +17894,7 @@ if(mins > otW*60+1){
 const extra={empId:e.id, code:"wot"};
 if(srcW){ extra.premium=true; extra.posted=!!wk.published && !postPending(wk); }
 push("warn",(srcW? "Overtime under "+otLineWho(srcW) : "Weekly overtime")+" — "+e.name,
-fmtHrs(mins)+" exceeds the "+otW+"h overtime threshold"+otLineWhere(srcW)+
+fmtHrs(mins)+workedWord(mins, paidMins)+" exceeds the "+otW+"h overtime threshold"+otLineWhere(srcW)+
 (srcW? ", which starts sooner than the "+(+S.org.otWeeklyH||40)+"h one" : "")+".", extra);
 } }
 
@@ -17740,12 +17902,13 @@ fmtHrs(mins)+" exceeds the "+otW+"h overtime threshold"+otLineWhere(srcW)+
 {
 const sev=seventhDayDate(e.id, ws);
 if(sev){
-const sevMin=mine.filter(a=>a.date===sev).reduce((t,a)=>t+paidMinutes(a),0);
+const sevMin=mine.filter(a=>a.date===sev).reduce((t,a)=>t+workedMinutes(a),0);
+const sevPaid=mine.filter(a=>a.date===sev).reduce((t,a)=>t+paidMinutes(a),0);
 const over=Math.max(0, sevMin-8*60);
 push("warn","Seventh day of the week — "+e.name,
 prettyDate(sev)+" is the seventh day of a week they have worked every day of, so "+
 (over? "the first 8h are paid at time and a half and the remaining "+fmtHrs(over)+" at double time"
-: "all "+fmtHrs(sevMin)+" is paid at time and a half")+
+: "all "+fmtHrs(sevMin)+(sevPaid!==sevMin? " worked" : "")+" is paid at time and a half")+
 " under "+(law().name||"your state\u2019s rules")+
 ((unionOn() && union().seventhDay)? ", and "+unionLabel()+" carries the same premium" : "")+
 ". Giving them one of the seven days off costs less and is the point of the rule.",
@@ -17848,17 +18011,17 @@ DSHORT[a.dow]+" "+prettyDate(a.date)+": "+e.name.split(" ")[0]+" "+rb+".",
 && r.status!=="declined" && (!r.from || !r.to || !(r.to<ws || r.from>addDays(ws,6))));
 if(caps.length){
 const cap=Math.min.apply(null, caps.map(r=>+r.num));
-const wm=empWeekMinutes(e.id, ws);
+const wm=empWeekWorked(e.id, ws);
 if(wm > cap*60+1)
 push("crit","Over the hours they asked for — "+e.name,
-fmtHrs(wm)+" this week against the "+cap+"h they asked to stay under.",
+fmtHrs(wm)+workedWord(wm, paidMins)+" this week against the "+cap+"h they asked to stay under.",
 {empId:e.id, code:"request"});
 } }
  
 const byDate={};
 mine.forEach(a=>{ (byDate[a.date]=byDate[a.date]||[]).push(a); });
 Object.keys(byDate).forEach(d=>{
-const list=byDate[d], dm=list.reduce((t,a)=>t+paidMinutes(a),0), dow=parseYmd(d).getDay();
+const list=byDate[d], dm=list.reduce((t,a)=>t+workedMinutes(a),0), dmPaid=list.reduce((t,a)=>t+paidMinutes(a),0), dow=parseYmd(d).getDay();
 if(list.length>1){    
 const ov=list.some((x,i)=>list.some((y,j)=>j>i && spansOverlap(x.startMin,x.endMin,y.startMin,y.endMin)));
 push("crit",(ov? "Double-booked — " : "On twice in one day — ")+e.name,
@@ -17870,17 +18033,17 @@ ov? DSHORT[dow]+" has "+list.length+" overlapping shifts."
 { const srcD=(lim.otSrc||{}).daily;
 if(lim.otDailyH>0 && dm > lim.otDailyH*60+1){
 if(srcD) push("warn","Daily overtime under "+otLineWho(srcD)+" — "+e.name,
-DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+", past the "+lim.otDailyH+"h"+otLineWhere(srcD)+
+DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+workedWord(dm, dmPaid)+", past the "+lim.otDailyH+"h"+otLineWhere(srcD)+
 (otDailyMin()? " \u2014 sooner than the "+S.org.otDailyH+"h one":"")+".",
 {date:d,empId:e.id,premium:true,posted:!!wk.published && !postPending(wk), code:"dot", aIds:list.map(a=>a.id)});
-else push("info","Daily overtime — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+lim.otDailyH+"h).", {date:d,empId:e.id, code:"dot", aIds:list.map(a=>a.id)});
+else push("info","Daily overtime — "+e.name, DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+workedWord(dm, dmPaid)+" (over "+lim.otDailyH+"h).", {date:d,empId:e.id, code:"dot", aIds:list.map(a=>a.id)});
 } }
 { const srcT=(lim.otSrc||{}).dt;
 if(lim.dtDailyH>0 && dm > lim.dtDailyH*60+1){
 const extra={date:d,empId:e.id, code:"dot", aIds:list.map(a=>a.id)};
 if(srcT){ extra.premium=true; extra.posted=!!wk.published && !postPending(wk); }
 push("warn","Double time"+(srcT? " under "+otLineWho(srcT):"")+" — "+e.name,
-DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+" (over "+lim.dtDailyH+"h"+otLineWhere(srcT)+").", extra);
+DSHORT[dow]+" "+prettyDate(d)+": "+fmtHrs(dm)+workedWord(dm, dmPaid)+" (over "+lim.dtDailyH+"h"+otLineWhere(srcT)+").", extra);
 } }
  
  
@@ -17895,7 +18058,7 @@ e.name.split(" ")[0]+" is marked as working for their own parent, who owns this 
 }
 if(minorsOn() && e.birth){
 list.forEach(a=>{
-const soFar=mine.filter(x=>x.id!==a.id).reduce((t,x)=>t+paidMinutes(x),0);
+const soFar=mine.filter(x=>x.id!==a.id).reduce((t,x)=>t+workedMinutes(x),0);
 const why=minorBlock(e, d, dow, a.startMin, a.endMin, soFar, ws, a);
 if(why) push("crit","Under-18 limit — "+e.name,
 DSHORT[dow]+" "+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin)+": "+why+".",
@@ -18704,8 +18867,9 @@ add(e.name||"Person", e.active? "person" : "person · inactive", null,
 });
 }catch(e){}
  
+ 
 try{
-(typeof kbList==="function"? kbList() : []).slice(0,120).forEach(q=>{
+(typeof kbList==="function"? kbList() : []).forEach(q=>{
 add(q.t, "in Help", q.go||"help", q.k||"");
 });
 }catch(e){}
@@ -20316,7 +20480,7 @@ return lead+": "+clauses.join(", ");
 function overLine(e, slot, date, state){
 const L=effLimits(e, date);
 const [a,b]=shiftMinutes(slot.sh);
-return ((state[e.id]||{min:0}).min + slotPaid(slot.sh, date, e)) > (L.otWeeklyH||40)*60 + 1;
+return ((state[e.id]||{min:0}).min + slotWorked(slot.sh, date, e)) > (L.otWeeklyH||40)*60 + 1;
 }
 
  
@@ -22072,6 +22236,7 @@ if(path==="org.jurisdiction") otFollowState(v);
 setPath(S,path,v);
 if(path==="rules.mealWaiverMode") S.rules.allowMealWaiver = v!=="off";
 if(path==="org.name" && S.sample) S.sample=false;    
+if(path==="rules.mealsPaid") return restampDrafts();    
 if(path.indexOf("rules.meal")===0 || path==="rules.breakMode" || path==="rules.restMode"
 || path==="rules.staggerMeals" || path==="rules.allowMealWaiver" || path==="org.jurisdiction")
 return rebuildBreaks();
@@ -22502,7 +22667,7 @@ const EXPLAIN = {
  
 "org.weekStart": "Which day your week starts on. It sets where the grid begins, how weekly hours and overtime are counted, and which seven days a printed schedule covers. Example: with Monday, a week runs Mon–Sun and somebody who works Sat and Sun has both days in the SAME week; with Sunday, those two days fall in different weeks and their overtime is counted separately.",
 "org.fiscalStart": "The month your financial year begins. Reports and Analytics can then be run for “this fiscal year” instead of only the calendar year. Example: choose October, and 1 Oct 2026 – 30 Sep 2027 is FY2027; a report run in March 2027 for “this fiscal year so far” starts from 1 October.",
-"org.jurisdiction": "Which state's meal and rest break rules are enforced while drafting. This is not a label — it changes what the drafter is allowed to do. Example: on California, an eight-hour shift must get an unpaid meal starting before the end of the fifth hour, and the drafter will place it there rather than leave it to chance.",
+"org.jurisdiction": "Which state's meal and rest break rules are enforced while drafting. This is not a label — it changes what the drafter is allowed to do. Example: on California, an eight-hour shift must get a meal starting before the end of the fifth hour, and the drafter will place it there rather than leave it to chance.",
 "org.pay.type": "How often you run payroll. It has no effect on the schedule; it decides where the shading and the pay-period totals fall. Example: on “every two weeks”, a week that straddles two periods is shaded in two tones and each person's hours are shown as the two halves that will land on two different cheques.",
 "org.pay.anchor": "The first day of any one pay period — the app counts forward and back from it. Set it once to a period start you know is right. Example: if a two-week period began Sunday 6 September, put that date in and every period before and after lines up with it.",
 "org.trackCost": "Turns on hourly rates and shows what a week costs. Nothing changes about who is scheduled. Example: with it on, the week header reads “$11,240 of $12,000” against the budget you set, and the drafter's suggestions say what each one would add.",
@@ -22514,7 +22679,7 @@ const EXPLAIN = {
 
  
 "rules.minRestH": "The least time somebody gets between the end of one shift and the start of the next. The drafter treats this as a wall — it leaves a shift open rather than break it. Example: 10 hours means a person who closes at 22:00 cannot be put on before 08:00 the next morning.",
-"rules.maxShiftH": "The longest single shift anybody may be given, counted in PAID hours — an unpaid meal does not count towards it. Example: 12 means a 12.5-hour clock day with a 30-minute unpaid meal is allowed, because the paid part is exactly 12.",
+"rules.maxShiftH": "The longest single shift anybody may be given, counted in time worked — a meal does not count towards it, paid or not. Example: 12 means a 12.5-hour clock day with a 30-minute meal is allowed, because the time worked is exactly 12.",
 "rules.maxSpanH": "The longest a shift may STRETCH from first minute to last, including unpaid time in the middle. It is what stops a split shift becoming a 14-hour day. Example: with a span of 11, a person cannot work 08:00–12:00, go home, and come back 17:00–21:00 — that spans 13 hours even though it is only 8 paid.",
 "rules.maxConsecDays": "The most days in a row anybody may be scheduled. It counts across the week boundary, not just inside one week. Example: 6 means somebody who worked Tue–Sun cannot be put on the following Monday, even though that is a different week.",
 "rules.advanceNoticeDays": "How many days before a week starts you aim to have it posted. It never blocks anything — it warns. Example: 14 means posting next week's schedule three days out gets a “going up on short notice” note, which in some cities carries a payment.",
@@ -22538,10 +22703,11 @@ const EXPLAIN = {
 "rules.breakMode": "Whether Weeksolved places each meal at a specific time, or just tells you how many are owed and leaves the timing to the floor. Example: “placed” prints “meal 11:30” on the day sheet; “owed” prints “1 × 30m” and your lead decides when.",
 "rules.restMode": "The same choice for paid rest breaks. Example: “placed” puts a 10-minute rest at a named time; “owed” says two are due and lets the floor take them when it is quiet.",
 "rules.mealPlan": "How meals are handled across the day — staggered so the floor is never empty, at fixed times, at random inside the meal window, or by closing the doors. Example: with one person on duty, “close the doors” shuts you for 30 minutes and stops that half-hour counting as a coverage gap.",
+"rules.mealsPaid": "Whether the minutes of a meal period stay in paid hours. Only the arithmetic changes: meals are placed, staggered and checked the same either way. Example: a 7:00 to 3:00 shift with a 30-minute meal is 7½ paid hours when the clock stops for the meal, and 8 when staff are paid through it. A paid meal counts toward hours paid and cost. The overtime and shift-length checks keep counting time worked, as they do now.",
 "rules.mealEarliestMin": "The earliest a meal may start, in minutes after the shift begins. It stops the software putting lunch at half past nine. Example: 120 means somebody starting at 09:00 gets nothing before 11:00.",
-"rules.mealLengthMin": "How long the one unpaid meal on a shift runs. An employer may give a LONGER unpaid meal than the law\u2019s minimum, but never a shorter one, so this can only ever add time \u2014 paid hours and the second meal\u2019s own deadline both follow the length you set here. Where the law\u2019s own minimum for THIS shift is longer than your setting, the law still wins. Example: a jurisdiction whose meal grows to 45 minutes on a long shift still gives 45, even with this left at \u201cas the law requires\u201d or set to 30.",
+"rules.mealLengthMin": "How long the meal on a shift runs. An employer may give a LONGER meal than the law\u2019s minimum, but never a shorter one, so this can only ever add time — the second meal\u2019s own deadline follows the length you set here, and so do paid hours where the clock stops for the meal. Where the law\u2019s own minimum for THIS shift is longer than your setting, the law still wins. Example: a jurisdiction whose meal grows to 45 minutes on a long shift still gives 45, even with this left at \u201cas the law requires\u201d or set to 30.",
 "rules.staggerMeals": "Keeps two people from going to lunch at the same time. Example: with three on the floor and this on, meals go at 11:30, 12:00 and 12:30 rather than all at noon.",
-"rules.mealWaiverMode": "A meal waiver lets someone skip the unpaid meal on a shift short enough for the break rules on this board to allow it, so the shift stays short. It always needs the person's written agreement, so even “automatic” only waives for people whose profile says they signed — anybody you have not asked keeps their meal. Example: a shift short enough to waive is drafted without the meal for someone who signed and with it for everyone else; “only when I waive one myself” means the drafter never assumes it.",
+"rules.mealWaiverMode": "A meal waiver lets someone skip the meal on a shift short enough for the break rules on this board to allow it, so the shift stays short. It always needs the person's written agreement, so even “automatic” only waives for people whose profile says they signed — anybody you have not asked keeps their meal. Example: a shift short enough to waive is drafted without the meal for someone who signed and with it for everyone else; “only when I waive one myself” means the drafter never assumes it.",
 "rules.mealClose.when": "Whether the doors shut for lunch every day, or only on days when one person is on duty. Example: “only when one person is on” keeps you open on busy days and shuts for half an hour on the quiet ones.",
 
  
@@ -22621,7 +22787,7 @@ qtime: "The time the request is about. Its meaning depends on the kind above. Ex
 qnum: "The number the request is about — for an hours cap, the most hours they may be given. Example: 24 on a cap request holds somebody to 24 hours for the stretch you set, whatever their profile says.",
 tst: "Whether this time off is settled or still being decided. Pending leave is shown but does not stop the drafter. Example: mark it approved and the drafter will not schedule them; leave it pending and it is only a note.",
 tpto: "Whether these days come out of their paid time off balance. Example: unpaid leave and jury duty usually do not.",
-ewv: "Whether this person has agreed in writing to skip the unpaid meal on a shift short enough for the break rules on this board to allow it. It is their choice to give, not yours to assume — leave it at not signed unless you hold the signed form. Example: with a signed waiver on file, a shift short enough to waive is drafted without the meal; otherwise the drafter always places it.",
+ewv: "Whether this person has agreed in writing to skip the meal on a shift short enough for the break rules on this board to allow it. It is their choice to give, not yours to assume — leave it at not signed unless you hold the signed form. Example: with a signed waiver on file, a shift short enough to waive is drafted without the meal; otherwise the drafter always places it.",
 epat: "How this person's week is shaped — the same shift every day, a fixed rota you name, or left to the drafter. Example: set “earlies only” and they are never given a closing shift, whatever the week looks like.",
 ecyc: "A repeating rota that runs over more than one week. Example: a two-week cycle of “Mon–Fri, then Tue–Sat” means their weekend rotates by itself and you never have to remember whose turn it is.",
 ehm: "Which promise you have made about this person's hours, and it changes what the drafter must do. “No promise” means schedule them as the week needs. “At least” is a floor it will work to reach. “Exactly” is a number it must land on to the minute. Example: choose “exactly 40” and a draft that gives them 38.5 is flagged until it is fixed — the drafter will trim or stretch a shift to make the 40.",
@@ -23174,6 +23340,7 @@ const SET_OPTS={
 "rules.maxShiftH":[[6,"6 hours"],[8,"8 hours"],[10,"10 hours"],[12,"12 hours"],[14,"14 hours"],[16,"16 hours"]],
 "rules.noClopen":[[1,"Never allow it"],[0,"It's fine"]],
 "rules.advanceNoticeDays":[[0,"No target"],[7,"7 days"],[10,"10 days"],[14,"14 days"],[21,"21 days"]],
+"rules.mealsPaid":[[0,"No — the clock stops"],[1,"Yes — the meal is paid"]],
 "rules.mealEarliestMin":[[0,"No opinion — whenever it fits"],[120,"Not before 2 hours in"],[180,"Not before 3 hours in"],[240,"Not before 4 hours in"]],
 "rules.mealLengthMin":[[0,"As the law requires (usually 30 minutes)"],[45,"45 minutes"],[60,"60 minutes"]],
 "rules.breakMode":[["assigned","Put a time on the schedule"],["lengths","Say how long, staff pick when"],["self","Staff sort it out themselves"]],
@@ -23676,14 +23843,18 @@ sel("rules.sheetNotes", [["lines","A column to write in, plus lines at the foot"
       ${setRow("Posts on the floor (optional)", (S.stations||[]).length? (S.stations||[]).filter(x=>x.kind!=="admin").length+" posts, "+(S.stations||[]).filter(x=>x.kind==="admin").length+" duties — handed out on the day sheet only" : "none — the day sheet still prints, it just doesn't name posts", "", "stations")}
     </div></div>
     <div class="card" data-findcard="settings"><header><h3>Meals and rest breaks</h3><span class="chip acc">${esc(L.short)}</span></header><div class="setbody">
+      ${setRow("Are meal periods paid here?", mealsPaid()
+? "Lunch is paid. Meals are still placed, staggered and checked the same way. A paid meal counts toward hours paid and cost. The overtime and shift-length checks keep counting time worked, as they do now. Posted weeks stay as posted."
+: "Lunch is unpaid: meal minutes come out of paid hours.",
+sel("rules.mealsPaid", SET_OPTS["rules.mealsPaid"], mealsPaid()?1:0))}
       ${setRow("Earliest a meal may be scheduled", "",
 sel("rules.mealEarliestMin", SET_OPTS["rules.mealEarliestMin"], +S.rules.mealEarliestMin||0))}
-      ${setRow("How long is an unpaid meal period?",
+      ${setRow("How long is a meal period?",
 (+S.rules.mealLengthMin||0)
 ? "Set to "+(+S.rules.mealLengthMin)+" minutes \u2014 "+esc(L.name)+"\u2019s own "+(L.meal?L.meal.lengthMin:30)+"-minute minimum still applies on a shift where that minimum is longer."
 : "As "+esc(L.name)+" requires \u2014 "+(L.meal?L.meal.lengthMin:30)+" minutes on a typical shift.",
 sel("rules.mealLengthMin", SET_OPTS["rules.mealLengthMin"], +S.rules.mealLengthMin||0))}
-      ${setRow("Meal periods (the unpaid one)", "", sel("rules.breakMode", SET_OPTS["rules.breakMode"], S.rules.breakMode))}
+      ${setRow("Meal periods", "", sel("rules.breakMode", SET_OPTS["rules.breakMode"], S.rules.breakMode))}
       ${S.rules.breakMode==="assigned"? setRow("How those meal times get decided",
 mealPlan()==="slotsrandom" ? "Only the times you named, shared out at random so the same person doesn\u2019t always get the same one: "+esc((S.rules.mealSlots||[]).map(x=>m2disp(t2m(x))).join(", "))
 : mealPlan()==="slots" ? "Only the times you named, nearest to what the shift wants: "+esc((S.rules.mealSlots||[]).map(x=>m2disp(t2m(x))).join(", "))
@@ -23932,7 +24103,7 @@ wireMealEditors(root);
 root.querySelectorAll("[data-set]").forEach(el=>el.addEventListener("change",()=>{
 const path=el.dataset.set;
 let v=el.value;
-const boolPaths=["rules.trackLic","rules.noClopen","rules.staggerMeals","rules.allowMealWaiver","org.trackCost","org.trackPto","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","rules.familyBiz","rules.familyHazard","ui.recurOff","ui.adviceOff","ui.betaFww","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger","rules.holCounts"];
+const boolPaths=["rules.trackLic","rules.noClopen","rules.staggerMeals","rules.mealsPaid","rules.allowMealWaiver","org.trackCost","org.trackPto","rules.useDaySheet","rules.useCycles","support.remind","rules.sendOut","vacations.on","rules.confirmRepost","rules.confirmPost","rules.confirmSend","daily.on","rules.stationFamilies","rules.skillsOn","rules.deviceWatch","rules.newDeviceConfirm","rules.minorsOn","rules.familyBiz","rules.familyHazard","ui.recurOff","ui.adviceOff","ui.betaFww","msg.on","fww.on","union.on","remind.on","remind.lic","remind.post","remind.poll","remind.hol","union.seniorityRules","union.changePremium","union.restPremium","union.seventhDay","union.otLedger","rules.holCounts"];
 const numPaths=["rules.mealClose.mins","rules.mealEarliestMin","rules.mealLengthMin","rules.maxSpanH","org.weekStart","org.fiscalStart","rules.minRestH","rules.maxConsecDays","rules.maxShiftH","rules.advanceNoticeDays","priority.strength","horizon","rules.projectMinH","rules.remindH","rules.auditKeep","rules.askHours","rules.postGraceSec","union.postDays","union.reportPayH","union.restH","union.otDailyH","union.otWeeklyH","union.dtDailyH","union.maxConsecH"];
 if(boolPaths.includes(path)) v = v==="1";
 else if(numPaths.includes(path)) v = parseFloat(v);
@@ -23969,10 +24140,13 @@ return;
 setPath(S,path,v);
 if(path==="rules.mealWaiverMode") S.rules.allowMealWaiver = v!=="off";
 if(path==="rules.auditKeep") auditPrune();
-if(path.indexOf("rules.meal")===0 || path==="rules.breakMode" || path==="rules.restMode"
+let redone=null;
+if(path==="rules.mealsPaid") redone=restampDrafts();    
+else if(path.indexOf("rules.meal")===0 || path==="rules.breakMode" || path==="rules.restMode"
 || path==="rules.staggerMeals" || path==="rules.allowMealWaiver" || path==="org.jurisdiction")
-rebuildBreaks();
+redone=rebuildBreaks();
 priorityRefresh(); save(); render();
+if(path==="rules.mealsPaid") breakRebuildNote(redone);    
 }));
 root.querySelectorAll("[data-bugopen]").forEach(b=>b.onclick=()=>bugModal());
 root.querySelectorAll("[data-bugsend]").forEach(b=>b.onclick=()=>digestModal());
@@ -24226,9 +24400,10 @@ S.employees.filter(e=>e.rate>0).length+" of "+S.employees.length+" "+(S.employee
 {path:"org.budget", label:"Weekly labor budget", when:()=>!!S.org.trackCost, say:()=>(+S.org.budget? money(+S.org.budget) : "No target")}]},
 
 {page:"rules", card:"Meals and rest breaks", hint:()=>law().name+" rules decide what is owed. You decide who picks the clock time.", rows:[
+{path:"rules.mealsPaid", label:"Are meal periods paid here?", say:()=>optSay("rules.mealsPaid", mealsPaid()?1:0)},
 {path:"rules.mealEarliestMin", label:"Earliest a meal may be scheduled", say:()=>optSay("rules.mealEarliestMin", +S.rules.mealEarliestMin||0)},
-{path:"rules.mealLengthMin", label:"How long is an unpaid meal period?", say:()=>optSay("rules.mealLengthMin", +S.rules.mealLengthMin||0)},
-{path:"rules.breakMode", label:"Meal periods (the unpaid one)", say:()=>optSay("rules.breakMode", S.rules.breakMode), note:()=>SUM_MEALS[S.rules.breakMode]||""},
+{path:"rules.mealLengthMin", label:"How long is a meal period?", say:()=>optSay("rules.mealLengthMin", +S.rules.mealLengthMin||0)},
+{path:"rules.breakMode", label:"Meal periods", say:()=>optSay("rules.breakMode", S.rules.breakMode), note:()=>SUM_MEALS[S.rules.breakMode]||""},
 {path:"rules.mealPlan", label:"How those meal times get decided", when:()=>S.rules.breakMode==="assigned",
 say:()=>optSay("rules.mealPlan", mealPlan()), note:()=>SUM_PLAN[mealPlan()]||""},
 {path:"rules.mealSlots", label:"Your meal times", when:()=>S.rules.breakMode==="assigned" && (mealPlan()==="slots"||mealPlan()==="slotsrandom"),
@@ -24288,13 +24463,17 @@ S.org.weekStart=next;
 const r=built? reweekAll(next) : (S.currentWeek=weekStartOf(curWeek(), next), {moved:0, unposted:0});
 save(); render();
 toast(built? "Week now starts on "+DAYS[next]+" \u2014 "+r.moved+" shift"+(r.moved===1?"":"s")+" moved into the weeks they now fall in"+(r.unposted? ", and "+r.unposted+" week"+(r.unposted===1?" is":"s are")+" no longer marked as posted" : "")
++(r.restamped? " \u00b7 "+(r.unposted===1? "its" : "their")+" meals are now "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : "")    
 : "Week now starts on "+DAYS[next]);
 };
 if(!built){ apply(); return; }
+ 
+const stampMoves=Object.keys(S.weeks||{}).some(k=>{ const w=S.weeks[k]; if(!w || !w.published) return false;
+const st=weekMealStamp(w); return st!==null && st!==mealsPaid(); });
 modal("Move the week boundary?", `
         <div class="stack">
           <div class="banner warn"><div><b>You have ${built} week${built===1?"":"s"} built on a ${esc(DAYS[was])} boundary.</b> Moving it to ${esc(DAYS[next])} re-cuts them: every shift keeps its date, but the weeks they sit in change shape.</div></div>
-          <div class="help">Anything already posted stops counting as posted, because a week whose days have changed is not the week your team was sent. Post it again once you have looked at it. Take a backup first if you want a way back \u2014 Settings \u2192 This device \u2192 This board.</div>
+          <div class="help">Anything already posted stops counting as posted, because a week whose days have changed is not the week your team was sent. Post it again once you have looked at it.${stampMoves? " A week posted before the meal setting changed takes it: its meals are then "+(mealsPaid()? "paid" : "unpaid")+", as Settings says, and its paid hours change." : ""} Take a backup first if you want a way back \u2014 Settings \u2192 This device \u2192 This board.</div>
         </div>`,
 `<button class="btn" data-close>Leave it on ${esc(DAYS[was])}</button>
          <button class="btn primary" id="wsgo">Move it to ${esc(DAYS[next])}</button>`,
@@ -24363,7 +24542,7 @@ return `
       <header><h3>Named shifts</h3><span class="hint">Give the times you use over and over a name, the way your staff already says them.</span>
         <button class="btn primary sm" id="addshift">Add a shift</button></header>
       <div class="scroll">${S.shifts.length? `<table>
-        <thead><tr><th>Name</th><th style="width:150px">Times</th><th style="width:90px">Length</th><th style="width:110px">Unpaid meal</th><th style="width:130px">Wanted?</th><th>Note</th><th style="width:150px"></th></tr></thead>
+        <thead><tr><th>Name</th><th style="width:150px">Times</th><th style="width:90px">Length</th><th style="width:110px">Meal</th><th style="width:130px">Wanted?</th><th>Note</th><th style="width:150px"></th></tr></thead>
         <tbody>${S.shifts.map(s=>{
 const [a,b]=shiftMinutes(s); const gg=shiftGap(s);
 const gross=(b-a)-(gg? gg.to-gg.from : 0);
@@ -24491,8 +24670,10 @@ save();
  
 function defaultShiftSpanMin(){
  
-return 8*60 + mealLenFor(null);
+return 8*60 + mealOffClock(null);
 }
+ 
+function mealOffClock(shift){ return mealsPaid()? 0 : mealLenFor(shift); }
  
  
  
@@ -24585,7 +24766,9 @@ function shiftObjections(sh, ws){
 const out=[];
 if(!sh || !sh.start || !sh.end) return out;
 const [a,b]=shiftMinutes(sh);
-const worked=paidEstimate(a, b, {gap:shiftGap(sh), shift:sh});
+const worked=workedEstimate(a, b, {gap:shiftGap(sh), shift:sh});
+ 
+const ww=paidEstimate(a, b, {gap:shiftGap(sh), shift:sh})!==worked;
  
 const capH=+((S.rules||{}).maxShiftH)||0;
 if(capH && worked > capH*60+1)
@@ -24664,10 +24847,10 @@ ownSay});
  
 const ot=otDailyMin(), dt=dtDailyMin();
 if(ot && worked > ot+1)
-out.push({kind:"ot", say:"Anyone on it passes daily overtime: the first "+(ot/60)+" hours are ordinary and the other "+
+out.push({kind:"ot", say:"Anyone on it passes daily overtime"+(ww? " at "+fmtHrs(worked)+" worked" : "")+": the first "+(ot/60)+" hours "+(ww? "worked " : "")+"are ordinary and the other "+
 fmtHrs(worked-ot)+" is paid at time and a half."});
 if(dt && worked > dt+1)
-out.push({kind:"dt", say:"It also passes the "+(dt/60)+"-hour line, so "+fmtHrs(worked-dt)+" of it is paid at double time."});
+out.push({kind:"dt", say:"It also passes the "+(dt/60)+"-hour line, so "+fmtHrs(worked-dt)+(ww? " of the time worked" : " of it")+" is paid at double time."});
 return out;
 }
 function shiftModal(id){
@@ -24682,7 +24865,7 @@ modal(id? ("Edit "+((s&&s.label)||"shift")) : "New shift", `
         <div class="field"><label>Ends</label><input type="time" id="se" value="${esc(s.end)}"></div>
       </div>
       <div class="field"><label>Set the length</label><div class="row lenchips" id="lenchips"></div></div>
-      <div class="field"><label>Unpaid meal</label><div class="row mealchips" id="mealchips"></div></div>
+      <div class="field"><label>Meal</label><div class="row mealchips" id="mealchips"></div></div>
       <div id="overnight" class="banner warn" style="display:none"></div>
       <div id="shiftlen" class="shiftlen"></div>
       <label class="switch"><input type="checkbox" id="ssplit" ${(s.gapFrom&&s.gapTo)?"checked":""}> Split shift &mdash; they go home in the middle and come back <span class="chip">optional</span></label>
@@ -24734,7 +24917,7 @@ if(gf>a && gt<b) gg={from:gf, to:gt};
 }
 const shiftLike={mealMin};
 const br=computeBreaks(a,b,{gap:gg, shift:shiftLike}); const L=law();
-const gross=(b-a)-(gg? gg.to-gg.from : 0), unpaid=br.unpaid||0, paid=gross-unpaid;
+const gross=(b-a)-(gg? gg.to-gg.from : 0), unpaid=mealMinOff(br.meals), paidMeal=mealMinPaid(br.meals), paid=gross-unpaid;
 const over14=gross>14*60;
  
  
@@ -24765,7 +24948,7 @@ root.querySelector("#lenchips").innerHTML=list.map(h=>
 root.querySelectorAll("#lenchips [data-lenchip]").forEach(btn=>{
 btn.onclick=()=>{
 const h=+btn.dataset.lenchip;
-const newEnd=(a + Math.round(h*60) + mealLenFor(shiftLike)) % 1440;
+const newEnd=(a + Math.round(h*60) + mealOffClock(shiftLike)) % 1440;
 const se2=root.querySelector("#se");
 se2.value=m2t(newEnd);
 se2.dispatchEvent(new Event("input",{bubbles:true}));
@@ -24788,9 +24971,11 @@ prev();
 }
 root.querySelector("#brkprev").innerHTML = `<div>
           <b>${fmtHrs(gross)} on the clock` +
-(unpaid? ` \u2212 ${unpaid} min unpaid meal = <b>${fmtHrs(paid)} worked and paid</b>` : `, all of it paid`) + `.</b><br>
+(unpaid? ` \u2212 ${unpaid} min unpaid meal = <b>${fmtHrs(paid)} worked and paid</b>`
+: paidMeal? `, all of it paid — ${paidMeal} min of it ${br.meals.filter(m=>!m.waived).length===1? "a paid meal period" : "paid meal periods"}`
+: `, all of it paid`) + `.</b><br>
           Under ${esc(L.name)} rules that's ${br.owed.meals} meal period${br.owed.meals===1?"":"s"} and ${br.owed.rests} paid rest break${br.owed.rests===1?"":"s"}` +
-(br.owed.meals? `, because entitlement is measured on hours <em>worked</em> \u2014 the unpaid lunch doesn't count toward it` : ``) + `.
+(br.owed.meals? `, counted on the shift’s length with the meal itself left out` : ``) + `.
           ${br.meals.length? "Meal lands around "+m2disp(br.meals[0].start)+", latest start the rule allows "+m2disp(br.meals[0].deadline)+"."
 : ""}
           ${br.meals.length>1? "Second meal around "+m2disp(br.meals[1].start)+", latest "+m2disp(br.meals[1].deadline)+"." : ""}
@@ -24818,7 +25003,7 @@ const trail=()=>{
 if(!follow) return;
 if(!ss.value) return;                  
 const a=t2m(ss.value); if(!isFinite(a)) return;
-se.value=m2hhmm((a + 8*60 + mealLenFor({mealMin})) % 1440);
+se.value=m2hhmm((a + 8*60 + mealOffClock({mealMin})) % 1440);
 prevE();
 };
 ss.addEventListener("input", trail);
@@ -25759,7 +25944,7 @@ fr("Meal waiver", `<select id="ewv" data-long>
         <option value="default" ${empWaiver(e)==="default"?"selected":""}>Follow the board setting</option>
         <option value="yes" ${empWaiver(e)==="yes"?"selected":""}>Signed a waiver — waive their meal whenever the break rules allow</option>
         <option value="no" ${empWaiver(e)==="no"?"selected":""}>Has not signed — never waive their meal</option></select>`),
-`The board is set to: ${esc(WAIVER_WORDS[waiverMode()])}. A meal waiver lets them skip the unpaid meal on a shift short enough under ${esc(law().name)} rules, so the shift stays short. The signed form stays with you; this just tells the drafter what it may do.`) : ""}
+`The board is set to: ${esc(WAIVER_WORDS[waiverMode()])}. A meal waiver lets them skip the meal on a shift short enough under ${esc(law().name)} rules, so the shift stays short. The signed form stays with you; this just tells the drafter what it may do.`) : ""}
     ${S.rules.fillMode==="full"? grp("",
 fr(S.rules.topUpLabel||"Project time", `<select id="epj" data-long>
         <option value="first" ${projectOk(e)==="first"?"selected":""}>First in line for it</option>
@@ -26832,7 +27017,7 @@ modal("Coverage rule",`
         the business as a whole.</span></div>` : ""}
       <div class="field" id="clabels"></div>
       <div class="field"><label>Does a meal period break this rule?</label><select id="cmeal">
-        <option value="1">Yes — someone at an unpaid meal is off duty</option>
+        <option value="1">Yes — someone at a meal is off the floor</option>
         <option value="0">No — I only care who's on the premises</option></select>
         <span class="mini">Say yes for a rule the business has to follow. Say no for rules where stepping away for lunch shouldn't count against you.</span></div>
     </div>`,
@@ -27183,8 +27368,9 @@ const mins=empWeekMinutes(e.id,ws);
 const _hol=holCreditMin(e.id, ws);
 const _paid=mins+_hol;
 const _sp=payOn()? paySplit(ws) : null;
-const pct=e.maxH?clamp(_paid/(e.maxH*60),0,1):0;
-const over = e.maxH && mins>e.maxH*60+1, under = e.minH && _paid<e.minH*60-1 && e.type!=="PRN";
+ 
+const pct=e.maxH?clamp((empWeekWorked(e.id,ws)+_hol)/(e.maxH*60),0,1):0;
+const over = e.maxH && empWeekWorked(e.id,ws)>e.maxH*60+1, under = e.minH && _paid<e.minH*60-1 && e.type!=="PRN";
 return `<div class="erow">
           <div class="name">
             <div class="nm" title="${esc(e.name)}">${empNameLink(e)}</div>
@@ -27250,7 +27436,7 @@ const dayBudget = S.org.budget? S.org.budget/7 : 0;
  
 const PL = payLinesWeek(ws);
 return `<div class="card wkcost"><header><h3>Labor cost</h3>
-        <span class="hint">Paid hours at each person's rate; overtime at time and a half${PL.daily.length? " past "+numsWord(PL.daily)+" hours in a day":""}${PL.dt.length? ", double time past "+numsWord(PL.dt)+" hours":""}, and the ${hoursWord(PL.weekly)} week${PL.weekly.length>1?"s":""} counted the way a pay run does. Meals come out; paid rest breaks stay in.</span></header>
+        <span class="hint">Paid hours at each person's rate; overtime at time and a half${PL.daily.length? " past "+numsWord(PL.daily)+" hours in a day":""}${PL.dt.length? ", double time past "+numsWord(PL.dt)+" hours":""}, and the ${hoursWord(PL.weekly)} week${PL.weekly.length>1?"s":""} counted on time worked. A meal comes out unless it is paid; paid rest breaks stay in.</span></header>
         <div class="body grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)">
           <div class="grid3" style="grid-template-columns:1fr 1fr">
             <div class="kpi ${S.org.budget&&total>S.org.budget?"warn":"ok"}"><span class="k">This week</span><span class="v">${money(total)}</span>
@@ -27459,7 +27645,7 @@ const bb=computeBreaks(s,en,{date:a.date, emp:empById((r.querySelector("#am")||{
 r.querySelector("#brklist").innerHTML = (bb.owed.meals||bb.owed.rests)? `
           <div class="stack" style="gap:7px">
             ${bb.meals.map((m,i)=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:7px 10px">
-              <div><strong>Meal ${m.idx}</strong> <span class="mini">${m.len} min, unpaid</span>
+              <div><strong>Meal ${m.idx}</strong> <span class="mini">${m.len} min${(a.breaks&&a.breaks.meals[i]&&a.breaks.meals[i].waived)? "" : ", "+(m.paid? "paid" : "unpaid")}</span>
                 <div class="mini">Latest start the rule allows ${m2disp(m.deadline)}${m.waivable?" · may be waived in writing":""}</div></div>
               <div class="row" style="gap:6px"><input type="time" class="bm" data-i="${i}" value="${m2t(m.start)}" style="width:120px">
                 ${m.waivable?`<label class="switch"><input type="checkbox" class="bw" data-i="${i}" ${(a.breaks&&a.breaks.meals[i]&&a.breaks.meals[i].waived)?"checked":""}> waived</label>`:""}</div></div>`).join("")}
@@ -28135,7 +28321,8 @@ if(src.patternId) dst.patternId=src.patternId;
 dst.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
 dst.generatedAt=Date.now(); dst.touched=true; dst.suggested=false;
 S.currentWeek=to; save(); closeModal(); render();
-toast("Copied to "+prettyDate(to));
+{ const st=weekMealStamp(src);    
+toast("Copied to "+prettyDate(to)+((st!==null && st!==mealsPaid())? " \u00b7 meals in the copy are "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : "")); }
 }; });
 }
 
@@ -28435,7 +28622,7 @@ return `<div class="tlrow">
                   ${aTimes(a)}
                 </div>
                 ${S.rules.breakMode==="assigned"? b.meals.filter(m=>!m.waived).map(m=>
-`<div class="tlmeal${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" apart":"";})()}" style="left:${pct(m.start)}%;width:${m.len/span*100}%" title="Meal ${m.idx}: ${m2disp(m.start)}–${m2disp(m.end)} (unpaid, must start by ${m2disp(m.deadline)})${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" — outside the closure, which would be past the latest start the rule allows":"";})()}"><span class="tlm">MEAL</span></div>`).join(""):""}
+`<div class="tlmeal${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" apart":"";})()}" style="left:${pct(m.start)}%;width:${m.len/span*100}%" title="Meal ${m.idx}: ${m2disp(m.start)}–${m2disp(m.end)} (${m.paid? "paid" : "unpaid"}, must start by ${m2disp(m.deadline)})${(()=>{const c=lunchClosure(dow,date); return c&&m.start!==c.from?" — outside the closure, which would be past the latest start the rule allows":"";})()}"><span class="tlm">MEAL</span></div>`).join(""):""}
                 ${S.rules.restMode==="assigned"? b.rests.map(r=>
 `<div class="tlrest" style="left:${pct(r.start)}%;width:${Math.max(0.6,r.len/span*100)}%" title="Paid rest ${m2disp(r.start)}–${m2disp(r.start+r.len)}"></div>`).join(""):""}
               </div></div>`;
@@ -28666,7 +28853,7 @@ const gaps = V.filter(v=>v.sev==="crit" && !v.openSlot);
 const under = S.employees.filter(e=>{ const L=effLimits(e);
 return e.active!==false && !e.onCall && L.minH && e.type!=="PRN" && empWeekPaidMinutes(e.id,ws) < L.minH*60-1; });
  
-const overtime = S.employees.filter(e=>e.active!==false && empWeekMinutes(e.id,ws) > (effLimits(e,ws).otWeeklyH||40)*60+1);
+const overtime = S.employees.filter(e=>e.active!==false && empWeekWorked(e.id,ws) > (effLimits(e,ws).otWeeklyH||40)*60+1);
 const days = new Set(wk.assignments.map(a=>a.date)).size;
 const need = fwwNotice();
 const shortNotice = need && daysOut < need;
@@ -28688,7 +28875,7 @@ fixv:V.indexOf(V.find(v=>(v.code==="under"||v.code==="contract"||v.code==="guarr
 && (v.empId===under[0].id || (v.empIds||[]).indexOf(under[0].id)>=0)))});
 if(overtime.length) looks.push({sev:"warn",
 t:overtime.length+" heading into overtime",
-d:overtime.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekMinutes(e.id,ws))).join(", "), act:"emp", ref:overtime[0].id, actLabel:"Open "+overtime[0].name.split(" ")[0]+"’s profile",
+d:overtime.map(e=>e.name.split(" ")[0]+" "+fmtHrs(empWeekWorked(e.id,ws))+workedWord(empWeekWorked(e.id,ws), empWeekMinutes(e.id,ws))).join(", "), act:"emp", ref:overtime[0].id, actLabel:"Open "+overtime[0].name.split(" ")[0]+"’s profile",
 fixv:V.indexOf(V.find(v=>v.code==="wot" && v.empId===overtime[0].id))});
 if(shortNotice) looks.push({sev:"warn", rev:true, t:"Going up on short notice",
 d:"You aim for "+need+" days and "+(daysOut<0?"this week is already underway":daysOut===0?"it starts today":"it starts in "+daysOut+" day"+(daysOut===1?"":"s"))+"."+
@@ -28827,7 +29014,7 @@ label:"Bring "+e.name+" in at "+m2disp(a.startMin-add)});
 }
 });
 out.forEach(o=>{
-const wkMin=empWeekMinutes(o.e.id, ws);
+const wkMin=empWeekWorked(o.e.id, ws);
  
 o.ot=(wkMin+o.add) > (effLimits(o.e, ws).otWeeklyH||40)*60;
 o.cost=(costOn()&&o.e.rate)? (o.add/60)*o.e.rate*(o.ot?1.5:1) : null;
@@ -28840,10 +29027,11 @@ const shA=aShift(a0);
 const was=computeBreaks(a0.startMin, a0.endMin, {shift:shA}), will=computeBreaks(s0, e0, {shift:shA});
  
 const paidAdd=Math.max(0, paidEstimate(s0, e0, {date, gap:aGap(a0), shift:shA}) - paidEstimate(a0.startMin, a0.endMin, {date, gap:aGap(a0), shift:shA}));
-if(o.cost!=null) o.cost=(paidAdd/60)*o.e.rate*(o.ot?1.5:1);
+const workAdd=Math.max(0, workedEstimate(s0, e0, {date, gap:aGap(a0), shift:shA}) - workedEstimate(a0.startMin, a0.endMin, {date, gap:aGap(a0), shift:shA}));
+if(o.cost!=null) o.cost=(paidAdd/60)*o.e.rate + (o.ot? (workAdd/60)*o.e.rate*0.5 : 0);    
 const dm=will.owed.meals-was.owed.meals, dr=will.owed.rests-was.owed.rests;
 const bits=[];
-if(dm>0) bits.push("adds a "+(will.owed.meals===2?"second":"further")+" unpaid meal period");
+if(dm>0) bits.push("adds a "+(will.owed.meals===2?"second":"further")+" meal period");
 if(dr>0) bits.push("adds "+dr+" paid rest break"+(dr===1?"":"s"));
 o.breaksNote = bits.length? "Careful \u2014 this "+bits.join(" and ")+"." : "";
 }
@@ -29169,7 +29357,7 @@ bringIn(date, !O.some(o=>o.rec));
 dayLink();
 rules.forEach(r=>{
 if(mealDriven && r.mealsCount!==false)
-later("Let a meal count as on duty for “"+(r.label||ruleSentence(r))+"”", "For an on-duty meal agreement, or when the person stays on the premises. Meals stop counting against this rule.",
+later("Stop meals counting against “"+(r.label||ruleSentence(r))+"”", "For a rule that is only about who is on the premises. Meals stop counting against this rule.",
 ()=>{ r.mealsCount=false; save(); render(); toast("Meals no longer count against that rule"); });
 if((r.kind||"min")==="min" && (r.min||1)>1)
 later("Lower “"+(r.label||ruleSentence(r))+"” to "+((r.min||1)-1), "The floor drops by one everywhere the rule applies.",
@@ -29293,7 +29481,7 @@ break;
 case "guarreach": {
 if(e) later(first+"\u2019s hours and limits", "The guarantee, the weekly cap and the day limit are on their profile.", ()=>empModal(e.id));
 later("Roles & shifts", "The shift lengths this week can draw on are defined there.", ()=>go("shifts"));
-later("Ground rules \u2192 Meals and rest breaks", "Where the unpaid meal periods behind the paid-hours figure come from.", ()=>go("settings"));
+later("Ground rules \u2192 Meals and rest breaks", "Where the meal periods behind the paid-hours figure come from.", ()=>go("settings"));
 break;
 }
 case "alone": {
@@ -30244,17 +30432,17 @@ const ws=wsIn||S.currentWeek, wk=getWeek(ws);
  
 const rows=[["Date","Day","Employee","Role","Shift","Start","End","Gross hours",
 "Unpaid meal min","Unpaid split min","Paid hours","Away between",
-"Meal times","Rest breaks"]];
+"Meal times","Rest breaks","Paid meal min"]];    
 wk.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.startMin-b.startMin).forEach(a=>{
 const e=empById(a.empId)||{name:"—"}, b=a.breaks||{meals:[],rests:[]};
-const unpaid=b.meals.filter(m=>!m.waived).reduce((t,m)=>t+m.len,0);
+const unpaid=mealMinOff(b.meals);
 const g=aGap(a);
 rows.push([a.date, DAYS[a.dow], e.name+(e.active===false? " (set aside)":""), roleName(a.roleId),
 aShift(a).label, m2t(a.startMin), m2t(a.endMin)+(a.endMin>=1440? " +1d" : ""),
 (aSpanMin(a)/60).toFixed(2), unpaid, gapMin(a), (paidMinutes(a)/60).toFixed(2),
 g? m2t(g.from)+"-"+m2t(g.to) : "",
 b.meals.map(m=>m.waived?"waived":m2t(m.start)).join(" "),
-b.rests.map(r=>m2t(r.start)).join(" ")]);
+b.rests.map(r=>m2t(r.start)).join(" "), mealMinPaid(b.meals)]);
 });
 return rows;
 }
@@ -31028,7 +31216,7 @@ return [esc(e.name), esc(TYPES[e.type]||e.type), mine.length, H(tot)];
 const grand=H(rawMin.reduce((t,m)=>t+m,0));
 rows.push(["<b>Everyone</b>","",rows.reduce((t,r)=>t+r[2],0),"<b>"+grand+"</b>"]);
 body=repTable(["Person","Type","Shifts","Hours"], rows, {num:[2,3], w:["36%","20%","14%","14%"]})+
-(holHoursIn(roster, all, from, to)? '<p class="foot">Hours worked. Paid holidays nobody worked are '+
+(holHoursIn(roster, all, from, to)? '<p class="foot">Paid hours on the schedule. Paid holidays nobody worked are '+
 holHoursIn(roster, all, from, to)+' hours on top of this, and are priced in the cost report.</p>' : "");
 }
 else if(k==="pay"){
@@ -31062,12 +31250,14 @@ return '<h3>'+esc(g.label)+'</h3>'+
 repTable(["Person","Hours","Regular","At time and a half","At double time"], rows,
 {num:[1,2,3,4], w:["34%","14%","14%","19%","19%"]});
 }).join("") || '<p class="empty">No pay periods fall in this range.</p>';
-if(keys.length) body+='<p class="foot">Overtime is measured across each workweek and then charged to the pay period the day falls in \u2014 the same arithmetic as the cost report, so the two agree. Holiday pay, and any premium your agreement or the law adds on top, are not in these columns.</p>';
+if(keys.length) body+='<p class="foot">Overtime is measured across each workweek and then charged to the pay period the day falls in \u2014 the same arithmetic as the cost report, so the two agree. Holiday pay, and any premium your agreement or the law adds on top, are not in these columns.'+
+(all.some(a=>payPeriod(a.date) && paidMinutes(a)!==workedMinutes(a))? ' Hours include paid meals; the overtime columns count time worked.' : '')+'</p>';    
 }
 else if(k==="ot"){
  
 const det={}; wks.forEach(w=>{ det[w]=weekCostDetail(w); });
 const rows=[]; let otTot=0, dtTot=0, premTot=0;
+let otDiff=false;    
  
 const inWindow=(d,e)=>{ const m=(d.perDay||{})[e.id]||{}; let ot=0, dbl=0, pr=0;
 Object.keys(m).forEach(day=>{ if(day<from || day>to) return;
@@ -31078,6 +31268,7 @@ const d=det[w], win=inWindow(d,e), otH2=H(win.ot), dtH2=H(win.dt);
 if(!otH2 && !dtH2) return;
 const prem=win.prem;
 const mins=(S.weeks[w].assignments||[]).filter(a=>a.empId===e.id&&inRange(a)).reduce((t,a)=>t+paidMinutes(a),0);
+if((S.weeks[w].assignments||[]).some(a=>a.empId===e.id && inRange(a) && paidMinutes(a)!==workedMinutes(a))) otDiff=true;
  
 otTot+=win.ot; dtTot+=win.dt; premTot+=prem;
 rows.push([esc(e.name), prettyDate(w), H(mins), otH2, dtH2,
@@ -31091,7 +31282,8 @@ body=repTable(["Person","Week of","Hours","At time and a half","At double time",
 (PL.weekly.length>1? ' \u2014 not the same for everyone here, so each row is measured against the one that applies to that person':'')+
 (PL.daily.length? ', with a day counting as overtime past '+numsWord(PL.daily)+' hours':'')+
 (PL.dt.length? ' and as double time past '+numsWord(PL.dt)+' hours':'')+
-'. The last column is the premium only \u2014 the half, and the second whole hour where a day runs into double time \u2014 not the whole overtime hour. It is the same figure as the "of which premiums" column of the cost report.</p>';
+'. The last column is the premium only \u2014 the half, and the second whole hour where a day runs into double time \u2014 not the whole overtime hour. It is the same figure as the "of which premiums" column of the cost report.'+
+(otDiff? ' Hours include paid meals; the overtime columns count time worked.' : '')+'</p>';
 }
 else if(k==="cost"){
  
@@ -31120,7 +31312,7 @@ rows.push(["<b>Everyone</b>","","","<b>"+money(premTot)+"</b>",
 "<b>"+(holHTot? holHTot+"h \u00b7 "+money(holTot) : "\u2014")+"</b>","<b>"+money(tot)+"</b>"]);
 const PL=payLines(roster, wks[0]);
 body=repTable(["Person","Hours","Rate","Of which premiums","Holiday pay","Cost"], rows, {num:[1,2,3,4,5]})+
-'<p class="foot">Overtime at time and a half'+(PL.daily.length? ' past '+numsWord(PL.daily)+' hours in a day':'')+(PL.dt.length? ', double time past '+numsWord(PL.dt)+' hours':'')+', and the '+hoursWord(PL.weekly)+' week'+(PL.weekly.length>1?'s':'')+' counted the way a pay run does. Premiums are the extra over straight time. Holiday pay covers a paid holiday the person did not work \u2014 anyone who worked one is paid for the shift, which is already in the Cost column, plus whatever premium your payroll adds on top of it.</p>'+
+'<p class="foot">Overtime at time and a half'+(PL.daily.length? ' past '+numsWord(PL.daily)+' hours in a day':'')+(PL.dt.length? ', double time past '+numsWord(PL.dt)+' hours':'')+', and the '+hoursWord(PL.weekly)+' week'+(PL.weekly.length>1?'s':'')+' counted on time worked. Premiums are the extra over straight time. Holiday pay covers a paid holiday the person did not work \u2014 anyone who worked one is paid for the shift, which is already in the Cost column, plus whatever premium your payroll adds on top of it.</p>'+
 (S.org.budget? '<p class="foot">Weekly budget '+money(S.org.budget)+' \u00d7 '+wks.length+' week'+(wks.length===1?"":"s")+' = '+
 money(S.org.budget*wks.length)+'. This period came to '+money(tot)+'.</p>' : "");
 }
@@ -31238,16 +31430,16 @@ const fx=familyExempt(e, a.date);
 const band=minorBand(e, a.date), R=minorRule(band, a.date, fx);
 const sd=schoolDayOn(a.date);
 rows.push([prettyDate(a.date), esc(e.name)+(fx? " (family)":""), age, sd? "school day":"non-school day",
-m2disp(a.startMin)+"\u2013"+m2disp(a.endMin), H(paidMinutes(a)),
+m2disp(a.startMin)+"\u2013"+m2disp(a.endMin), H(workedMinutes(a)),
 R? ((sd? R.sd : R.nd)+"h, until "+m2disp(t2m((R.summerTo && !sd)? R.summerTo : R.to))) : "no limit",
  
 minorBlock(e,a.date,a.dow,a.startMin,a.endMin,
 all.filter(x=>x.empId===a.empId && x.id!==a.id &&
 weekStartOf(x.date,S.org.weekStart)===weekStartOf(a.date,S.org.weekStart))
-.reduce((t,x)=>t+paidMinutes(x),0),
+.reduce((t,x)=>t+workedMinutes(x),0),
 weekStartOf(a.date,S.org.weekStart), a)? '<b class="bad">check</b>':"ok"]);
 });
-body=repTable(["Date","Person","Age","Day","Shift","Hours","Limit that applied","\u00a0"], rows)+
+body=repTable(["Date","Person","Age","Day","Shift","Time worked","Limit that applied","\u00a0"], rows)+
 '<p class="foot">Federal law is the floor everywhere and a state may only be stricter, so the limit shown is whichever was tighter. Work permits and the hazardous-job list are not covered here.</p>';
 }
 else if(k==="roster"){
@@ -32135,11 +32327,16 @@ const HOURS_PRESETS=[
 {id:"always",t:"Around the clock",              d:""}
 ];
  
-function paidUnder(juris, a, b){
-const keep=S.org.jurisdiction;
+let WIZ_MEALS_PAID=null;    
+function estUnder(juris, a, b){
+const keep=S.org.jurisdiction, keepPaid=S.rules.mealsPaid;
 if(juris) S.org.jurisdiction=juris;
-try{ return paidEstimate(a, b, {}); } finally { S.org.jurisdiction=keep; }
+if(typeof WIZ_MEALS_PAID==="function") S.rules.mealsPaid=!!WIZ_MEALS_PAID();
+try{ return estParts(a, b, {}); } finally { S.org.jurisdiction=keep; S.rules.mealsPaid=keepPaid; }
 }
+function paidUnder(juris, a, b){ const x=estUnder(juris, a, b); return x.worked+x.paidMeal; }
+ 
+function workedUnder(juris, a, b){ return estUnder(juris, a, b).worked; }
  
 function clockForPaid(paidMin, juris, from){
 from=from||0;
@@ -32303,6 +32500,7 @@ W.fillMode=R.fillMode||"demand"; W.topUpLabel=R.topUpLabel||"Project time"; W.pr
 W.mealPlan=R.mealPlan||"auto"; if(R.mealSlots) W.mealSlots=R.mealSlots.slice(); if(R.mealClose){ W.mealCloseFrom=R.mealClose.from; W.mealCloseTo=R.mealClose.to; }
 W.sendOut=!!R.sendOut; W.remindH=R.remindH!=null? R.remindH : 12; W.holidayRush=R.holidayRush||"none"; W.holidayRushScope=R.holidayRushScope||"calendar";
 W.xMinors=!!R.minorsOn; W.xTrainee=R.traineeCover==="extra"; W.xCycles=!!R.useCycles; W.xNotice=!!R.advanceNoticeDays;
+W.mealsPaid=!!R.mealsPaid;
 W.xWaiver=!!R.allowMealWaiver; W.waiverAuto=R.mealWaiverMode==="auto"; W.xLic=!!R.trackLic; W.xSkills=!!R.skillsOn;
 W.xPto=!!(s.org||{}).trackPto; W.xMsg=!!(s.msg&&s.msg.on); W.xNoComms=!!(s.rules||{}).commsOff; W.xFww=!!(s.fww&&s.fww.on); W.xPay=!!(s.org&&s.org.pay&&s.org.pay.type&&s.org.pay.type!=="none");
 W.postSpan=R.stationSpan||"day"; W.postFam=R.stationFamilies===false? "0":"1";
@@ -32411,7 +32609,7 @@ const untouched=(M.employees||[]).filter(e=>!empMap[e.id+"_used"] && !N.employee
  
 ["minRestH","maxConsecDays","noClopen","preferLong","breakMode","restMode","mealPlan","mealSlots","mealClose",
 "fillMode","topUpLabel","projectShape","projectShare","sendOut","remindH","minorsOn","traineeCover","holidayRush","holidayRushScope",
-"useCycles","advanceNoticeDays","allowMealWaiver","mealWaiverMode","trackLic","skillsOn","stationSpan","stationFamilies","commsOff"]
+"useCycles","advanceNoticeDays","allowMealWaiver","mealWaiverMode","mealsPaid","trackLic","skillsOn","stationSpan","stationFamilies","commsOff"]
 .forEach(k=>{ if(N.rules[k]!==undefined) M.rules[k]=N.rules[k]; });
 M.msg=Object.assign({on:false, tpl:Object.assign({}, MSG_DEFAULT)}, M.msg||{}); M.msg.on=!!N.msg.on;
 M.fww=Object.assign({on:false, city:"", staff:0, sites:1, asked:false}, M.fww||{}); M.fww.on=!!N.fww.on;
@@ -32467,6 +32665,7 @@ bucketCount:2, buckets:["Staff","Lead","",""], bucketNames:["","","",""], bucket
 people:{},                      
 shiftPreset:"openclose", shifts:[], custom:null,
 shiftLen:8,                      
+mealsPaid:false,                 
 shiftAuto:true,                  
 perShift:{}, perShiftMax:{},
 minRest:10, maxConsec:6, noClopen:true, preferLong:false, perDiem:"ask", breakMode:"assigned", restMode:"self", holPay:"ft", cycles:false, fillMode:"demand",
@@ -32484,8 +32683,13 @@ weeks:1
 const WFRESH = JSON.parse(JSON.stringify(W));
  
 if(!resume && wizRealBoard(S)) Object.assign(W, wizSeedFrom(S));
+WIZ_MEALS_PAID=()=>W.mealsPaid;    
  
-if(resume){ const d=wizDraft(); if(d) Object.assign(W, d.W); }
+if(resume){ const d=wizDraft(); if(d) Object.assign(W, d.W);
+ 
+ 
+if(wizRealBoard(S) && !(d && d.W && typeof d.W.mealsPaid==="boolean" && d.W.mealsPaidSeen===mealsPaid())) W.mealsPaid=mealsPaid(); }
+W.mealsPaidSeen=mealsPaid();    
  
 const POSTY=["pharmacy","clinic","warehouse","security","hotel","food"];
 const ALL_STEPS=[
@@ -32924,7 +33128,7 @@ if(k==="count") return `
       </div>`;
 if(k==="team") return `
       <div class="stack">
-        <p class="whead">One name per line, under the job they do — type or paste a list. Each name gets a row below for full or part time and hours a week. First listed is most senior.</p>
+        <p class="whead">One name per line, under their job — type or paste a list. Each gets a row below for full or part time and hours a week. First listed is most senior.</p>
         <div class="grid2">${Array.from({length:W.bucketCount},(_,b)=>`
           <div class="field">
             <input type="text" class="wbn-name" data-b="${b}" value="${esc(W.buckets[b]||"")}" placeholder="${esc(bucketSuggestionName(W,b))}">
@@ -32962,9 +33166,13 @@ const eff=effPreset();
 const L=shiftLen();
  
 const clk=presets.clock;
+ 
+const capFrom=W.hoursPreset==="always"? 7*60 : t2m(W.open);
 const cap=clk>L*60
 ? L+" paid is "+hmLen(clk)+" with the unpaid meal."
-: "No unpaid meal comes out of a "+L+"h shift here, so the clock says the same.";
+: estUnder(W.juris, capFrom, capFrom+clk).paidMeal>0
+? L+" paid is "+hmLen(clk)+" on the clock — the meal is paid, so it stays in."
+: "No meal comes out of a "+L+"h shift here, so the clock says the same.";
 const anyFT = !allNames().length || allNames().some(pn=>((pset(pn)||{}).type||"FT")==="FT");
  
 const curPaid = (cur.shifts||[]).map(sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return paidUnder(W.juris,a,b); });
@@ -32977,12 +33185,14 @@ if(Math.ceil(goal/h-1e-6) > days) return r(h)+"h shifts: five days make "+r(h*da
 const lo=Math.floor(goal/h+1e-6)*h;
 return r(h)+"h shifts: a full-timer on "+goal+"h lands on "+r(lo)+"h or "+r(lo+h)+"h, not "+goal+"h."; })();
  
-const otSay = (()=>{ const ot=otDefaults(W.juris); if(!(ot.otDailyH>0) || !curPaid.length) return "";
-const top=Math.max.apply(null, curPaid)/60; if(top <= ot.otDailyH+1e-6) return "";
+ 
+const curWorked = (cur.shifts||[]).map(sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return workedUnder(W.juris,a,b); });
+const otSay = (()=>{ const ot=otDefaults(W.juris); if(!(ot.otDailyH>0) || !curWorked.length) return "";
+const top=Math.max.apply(null, curWorked)/60; if(top <= ot.otDailyH+1e-6) return "";
 const f=x=>(Math.round(x*100)/100)+"h";
 const dt = (ot.dtDailyH>0 && top>ot.dtDailyH)? top-ot.dtDailyH : 0;
 const ot1 = (dt? ot.dtDailyH : top) - ot.otDailyH;
-return f(top)+" shifts run past the "+ot.otDailyH+"-hour daily overtime line here: "+f(ot1)+" of each is paid at time and a half"+
+return (Math.max.apply(null, curWorked)===Math.max.apply(null, curPaid)? f(top)+" shifts run" : "Shifts of "+f(top)+" worked run")+" past the "+ot.otDailyH+"-hour daily overtime line here: "+f(ot1)+" of each is paid at time and a half"+
 (dt? " and "+f(dt)+" at double time" : "")+"."+
 (W.juris==="CA"? " An alternative workweek schedule, where one has been adopted, changes this." : ""); })();
  
@@ -33004,6 +33214,10 @@ return `
         <p class="whead">Times come from your hours; the names are yours.</p>
         <div class="field"><label>Paid hours per shift</label>
           <div class="wopts wcols wlens" role="group" aria-label="Paid hours in a shift">${lenOpts().map(h=>opt("shiftLen",h,L,h+"h","")).join("")}</div>
+          <div id="wmealpaid" role="group" aria-label="Are meal periods paid here?" style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+            <label style="font-weight:600;font-size:14px;line-height:1.4">Are meal periods paid here?</label>
+            <div class="wopts">${opt("mealsPaid",false,!!W.mealsPaid,"No — the clock stops","")+opt("mealsPaid",true,!!W.mealsPaid,"Yes — the meal is paid","")}</div>
+          </div>
           <span class="mini" id="wlencap">${esc(cap)}</span>
           ${ftSay? `<div class="banner info" id="wlenft"><div>${esc(ftSay)}</div></div>` : ""}
           ${otSay? `<div class="banner info" id="wlenot"><div>${esc(otSay)}</div></div>` : ""}
@@ -33031,7 +33245,7 @@ return `<div class="wshiftrow">
             <div class="tablabel wsdesire">Guessed: ${esc((DESIRE_LABEL[sh.desire]||"Neutral").toLowerCase())}</div>
             ${note? `<div class="banner warn wsonote"><div>${esc(note.say)}${note.btn? ` <button type="button" class="btn sm" data-wsfix="${i}" data-wswhich="${esc(note.which)}" data-wsstart="${note.fixedStart}" data-wsend="${note.fixedEnd}">${esc(note.btn)}</button>` : ""}</div></div>` : ""}
           </div>`;}).join("")}
-          <div class="help">Wanted or unwanted is guessed from the shape; see Who gets first pick.</div>
+          <div class="help">Guessed from the shape; see Who gets first pick.</div>
         </div>`:""}
         <div class="row" style="gap:8px;flex-wrap:wrap">
           <button type="button" class="btn sm" id="wsadd">+ Add another shift</button>
@@ -33179,7 +33393,8 @@ if(k==="rules") return `
 if(k==="meals") return `
       <div class="stack">
         <p class="whead">Meals follow the rule for ${esc((LAW[W.juris]||LAW.NONE).name)}, staggered so the floor never empties.</p>
-        <div class="field"><label>Meal periods (the unpaid one)</label>
+        <p class="mini" id="wmealecho">${W.mealsPaid? "Meals here are paid — set on Your shifts." : "Meals here are unpaid — set on Your shifts."}</p>
+        <div class="field"><label>Meal periods</label>
           <div class="wopts">${
 opt("breakMode","assigned",W.breakMode,"Put a time on the schedule","Placed inside the meal window.")+
 opt("breakMode","lengths",W.breakMode,"Say how long, staff pick when","Length owed, latest start allowed.")+
@@ -33266,7 +33481,7 @@ return `
         ${W.xNoComms? "" : X("xMsg", W.xMsg, "Ready-written messages to staff", "Nothing sends on its own.")}
         ${X("xTrainee", W.xTrainee, "Someone still learning the job", "Scheduled as an extra, on top of the people you asked for \u2014 never alone.")}
         ${X("xMinors", W.xMinors, "Under-18 hour limits", "Enforced automatically by age.")}
-        ${X("xWaiver", W.xWaiver, "Meal waivers \u2014 skip the unpaid meal on a short shift", "Only with the person\u2019s written agreement; you keep the form.")}
+        ${X("xWaiver", W.xWaiver, "Meal waivers \u2014 skip the meal on a short shift", "Only with the person\u2019s written agreement; you keep the form.")}
         <div class="field" id="xwaiverhow" style="margin:-4px 0 10px 14px;display:${W.xWaiver?"":"none"}"><label>Waived when?</label>
           <select data-wv="1">
             <option value="manual" ${W.waiverAuto?"":"selected"}>Only when I waive one myself</option>
@@ -33489,6 +33704,7 @@ function paintStep(){
 const r=modalRoot();
 PAINT_STEP=W.step;
 histModalOpen();           
+MODAL_ONCLOSE=()=>{ WIZ_MEALS_PAID=null; };    
 const last = W.step===STEPS.length-1;
 r.innerHTML=`<div class="scrim"><div class="modal" style="max-width:760px">
       <header class="wizhd"><h3>${esc(STEPS[W.step].t)}</h3>
@@ -33549,7 +33765,7 @@ b.querySelector("#wleaveno").onclick=()=>b.remove();
 wireDialog(r);
  
 wireSug(r);
-r.querySelectorAll('.wopt[data-g="shiftLen"]').forEach(b=>{ b.dataset.eff=effPreset(); });
+r.querySelectorAll('.wopt[data-g="shiftLen"], .wopt[data-g="mealsPaid"]').forEach(b=>{ b.dataset.eff=effPreset(); });
 r.querySelectorAll(".wopt").forEach(b=>b.onclick=()=>{
 const g=b.dataset.g; let v=b.dataset.v;
 if(v==="true") v=true; else if(v==="false") v=false; else if(/^-?\d+$/.test(v)) v=+v;
@@ -33588,7 +33804,7 @@ W.bucketCount=newCount; W.buckets=["","","",""]; W.bucketLic=(bt.lic||[]).concat
 if(bt.rules) Object.assign(W, bt.rules); } }
 if(g==="shiftPreset"){ W.shifts=[]; W.perShift={}; W.perShiftMax={}; W.shiftAuto=false; }
  
-if(g==="shiftLen"){ W.shifts=[]; const was=b.dataset.eff;
+if(g==="shiftLen" || g==="mealsPaid"){ W.shifts=[]; const was=b.dataset.eff;    
 if(was && was!==effPreset()){ W.perShift={}; W.perShiftMax={}; } }
 if(g==="biz"){ W.custom=null; }
 if(g==="hoursPreset"){ W.shifts=[]; W.perShift={}; W.perShiftMax={}; W.custom=null; }
@@ -34012,6 +34228,7 @@ N.rules.useCycles = !!W.xCycles;
 N.rules.advanceNoticeDays = W.xNotice? 14 : 0;
 N.rules.allowMealWaiver = !!W.xWaiver;
 N.rules.mealWaiverMode = W.xWaiver? (W.waiverAuto? "auto":"manual") : "off";
+N.rules.mealsPaid = !!W.mealsPaid;
 N.rules.trackLic = !!W.xLic;
 N.rules.skillsOn = !!W.xSkills;
  
@@ -34082,12 +34299,16 @@ S.sites=[{id:"site_main", name:"", hours:null}];
 S.priority=Object.assign({}, S.priority||{}, {order:[]});
 if(S.holidays) S.holidays.priorTurns={};
 }
+WIZ_MEALS_PAID=null;
+const paidWas=mealsPaid();
 S=wizMerge(S, N, W);
+const paidMoved=mealsPaid()!==paidWas;
+if(paidMoved) restampDrafts();    
 if(keepUI) S.ui=Object.assign({}, keepUI, {updSeen:UPDREV});
 priorityRefresh(); save(); closeModal(true);
 if(W.startFresh && wasReal) toast("Board cleared and set up again for "+(S.org.name||"the new business"));
 if(wasReal && S._wizMerge){ const m=S._wizMerge; delete S._wizMerge;
-toast("Setup updated \u2014 "+m.kept+" on the roster matched by name"+(m.added? ", "+m.added+" added":"")+(m.untouched? ", "+m.untouched+" not mentioned and kept":"")+". Nothing you'd drafted was touched.");
+toast("Setup updated \u2014 "+m.kept+" on the roster matched by name"+(m.added? ", "+m.added+" added":"")+(m.untouched? ", "+m.untouched+" not mentioned and kept":"")+(paidMoved? "." : ". Nothing you'd drafted was touched."));
 }
 if(S.shifts.length && S.employees.length){
 const res=generateRange(S.currentWeek, W.weeks||1); save(); go("week");
@@ -37494,8 +37715,8 @@ const KB=[
  
 {t:"A holiday is scheduling my whole roster \u2014 how do I run it light?", k:"holiday full roster everyone scheduled thanksgiving christmas one pharmacist skeleton crew fewer people holiday cover holiday shifts still scheduling ten", go:"demand",
 a:"Three things decide this, and the second one is what usually bites.\n\n<b>1. Say what should run.</b> Open Coverage needs and scroll past Saturday to the <b>Holidays</b> block. Add the shifts that should actually run \u2014 one Pharmacist on the day shift, say.\n\n<b>2. Make sure the holiday is actually reading them.</b> Every holiday added from the standard list arrives with a setting of its own (Christmas closed, Veterans Day normal), and <b>a holiday's own setting beats the general one</b>. So switching the general setting to \u201cits own cover\u201d can change nothing at all and say nothing about it. Weeksolved now asks: press <b>Use its own cover</b> and, if any holiday has its own setting, it offers to clear those so every holiday follows you. The block header tells you the truth either way \u2014 \u201cused by 3 of 11\u201d.\n\n<b>3. Decide whether anyone may be added on top.</b> Even with one person asked for, the drafter may give somebody a holiday shift to reach their guaranteed hours. On the Holidays page, <b>Topping people up on a holiday \u2192 Minimum cover only</b> stops that: the day gets exactly what you asked for and nobody else. Any stretch left uncovered is still reported in the checks.\n\nIf the day is genuinely short rather than genuinely quiet, give the holidays their own hours instead: Holidays \u2192 <b>Set hours on every holiday</b> does all of them at once."},
-{t:"How long is a new shift by default?", k:"default shift length 8 hours 8.5 meal break new shift end time automatic 830 430 lunch unpaid", go:"setup",
-a:"Eight paid hours plus the unpaid meal the law where you are owes for them \u2014 so in a state with a 30-minute meal, a shift starting at 8:00 ends at 16:30, and one starting at 9:00 ends at 17:30. That is the shape most businesses run, so it is what you get without doing the arithmetic.\n\nChange the start and the end follows it, keeping the day eight paid hours long. The moment you type your own end time it stops following, so a deliberate twelve-hour shift is never quietly pulled back. Editing a shift you already have never moves anything on its own."},
+{t:"How long is a new shift by default?", k:"default shift length 8 hours 8.5 meal break new shift end time automatic 830 430 lunch unpaid paid", go:"setup",
+a:"Eight paid hours, plus the meal where the clock stops for it — so with a 30-minute meal a shift starting at 8:00 ends at 16:30, and one starting at 9:00 ends at 17:30; where meals are paid, 8:00 ends at 16:00. That is the shape most businesses run, so it is what you get without doing the arithmetic.\n\nChange the start and the end follows it, keeping the day eight paid hours long. The moment you type your own end time it stops following, so a deliberate twelve-hour shift is never quietly pulled back. Editing a shift you already have never moves anything on its own."},
 {t:"Is there two-factor sign-in?", k:"two factor 2fa authentication authenticator security code phone sign in login extra security mfa", go:null,
 a:"Not yet. Sign-in today is your email and password, or your Google account — and a Google account with two-factor turned on already gives you two-factor on Weeksolved, because Google does the checking. Two-factor for email-and-password sign-in is on the list for launch. Until then, the strongest thing you can do is sign in with Google, or use a long password you do not use anywhere else."},
 {t:"What time zone does Weeksolved use?", k:"time zone timezone clock utc daylight saving travel different city times wrong hour", go:null,
@@ -37603,9 +37824,9 @@ a:"Give the drafter room. Keep at least one person more in each role’s pool th
 {t:"Tips for a week with fewer open shifts", k:"open shifts fewer tips availability requests per diem overtime pool coverage minimums", go:"week",
 a:"Most open shifts trace back to one of four things: availability that leaves a weekday with nobody, a coverage minimum higher than the shifts you defined can supply, a cap already spent by midweek, or a license or post only one person holds. Home’s checks name which one for each gap. Cheapest fixes first: approve fewer overlapping days off, add a shift the floor actually needs, raise one cap by a few hours, or add a per diem to the pool. Cover the gaps lists them in that order."},
 {t:"Can meals be waived automatically?", k:"meal waiver waive automatic auto skip lunch short shift six hours 6 hours signed agreement opt in opt out per person never always trim 5:55 6:05 line", go:"settings|Meals and rest breaks", when:()=>waiverPossible(),
-a:"A meal waiver lets someone skip the unpaid meal on a shift short enough for the break rules on this board to allow it, so the shift stays short \u2014 and only ever with that person\u2019s written agreement. Under Settings \u2192 Scheduling \u2192 Meals and rest breaks, Meal waivers has three settings: not used; only when I waive one myself, from the day sheet or a Fix list; and automatic, where the meal is left off as the shift is drafted for anyone whose profile says they signed, so a six-hour shift stays six hours. Each person\u2019s Team profile records whether they signed \u2014 signed means always, not signed means never \u2014 and the Team page shows the count. Weeksolved marks the shift; you keep the signature. When a shift you are typing runs a few minutes past a meal line \u2014 6:05 when 6:00 could be waived, 5:05 when 5:00 owes no meal at all \u2014 the shift editor says so and offers to end it on the line. It only offers; the times you typed stay unless you press it."},
+a:"A meal waiver lets someone skip the meal on a shift short enough for the break rules on this board to allow it, so the shift stays short \u2014 and only ever with that person\u2019s written agreement. Under Settings \u2192 Scheduling \u2192 Meals and rest breaks, Meal waivers has three settings: not used; only when I waive one myself, from the day sheet or a Fix list; and automatic, where the meal is left off as the shift is drafted for anyone whose profile says they signed, so a six-hour shift stays six hours. Each person\u2019s Team profile records whether they signed \u2014 signed means always, not signed means never \u2014 and the Team page shows the count. Weeksolved marks the shift; you keep the signature. When a shift you are typing runs a few minutes past a meal line \u2014 6:05 when 6:00 could be waived, 5:05 when 5:00 owes no meal at all \u2014 the shift editor says so and offers to end it on the line. It only offers; the times you typed stay unless you press it."},
 {t:"How do I fix a coverage dip or a flagged problem?", k:"fix coverage dip gap short floor empty meal lunch no cover free flagged problem checks conflicts warning press fix options solutions", go:"week",
-a:"Press Fix. Every problem on Home, in the checks panel under This week, and every dip on the Day sheet (including a no-cover-free or meal-late chip on the break sheet) opens one short list. The top half fixes it this week: stretch a shift already on the day with the overtime priced, move a meal to a time the floor holds, waive a meal where the break rules allow it, bring someone else in, hand a shift to someone who is clear. The bottom half stops it coming back: let a meal count as on duty for that rule (an on-duty meal agreement), close the doors for lunch on solo days, take a day out of a rule or lower it, schedule one more person on that weekday, change your hours, update a profile. One option is marked Recommended \u2014 the least disruptive. Nothing is invented: every option uses shifts, people and rules you already have, and the checks run again the moment you press one."},
+a:"Press Fix. Every problem on Home, in the checks panel under This week, and every dip on the Day sheet (including a no-cover-free or meal-late chip on the break sheet) opens one short list. The top half fixes it this week: stretch a shift already on the day with the overtime priced, move a meal to a time the floor holds, waive a meal where the break rules allow it, bring someone else in, hand a shift to someone who is clear. The bottom half stops it coming back: stop meals counting against that rule, close the doors for lunch on solo days, take a day out of a rule or lower it, schedule one more person on that weekday, change your hours, update a profile. One option is marked Recommended \u2014 the least disruptive. Nothing is invented: every option uses shifts, people and rules you already have, and the checks run again the moment you press one."},
 {t:"Why does Home say “This keeps happening”?", k:"keeps happening recurring repeat every week again pattern permanent fix for good stop it coming back same problem hide", go:"home",
 a:"When the same flag shows up in two or more of the weeks on your board \u2014 the four before this one and the three after \u2014 Home lists it under This keeps happening. With the same roster and the same rules, next week will bring the same flag, so Fix for good opens only the changes that stop it: a rule lowered or narrowed, one more person on that weekday, the doors shut for lunch, a cap or a contract updated on a profile. A temporary fix each week is still a perfectly good choice \u2014 the point is that the pattern is pointed out, not that anything is changed for you. Nothing is applied until you press. Hide this one keeps a flag you have decided to live with off the list; Settings \u2192 This device \u2192 This board turns the whole thing off or brings the hidden ones back."},
 {t:"Keep two people from working together", k:"keep apart separate conflict grievance siblings family divorce lawsuit restraining order not together same shift same day same station post never schedule together", go:"team",
@@ -37628,6 +37849,8 @@ a:"It is optional and off to begin with. Turn it on at Settings \u2192 Messages 
 a:"Export & share → 'For phone calendars'. Pick one person or the whole team and download a calendar file (.ics). Opened on a phone it drops every shift — times, station, meal — straight into Google or Apple Calendar."},
 {t:"Meal and rest breaks", k:"meal lunch break rest legal law compliance late missing window waive", go:"settings|Meals and rest breaks",
 a:"Pick your state under Settings → Business → Where you operate and every drafted shift gets its meal placed to that state's rule, with paid rest breaks laid around it. Choose under Settings → Scheduling → Meals and rest breaks whether meals are scheduled, length-only, or left to staff. A late or missing meal is flagged before you post, never after."},
+{t:"Can meal periods be paid?", k:"paid lunch paid meal lunch paid on the clock clock keeps running paid through 7 to 3 eight hours 40 37.5 unpaid", go:"settings|Meals and rest breaks",
+a:"Yes. Settings → Scheduling → Meals and rest breaks → Are meal periods paid here? Choose Yes and a meal’s minutes stay in paid hours: a 7:00 to 3:00 shift reads 8 hours, not 7½, and totals, guaranteed hours and contracts include them. A paid meal counts toward hours paid and cost. The overtime and shift-length checks keep counting time worked, as they do now. Meals are still placed, staggered and checked the same way. A shift sized for an unpaid meal pays more once meals are paid, so someone on an exact contract may draft to fewer shifts until the shift is shortened. Drafted weeks follow at once; a posted week stays as posted until you unpost it. Setup asks the same question on Your shifts."},
 {t:"Close for lunch / set meal times", k:"close lunch fixed slots meal times stagger closed", go:"settings|Meals and rest breaks",
 a:"Settings → Scheduling → Meals and rest breaks → How those meal times get decided. Three modes: staggered automatically so the floor never empties; your own fixed lunch slots; or close the business for a stretch — while closed, coverage isn't counted against you."},
 {t:"Coverage rules and minimums", k:"coverage minimum ratio never alone floor pharmacist supervisor", go:"demand",
@@ -38613,7 +38836,7 @@ blocks.push(av&&av.ok? "only free "+m2disp(t2m(av.from))+"–"+m2disp(t2m(av.to)
 if(onTimeOff(e.id,date)) blocks.push("on "+((timeOffFor(e.id,date)||{}).type||"time off"));
 if(empLicensed(e) && e.licExp && date > e.licExp)
 blocks.push((e.licLabel||"their license")+" expired "+prettyDate(e.licExp));
-if(minorBlock(e, date, dow, aMin, bMin, empWeekMinutes(e.id, ws), ws, sh))
+if(minorBlock(e, date, dow, aMin, bMin, empWeekWorked(e.id, ws), ws, sh))
 blocks.push("under-18 hour limits");
 if(!cycleWorksOn(e, date)) blocks.push("not on their work pattern that day");
 const sameDay = wk.assignments.filter(a=>a.empId===e.id && a.date===date);
@@ -38622,18 +38845,18 @@ if(sameDay.length) blocks.push("already on "+(shiftById(sameDay[0].shiftId)||{la
 if(ab) blocks.push("kept apart from "+(empById(ab.other)||{name:"someone"}).name); }
  
 const LIM = effLimits(e, ws);
-const mins = empWeekMinutes(e.id,ws), add = slotPaid(sh, date, e);
+const mins = empWeekWorked(e.id,ws), add = slotWorked(sh, date, e);
 const capH = LIM.maxH || 0;
 if(LIM.capSpent && !capH) blocks.push("their averaging period is already fully spent");
 else if(capH && mins+add > capH*60+1)
-blocks.push("would hit "+fmtHrs(mins+add)+" against a "+fmtHrs(capH*60)+" cap"
+blocks.push("would hit "+fmtHrs(mins+add)+workedWord(mins+add, empWeekMinutes(e.id,ws)+slotPaid(sh, date, e))+" against a "+fmtHrs(capH*60)+" cap"
 + (LIM.cycleCap===capH? " for this week of their cycle"
 : LIM.guaranteedOnly? " until extra hours are approved"
 : LIM.groups.length? " ("+LIM.groups[0]+")" : ""));
 const days = empDays(e.id,ws);
 if(LIM.maxD && days>=LIM.maxD && !sameDay.length) blocks.push(days+" days already, cap is "+LIM.maxD);
 { const g=shiftGap(sh), gm=g? g.to-g.from : 0;
-if(LIM.maxShiftH && paidSpan(aMin,bMin,g||gm,date,e,sh) > LIM.maxShiftH*60)    
+if(LIM.maxShiftH && workedSpan(aMin,bMin,g||gm,date,e,sh) > LIM.maxShiftH*60)    
 blocks.push("longer than their "+LIM.maxShiftH+"h shift limit"); }
 const prev = wk.assignments.filter(a=>a.empId===e.id && a.date===addDays(date,-1));
 if(prev.length){
@@ -38655,13 +38878,14 @@ const likes=[];
 if(e.prefShiftIds.includes(shiftId)) likes.push("asked for this shift");
 if(e.avoidShiftIds.includes(shiftId)) likes.push("would rather avoid it");
 if((e.prefDaysOff||[]).includes(dow)) likes.push("prefers "+DSHORT[dow]+" off");
-{ const pm=mins+holCreditMin(e.id, ws);
+{ const pm=empWeekPaidMinutes(e.id, ws);    
 if(LIM.minH && pm < LIM.minH*60) likes.push(fmtHrs(LIM.minH*60-pm)+" short of guaranteed hours"); }
 out.push({emp:e, blocks, likes, mins, add, cap:capH,
+paidTo: empWeekMinutes(e.id,ws)+slotPaid(sh, date, e),    
 rank: blocks.length*1000 - (e.prefShiftIds.includes(shiftId)?30:0)
 + (e.avoidShiftIds.includes(shiftId)?25:0)
 + ((e.prefDaysOff||[]).includes(dow)?20:0)
-+ (LIM.minH&&(mins+holCreditMin(e.id, ws))<LIM.minH*60? -20:0) + mins/60 });
++ (LIM.minH&&empWeekPaidMinutes(e.id, ws)<LIM.minH*60? -20:0) + mins/60 });
 });
 return out.sort((a,b)=>a.rank-b.rank);
 }
@@ -38674,7 +38898,7 @@ const at=ask? askedAt(ask.rel, c.emp.id) : null;
 return `<div class="cand ${c.blocks.length?"blocked":""}${two? " ask":""}">
     <div style="flex:none;font-weight:600;font-size:13px;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.emp.name)}${at? `<span class="mini asked">Asked at ${esc(askClock(at))}</span>` : ""}</div>
     <div class="why">${c.blocks.length? esc(c.blocks.join(" · ")) : (c.likes.length? esc(c.likes.join(" · ")) : "free and within every limit")}
-      <div class="mono" style="font-size:.6875rem;opacity:.75">${fmtHrs(c.mins)} → ${fmtHrs(c.mins+c.add)}${c.cap?" of "+fmtHrs(c.cap*60):""}</div></div>
+      <div class="mono" style="font-size:.6875rem;opacity:.75">${fmtHrs(c.mins)} → ${fmtHrs(c.mins+c.add)}${c.paidTo===undefined? "" : workedWord(c.mins+c.add, c.paidTo)}${c.cap?" of "+fmtHrs(c.cap*60):""}</div></div>
     ${two? `<div class="candacts"><button class="btn sm primary" ${ask.attr}="${c.emp.id}">Ask ${esc((c.emp.name||"").split(" ")[0])}</button><button class="btn sm" ${onPickAttr}="${c.emp.id}">Said yes — put them on</button></div>`
 : `<button class="btn sm ${c.blocks.length?"":"primary"}" ${onPickAttr}="${c.emp.id}">${c.blocks.length?"Assign anyway":"Assign"}</button>`}
   </div>`; }).join("");
@@ -38710,10 +38934,10 @@ return t + hp.hours*(e.rate||0)*(hp.pct/100);
 }
  
 function costOf(a){ const e=empById(a.empId); if(!e||!e.rate) return 0;
-const paid=paidMinutes(a)/60;
+const paid=paidMinutes(a)/60, work=workedMinutes(a)/60;    
 const lim=effLimits(e, a.date);
 const dtH=lim.dtDailyH>0? lim.dtDailyH : Infinity, otH=lim.otDailyH>0? lim.otDailyH : Infinity;
-const dt=Math.max(0,paid-dtH), ot=Math.max(0,paid-dt-otH), reg=paid-ot-dt;
+const dt=Math.max(0,work-dtH), ot=Math.max(0,work-dt-otH), reg=paid-ot-dt;
 return reg*e.rate + ot*e.rate*1.5 + dt*e.rate*2;
 }
  
@@ -38734,8 +38958,10 @@ const otW=(lim.otWeeklyH||40)*60;
 const otD=lim.otDailyH>0? lim.otDailyH*60 : 0;
 const dtD=lim.dtDailyH>0? lim.dtDailyH*60 : 0;
 const perMin=(e.rate||0)/60;
-const days={};
-byEmp[id].forEach(a=>{ days[a.date]=(days[a.date]||0)+paidMinutes(a); });
+ 
+const days={}, mealPay={};
+byEmp[id].forEach(a=>{ days[a.date]=(days[a.date]||0)+workedMinutes(a);
+mealPay[a.date]=(mealPay[a.date]||0)+mealMinPaid(a.breaks? a.breaks.meals : null); });
  
 const seventh=seventhDayDate(id, ws, list);
 let straight=0;
@@ -38755,7 +38981,7 @@ otMin[id]=(otMin[id]||0)+ot; dtMin[id]=(dtMin[id]||0)+dt;
  
 const slot = (perDay[id]=perDay[id]||{})[d] = {cost:0, prem:0, ot:ot, dt:dt, min:mins};
 if(!rated) return;
-const cost=reg*perMin + ot*perMin*1.5 + dt*perMin*2;
+const cost=(reg+mealPay[d])*perMin + ot*perMin*1.5 + dt*perMin*2;
 const prem=ot*perMin*0.5 + dt*perMin;                        
 slot.cost=cost; slot.prem=prem;
 byDay[d]=(byDay[d]||0)+cost;
@@ -39087,7 +39313,9 @@ const c=Object.assign({},a,{id:uid("a"),date:addDays(a.date,7),locked:false});
 delete c.holAssign;         
 applyBreaks(c); return c;
 });
-wk.generatedAt=Date.now(); wk.published=false; save(); closeModal(); render(); toast("Copied last week forward");
+wk.generatedAt=Date.now(); wk.published=false; restampWeek(wk); save(); closeModal(); render();
+{ const st=weekMealStamp(prev);    
+toast("Copied last week forward"+((st!==null && st!==mealsPaid())? " \u00b7 meals in the copy are "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : "")); }
 };
 r.querySelector("#msave").onclick=()=>{ closeModal(); saveTemplate(); };
 r.querySelector("#mprint").onclick=()=>{ closeModal(); setTimeout(()=>printModal(), 120); };
