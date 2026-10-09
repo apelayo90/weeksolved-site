@@ -8,7 +8,7 @@ Preferred-Languages: en
 Canonical: https://weeksolved.com/.well-known/security.txt
 Policy: https://weeksolved.com/security
 
-# We are a small team. You will get a human reply, usually within three
+# We are small. You will get a human reply, usually within three
 # business days. Tell us what you found, how to reproduce it, and what you
 # think the impact is. We will not take legal action against anyone who
 # reports a problem in good faith, stops at proof of concept, and does not

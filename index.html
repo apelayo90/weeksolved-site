@@ -16,19 +16,19 @@
 <title>Weeksolved — Staff Scheduling Software with Break Rules Built In</title>
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c6a66'/%3E%3Ctext x='32' y='43' font-family='Arial,Helvetica,sans-serif' font-size='28' font-weight='800' fill='%23fff' text-anchor='middle'%3EWS%3C/text%3E%3C/svg%3E">
-<meta name="description" content="Staff scheduling that drafts the week from your coverage rules and places every meal and rest break to your state's rules. Flat price per location.">
+<meta name="description" content="Staff scheduling that drafts the week from your coverage rules and places meal and rest breaks to the state break rules you pick. Flat price per location.">
 <link rel="canonical" href="https://weeksolved.com/">
 <meta property="og:site_name" content="Weeksolved">
 <meta property="og:title" content="Weeksolved — Staff Scheduling Software with Break Rules Built In">
-<meta property="og:description" content="Give it your coverage rules once. Weeksolved drafts the week, places every meal and rest break to the rule your state sets, and tells you exactly what blocked any shift it could not fill.">
+<meta property="og:description" content="Give it your coverage rules once. Weeksolved drafts the week, places every break to the state break rules you pick, and says what blocked any unfilled shift.">
   <meta property="og:image" content="https://weeksolved.com/og-cover.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Weeksolved — your week, solved. Staff scheduling that drafts the week from your coverage rules and places every meal and rest break to your state's break rules.">
+  <meta property="og:image:alt" content="Weeksolved — your week, solved. Staff scheduling that drafts the week from your coverage rules and places meal and rest breaks to the state break rules you pick.">
   <meta name="twitter:image" content="https://weeksolved.com/og-cover.png">
   <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Weeksolved — Staff Scheduling Software with Break Rules Built In">
-<meta name="twitter:description" content="Staff scheduling that drafts the week from your coverage rules and places every meal and rest break to your state's rules. Flat price per location.">
+<meta name="twitter:description" content="Staff scheduling that drafts the week from your coverage rules and places meal and rest breaks to the state break rules you pick. Flat price per location.">
 <meta property="og:url" content="https://weeksolved.com/">
 <meta name="theme-color" content="#1c6a66">
 <link rel="stylesheet" href="/fonts.css">
@@ -44,7 +44,7 @@
  "alternateName":"Week Solved",
  "url":"https://weeksolved.com/",
  "logo":"https://weeksolved.com/icon-512.png",
- "description":"Weeksolved is staff scheduling software for small businesses. A manager signs in; nobody else needs an account. It applies your state's meal and rest break rules, your coverage minimums and your hour caps while drafting, and flags anything that conflicts before you post it.",
+ "description":"Weeksolved is staff scheduling software for small businesses. A manager signs in; nobody else needs an account. It applies the state break rules you pick, your coverage minimums and your hour caps while drafting, and flags anything that conflicts before you post it.",
  "email":"support@weeksolved.com",
  "foundingDate":"2026",
  "areaServed":"US",
@@ -58,7 +58,7 @@
  "applicationCategory":"BusinessApplication","operatingSystem":"Web",
  "offers":{"@type":"Offer","price":"49","priceCurrency":"USD","url":"https://weeksolved.com/pricing",
    "priceSpecification":{"@type":"UnitPriceSpecification","price":"49","priceCurrency":"USD","unitText":"location per month"}},
- "description":"Weeksolved turns a manager's coverage rules into a drafted staff schedule with every break placed to your state's rules. It handles required coverage by role and time of day, role ratios, staff groups and hour caps, individual availability and requests, seniority or lottery rotation for the sought-after shifts, and meal and rest breaks under the break rules of the state you pick.",
+ "description":"Weeksolved turns a manager's coverage rules into a drafted staff schedule with every break placed to the state break rules you pick. It handles required coverage by role and time of day, role ratios, staff groups and hour caps, individual availability and requests, seniority or lottery rotation for the sought-after shifts, and meal and rest breaks under the break rules of the state you pick.",
  "featureList":["Automatic weekly schedule generation from your own rules","State meal and rest break rules applied while drafting every shift","Required coverage minimums, role ratios and pairing rules","Employee availability, preferences and time off","Fair rotation of sought-after shifts by seniority or lottery","Daily station sheets with meal-break relief","PTO balances with accrual rules","License and certification expiry tracking","Excel and PDF export, phone calendar files","Ranked-choice holiday poll"]}
 </script>
 <style>
@@ -129,7 +129,7 @@ h1 em{font-style:normal;color:var(--accent)}
   font-size:12.5px;color:var(--muted);padding:3px 10px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .browser img{display:block;width:100%;height:auto}
 
-/* logos-ish trust strip */
+/* trust strip */
 .trust{display:flex;gap:10px 26px;flex-wrap:wrap;justify-content:center;color:var(--muted);
   font-size:13px;font-weight:600;padding:34px 0 8px}
 .trust span{display:inline-flex;align-items:center;gap:7px}
@@ -234,7 +234,7 @@ footer.wsfoot .fnote{text-align:center;margin-top:8px}
 footer.wsfoot .fnote a{color:var(--accent)}
 /* No middots down here either. The row above reads cleanly on spacing alone,
    and a separator between wrapped items always strands one at the end of a line
-   or the start of the next — which is what he spotted. */
+   or the start of the next. */
 footer.wsfoot .fverticals{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 18px;margin-top:2px}
 footer.wsfoot .fverticals .flabel{color:var(--muted);padding:7px 0}
 footer.wsfoot .fverticals a{color:var(--accent)}
@@ -337,9 +337,9 @@ nav.hn a:active,nav.hn a.go:active{transform:scale(.97)}
 <div class="hero"><div class="wrap herogrid">
   <div class="reveal" style="--ri:0">
     <span class="kick"><i></i>In closed testing now · general release 11 January 2027</span>
-    <h1>Staff scheduling that follows your rules — <em>and your state's break rules</em></h1>
+    <h1>Staff scheduling that follows your rules — <em>and the state break rules you pick</em></h1>
     <p class="lede">Weeksolved is staff scheduling software for small businesses. One manager signs in; nobody else needs an account, an app or a login. Tell it once how your week has to look: coverage, roles, hours, limits.
-      From then on you press one button and read the result — every meal and rest break drafted to your state&rsquo;s rules, every rule you set applied, every gap explained in plain words.</p>
+      From then on you press one button and read the result — every meal and rest break drafted to the state break rules you pick, every rule you set applied, every gap explained in plain words.</p>
     <div class="cta-row">
       <a class="btn pri" href="/contact">Ask for an invite</a>
       <a class="btn sec" href="/pricing">See pricing</a>
@@ -386,7 +386,7 @@ nav.hn a:active,nav.hn a.go:active{transform:scale(.97)}
       clearly labeled, least disruptive first.</p></div>
     <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></svg></div>
       <h3>It works from your break rules</h3>
-      <p>Pick your state and every drafted shift gets its meal placed to that state&rsquo;s rule, rest breaks laid
+      <p>Every drafted shift gets its meal placed to the state break rules you pick, rest breaks laid
       around it, and staggering that never drops the floor below your minimums. Problems it catches are flagged
       as you draft — look over the schedule before you post it.</p></div>
     <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
@@ -450,7 +450,7 @@ nav.hn a:active,nav.hn a.go:active{transform:scale(.97)}
   <p>Meal and rest break rules differ by state. Weeksolved carries the break rules for the states it supports and applies them while drafting: how long a shift runs before a meal is owed, the latest the rule allows it
   to start, how many paid rest breaks the hours earn, and when a waiver is allowed.</p>
   <div class="lawstats">
-    <div class="ls"><b>Every shift</b><span>gets its breaks drafted to your state&rsquo;s rules, automatically</span></div>
+    <div class="ls"><b>Every shift</b><span>gets its breaks drafted to the state break rules you pick, automatically</span></div>
     <div class="ls"><b>Before posting</b><span>late or missing meals are flagged while you draft, not after</span></div>
     <div class="ls"><b>On paper</b><span>every printed schedule shows where each break was placed, so you can check it</span></div>
   </div>
