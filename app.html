@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build b7d495fe 2026-10-09 03:43 UTC -->
+<!-- build 7e508e5d 2026-10-09 08:40 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -874,7 +874,7 @@ ol.a2hs li{padding-left:2px}
 .look .sv{width:3px;align-self:stretch;border-radius:2px;flex:none;min-height:26px}
 .look .sv.crit{background:var(--crit)} .look .sv.warn{background:var(--warn)} .look .sv.ok{background:var(--accent)}
 .look strong{font-size:13.5px}
-@media (max-width:700px){.look{flex-wrap:wrap} .look>div[style*="flex:1"]{flex:1 1 100%!important} .look>.btn{flex:0 1 auto}}
+@media (max-width:700px){.look{flex-wrap:wrap} .look>div[style*="flex:1"]{flex:1 1 calc(100% - 16px)!important} .look>.btn,.look>.row{flex:0 1 auto;margin-left:14px}}
 .ladder{display:flex;flex-direction:column;gap:6px}
 .rung{display:flex;gap:12px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface2);transition:background .12s,box-shadow .12s,transform .06s}
 .rung[draggable="true"]{cursor:grab}
@@ -891,7 +891,7 @@ ol.a2hs li{padding-left:2px}
 .dmark.g{color:var(--ok)} .dmark.b{color:var(--warn)}
 .desrow{display:flex;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:6px;flex-wrap:wrap}
 .desrow .seg button{padding:4px 9px;font-family:"IBM Plex Mono",monospace;min-width:30px}
-@media (max-width:700px){.rung .tally{display:none}.desrow .mini:last-child{display:none}}
+@media (max-width:700px){.rung .tally{display:none}.desrow .seg~.mini:last-child{display:none}}
 .pane{animation:fadeup .18s ease}
 @keyframes fadeup{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .shiftblk{transition:box-shadow .12s,transform .08s,opacity .12s}
@@ -1072,6 +1072,14 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .daytog{padding:10px 12px}
   .switch{padding:8px 0}
   .addbtn{min-width:40px;min-height:36px}
+}
+@media (max-height:500px){
+  .scrim{padding:6px max(16px, env(safe-area-inset-right,0px)) calc(6px + var(--kb,0px)) max(16px, env(safe-area-inset-left,0px))}
+  .scrim.edge{padding:6px max(6px, env(safe-area-inset-right,0px)) calc(6px + var(--kb,0px)) max(6px, env(safe-area-inset-left,0px))}
+  .modal,.scrim.edge .modal{max-height:calc(100vh - 12px - var(--kb,0px));max-height:calc(100dvh - 12px - var(--kb,0px))}
+  .modal>header,.scrim.edge .modal>header{padding:6px 14px}
+  .modal>footer{padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px))}
+  .modal .body{padding-top:12px}
 }
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:80;
   grid-template-columns:repeat(5,minmax(0,1fr));
@@ -2142,6 +2150,9 @@ const d=parseYmd(dateStr); const diff=(d.getDay()-startDow+7)%7; d.setDate(d.get
  
 function thisWeekStart(){ return weekStartOf(ymd(new Date()), (S.org&&S.org.weekStart)||0); }
 function curWeek(){ const c=S && S.currentWeek; return (typeof c==="string" && /^\d{4}-\d{2}-\d{2}$/.test(c))? c : thisWeekStart(); }
+ 
+function weekKeyOk(k){ return typeof k==="string" && /^\d{4}-\d{2}-\d{2}$/.test(k); }
+const WEEK_ODD="This week's date can't be read, so it can't be opened. It is kept as it was.";
 function prettyDate(s){ const d=parseYmd(s);
 return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
 function prettyFull(s){ const d=parseYmd(s);
@@ -2768,6 +2779,7 @@ S._seq = LS_SEQ; S._tab = TAB_ID;
 }
  
 try{ S._at=Date.now(); S._uid=LS_UID||""; S._rev=CLOUD_REV||0; S._dirty=!!LOCAL_DIRTY;
+if(BOOT_CONFLICT){ S._rev=BOOT_CONFLICT.base||0; S._dirty=true; }    
 localStorage.setItem(lsKey(), JSON.stringify(S)); }
 catch(e){
  
@@ -2896,6 +2908,11 @@ Object.keys(c.weeks||{}).forEach(k=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) throw n
 return c;
 }
  
+ 
+const ID_FIELDS=new Set(["id","a","b","to","taker","gave","gaveShift","outBy","mentor","station","station2",
+"reliefFrom","linkedTo","linkWith","noStations","sts","posts","stations","order","seen","ids","unserved",
+"rank","cant","was","homeSite","trainBecomes","guaranteeShift","holAssign"]);
+function idField(k){ return ID_FIELDS.has(k) || /Ids?$/.test(k); }
 function remintIds(s){
 const fresh=new Map();
 eachRecord(s, v=>{ if(idBad(v)) fresh.set(String(v.id), ""); });
@@ -2907,12 +2924,17 @@ const rekey=k=>{ if(fresh.has(k)) return fresh.get(k);
 let t="|"+k+"|";
 fresh.forEach((n,o)=>{ while(t.indexOf("|"+o+"|")>=0) t=t.replace("|"+o+"|", "|"+n+"|"); });
 return t.slice(1,-1); };
+ 
 const walk=(v,d)=>{ if(!v || typeof v!=="object" || d>64) return;
-if(Array.isArray(v)){ for(let i=0;i<v.length;i++){ const y=swap(v[i]); if(y!==v[i]) v[i]=y; walk(v[i],d+1); } return; }
+if(Array.isArray(v)){ for(let i=0;i<v.length;i++) walk(v[i],d+1); return; }
 if("id" in v && v.id!=null && typeof v.id!=="string" && fresh.has(String(v.id))) v.id=fresh.get(String(v.id));
-const ks=Object.keys(v), nk=ks.map(rekey);
-if(nk.some((k,i)=>k!==ks[i])){ const vals=ks.map(k=>v[k]); ks.forEach(k=>{ delete v[k]; }); nk.forEach((k,i)=>{ v[k]=vals[i]; }); }
-Object.keys(v).forEach(k=>{ const y=swap(v[k]); if(y!==v[k]) v[k]=y; walk(v[k],d+1); }); };
+if(v!==s.weeks){ const ks=Object.keys(v), nk=ks.map(rekey);
+if(nk.some((k,i)=>k!==ks[i])){ const vals=ks.map(k=>v[k]); ks.forEach(k=>{ delete v[k]; }); nk.forEach((k,i)=>{ v[k]=vals[i]; }); } }
+Object.keys(v).forEach(k=>{ const x=v[k];
+if(idField(k)){
+if(typeof x==="string"){ const y=swap(x); if(y!==x) v[k]=y; }
+else if(Array.isArray(x)) for(let i=0;i<x.length;i++){ const y=swap(x[i]); if(y!==x[i]) x[i]=y; } }
+walk(v[k],d+1); }); };
 walk(s,0);
 return s;
 }
@@ -3383,7 +3405,7 @@ toast("That's all "+queue.length+" — check your sent folder to be sure");
 }
 
  
-const ACCESS = {"on":true,"until":"","codes":[{"id":"T01","s":"b0448054b80ed835ac88776ae1de32b002a61a171d01c9e25a3ad371ad39668a","days":30},{"id":"T02","s":"b2d221a1adacf5a9cef05176ab9e36d6dd137e0f27ce88d4994437bec5e99a61","days":30},{"id":"T03","s":"15d34ca5ac0a6b56e8c65906cfbc73d773675d72523fa652a926013ac53e8e43","days":30},{"id":"T05","s":"98e76db3f6c5789756f4b1fb204a0d6e9323d8daeb433b232d33b5ee5fb31e1d","days":30},{"id":"T06","s":"55d421430e37fc3d68e289deb7f7d1e7400f33226d133758fb4b1b825cf39381","days":30},{"id":"T11","s":"6de2b9a0f33b80f82e8f83f7bac2a143b9872445f4055fdeb6997f32e162b25f","days":30},{"id":"T12","s":"c214919abab6cc44dec07603b07ead4d630ba32f5db393359b286a9b342e48fb","days":30}]};    
+const ACCESS = {"on":true,"until":"","codes":[{"id":"T01","s":"b0448054b80ed835ac88776ae1de32b002a61a171d01c9e25a3ad371ad39668a","days":30},{"id":"T02","s":"b2d221a1adacf5a9cef05176ab9e36d6dd137e0f27ce88d4994437bec5e99a61","days":30},{"id":"T13","s":"9aa0137d3097c8afcf9d5b3deed30ba5fd4637b66a60ca3fc6299d2b240f5fa1","days":30},{"id":"T14","s":"0570d60c9e983d35fcf4fc4697b7e9f8b50cb83e869f8df6c6a194cf6489fbaa","days":30},{"id":"T15","s":"c8517fa9622dbcbdbd47b9c802a463cb143add885b5103b455dad45ad8dec1e6","days":30},{"id":"T16","s":"6f87419c28b8811311b9ce96ecf3511c3ee2ae0bd69ab996e73f421d3adcb557","days":30},{"id":"T17","s":"855e2909b93e4c37943c40ca824476a12ead099a6ec504ec71a892f96c877dc6","days":30},{"id":"T18","s":"31ede87e645ef8cdc3d3cae2c917866957e3e00c9910a6b8bdca85d086a42e57","days":30},{"id":"T19","s":"2f051c0205e82c9d7e1204fdb3866934b4248e8c49af39b2900617ceb65f529b","days":30},{"id":"T20","s":"a2f5a90320932f8445ad8a6a4d1d614de788b25fe438ca0d7e2db5d89ef882f9","days":30},{"id":"T21","s":"f7fc31bccdc341ed4a004277f6e94f03da449edd9bc3be115b6b20a97c2748b2","days":30},{"id":"T22","s":"66a659a93d14638ffb08ad5812e9f3a72c80754a7b1d7ed3f88c8b4ccef241c5","days":30}]};    
 const PASSKEY = "dowel.pass";
  
  
@@ -3474,7 +3496,7 @@ modal("A few new questions from the latest update", `
         </select></div>`:""}
       ${(S.holidays.list||[]).length? `<div class="field"><label>How you run each holiday you've listed</label>
         <div class="stack" style="gap:5px">${S.holidays.list.map(h=>`
-          <div class="desrow"><div style="min-width:0;flex:1"><strong style="font-size:12.5px">${esc(h.name)}</strong>
+          <div class="desrow"><div style="min-width:0;flex:1 1 80px"><strong style="font-size:12.5px">${esc(h.name)}</strong>
             <div class="mini mono">${esc(prettyDate(h.date))}</div></div>
             <select data-uhol="${esc(h.id)}" style="margin-left:auto;max-width:180px">
               <option value="closed" ${holMode(h)==="closed"?"selected":""}>Closed</option>
@@ -3483,7 +3505,7 @@ modal("A few new questions from the latest update", `
             </select></div>`).join("")}</div>
         <span class="mini">Closed days are never scheduled and stay out of the holiday poll.</span></div>`
 : `<div class="help">New: each holiday can now be marked closed, lighter, or normal — and the Holidays page can add the usual US holidays in one tap.</div>`}
-      ${(S.stations||[]).length? `<div class="field"><label>How long someone holds a post</label>
+      ${ (S.stations||[]).length? `<div class="field"><label>How long someone holds a post</label>
         <select id="u_span">
           <option value="day" ${(S.rules.stationSpan||"day")==="day"?"selected":""}>All day — one post each</option>
           <option value="half" ${S.rules.stationSpan==="half"?"selected":""}>Half a day, then everyone moves</option>
@@ -3491,7 +3513,7 @@ modal("A few new questions from the latest update", `
           <option value="3h" ${S.rules.stationSpan==="3h"?"selected":""}>Every 3 hours</option>
           <option value="4h" ${S.rules.stationSpan==="4h"?"selected":""}>Every 4 hours</option>
         </select>
-        <span class="mini">New: the floor can rotate during the day, and numbered posts (Typist 1, Typist 2) now share one rotation so a turn on either counts the same. Both adjustable under Stations.</span></div>`
+        <span class="mini">New: the floor can rotate during the day, and numbered posts (Register 1, Register 2) now share one rotation so a turn on either counts the same. Both adjustable under Stations.</span></div>`
 : `<div class="help">New: if people take posts during the day — a register, the deli counter — set them up under Stations. They never touch the weekly schedule; they're handed out on the day sheet, fairly, every time you draft.</div>`}
       <div class="field"><label>Plan longer vacations with a ranked survey?</label>
         <select id="u_vac">
@@ -3641,10 +3663,21 @@ let FB=null, CLOUD_REV=0, PUSHING_REV=0, cloudPushTimer=null, cloudUnsub=null, S
 let WELCOME_WITH=null;    
  
 let WELCOME_LATER=null;
+ 
+let WELCOME_AFTER=null;
 function welcomeAfterSetup(){
 const f=WELCOME_LATER; WELCOME_LATER=null;
+if(f) WELCOME_AFTER=WELCOME_AFTER||[];    
 if(f) setTimeout(()=>{ if(welcomeStillFor(f.uid)) f(); }, 350);
+ 
+if(f) setTimeout(()=>{ const q=WELCOME_AFTER||[]; WELCOME_AFTER=null;
+if(!q.length || !welcomeStillFor(f.uid)) return;
+const run=()=>q.forEach(g=>{ try{ g(); }catch(e){} });
+if(modalRoot().querySelector(".modal")){ const prev=MODAL_ONCLOSE; MODAL_ONCLOSE=()=>{ if(prev) prev(); setTimeout(run, 60); }; }
+else run(); }, 350);
 }
+ 
+function afterWelcome(g){ if(WELCOME_AFTER) WELCOME_AFTER.push(g); else g(); }
  
 function welcomeStillFor(uid){
 try{ return !!uid && !SIGNED_OUT && !!(FB && FB.user) && FB.user.uid===uid && !!document.querySelector(".app"); }
@@ -3728,8 +3761,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "b7d495fe";       
-const BUILD_AT = "2026-10-09 03:43 UTC";       
+const BUILD_ID = "7e508e5d";       
+const BUILD_AT = "2026-10-09 08:40 UTC";       
 const TERMS_VERSION = "4";                  
 const TERMS_HASH = "ed1753c996121835";
 const TERMS_DATE = "September 12, 2026";
@@ -4231,7 +4264,7 @@ FB={ auth: firebase.auth(), db: firebase.firestore() };
 collectRedirectResult();
 FB.auth.onAuthStateChanged(async u=>{
 if(SIGNING_UP) return;                     
-if(!u){ FB.user=null; WELCOME_WITH=null; WELCOME_LATER=null; authScreen(); return; }    
+if(!u){ FB.user=null; WELCOME_WITH=null; WELCOME_LATER=null; DEVLIST=[]; authScreen(); return; }    
 FB.user=u;
 try{ await cloudEnter(); deleteResumeOnBoot(u).catch(()=>{}); }
 catch(e){ authScreen("Couldn't reach your board. Check the connection and sign in again."); }
@@ -4265,7 +4298,7 @@ return;
 }
  
 if(SIGNING_UP){ if(u) last=u.id; return; }
-if(!u){ last=""; FB.user=null; FB.auth.currentUser=null; WELCOME_WITH=null; WELCOME_LATER=null; authScreen(); return; }    
+if(!u){ last=""; FB.user=null; FB.auth.currentUser=null; WELCOME_WITH=null; WELCOME_LATER=null; DEVLIST=[]; authScreen(); return; }    
 if(u.id===last) return;                    
 last=u.id;
 FB.user=sbUserShim(u); FB.auth.currentUser=FB.user;
@@ -4400,10 +4433,9 @@ BOARD_READY = true;
 if(bothMoved){
  
 S=migrate(local);
-BOOT_CONFLICT={state:remote.state, rev:remote.rev, at:remote.at};
+BOOT_CONFLICT={state:remote.state, rev:remote.rev, at:remote.at, base:localRev};    
 setSync(false,"Your other device also made changes \u2014 unresolved");
  
-setTimeout(()=>{ if(!welcomeStillFor(uid)) return; try{ bootConflictModal(); }catch(e){} }, 500);
 }
 else if(!localAhead){ S=migrate(remote.state); lsSave(); if(remote.legacy) cloudPushNow(); }
 else { S=migrate(local); cloudPushNow(); }    
@@ -4467,6 +4499,8 @@ return now;
 })();
 const asks=startApp();
 setSync(true,"Signed in — your board follows you between devices");
+ 
+if(BOOT_CONFLICT) setTimeout(()=>{ if(!welcomeStillFor(uid)) return; try{ bootConflictModal(); }catch(e){} }, 500);
  
 WELCOME_LATER=null;
 if(WELCOME_WITH && WELCOME_WITH.uid===uid){ const W=WELCOME_WITH; WELCOME_WITH=null;
@@ -4586,6 +4620,7 @@ return z? z.split("/").pop().replace(/_/g," ") : "";
 function devRef(id){ return FB.db.doc("users/"+FB.user.uid+"/devices/"+(id||deviceId())); }
 async function deviceTouch(){
 if(!FB || !FB.user) return;
+if(ACCOUNT_DELETING){ clearTimeout(DEVTIMER); DEVTIMER=setTimeout(deviceTouch, 600000); return; }    
 if(BACKEND==="supabase"){
 try{ await sbDeviceTouch(FB.user.uid); }catch(e){}
 clearTimeout(DEVTIMER);
@@ -4604,16 +4639,21 @@ DEVTIMER=setTimeout(deviceTouch, 600000);
 }
 async function deviceFetch(){
 if(!FB || !FB.user) return [];
+ 
+const uid=FB.user.uid, still=()=>!!(FB && FB.user && FB.user.uid===uid);
+let list=[];
 if(BACKEND==="supabase"){
-try{ DEVLIST=(await sbDeviceList(FB.user.uid)).sort((a,b)=>(b.last||0)-(a.last||0)); }
-catch(e){ DEVLIST=[]; }
-return DEVLIST;
-}
+try{ list=(await sbDeviceList(uid)).sort((a,b)=>(b.last||0)-(a.last||0)); }
+catch(e){ list=[]; }
+} else {
 try{
-const sn=await FB.db.collection("users/"+FB.user.uid+"/devices").get();
-DEVLIST=(sn.docs||[]).map(d=>Object.assign({id:d.id}, d.data()||{}))
+const sn=await FB.db.collection("users/"+uid+"/devices").get();
+list=(sn.docs||[]).map(d=>Object.assign({id:d.id}, d.data()||{}))
 .sort((a,b)=>(b.last||0)-(a.last||0));
-}catch(e){ DEVLIST=[]; }
+}catch(e){ list=[]; }
+}
+if(!still()) return [];
+DEVLIST=list;
 return DEVLIST;
 }
 const DEV_LIVE_MS=20*60*1000;
@@ -4750,6 +4790,20 @@ if(!FB || !FB.user) return;
 clearTimeout(cloudPushTimer);
 cloudPushTimer=setTimeout(cloudPushNow, 1200);
 }
+ 
+var ACCOUNT_DELETING=false;
+function deleteHold(){
+const unsent=!!(LOCAL_DIRTY || cloudPushTimer || CLOUD_RETRY);
+ACCOUNT_DELETING=true;
+try{ clearTimeout(cloudPushTimer); }catch(e){} cloudPushTimer=null;
+try{ cloudRetryStop(); }catch(e){}
+LOCAL_DIRTY=false;
+return unsent;
+}
+function deleteRelease(unsent){
+ACCOUNT_DELETING=false;
+if(unsent){ LOCAL_DIRTY=true; cloudPush(); }
+}
 let WKHASH={};     
  
 const MAX_STAFF = 250;
@@ -4785,11 +4839,13 @@ delete c._uid; delete c._at; delete c._rev;
 return JSON.stringify(c);
 }
 function cloudPushNow(){
-if(!FB || !FB.user || SIGNED_OUT) return;
+if(!FB || !FB.user || SIGNED_OUT || ACCOUNT_DELETING) return;    
  
 if(CLOUD_ENTERING) return;
  
 if(!BOARD_READY) return;
+ 
+if(BOOT_CONFLICT){ setSync(false,"Your other device also made changes \u2014 unresolved"); return; }
 if(LS_UID && LS_UID!==FB.user.uid) return;
  
 { const big=oversizeDoc();
@@ -5705,7 +5761,7 @@ return FB.db.collection("reports").where("uid","==",uid).get()
 }
  
 function reportPut(uid, rec, rid, key){
-if(!uid) return Promise.resolve("");
+if(!uid || ACCOUNT_DELETING) return Promise.resolve("");    
 rid=rid||nextReportId(uid);
 if(!rid) return Promise.resolve("");
 return FB.db.doc("reports/"+rid).set(rec).then(()=>rid, e=>{
@@ -5720,6 +5776,7 @@ return FB.db.doc("reports/"+id).set(rec).then(()=>id);
 }
  
 function mailPut(uid, kind, doc, id){
+if(ACCOUNT_DELETING) return Promise.resolve("");    
 id=id||nextMailId(uid, kind);
 if(!id) return Promise.resolve("");
 return FB.db.doc("mail/"+id).set(doc).then(()=>id, e=>{
@@ -6093,8 +6150,10 @@ if(!gOnly){
 const {error}=await SB.auth.signInWithPassword({email:String(u.email||""), password:pass});
 if(error) throw sbAuthErr(error);
 }
+const unsent=deleteHold();    
 const left=await wipeCloudData(u.uid);
 if(left){
+deleteRelease(unsent);
 btn.disabled=false; btn.textContent="Delete it for good";
 err("Some of your data could not be removed just now, so the account has been left alone rather than half-deleted. "+
 "That is usually the connection. Try again in a moment, and if it keeps happening write to support@weeksolved.com and it will be done by hand.");
@@ -6134,8 +6193,10 @@ const tr=await u.getIdTokenResult(true); const age=Date.now()-(Date.parse((tr &&
 if(!(age>=0 && age<5*60*1000)){ const e=new Error("not confirmed"); e.code="auth/requires-recent-login"; throw e; }
 }
 const W={};    
+const unsent=deleteHold();    
 const leftBehind = await wipeCloudData(u.uid, W);
 if(leftBehind){
+deleteRelease(unsent);
  
 btn.disabled=false; btn.textContent="Delete it for good";
 err("Some of your data could not be removed just now, so the account has been left alone rather than half-deleted. "+
@@ -6220,7 +6281,7 @@ document.body.innerHTML =
 '<div class="gate"><div class="gatebox">'+
 '<div class="gatemark">WS</div>'+
 '<h1>Weeksolved</h1>'+
-'<p class="gsub">Your test window has ended \u2014 thank you for putting it through its paces.</p>'+
+'<p class="gsub">Your access has ended. Thank you for using Weeksolved.</p>'+    
 '<p class="gfoot">Your board is kept in your account, and nothing is deleted without telling you first.'+(EXPIRED_UNSENT? '' : ' Back it up, or delete your account, under Your data below.')+'</p>'+
 (EXPIRED_UNSENT? '<div class="banner info" style="text-align:left"><div>Your last change didn\u2019t reach your account before your access ended. Back up now keeps it.</div></div>' : '')+
 (EXPIRED_UNSENT? yourData : '')+
@@ -6645,7 +6706,8 @@ if(typeof e.active!=="boolean") e.active = !!e.active;
 if(!e.active && !e.aside) e.aside={why:"", from:"", back:"", note:""};
  
 const hm=m=> m>=1440? "23:59" : String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
-const tm=v=> v==null || v===""? "00:00" : Number.isInteger(v) && v>=0 && v<=1440? hm(v) : String(v);
+ 
+const tm=v=> v==null || v===""? "00:00" : Number.isInteger(v) && v>=0 && v<=24? hm(v*60) : Number.isInteger(v) && v>=25 && v<=1440? hm(v) : String(v);
  
 const was=Array.isArray(e.avail) || (e.avail && typeof e.avail==="object")? e.avail : [];
 e.avail=[0,1,2,3,4,5,6].map(i=>{
@@ -6670,6 +6732,21 @@ function otDefaults(j){ return Object.assign({otDailyH:0, otWeeklyH:40, dtDailyH
 function seventhDayLaw(){ return !!otDefaults(S.org.jurisdiction).seventhDay; }
  
  
+ 
+function seventhDaySay(e, ws, rows){
+const sev=seventhDayDate(e.id, ws, rows); if(!sev) return "";
+const on=(rows||(peekWeek(ws).assignments||[])).filter(a=>a.empId===e.id && a.date===sev);
+const sevMin=on.reduce((t,a)=>t+workedMinutes(a),0);
+const sevPaid=on.reduce((t,a)=>t+paidMinutes(a),0);
+const over=Math.max(0, sevMin-8*60);
+return [prettyDate(sev)+" is the seventh day of a week they have worked every day of, so the ",
+(law().name? law().name+" rules on this board price " : "rules on this board price "),
+(over? "the first 8h at time and a half and the remaining "+fmtHrs(over)+" at double time"
+: "all "+fmtHrs(sevMin)+(sevPaid!==sevMin? " worked" : "")+" at time and a half"),
+((unionOn() && union().seventhDay)? ", and "+unionLabel()+" carries the same premium" : ""),
+". Giving them one of the seven days off costs less.",
+].join("");
+}
 function seventhDayDate(empId, ws, rows){
 if(!seventhDayLaw()) return null;
 const list=weekDates(ws).map(x=>x.date);
@@ -7242,6 +7319,36 @@ return bad;
 function covOn(r, dow){
 return !r || !Array.isArray(r.days) || !r.days.length || r.days.includes(dow);
 }
+ 
+function ruleWindowsOn(r, dow, date){
+const rs=t2m(r.start); let re=t2m(r.end); if(re<=rs) re+=1440;
+const w=[];
+if(covOn(r, dow)) w.push([rs, re]);
+const yd=(dow+6)%7;
+if(re>1440 && covOn(r, yd)){
+let y0=0;
+if(date){ const y=addDays(date,-1);
+(multiSite()? sitesList().map(z=>siteWindowOnDate(y, yd, z.id)) : [dayWindow(yd)])
+.forEach(x=>{ if(x) y0=Math.max(y0, x[1]-1440); }); }
+if(re-1440>y0) w.push([y0, re-1440, true]);
+}
+return w;
+}
+ 
+function withLastNight(day){
+const d=day && day[0]; if(!d || !d.date) return day||[];
+if(day.some(x=>x._tail || x.date!==d.date)) return day;
+const y=addDays(d.date,-1), w1=weekStartOf(d.date, S.org.weekStart), w0=weekStartOf(y, S.org.weekStart);
+const rows=(peekWeek(w1).assignments||[]).concat(w0!==w1? (peekWeek(w0).assignments||[]) : []);
+return day.concat(overnightTails(rows, d.date));
+}
+ 
+function lastNightRules(dow, date){
+const out=[];
+(S.coverage||[]).forEach(r=>{ const w=ruleWindowsOn(r, dow, date).find(x=>x[2]);
+if(w) out.push(Object.assign({}, r, {start:m2t(w[0]), end:m2t(w[1]), _rule:r})); });
+return out;
+}
 function dayShortfall(day, dow){
  
 if(multiSite()){
@@ -7249,13 +7356,24 @@ const date=(day && day[0])? day[0].date : null;
 const winAt=z=>{ if(z) return siteWindowOnDate(date, dow, z);
 const open=sitesList().map(x=>siteWindowOnDate(date, dow, x.id)).filter(Boolean);
 return open.length? [Math.min.apply(null, open.map(w=>w[0])), Math.max.apply(null, open.map(w=>w[1]))] : null; };
-return (S.coverage||[]).filter(r=>covOn(r,dow)).reduce((t,r)=>t+covSites(r).reduce((u,z)=>{
+const own=(S.coverage||[]).filter(r=>covOn(r,dow)).reduce((t,r)=>t+covSites(r).reduce((u,z)=>{
 const w=winAt(z); return w? u+ruleShort(z? day : openPool(day, date, dow), z? Object.assign({}, r, {siteId:z}) : r, w[0], w[1]) : u; }, 0), 0);
+ 
+const tails=lastNightRules(dow, date);
+if(!tails.length) return own;
+const dn=withLastNight(day);
+return own+tails.reduce((t,r)=>t+covSites(r).reduce((u,z)=>{
+const w=winAt(z); return w? u+ruleShort(z? dn : openPool(dn, date, dow), z? Object.assign({}, r, {siteId:z}) : r, w[0], w[1]) : u; }, 0), 0);
 }
 const win=dayWindow(dow);
 if(!win) return 0;                        
-return (S.coverage||[]).filter(r=>covOn(r,dow))
+const own=(S.coverage||[]).filter(r=>covOn(r,dow))
 .reduce((t,r)=>t+ruleShort(day,r,win[0],win[1]),0);
+ 
+const tails=lastNightRules(dow, (day && day[0])? day[0].date : null);
+if(!tails.length) return own;
+const dn=withLastNight(day);
+return own+tails.reduce((t,r)=>t+ruleShort(dn,r,win[0],win[1]),0);
 }
  
 function staggerDay(list, all){
@@ -7278,14 +7396,18 @@ const rules = (S.coverage||[]).filter(r=>covOn(r,dow));
  
 const nDate = addDays(withMeals[0].date, 1), nDow = (dow+1)%7;
 const nextRules = (S.coverage||[]).filter(r=>covOn(r,nDow));
+ 
+const tails = lastNightRules(dow, withMeals[0].date);
+let _dn=null; const dayN=()=>_dn||(_dn=withLastNight(day));
 const nextFloor = ()=>day.filter(x=>x.endMin>1440)
 .map(x=>Object.assign({}, x, {startMin:0, endMin:x.endMin-1440, date:nDate, dow:nDow, breaks:rebaseBreaks(x.breaks)}));
  
 const scoped = multiSite() && (plan!=="closed" || !((+((S.rules.mealClose||{}).mins)||0) > 0));
-let mine=null, nmine=null;
+let mine=null, nmine=null, tmine=null;
 const shortfall = (w0, w1, was)=>{
 const v = rules.map((r,i)=>(was && !mine[i])? was[i] : ruleShort(day,r,w0,w1));
-if(w1>1440){ const nf=nextFloor(); nextRules.forEach((r,j)=>v.push((was && !nmine[j])? was[rules.length+j] : ruleShort(nf,r,Math.max(0,w0-1440),w1-1440))); }
+tails.forEach((r,k)=>v.push((was && !tmine[k])? was[rules.length+k] : ruleShort(dayN(),r,w0,w1)));    
+if(w1>1440){ const nf=nextFloor(); nextRules.forEach((r,j)=>v.push((was && !nmine[j])? was[rules.length+tails.length+j] : ruleShort(nf,r,Math.max(0,w0-1440),w1-1440))); }
 return v;
 };
 const slots = plan==="slots"? mealSlotList() : null;
@@ -7325,9 +7447,9 @@ const taken = [];
  
 const workClock=(a,n)=>{ const g=aGap(a); const before=g? g.from-a.startMin : Infinity;
 return (!g || n<=before)? a.startMin+n : g.to+(n-before); };
-withMeals.forEach(a=>{
+const place = a=>{      
 if(scoped){ const at=siteOf(a), can=r=>{ const z=covSites(r); return z.indexOf(null)>=0 || z.indexOf(at)>=0; };
-mine=rules.map(can); nmine=nextRules.map(can); }    
+mine=rules.map(can); nmine=nextRules.map(can); tmine=tails.map(can); }    
  
 const gp = aGap(a);
 const workedA = (a.endMin - a.startMin) - (gp? gp.to - gp.from : 0);
@@ -7388,7 +7510,19 @@ taken.push(best.t);
 if(a.breaks.rests.length)
 a.breaks.rests = layRests(a.startMin, a.endMin, a.breaks.meals,
 a.breaks.rests.length, a.breaks.rests[0].len, aGap(a));
+};
+withMeals.forEach(place);
+ 
+if(plan==="auto" && withMeals.length>1){
+const eats = x=>x.breaks.meals.filter(m=>!m.waived);
+const shares = a=>eats(a).some(m=>withMeals.some(b=>b!==a && eats(b).some(n=>n.start<m.end && m.start<n.end)));
+withMeals.forEach(a=>{
+if(!shares(a)) return;
+taken.length=0;
+withMeals.forEach(b=>{ if(b!==a) eats(b).forEach(n=>taken.push(n.start)); });
+place(a);
 });
+}
 }
 
 function applyBreaks(a){
@@ -7521,7 +7655,8 @@ return '<button type="button" class="shname'+(cls? " "+cls:"")+'" data-emp="'+es
 }
 const roleById = id => S.roles.find(r=>r.id===id);
 function roleName(id){ const r=roleById(id); return r?r.name:"Any role"; }
-function roleAbbr(id){ const r=roleById(id); return r?r.abbr:"Any"; }
+ 
+function roleAbbr(id){ const r=roleById(id); return r?(r.abbr||r.name):"Any"; }
  
 function empRoleAbbrs(e){ return ((e&&e.roleIds)||[]).map(roleAbbr).join("/") || roleAbbr(null); }
 
@@ -11042,9 +11177,9 @@ siteId:(siteId||undefined),
 breaks:computeBreaks(aMin,bMin,{gap:g0})};
 
 function scan(d, dw, probe, from, to){
-const rules=(S.coverage||[]).filter(r=>r.kind && r.kind!=="min" && covOn(r,dw));
-for(const r of rules){
-const rs=t2m(r.start); let re=t2m(r.end); if(re<=rs) re+=1440;
+ 
+const rules=(S.coverage||[]).filter(r=>r.kind && r.kind!=="min");
+for(const r of rules) for(const [rs,re] of ruleWindowsOn(r,dw)){
 const O={ignoreMeals: r.mealsCount===false};
  
 const _z = (siteId && covSites(r).indexOf(siteId)>=0)? siteId
@@ -11530,6 +11665,9 @@ const [aMin,bMin]=shiftMinutes(sh);
 const wk=peekWeek(ws);
 const out=[];
 const when=DSHORT[slot.dow]+" "+prettyDate(slot.date);
+ 
+const gst=stateFrom(ws, wk.assignments);
+const FIX_OPEN={cap:1, maxD:1, exact:1, rest:1, clopen:1, breach:1, veto:1, request:1, reqcap:1};
 
 S.employees.filter(e=>e.active).forEach(e=>{
 if(slot.roleId && !e.roleIds.includes(slot.roleId)) return;
@@ -11579,21 +11717,46 @@ if(gap < (lim.minRestH||0)*60 && (restGap===null || gap<restGap)) restGap=gap;
 }
 
  
+let gate=[], sevSay="", sevCost=0;
+if(!sameDay.length){
+gate=placeObjections(e, {shiftId:slot.shiftId, roleId:slot.roleId||null, sh, siteId:slot.siteId||null,
+_allowOnCall:true, _allowExtra:true}, slot.date, slot.dow, gst, wk.assignments, true);
+if(gate.some(o=>!FIX_OPEN[o.rule])) return;
+if(seventhDayLaw() && !seventhDayDate(e.id, ws)){
+const hypo={id:"_would", empId:e.id, date:slot.date, dow:slot.dow, shiftId:slot.shiftId,
+startMin:aMin, endMin:bMin, gap:shiftGap(sh), roleId:slot.roleId||e.roleIds[0]||null, locked:false};
+if(multiSite() && slot.siteId && slot.siteId!==mainSiteId()) hypo.siteId=slot.siteId;
+applyBreaks(hypo);
+const rows=wk.assignments.concat([hypo]);
+if(seventhDayDate(e.id, ws, rows)){
+sevSay=seventhDaySay(e, ws, rows);
+sevCost=e.rate? (weekCostDetail(ws, rows).byPerson[e.id]||0) - (weekCostDetail(ws).byPerson[e.id]||0) : 0;
+}
+}
+}
+const fin=(o, named)=>{
+const hid=gate.filter(x=>!named[x.rule]);
+if(sevSay){ o.premium=true; o.cost=sevCost; o.why+=" "+sevSay; }
+if(hid.length){ o.flag=hid; o.why+=" Also: "+hid.map(x=>x.say).join("; ")+"."; }
+return o;
+};
+
+ 
 if(e.onCall && !sameDay.length){
 if(!reqBlock && !restGap)
-out.push({kind:"percall", emp:e, rank:1,
+out.push(fin({kind:"percall", emp:e, rank:1,
 title:"Call in "+e.name,
 why:(e.type==="PRN"? "Per diem — no guaranteed hours. " : "Kept on call. ")+
 fmtHrs(mins)+workedWord(mins, minsPaid)+" so far this week"+(overCap? ", so this one is on top of their usual":"")+".",
 cost: e.rate? addPay/60*e.rate : 0,
-apply:()=>placeInSlot(e,slot,ws,{allowOnCall:true})});
+apply:()=>placeInSlot(e,slot,ws,{allowOnCall:true})}, overCap? {cap:1, exact:1} : {}));
 return;
 }
 
  
 if(reqBlock){
 const req=reqsFor(e.id,slot.date).find(r=>r.hard);
-if(req && !sameDay.length) out.push({kind:"deny", emp:e, rank:5, req,
+if(req && !sameDay.length) out.push(fin({kind:"deny", emp:e, rank:5, req,
 title:"Decline "+e.name.split(" ")[0]+"'s request",
 why:"They "+reqBlock+". Declining it puts them back in the frame for "+sh.label+", "+when+".",
 cost: e.rate? addPay/60*e.rate : 0,
@@ -11602,7 +11765,7 @@ apply:()=>{ req.status="declined"; req.deniedAt=Date.now();
 placeInSlot(e,slot,ws,{overrode:"a request declined"});
 logIt("change", e.name+" put on "+sh.label+" on "+prettyDate(slot.date)+
 " — a request declined set aside");
-save(); }});
+save(); }}, {request:1, reqcap:1}));
 return;
 }
 
@@ -11729,11 +11892,11 @@ return;
 
  
 if(restGap!==null){
-if(restGap>=8*60) out.push({kind:"rest", emp:e, rank:7,
+if(restGap>=8*60) out.push(fin({kind:"rest", emp:e, rank:7,
 title:"Give "+e.name.split(" ")[0]+" a shorter turnaround",
 why:"They'd have "+fmtHrs(restGap)+" off instead of your usual "+lim.minRestH+"h. It's the kind of thing people notice.",
 cost: e.rate? addPay/60*e.rate : 0,
-apply:()=>placeInSlot(e,slot,ws,{shortRest:true})});
+apply:()=>placeInSlot(e,slot,ws,{shortRest:true})}, {rest:1}));
 return;
 }
 
@@ -11743,43 +11906,45 @@ if(overCap && placeCapMin(lim, true) && total > placeCapMin(lim, true) + 1) retu
 if(overCap || overDays){
 const overOT=Math.max(0, total - otLine);
 if(overOT > 1){
-out.push({kind:"overtime", emp:e, rank:4,
+out.push(fin({kind:"overtime", emp:e, rank:4,
 title:"Ask "+e.name+" to work overtime",
 why:"Would take them to "+fmtHrs(total)+totalWord+" \u2014 "+fmtHrs(overOT)+" past the "+otWord
-+(e.rate? ", about "+money(overOT/60*e.rate*1.5)+" at time and a half":"")+".",
++(e.rate && !sevSay? ", about "+money(overOT/60*e.rate*1.5)+" at time and a half":"")+".",
 cost: e.rate? (addPay-overOT)/60*e.rate + overOT/60*e.rate*1.5 : 0,
-apply:()=>placeInSlot(e,slot,ws,{overtime:true})});
+apply:()=>placeInSlot(e,slot,ws,{overtime:true})}, {cap:1, exact:1}));
 } else {
 const bits=[];
 if(overCap) bits.push(lim.capSpent? capSay(lim)
 : fmtHrs(total - lim.maxH*60)+" past their usual "+lim.maxH+"h"+(lim.exactH?" contract":"")+
 (lim.couldBe? ", still inside the "+lim.couldBe+"h their profile allows":""));
-if(overDays) bits.push("a "+(days+1)+(days+1===6?"th":days+1===7?"th":"th")+" day, one more than they normally do");
-out.push({kind:"extra", emp:e, rank:2,
+const oneMore=overDays && days===(lim.maxD||7);    
+if(oneMore) bits.push("a "+(days+1)+(days+1===6?"th":days+1===7?"th":"th")+" day, one more than they normally do");
+out.push(fin({kind:"extra", emp:e, rank:2,
 title:"Ask "+e.name+" to pick up an extra shift",
-why:"Would take them to "+fmtHrs(total)+totalWord+" \u2014 "+bits.join(" and ")+". Still under the "+
-otWord+", so it's paid at the normal rate"+(e.rate? " (about "+money(addPay/60*e.rate)+")":"")+".",
+why:"Would take them to "+fmtHrs(total)+totalWord+(bits.length? " \u2014 "+bits.join(" and ") : "")+"."+
+(sevSay? "" : " Still under the "+otWord+", so it's paid at the normal rate"+(e.rate? " (about "+money(addPay/60*e.rate)+")":"")+"."),
 cost: e.rate? addPay/60*e.rate : 0,
-apply:()=>placeInSlot(e,slot,ws,{extra:true})});
+apply:()=>placeInSlot(e,slot,ws,{extra:true})}, Object.assign(overCap? {cap:1, exact:1} : {}, oneMore? {maxD:1} : {})));
 }
 return;
 }
 
  
-out.push({kind:"free", emp:e, rank:0,
+if(gate.some(x=>x.rule!=="breach" && x.rule!=="veto")) return;    
+out.push(fin({kind:"free", emp:e, rank:0,
 title:"Put "+e.name+" on it",
 why:"Free that day and inside every limit — a coverage rule was what kept them off, so check it still holds after.",
 cost: e.rate? addPay/60*e.rate : 0,
-apply:()=>placeInSlot(e,slot,ws,{})});
+apply:()=>placeInSlot(e,slot,ws,{})}, {breach:1, veto:1}));
 });
 
  
  
 out.forEach(o=>{ const sw=holSwingMoney(o.emp, ws, [slot.date], []); if(sw) o.cost=(o.cost||0)+sw; });
-if(!out.some(o=>o.kind==="free"||o.kind==="percall"))
+if(!out.some(o=>(o.kind==="free"||o.kind==="percall") && !o.flag))
 chainOptions(slot, ws).forEach(o=>out.push(o));
 
-out.sort((a,b)=>a.rank-b.rank || (a.cost||0)-(b.cost||0));
+out.sort((a,b)=>(a.flag?1:0)-(b.flag?1:0) || a.rank-b.rank || (a.cost||0)-(b.cost||0));    
 return out;
 }
 
@@ -12201,12 +12366,12 @@ const REPLY_KINDS=["free","percall","extra","overtime"];
 function replyOption(target, ws, empId){
 const o=optionsFor(target, ws).find(x=>x.emp.id===empId);
 if(!o) return {opt:null, moved:null};
-return REPLY_KINDS.includes(o.kind)? {opt:o, moved:null} : {opt:null, moved:o};
+return (REPLY_KINDS.includes(o.kind) && !o.flag)? {opt:o, moved:null} : {opt:null, moved:o};    
 }
 function offerEligible(sl, ws){
  
 return optionsFor(sl, ws)
-.filter(o=>REPLY_KINDS.includes(o.kind))
+.filter(o=>REPLY_KINDS.includes(o.kind) && !o.flag)    
 .map(o=>({empId:o.emp.id, kind:o.kind}));
 }
 
@@ -12704,7 +12869,7 @@ const off=openOffer(ws); if(!off) return "";
 const rows=off.slots.map(sl=>{
 const sh=shiftById(sl.shiftId)||{label:"Shift"};
 const [a,b]=shiftMinutes(sh);
-return "  \u2022 "+DAYS[sl.dow]+", "+prettyFull(sl.date)+" \u2014 "+sh.label+", "+m2disp(a)+" to "+m2disp(b);
+return "  \u2022 "+prettyFull(sl.date)+" \u2014 "    +sh.label+", "+m2disp(a)+" to "+m2disp(b);
 });
 return "Subject: Shifts going spare \u2014 week of "+prettyDate(ws)+"\n\n"+
 "Hi all,\n\nThese shifts are open next week:\n\n"+rows.join("\n")+"\n\n"+
@@ -14240,11 +14405,11 @@ const dates=g.slots.map(x=>DSHORT[x.dow]+" "+prettyDate(x.date));
 const perSlot=g.slots.map(sl=>({sl, opts:optionsFor(sl,ws)}));
 const byPerson={};
 perSlot.forEach(({sl,opts})=>opts.forEach(o=>{
-const k=o.emp.id+"|"+o.kind;
+const k=o.emp.id+"|"+o.kind+(o.flag? "|flag" : "");    
 byPerson[k]=byPerson[k]||{o, dates:[]};
 byPerson[k].dates.push(sl);
 }));
-const ranked=Object.values(byPerson).sort((a,b)=>
+const ranked=Object.values(byPerson).sort((a,b)=>(a.o.flag?1:0)-(b.o.flag?1:0) ||
 a.o.rank-b.o.rank || b.dates.length-a.dates.length || (a.o.cost||0)-(b.o.cost||0)).slice(0,6);
  
 return `<div class="fixgrp">
@@ -14257,14 +14422,14 @@ return `<div class="fixgrp">
         </div>
       </div>
       ${ranked.length? `<div class="stack" style="gap:6px;margin-top:9px">
-        ${ranked.slice(0,4).map((x,i)=>`<div class="fixopt${i===0?" bestfix":""}">
+        ${ranked.slice(0,4).map((x,i)=>`<div class="fixopt${i===0 && !x.o.flag?" bestfix":""}">
           <span class="fixk ${x.o.kind}">${({percall:"Per diem",overtime:"Overtime shift",extra:"Extra shift",deny:"Decline a request",move:"Move someone",moveOvertime:"Move \u2014 overtime",moveExtra:"Move \u2014 extra hours",moveRest:"Move \u2014 bends a rest rule",moveCover:"Move \u2014 check cover",rest:"Bend a rest rule",free:"Available now",chain:"Swap chain"})[x.o.kind]||x.o.kind}</span>
           <div style="flex:1;min-width:0">
-            ${i===0? `<span class="chip ok" style="margin-bottom:3px">Recommended — ${({free:"breaks no rules at all",percall:"that's what per diem is for",extra:"inside everyone's limits",overtime:"costs money but bends nothing else",deny:"one person disappointed, everyone covered",move:"reshuffles rather than breaks",moveOvertime:"reshuffles, and costs overtime",moveExtra:"reshuffles, and asks for extra hours",moveRest:"reshuffles, and bends a turnaround",moveCover:"reshuffles \u2014 check the cover rule after",rest:"the smallest bend available",chain:"nobody works more, nothing bends"})[x.o.kind]||"least impact of the options here"}</span>`:""}
+            ${i===0 && !x.o.flag? `<span class="chip ok" style="margin-bottom:3px">Recommended — ${({free:"breaks no rules at all",percall:"that's what per diem is for",overtime:"costs money but bends nothing else",deny:"one person disappointed, everyone covered",move:"reshuffles rather than breaks",moveOvertime:"reshuffles, and costs overtime",moveExtra:"reshuffles, and asks for extra hours",moveRest:"reshuffles, and bends a turnaround",moveCover:"reshuffles \u2014 check the cover rule after",rest:"the smallest bend available",chain:"nobody works more, nothing bends"})[x.o.kind]||"least impact of the options here"}</span>`:""}
             <strong>${esc(x.o.title)}${x.dates.length>1? " — any of "+x.dates.map(d=>prettyDate(d.date)).join(", ") : " on "+prettyDate(x.dates[0].date)}</strong>
             <div class="mini">${esc(x.o.why)}</div></div>
           <div class="row" style="gap:6px;flex:none">
-            ${x.dates.map((d,di)=>`<button class="btn sm ${i===0&&di===0?"primary":""}" data-fixgo="${gi}:${ranked.indexOf(x)}:${di}">${x.dates.length>1? prettyDate(d.date) : "Do it"}</button>`).join("")}
+            ${x.dates.map((d,di)=>`<button class="btn sm ${i===0&&di===0&&!x.o.flag?"primary":""}" data-fixgo="${gi}:${ranked.indexOf(x)}:${di}">${x.dates.length>1? prettyDate(d.date) : "Do it"}</button>`).join("")}
           </div></div>`).join("")}
         ${ranked.length>4? `<div class="mini">${ranked.length-4} weaker option${ranked.length-4===1?"":"s"} not shown — the ones above bend the fewest rules.</div>`:""}
       </div>`
@@ -14294,7 +14459,7 @@ if(!open.length) break;
 let moved=false;
 for(let i=0;i<open.length && !moved;i++){
 const opts=optionsFor(open[i], ws).filter(o=>
-o.kind==="free"||o.kind==="chain"||o.kind==="percall"||o.kind==="extra");
+(o.kind==="free"||o.kind==="chain"||o.kind==="percall"||o.kind==="extra") && !o.flag && !o.premium);    
 if(!opts.length) continue;
 const o=opts[0];
 o.apply();
@@ -14348,9 +14513,9 @@ const g=groups[gi];
 const perSlot=g.slots.map(sl=>({sl, opts:optionsFor(sl,ws)}));
 const byPerson={};
 perSlot.forEach(({sl,opts})=>opts.forEach(o=>{
-const k=o.emp.id+"|"+o.kind; byPerson[k]=byPerson[k]||{o,dates:[]}; byPerson[k].dates.push(sl);
+const k=o.emp.id+"|"+o.kind+(o.flag? "|flag" : ""); byPerson[k]=byPerson[k]||{o,dates:[]}; byPerson[k].dates.push(sl);
 }));
-const ranked=Object.values(byPerson).sort((a,b)=>
+const ranked=Object.values(byPerson).sort((a,b)=>(a.o.flag?1:0)-(b.o.flag?1:0) ||
 a.o.rank-b.o.rank || b.dates.length-a.dates.length || (a.o.cost||0)-(b.o.cost||0)).slice(0,6);
 const pick=ranked[oi]; if(!pick) return;
 const targetSlot=pick.dates[di]||pick.dates[0];
@@ -15644,14 +15809,15 @@ win = open.length? [Math.min.apply(null, open.map(w=>w[0])), Math.max.apply(null
 if(!win) return null;
 const [o,c]=win;
 const rules = (S.coverage||[]).filter(r=>covOn(r,dow));
+ 
+const wins = rules.concat((S.coverage||[]).filter(r=>!covOn(r,dow))).map(r=>[r, ruleWindowsOn(r, dow, date)]).filter(x=>x[1].length);
 const pts=[];
 for(let t=o;t<c;t+=STEP){
 let worst=0, detail=[];
 const shut = shutAt(t, dow, date);
-rules.forEach(r=>{
+wins.forEach(([r,W])=>{
 if(shut) return;                        
-const rs=t2m(r.start), re=t2m(r.end)<=t2m(r.start)?t2m(r.end)+1440:t2m(r.end);
-if(t<rs||t>=re) return;
+if(!W.some(w=>t>=w[0] && t<w[1])) return;
 const kind = r.kind||"min";
 const O = {ignoreMeals: r.mealsCount===false};
  
@@ -15721,10 +15887,13 @@ if(!list.length) return {ok:false, lens:[],
 why:"no shift the week asks for is one "+e.name.split(" ")[0]+" can fill, and they are not on anything already"};
 const best=Math.max.apply(null, list), ceiling=best*days;
 if(ceiling >= oweMin) return {ok:true, lens:list, ceiling:ceiling};
-return {ok:false, lens:list, ceiling:ceiling,
-why:"the longest shift "+e.name.split(" ")[0]+" can be given is "+fmtHrs(best)+
-" and they may work "+days+" day"+(days===1?"":"s")+" a week, so "+fmtHrs(ceiling)+
-" is the most any schedule can reach"};
+return {ok:false, lens:list, ceiling:ceiling, why:daysCeilingSay(e, best, days)};
+}
+ 
+function daysCeilingSay(e, best, days){
+return "the longest shift "+e.name.split(" ")[0]+" can be given is "+fmtHrs(best)+
+" and they may work "+days+" day"+(days===1?"":"s")+" a week, so "+fmtHrs(best*days)+
+" is the most any schedule can reach";
 }
 function exactHoursFeasible(e, ws){
 const L=effLimits(e, ws);
@@ -15750,6 +15919,9 @@ if((capWorked? w2 : v+l)<=cap){ const o=next.get(v+l); if(o===undefined || o>w2)
 reach=next;
 if(L.exactH ? reach.has(goal) : [...reach.keys()].some(v=>v>=goal)) return {ok:true, lens:list};
 }
+ 
+{ const best=Math.max.apply(null, list);
+if(L.exactH && best*maxD < goal) return {ok:false, lens:list, ceiling:best*maxD, why:daysCeilingSay(e, best, maxD)}; }
 const all=[...reach.keys()].filter(v=>v>0).sort((a,b)=>Math.abs(a-goal)-Math.abs(b-goal));
 const near=all.slice(0,2).sort((a,b)=>a-b);
  
@@ -16066,8 +16238,9 @@ const wk=peekWeek(ws);
 if(!wk || !wk.published || postPending(wk) || !wk.assignments.length) return "";
 if(wk.sentAt && !toldIsStale(ws)) return `<div class="hnotice"><span><b>The team has this week.</b> ${esc(toldText(wk))}.</span>
     <button class="btn sm" data-tell="${esc(ws)}" style="flex:none">Hand it out again</button></div>`;
+ 
 if(wk.sentAt) return `<div class="banner warn"><div><b>This week has changed since you handed it out.</b>
-      Your team is working from the version you gave them ${esc(toldText(wk).replace(/^[a-z ]+/,""))}. Hand it out again so nobody turns up to the old plan.</div>
+      Your team is working from the version you gave them ${esc(toldText(wk).slice((TELL_WORD[wk.toldHow]||"handed out").length+1))}. Hand it out again so nobody turns up to the old plan.</div>
     <button class="btn sm primary" data-tell="${esc(ws)}" style="flex:none;margin-left:auto">Hand it out again</button></div>`;
 return `<div class="banner warn"><div><b>Posted \u2014 but nobody has been told yet.</b>
       Posting locks the week in here. It does not go to anyone\u2019s phone on its own. Pick how your team finds out.</div>
@@ -17281,17 +17454,21 @@ const nShort = missing.filter(x=>x.shiftId===s.shiftId && (x.roleId||null)===(s.
  
 const rel = releasedSlot(ws, date, s.shiftId, s.roleId||null, s.siteId||null);
 const lockNote = (rel && rel.fromLock)? "Released from a lock — whoever covers it starts unlocked." : "";
-const detail = (u && u.counted)
-? DAYS[dow]+" "+clockRange(sa,sb)+" "+(s.roleId? roleName(s.roleId) : (shx||{label:"Shift"}).label)+" is "+nShort+" short. "+u.reason+"."+
+ 
+const say = why => (u && u.counted)
+? DAYS[dow]+" "+clockRange(sa,sb)+" "+(s.roleId? roleName(s.roleId) : (shx||{label:"Shift"}).label)+" is "+nShort+" short."+(why!=null? " "+why+"." : "")+
 (pat? " Asked for by the pattern “"+pat.name+"”." : "")+(lockNote? " "+lockNote : "")
-: roleName(s.roleId)+" · "+(u?u.reason:"no one assigned yet")+(pat? " · asked for by the pattern “"+pat.name+"”" : "")+(lockNote? " · "+lockNote : "");
+: roleName(s.roleId)+" · "+(why!=null? why : "no one assigned yet")+(pat? " · asked for by the pattern “"+pat.name+"”" : "")+(lockNote? " · "+lockNote : "");
+const detail = say(u? u.reason : null);
+const openTitle = "Open shift — "+(shiftById(s.shiftId)||{label:"Shift"}).label+", "+DSHORT[dow];
 push("crit", pd? pd.name.split(" ")[0]+" could take "+DAYS[dow]+" "+clockRange(sa,sb)
-: "Open shift — "+(shiftById(s.shiftId)||{label:"Shift"}).label+", "+DSHORT[dow],
+: openTitle,
 detail,
 Object.assign({date,dow,openSlot:date+"|"+s.shiftId+"|"+(s.roleId||"")+"|"+(s.siteId||""),
 code:"open", shiftId:s.shiftId, roleId:s.roleId||null, siteId:s.siteId||null, pdEmp:pd? pd.id : null},
  
-(rel && askedLine(rel))? {asked:askedLine(rel)} : {}));
+(rel && askedLine(rel))? {asked:askedLine(rel)} : {},
+{team:{title:openTitle, detail:say(null)}}));
 });
 });
 
@@ -17494,7 +17671,9 @@ push("crit",
 "No "+(r.rule.roleId? roleName(r.rule.roleId).toLowerCase() : "one")+" on site "+DAYS[dow]+" "+clockRange(r.from, r.to),
 "Breaks the rule set for this board: "+(r.rule.label||ruleSentence(r.rule))+", "+clockRange(rs, re)+"."+
 (pd? " "+pd.name.split(" ")[0]+" could take it." : ""),
-Object.assign({date,dow, code:"cover", presence:true, ruleId:r.rule.id, from:r.from, to:r.to, pdEmp:pd? pd.id : null}, at));
+Object.assign({date,dow, code:"cover", presence:true, ruleId:r.rule.id, from:r.from, to:r.to, pdEmp:pd? pd.id : null}, at,
+ 
+pd? {team:{detail:"Breaks the rule set for this board: "+(r.rule.label||ruleSentence(r.rule))+", "+clockRange(rs, re)+"."}} : {}));
 return;
 }
  
@@ -17790,19 +17969,9 @@ fmtHrs(mins)+workedWord(mins, paidMins)+" exceeds the "+otW+"h overtime threshol
  
 {
 const sev=seventhDayDate(e.id, ws);
-if(sev){
-const sevMin=mine.filter(a=>a.date===sev).reduce((t,a)=>t+workedMinutes(a),0);
-const sevPaid=mine.filter(a=>a.date===sev).reduce((t,a)=>t+paidMinutes(a),0);
-const over=Math.max(0, sevMin-8*60);
-push("warn","Seventh day of the week — "+e.name,
-prettyDate(sev)+" is the seventh day of a week they have worked every day of, so the "+
-(law().name? law().name+" rules on this board price " : "rules on this board price ")+
-(over? "the first 8h at time and a half and the remaining "+fmtHrs(over)+" at double time"
-: "all "+fmtHrs(sevMin)+(sevPaid!==sevMin? " worked" : "")+" at time and a half")+
-((unionOn() && union().seventhDay)? ", and "+unionLabel()+" carries the same premium" : "")+
-". Giving them one of the seven days off costs less.",
+if(sev)
+push("warn","Seventh day of the week — "+e.name, seventhDaySay(e, ws),    
 {date:sev, empId:e.id, premium:true, code:"seventh"});
-}
 }
 
  
@@ -19819,9 +19988,10 @@ let POST_SHEET_WS=null;
 function postSheet(ws, invoker){
 ws=ws|| curWeek();
 const P=homeProblems(ws);
+ 
 const sevRows=(list,sev)=>'<div class="inset">'+list.map(v=>
-'<div class="hrow" data-sev="'+sev+'"><div class="hrowhd"><span class="sdot" data-sev="'+sev+'"></span>'+
-reviewedHtml(v.detail|| v.title)+"</div></div>").join("")+"</div>";
+'<div class="hrow" data-sev="'+sev+'"><div class="hrowhd"><span class="sdot" data-sev="'+sev+'"></span><div class="rowmain">'+
+reviewedHtml(v.detail|| v.title)+((v.detail && v.title)? '<div class="rowsub">'+esc(v.title)+"</div>" : "")+"</div></div></div>").join("")+"</div>";
 let body="";
  
 if(P.crit.length)
@@ -21549,6 +21719,8 @@ function render(){
  
 if(!document.querySelector("#ttl")) return;
  
+if(S && S.currentWeek!=null && !weekKeyOk(S.currentWeek)) S.currentWeek=curWeek();
+ 
 if(VIEW==="tools" && !isPhone()) VIEW="home";
  
 WAS_PHONE = isPhone();
@@ -21896,6 +22068,7 @@ if(k==="setcard"){ settingsJump(v); return; }
 if(k==="emp"){ empModal(v); return; }
 if(k==="lic"){ licRenewModal(v); return; }
 if(k==="fixall"){ fixModal(S.currentWeek); return; }
+if((k==="wkopen" || k==="wkchecks") && !weekKeyOk(v)){ toast(WEEK_ODD); return; }    
 if(k==="wkopen"){ S.currentWeek=v; save(); fixModal(v); return; }
 if(k==="wkchecks"){ S.currentWeek=v; save(); render();    
 if(typeof traySheet==="function") traySheet(document.querySelector('[data-act="wkchecks:'+v+'"]')||document.querySelector("#status")||null); return; }
@@ -22446,7 +22619,8 @@ const SETUP_NEXT={
 "union.on":          {say:"Your agreement's rules are now checked. Fill in the ones that apply \u2014 rest period, overtime lines, posting notice.", go:"settings", label:"Fill them in"},
 "rules.sendOut":     {say:"Weeksolved can now write one message per person with their own shifts. It needs an email address or a phone number on each profile.", go:"team", label:"Add contacts"},
 "msg.on":            {say:"Ready-written replies are on. A Tell them button now appears on every request.", go:"requests", label:"Open Requests"},
-"rules.stationFamilies": {say:"Numbered posts now share one rotation. Check the posts are named so the grouping makes sense \u2014 Typist 1, Typist 2.", go:"stations", label:"Open Posts"}
+ 
+"rules.stationFamilies": {say:"Numbered posts now share one rotation. Check the posts are named so the grouping makes sense \u2014 Register 1, Register 2.", go:"stations", label:"Open Posts"}
 };
 let SETUP_SAID=null;       
 function setupNextBanner(){
@@ -23197,6 +23371,9 @@ toast(from? name+" is set up like "+siteName(from)+" \u2014 "+said
 };
 const del=r.querySelector("#sitedel");
 if(del) del.onclick=()=>{
+ 
+if(refuseOnPosted(siteName(z.id), Object.keys(S.weeks||{}).filter(k=>{ const w=S.weeks[k]||{};
+return w.published && (w.assignments||[]).some(a=>a && a.siteId===z.id); }))) return;
  
 const main=mainSiteId();
 Object.keys(S.demand||{}).forEach(d=>(S.demand[d]||[]).forEach(row=>{ if(row.siteId===z.id) delete row.siteId; }));
@@ -24488,11 +24665,12 @@ const PALETTE=["#0072B2","#7a4fa3","#CC79A7","#56B4E9","#4a5f7a","#D55E00"];
 function roleModal(id){
 if(id && !roleById(id)){ toast("That role is no longer on the board"); return; }
 const r = id? roleById(id) : {id:uid("r"),name:"",abbr:"",color:PALETTE[S.roles.length%8],note:"",licensed:false};
+ 
 modal(id? ("Edit "+((r&&r.name)||"role")) : "New role", `
     <div class="stack">
       <div class="grid2">
         <div class="field"><label>Role name</label><input type="text" id="rn" value="${esc(r.name)}" placeholder="${esc(bizEx().roles[1].replace(/^e\.g\. /,""))}"></div>
-        <div class="field"><label>Short label</label><input type="text" id="ra" value="${esc(r.abbr||"")}" placeholder="Tech" maxlength="6"></div>
+        <div class="field"><label>Short label</label><input type="text" id="ra" value="${esc(r.abbr||"")}" placeholder="Mgr" maxlength="6"></div>
       </div>
       <div class="field"><label>Requirement or note</label><input type="text" id="rnote" value="${esc(r.note||"")}" placeholder="${esc(bizEx().roleNote)}"></div>
       <div class="field"><label>Color</label><div class="row" id="rcol">${PALETTE.map(c=>`<button class="btn sm" data-c="${c}" style="background:${c};border-color:${c};width:34px;height:26px;${r.color===c?"outline:2px solid var(--ink);outline-offset:2px":""}"></button>`).join("")}</div></div>
@@ -24506,7 +24684,7 @@ root.querySelectorAll("#rcol button").forEach(x=>x.style.outline=""); b.style.ou
 root.querySelector("#saverole").onclick=()=>{
 const name=root.querySelector("#rn").value.trim();
 if(!name){ toast("Give the role a name"); return; }
-const rec={id:r.id,name,abbr:root.querySelector("#ra").value.trim()||name.slice(0,4),color,
+const rec={id:r.id,name,abbr:root.querySelector("#ra").value.trim() ,color,
 note:root.querySelector("#rnote").value.trim(),licensed:root.querySelector("#rlic").checked};
 const i=S.roles.findIndex(x=>x.id===r.id);
 if(i>=0) S.roles[i]=rec; else S.roles.push(rec);
@@ -24553,6 +24731,18 @@ shifts+=c; weeks[k]=1; if(w.published){ posted+=c; postedWeeks.push(k); }
 });
 postedWeeks.sort();
 return {shifts, posted, weeks:Object.keys(weeks).length, postedWeeks};
+}
+ 
+const KEEP_POSTED="Weeks already posted stay as they were posted.";    
+function refuseOnPosted(name, weeks){
+if(!weeks || !weeks.length) return false;
+modal(name? "\u201c"+name+"\u201d is on a week you have already posted" : "That week is already posted", `
+    <div class="stack">
+      <div class="banner warn"><div><b>${esc(KEEP_POSTED)}</b></div></div>
+      <div class="card"><div class="body"><div class="lab">Posted weeks using it</div>
+        <div class="mini">${weeks.slice().sort().map(w=>esc(prettyFull(w))).join(" \u00b7 ")}</div></div></div>
+    </div>`, `<button class="btn primary" data-close>Leave it alone</button>`);
+return true;
 }
  
 function deleteRole(rid){
@@ -24952,7 +25142,7 @@ return;
 }
  
 const brkKey=g=>g? g.from+"-"+g.to : "", brkWas=brkKey(shiftGap(s)), brkNow=brkKey(shiftGap(rec));
-const keepPosted="Weeks already posted stay as they were posted.";
+const keepPosted=KEEP_POSTED;    
 s.gapFrom=rec.gapFrom; s.gapTo=rec.gapTo;    
 const i=S.shifts.findIndex(x=>x.id===s.id);
 if(i>=0) S.shifts[i]=rec; else S.shifts.push(rec);
@@ -24989,6 +25179,11 @@ else if(moved.length || postedBrk.length) toast((moved.length? moved.length+" sh
 };
 const d=root.querySelector("#delshift");
 if(d) d.onclick=()=>{
+ 
+const on=x=>x && x.shiftId===s.id;
+if(refuseOnPosted(s.label, Object.keys(S.weeks||{}).filter(k=>{ const w=S.weeks[k]||{};
+return w.published && ((w.assignments||[]).some(on) || (Array.isArray(w.vetoes) && w.vetoes.some(on))
+|| (w.offer && Array.isArray(w.offer.slots) && w.offer.slots.some(on)) || (Array.isArray(w.unfilled) && w.unfilled.some(on))); }))) return;
 S.shifts=S.shifts.filter(x=>x.id!==s.id);
 Object.keys(S.demand).forEach(k=>S.demand[k]=S.demand[k].filter(x=>x.shiftId!==s.id));
  
@@ -25311,7 +25506,7 @@ modal(id?"Edit "+g.name:"New staff group", `
       </select><span class="mini">Check a role and a type together and someone has to match both — a part-time cashier, say.</span></div>
       <div class="field"><label>Roles</label><div class="row" id="gr">
         ${S.roles.length? S.roles.map(r=>`<label class="switch" style="border:1px solid var(--line);padding:4px 9px;border-radius:6px;font-size:12px">
-          <input type="checkbox" data-r="${r.id}" ${(M.roleIds||[]).includes(r.id)?"checked":""}> <span class="tag" style="--sc:${r.color}">${esc(r.name)}</span></label>`).join("")
+          <input type="checkbox" data-r="${r.id}" ${(M.roleIds||[]).includes(r.id)?"checked":""}> <span class="tag" style="--sc:${esc(r.color)}">${esc(r.name)}</span></label>`).join("")    
 : `<span class="mini">No roles defined yet.</span>`}</div></div>
       <div class="field"><label>Employment type</label><div class="row" id="gt">
         ${Object.keys(TYPES).map(t=>`<label class="switch" style="border:1px solid var(--line);padding:4px 9px;border-radius:6px;font-size:12px">
@@ -26295,7 +26490,10 @@ if(S.roles.length && ![...root.querySelectorAll("#eroles input:checked")].length
 const rec={
 id:e.id, name,
 email:root.querySelector("#eem").value.trim(), phone:root.querySelector("#eph").value.trim(),
-roleIds:[...root.querySelectorAll("#eroles input:checked")].map(x=>x.dataset.r),
+ 
+roleIds:(function(){ const on=[...root.querySelectorAll("#eroles input:checked")].map(x=>x.dataset.r);
+const was=(e.roleIds||[]).filter(r=>on.indexOf(r)>=0);
+return was.concat(on.filter(r=>was.indexOf(r)<0)); })(),
 type:root.querySelector("#et").value,
 onCall:root.querySelector("#eoc").value==="1",
 mealWaiver:(root.querySelector("#ewv")||{}).value||empWaiver(e),
@@ -26346,7 +26544,7 @@ return (!on.length || on.length===sitesList().length)? [] : on; })(),
 homeSite:(function(){ const box=root.querySelector("#esites"); if(!box) return e.homeSite||null;
 const on=[...box.querySelectorAll("input:checked")].map(x=>x.dataset.site);
 return on.length? on[0] : null; })(),
-canOpen:true,canClose:true,
+canOpen:e.canOpen!==false,canClose:e.canClose!==false,    
 pto: root.querySelector("#eptob")? {bal:+root.querySelector("#eptob").value||0, anchor:root.querySelector("#eptoa").value||ymd(new Date()),
 per:root.querySelector("#eptop").value, rate:+root.querySelector("#eptor").value||0} : (e.pto||null),
 birth:((root.querySelector("#edob")||{}).value||"")||(root.querySelector("#edob")?"":e.birth||""),
@@ -26392,6 +26590,8 @@ note: (root.querySelector("#easidenote")||{}).value || "",
 from: (e.aside&&e.aside.from) || ymd(new Date()) }
 : undefined
 };
+ 
+if(id && !e.gone) Object.keys(e).forEach(k=>{ if(!(k in rec)) rec[k]=e[k]; });
 if(rec.aside===undefined) delete rec.aside;
 const i=S.employees.findIndex(x=>x.id===e.id);
 if(i>=0) S.employees[i]=rec; else S.employees.push(rec);
@@ -26411,7 +26611,7 @@ const wrap=root.querySelector("#eroles");
 wrap.innerHTML='<div class="frow"><span class="frowmain"><span class="rowt">New role</span></span><span class="frowctl"><input type="text" id="eaddrolename" placeholder="Role name, e.g. Clerk"><button type="button" class="btn" id="eaddrolego">Add</button></span></div>';
 const inp=wrap.querySelector("#eaddrolename"); inp.focus();
 const go_=()=>{ const name=inp.value.trim(); if(!name){ toast("Give the role a name"); return; }
-const rec={id:uid("r"), name, abbr:name.slice(0,4), color:PALETTE[S.roles.length%PALETTE.length], note:"", licensed:false};
+const rec={id:uid("r"), name, abbr:"" , color:PALETTE[S.roles.length%PALETTE.length], note:"", licensed:false};
 S.roles.push(rec); save();
 wrap.innerHTML=S.roles.map(r=>frow(r.name, '<input type="checkbox" data-r="'+esc(r.id)+'"'+(r.id===rec.id? " checked" : "")+">")).join("")+
 '<button type="button" class="irow addrow" id="eaddrole2"><span class="rowmain"><span class="rowt">Another role</span></span></button>';
@@ -26555,7 +26755,7 @@ const sh=shiftById(r.shiftId); if(!sh) return "";
 const [a,b]=shiftMinutes(sh);
 return `<div class="demrow" data-dshift="${esc(r.shiftId)}" data-editdem="${i}:${ri}" role="button" tabindex="0" title="Edit this row" style="cursor:pointer">
               ${multiSite()? `<span class="chip">${esc(siteName(siteOf(r)))}</span>` : ""}
-              <span class="tag" style="--sc:${sh.color}">${esc(sh.label)}</span>
+              <span class="tag" style="--sc:${esc(sh.color)}">${esc(sh.label)}</span>
               <span class="mono">${m2disp(a)}–${m2disp(b)}</span>
               <span>${esc(roleName(r.roleId))}</span>
               <span class="chip acc">${r.max!=null? demCount(r)===r.max? r.max+" exactly" : "at least "+demCount(r)+" · at most "+r.max : "at least "+demCount(r)}</span>
@@ -27006,7 +27206,7 @@ modal("Build a week pattern", `
 const [a2,b2]=shiftMinutes(sh);
 return `<div class="patrow">
             <div style="min-width:190px">
-              <span class="tag" style="--sc:${sh.color}">${esc(sh.label)}</span>
+              <span class="tag" style="--sc:${esc(sh.color)}">${esc(sh.label)}</span>
               <div class="mini mono">${m2disp(a2)}–${m2disp(b2)} · ${fmtHrs(b2-a2)}</div></div>
             <div class="row" style="gap:8px;margin-left:auto;flex-wrap:wrap">
               ${roles.map(r=>`<div class="field" style="min-width:120px">
@@ -27165,8 +27365,14 @@ const crit=V.filter(v=>v.sev==="crit"), warn=V.filter(v=>v.sev==="warn"), info=V
  
 const siteOK = a=>!WEEK_SITE || siteOf(a)===WEEK_SITE;
 const roster = S.employees.filter(e=>e.active && (!WEEK_SITE || empAtSite(e, WEEK_SITE) || wk.assignments.some(a=>a.empId===e.id && siteOf(a)===WEEK_SITE)));
+ 
+const onWeek=new Set(wk.assignments.filter(siteOK).map(a=>a.empId)), inRoster=new Set(roster.map(e=>e.id));
+const gridPeople = exportPeople(wk).filter(e=>inRoster.has(e.id) || (!e.active && onWeek.has(e.id)));
 const totalMin = wk.assignments.filter(siteOK).reduce((t,a)=>t+paidMinutes(a),0);
 const wantSlots = dates.reduce((t,d)=>t+expandDemand(d.dow,ws).filter(sl=>!WEEK_SITE || (sl.siteId||mainSiteId())===WEEK_SITE).length,0);
+ 
+const overSlots = dates.reduce((t,d)=>{ const sl=expandDemand(d.dow,ws).filter(x=>!WEEK_SITE || (x.siteId||mainSiteId())===WEEK_SITE), on=wk.assignments.filter(a=>a.date===d.date && siteOK(a));
+return t+on.length-(sl.length-matchDemand(sl, on).missing.length); },0);
 
 const covStrip = d => {
 const prof = coverageProfile(d.date,d.dow,ws);
@@ -27186,6 +27392,8 @@ const h=S.hours[d.dow];
 const shutAll=weekdayShut(d.dow) && !(multiSite() && openAnywhere(d.date, d.dow));
 const on=wk.assignments.filter(a=>a.date===d.date && siteOK(a)).sort((x,y)=>x.startMin-y.startMin);
 const want=expandDemand(d.dow,ws).length;
+ 
+const filled=want-matchDemand(expandDemand(d.dow,ws), on).missing.length;
 const gaps=V.filter(v=>v.date===d.date && v.sev==="crit").length;
 const sev=gaps? "crit" : V.some(v=>v.date===d.date && v.sev==="warn")? "warn" : null;
 const open = DAYOPEN.has(d.dow);
@@ -27195,7 +27403,7 @@ return `${_first? `<div class="ppband${payShade(d.date)}"><i></i>Pay period ${es
             <span class="dn">${DSHORT[d.dow]} ${esc(prettyDate(d.date))}</span>
             <span class="dh"><span class="mono">${esc(dayHoursLabel(d.date, d.dow))}</span>${(()=>{const _h=(S.holidays.list||[]).find(h=>h.date===d.date); if(_h) return '<span class="busy" title="'+esc(_h.name)+'">'+(holMode(_h)==="closed" && !(multiSite() && openAnywhere(d.date, d.dow))?"closed — holiday":holMode(_h)==="reduced"?"holiday cover":"holiday")+'</span>'; return ''})()}${holAdj(d.date)?'<span class="busy" title="Counts one step busier when drafting">holiday rush</span>':dayLoad(d.dow)>0?'<span class="busy">busy</span>':dayLoad(d.dow)<0?'<span class="quiet">quiet</span>':""}</span>
             ${shutAll? '<span class="dcount">Closed</span>'
-: `<span class="dcount${on.length>=want?"":" short"}"${on.length>=want? "" : whyAttrs(on.length+" of the "+want+" shifts you asked for on "+DAYS[d.dow]+" are filled. Open the day, or press Show me the fixes for the ways to fill the rest.", "fixall")}>${on.length}/${want}</span>`}
+: `<span class="dcount${filled>=want?"":" short"}"${filled>=want? "" : whyAttrs(filled+" of the "+want+" shifts you asked for on "+DAYS[d.dow]+" are filled. Open the day, or press Show me the fixes for the ways to fill the rest.", "fixall")}>${filled>=want? on.length : filled}/${want}</span>`}
             ${sev? `<span class="sdot" data-sev="${sev}" aria-hidden="true"></span>` : ""}
             <span class="chev" aria-hidden="true">›</span>
           </button>
@@ -27204,7 +27412,7 @@ return `${_first? `<div class="ppband${payShade(d.date)}"><i></i>Pay period ${es
               <button class="btn sm" data-addday="${d.date}:${d.dow}">Add someone</button></div>
             ${on.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
 const bad=V.some(v=>v.sev==="crit"&&v.empId===a.empId&&v.date===a.date);
-return `<button class="drow ${bad?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" style="--sc:${sh.color}">
+return `<button class="drow ${bad?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" style="--sc:${esc(sh.color)}">
                 <span class="dw">${esc(e.name)}</span>
                 <span class="ds">${a.locked?"● ":""}${esc(sh.label)}${a.topUp?' <span class="ptag">+ Project time</span>':""}</span>
                 <span class="dt mono">${aTimes(a)}</span></button>`;
@@ -27241,7 +27449,7 @@ return `
       </div>
       <div class="wkchips">
         <span class="chip" title="You asked for ${wantSlots}. Anything over that is there to reach people’s guaranteed hours.">${wk.assignments.filter(siteOK).length} shift${wk.assignments.filter(siteOK).length===1?"":"s"}${
-wk.assignments.filter(siteOK).length>wantSlots? " · "+(wk.assignments.filter(siteOK).length-wantSlots)+" over" : ""}</span>
+overSlots>0? " · "+overSlots+" over" : ""}</span>
         <span class="chip">${fmtHrs(totalMin)}</span>
         ${crit.length? `<span class="chip crit"${whyAttrs(crit.length+" thing"+(crit.length===1?"":"s")+" on this week break"+(crit.length===1?"s":"")+" a rule or leave"+(crit.length===1?"s":"")+" a gap — each one is under What this week needs, with a Fix button.", "checks")}>${crit.length} to fix</span>`:wk.assignments.length?`<span class="chip ok">hours checked</span>`:""}
         ${warn.length? `<span class="chip warn"${whyAttrs(warn.length+" worth a look"+" — things worth a look before the week goes up, none of them a rule broken. Each one is under What this week needs, with a Fix button.", "checks")}>${warn.length} worth a look</span>`:""}
@@ -27277,7 +27485,7 @@ return `<div class="hcell ${weekdayShut(d.dow) && !(multiSite() && openAnywhere(
           </div>`;
 }).join("")}
       </div>
-      ${roster.length? roster.map(e=>{
+      ${gridPeople.length? gridPeople.map(e=>{
 const mins=empWeekMinutes(e.id,ws);
  
 const _hol=holCreditMin(e.id, ws);
@@ -27288,9 +27496,9 @@ const pct=e.maxH?clamp((empWeekWorked(e.id,ws)+_hol)/(e.maxH*60),0,1):0;
 const over = e.maxH && empWeekWorked(e.id,ws)>e.maxH*60+1, under = e.minH && _paid<e.minH*60-1 && e.type!=="PRN";
 return `<div class="erow">
           <div class="name">
-            <div class="nm" title="${esc(e.name)}">${empNameLink(e)}</div>
-            <div class="meta"><span class="mono">${fmtHrs(mins)}</span>${_hol? ` <span class="mini" title="Holiday pay counts toward guaranteed hours \u2014 change that under Hours, guarantees and patterns">+${fmtHrs(_hol)} hol</span>`:""}${_sp? ` <span class="mini">(${fmtHrs(payHours(e.id,ws,"before"))} + ${fmtHrs(payHours(e.id,ws,"after"))})</span>`:""} · ${esc(e.type)}${cyclesOn()&&cycleLabel(e)? " · "+esc(cycleLabel(e)):""}
-              ${e.roleIds.slice(0,2).map(id=>{const r=roleById(id);return r?`<span class="tag" style="--sc:${r.color}">${esc(r.abbr||r.name)}</span>`:"";}).join("")}</div>
+            <div class="nm" title="${esc(e.name)}">${e.gone? esc(e.name) : empNameLink(e)}</div>
+            <div class="meta"><span class="mono">${fmtHrs(mins)}</span>${_hol? ` <span class="mini" title="Holiday pay counts toward guaranteed hours \u2014 change that under Hours, guarantees and patterns">+${fmtHrs(_hol)} hol</span>`:""}${_sp? ` <span class="mini">(${fmtHrs(payHours(e.id,ws,"before"))} + ${fmtHrs(payHours(e.id,ws,"after"))})</span>`:""}${e.gone? "" : " · "+esc(e.type)}${cyclesOn()&&cycleLabel(e)? " · "+esc(cycleLabel(e)):""}${e.gone? " · no longer on the roster" : e.active===false? " · set aside" : ""}
+              ${e.roleIds.slice(0,2).map(id=>{const r=roleById(id); return r?`<span class="tag" style="--sc:${esc(r.color)}">${esc(r.abbr||r.name)}</span>`:"";}).join("")}</div>
             <div class="bar"><i style="width:${pct*100}%;background:${over?"var(--crit)":under?"var(--warn)":"var(--accent)"}"></i></div>
           </div>
           ${dates.map(d=>{
@@ -27306,15 +27514,17 @@ return `<div class="ecell ${(off||unavail)&&!mine.length?"off":""}${_sp&&_sp.dat
               ${mine.map(a=>{
 const sh=aShift(a);
 const dv = desireOf(a.shiftId,a.dow);
-return `<div class="shiftblk ${cellViol?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" tabindex="0" role="button" style="--sc:${sh.color}"
+ 
+return `<div class="shiftblk ${cellViol?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" tabindex="0" role="button" style="--sc:${esc(sh.color)}"
                   title="${esc(sh.label)} · ${DESIRE_LABEL[clamp(dv,-2,2)]}">
                   ${a.locked?'<span class="lk">●</span>':""}
                   <span class="lb">${dv?`<span class="dmark ${dv>0?"g":"b"}">${dv>0?"+":"−"}</span>`:""}${esc(sh.label)}${a.topUp?' <span class="tup">+</span> <span class="ptag">Project time</span>':""}</span>
                   <span class="tm">${aTimes(a)}</span>
-                  ${a.breaks&&a.breaks.meals.length?`<span class="tm meal">meal ${m2disp(a.breaks.meals[0].start)}${a.breaks.meals[0].end!=null? "\u2013"+m2disp(a.breaks.meals[0].end):""}</span>`:""}
+                  ${a.breaks&&a.breaks.meals.length&&S.rules.breakMode==="assigned"?`<span class="tm meal">meal ${m2disp(a.breaks.meals[0].start)}${a.breaks.meals[0].end!=null? "\u2013"+m2disp(a.breaks.meals[0].end):""}</span>`
+:a.breaks&&a.breaks.meals.length&&S.rules.breakMode==="lengths"&&a.breaks.owed&&a.breaks.owed.meals?`<span class="tm meal">meal ${a.breaks.owed.meals}\u00d7${a.breaks.meals[0].len}m</span>`:""}
                 </div>`;
 }).join("")}
-              ${!mine.length && !off && !unavail? `<button class="addbtn" aria-label="Add a shift for ${esc(e.name)}, ${DSHORT[d.dow]}" data-adda="${e.id}:${d.date}:${d.dow}">+</button>`:""}
+              ${!mine.length && !off && !unavail && e.active!==false? `<button class="addbtn" aria-label="Add a shift for ${esc(e.name)}, ${DSHORT[d.dow]}" data-adda="${e.id}:${d.date}:${d.dow}">+</button>`:""}
             </div>`;
 }).join("")}
         </div>`;
@@ -27473,9 +27683,10 @@ const id=r.querySelector("#adw").value; closeModal(); newAssignModal(id,date,dow
 function newAssignModal(empId,date,dow){
 if(!S.shifts.length){ toast("Define a shift first — opening the shift editor"); shiftModal(null); return; }
 const e=empById(empId);
+ 
 modal("Add a shift for "+e.name,`
     <div class="stack">
-      <div class="mini">${DAYS[dow]} ${prettyFull(date)}</div>
+      <div class="mini">${prettyFull(date)}</div>
       <div class="field"><label>Shift</label><select id="ns">${S.shifts.map(s=>{const[a,b]=shiftMinutes(s);
 const ok=availOk(e,dow,a,b);
 return `<option value="${s.id}">${esc(s.label)} · ${m2disp(a)}–${m2disp(b)}${ok?"":"  (outside stated availability)"}</option>`;}).join("")}</select></div>
@@ -27763,7 +27974,9 @@ return wk.published? "posted" : "draft";
 }
 function vWeeks(){
 const today=weekStartOf(ymd(new Date()), S.org.weekStart);
-const known=Object.keys(S.weeks).filter(k=>S.weeks[k].assignments.length || S.weeks[k].note || S.weeks[k].patternId);
+ 
+const known=Object.keys(S.weeks).filter(k=>weekKeyOk(k) && (S.weeks[k].assignments.length || S.weeks[k].note || S.weeks[k].patternId));
+const odd=Object.keys(S.weeks).filter(k=>!weekKeyOk(k)).sort();
  
 const runway=[]; for(let i=0;i<8;i++) runway.push(addDays(today,i*7));
 const all=[...new Set(known.concat(runway))].sort();
@@ -27807,6 +28020,21 @@ const inner = `<div class="wkrow ${state} ${isNow?"here":""}${payShade(ws)}" dat
     </div>`;
  
 return inner;
+};
+
+ 
+const oddRow=(ws)=>{
+const wk=S.weeks[ws]||{}, state=Array.isArray(wk.assignments)? weekState(ws) : "unstarted";
+return `<div class="wkrow ${state}" style="cursor:default">
+      <div class="wkwhen" style="min-width:0;overflow-wrap:anywhere">
+        <strong>${esc(ws)}</strong>
+        <div class="mini">${esc(WEEK_ODD)}</div>
+        ${wk.note? `<div class="wknote">${esc(wk.note)}</div>`:""}
+      </div>
+      <div class="wkstate">${state==="posted"? `<span class="chip ok">posted</span>` : state==="pending"? `<span class="chip warn">going up</span>`
+: state==="draft"? `<span class="chip acc">draft</span>` : `<span class="chip">nothing yet</span>`}</div>
+      <div class="wkacts"><button class="btn sm" disabled aria-disabled="true">Open</button></div>
+    </div>`;
 };
 
 const monthMode=(S.ui&&S.ui.schedView)==="month";
@@ -27884,7 +28112,9 @@ return `
     ${posted.length? `<div class="card">
       <header><h3>Posted</h3><span class="hint">Locked. Unpost one to change it.</span></header>
       <div class="wklist">${posted.slice().reverse().map(row).join("")}</div>
-    </div>`:""}`}
+    </div>`:""}
+
+    ${odd.length? `<div class="card"><div class="wklist">${odd.map(oddRow).join("")}</div></div>`:""}`}
   </div>`;
 }
 WIRE.weeks = root=>{
@@ -27899,22 +28129,24 @@ let [Y,M]=a.split("-").map(Number); M+=dir; if(M<1){M=12;Y--;} if(M>12){M=1;Y++;
 S.ui.monthAnchor=Y+"-"+String(M).padStart(2,"0"); save(); render(); };
 if(mp) mp.onclick=()=>shift(-1);
 if(mn) mn.onclick=()=>shift(1);
+ 
 root.querySelectorAll("[data-goweek]").forEach(b=>b.onclick=ev=>{
 ev.stopPropagation();
+if(!weekKeyOk(b.dataset.goweek)){ toast(WEEK_ODD); return; }
 S.currentWeek=b.dataset.goweek; save(); go("week");
 });
-root.querySelectorAll(".wkrow").forEach(r=>r.onclick=()=>{ S.currentWeek=r.dataset.open; save(); go("week"); });
+root.querySelectorAll(".wkrow[data-open]").forEach(r=>r.onclick=()=>{ if(!weekKeyOk(r.dataset.open)) return; S.currentWeek=r.dataset.open; save(); go("week"); });
 root.querySelectorAll("[data-wkmenu]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); weekMenu(b.dataset.wkmenu); });
  
 root.querySelectorAll("[data-wkdiscard]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
-const ws=b.dataset.wkdiscard;
+const ws=b.dataset.wkdiscard; if(!weekKeyOk(ws)){ toast(WEEK_ODD); return; }    
 if(weekState(ws)==="posted"){ toast("That week is posted \u2014 unpost it first"); return; }
 delete S.weeks[ws]; save(); render();
 toast("Draft discarded", {label:"Undo", run:undo});
 });
 { const da=root.querySelector("#wkdiscardall");
 if(da) da.onclick=()=>{
-const list=Object.keys(S.weeks).filter(k=>weekState(k)==="draft");
+const list=Object.keys(S.weeks).filter(k=>weekKeyOk(k) && weekState(k)==="draft");    
 if(!list.length){ toast("No drafts to clear"); return; }
 confirmModal("Throw away "+list.length+" draft"+(list.length===1?"":"s")+"?",
 "Nothing posted is touched \u2014 only weeks still being worked on. Undo puts them all back.",
@@ -27923,7 +28155,7 @@ toast(list.length+" draft"+(list.length===1?"":"s")+" discarded", {label:"Undo",
 }; }
 const pa=root.querySelector("#wkpostall");
 if(pa) pa.onclick=()=>{
-const drafts=Object.keys(S.weeks).filter(k=>weekState(k)==="draft");
+const drafts=Object.keys(S.weeks).filter(k=>weekKeyOk(k) && weekState(k)==="draft");    
 modal("Post "+drafts.length+" drafts?", `
       <div class="stack">
         <p class="whead">All of these go up at once and lock. Anything still open stays open — posting doesn't fill it.</p>
@@ -28146,6 +28378,7 @@ modal(title, `<div class="stack"><p class="whead">${esc(body)}</p></div>`,
 r=>{ r.querySelector("#cfyes").onclick=()=>{ closeModal(true); onYes(); }; });
 }
 function weekMenu(ws){
+if(!weekKeyOk(ws)) return toast(WEEK_ODD);    
 const st=weekStats(ws), state=weekState(ws), wk=S.weeks[ws]||getWeek(ws);
 modal(prettyDate(ws)+" – "+prettyDate(addDays(ws,6)), `
     <div class="stack">
@@ -28226,6 +28459,14 @@ save(); closeModal(); render(); toast("Week deleted"); }; });
 });
 }
 
+ 
+function copyClashes(list, c){
+if(!c.empId) return list.some(x=>!x.empId && x.date===c.date && x.startMin===c.startMin && x.endMin===c.endMin
+&& (x.roleId||null)===(c.roleId||null) && x.shiftId===c.shiftId);
+const at=x=>{ const d=Math.round(parseYmd(x.date).getTime()/86400000)*1440; return [d+x.startMin, d+x.endMin]; };
+const [a,b]=at(c);
+return list.some(x=>x.empId===c.empId && (x.date===c.date || (()=>{ const [p,q]=at(x); return p<b && a<q; })()));
+}
 function duplicateWeekModal(from){
 const today=weekStartOf(ymd(new Date()), S.org.weekStart);
 const opts=[]; for(let i=0;i<12;i++){ const k=addDays(today,i*7); if(k!==from) opts.push(k); }
@@ -28245,9 +28486,12 @@ if(dst.published){ toast("That week is posted — unpost it first"); return; }
 const src=getWeek(from);
 const shift=Math.round((parseYmd(to)-parseYmd(from))/86400000);
 if(r.querySelector("#dupclear").checked) dst.assignments=[];
+ 
+const had=dst.assignments.slice();
 src.assignments.forEach(a=>{
 const c=Object.assign({},a,{id:uid("a"), date:addDays(a.date,shift), locked:false});
 delete c.holAssign;           
+if(copyClashes(had, c)) return;
 applyBreaks(c); dst.assignments.push(c);
 });
 if(src.patternId) dst.patternId=src.patternId;
@@ -28551,7 +28795,7 @@ return `<div class="tlrow">
               <div class="tltrack">
                 <div class="tlgrid">${ticks.map(t=>`<i style="left:${pct(t)}%"></i>`).join("")}</div>
                 ${(()=>{const c=lunchClosure(dow,date); return c? `<div class="tlshut" style="left:${pct(c.from)}%;width:${(c.to-c.from)/span*100}%" title="Doors shut ${m2disp(c.from)}–${m2disp(c.to)}"></div>`:"";})()}
-                <div class="tlbar" data-edita="${a.id}" role="button" tabindex="0" title="Tap to change this shift" style="left:${pct(a.startMin)}%;width:${(a.endMin-a.startMin)/span*100}%;--sc:${sh.color};cursor:pointer">
+                <div class="tlbar" data-edita="${a.id}" role="button" tabindex="0" title="Tap to change this shift" style="left:${pct(a.startMin)}%;width:${(a.endMin-a.startMin)/span*100}%;--sc:${esc(sh.color)};cursor:pointer">
                   ${aTimes(a)}
                 </div>
                 ${S.rules.breakMode==="assigned"? b.meals.filter(m=>!m.waived).map(m=>
@@ -28888,6 +29132,8 @@ const was=rest.concat([a]);
 const lo=Math.min(a.startMin, s2), hi=Math.min(Math.max(a.endMin, e2), 1440), hiR=Math.max(a.endMin, e2);
 const dow=(a.dow!=null)? a.dow : parseYmd(a.date).getDay();
 const rules=(S.coverage||[]).filter(r=>r.kind && covOn(r, dow)), hard=rules.filter(r=>r.kind!=="min");
+ 
+const tails=lastNightRules(dow, a.date).filter(r=>r.kind), hardT=tails.filter(r=>r.kind!=="min");
 const people=[...new Set(was.map(x=>x.empId))].filter(id=>{ const e=empById(id); return e && effLimits(e, a.date).canBeAlone===false; });
 const alone=(pool, id, x, y)=>{ const mine=pool.filter(q=>q.empId===id); let n=0; for(let t=x;t<y;t+=15) if(onDutyAt(pool,t,null)===1 && onDutyAt(mine,t,null)===1) n++; return n; };
  
@@ -28896,6 +29142,9 @@ const diff=(A,B,at0)=>{ let n=0, at=null, end=null; for(let i=0;i<A.length;i++) 
 let w=null;
 for(const r of hard){ const A=[], B=[]; const yR=(y>=hi)? Math.max(y, hiR) : y;
 if(ruleShort(now,r,x,yR,A) > ruleShort(was,r,x,yR,B)){ w=Object.assign({rule:true, what:"\u201c"+ruleSentence(r)+"\u201d"}, diff(A,B,A.from)); break; } }
+if(!w && hardT.length){ const nN=withLastNight(now), nW=withLastNight(was);     
+for(const r of hardT){ const A=[], B=[];
+if(ruleShort(nN,r,x,y,A) > ruleShort(nW,r,x,y,B)){ w=Object.assign({rule:true, what:"\u201c"+ruleSentence(r._rule)+"\u201d"}, diff(A,B,A.from)); break; } } }
 for(const id of people){ const A=[], B=[]; const mn=now.filter(q=>q.empId===id), mw=was.filter(q=>q.empId===id);
 for(let t=x;t<y;t+=15){ A.push(onDutyAt(now,t,null)===1 && onDutyAt(mn,t,null)===1? 1:0); B.push(onDutyAt(was,t,null)===1 && onDutyAt(mw,t,null)===1? 1:0); }
 if(A.reduce((p,q)=>p+q,0) > B.reduce((p,q)=>p+q,0)){ const who=(empById(id).name||"Somebody").split(" ")[0];
@@ -28903,7 +29152,8 @@ if(w){ w.also=who; return w; }
 return Object.assign({rule:false, what:who}, diff(A,B,x)); } }
 return w; };
 const say=w=>(w.rule? "costs "+w.what : "leaves "+w.what+" on their own")+" up to "+(w.n*15<60? (w.n*15)+" min" : fmtHrs(w.n*15))+(w.at!=null? " from "+m2disp(w.at) : "")+(w.also? " and leaves "+w.also+" on their own" : "");
-const total=pool=>rules.reduce((t,r)=>t+ruleShort(pool,r),0)+people.reduce((t,id)=>t+alone(pool,id,0,1440),0);
+const total=pool=>rules.reduce((t,r)=>t+ruleShort(pool,r),0)+people.reduce((t,id)=>t+alone(pool,id,0,1440),0)
++(tails.length? tails.reduce((t,r)=>t+ruleShort(withLastNight(pool),r),0) : 0);    
 let now=rest.concat([will]); const w0=worseIn(now, lo, hi);
 if(!w0) return null;
 if(total(now) <= total(was)) return {say:say(w0), worse:false};
@@ -29277,8 +29527,12 @@ now("Call "+f+" in", f+" is kept on call"+(perDiemMode(pd)==="ask"? " and set to
 (weekIsPosted(ws)? " The week is posted, so "+f+" is sent the change message." : ""),
 ()=>callInPerDiem(v, ws), true);
 }
-now(pd? "Who else could work it?" : "Who could work it?", "Everyone who clears every limit, best fit first.", ()=>fillOpenModal(v.date, v.shiftId, v.roleId||null, v.siteId||null), !pd);
-now("All open shifts and the best ways out", "Per diem, an hour of overtime, a request to decline — ranked, least disruptive first.", ()=>fixModal(ws));
+ 
+const odow=v.dow!=null? v.dow : parseYmd(v.date).getDay();
+const clearNow=!pd && candidatesFor(v.shiftId, v.date, odow, v.roleId||null, null, v.siteId||null).some(c=>!c.blocks.length);
+const waysOut=!pd && !clearNow && optionsFor({date:v.date, dow:odow, shiftId:v.shiftId, roleId:v.roleId||null, siteId:v.siteId||null}, ws).some(o=>!o.flag);
+now(pd? "Who else could work it?" : "Who could work it?", "Everyone who clears every limit, best fit first.", ()=>fillOpenModal(v.date, v.shiftId, v.roleId||null, v.siteId||null), clearNow);
+now("All open shifts and the best ways out", "Per diem, an hour of overtime, a request to decline — ranked, least disruptive first.", ()=>fixModal(ws), waysOut);
 now("Offer it to the team", "One page they can reply to with a code. Nobody needs an account.", ()=>offerModal(ws));
 bringIn(v.date);
 later("Need fewer people on "+dayName+"s?", "Change the coverage needs and the drafter stops asking for it.", ()=>go("demand"));
@@ -30760,9 +31014,29 @@ return Math.max(40, PDF_FOOT_CLEAR+(n-1)*pdfFootLh(doc)+PDF_FOOT_PT+8);
 }
  
 function pdfKeep(doc, y, need, lead){
+need=Math.min(need, doc.internal.pageSize.getHeight()-pdfFootRoom(doc)-40-lead);    
 if(y+need<=doc.internal.pageSize.getHeight()-pdfFootRoom(doc)) return y;
 doc.addPage();
 return 40+lead;
+}
+ 
+function pdfRowH(doc, cells, fs, pad){
+const lh=fs*((doc.getLineHeightFactor&&doc.getLineHeightFactor())||1.15);
+let n=1;
+if(typeof doc.splitTextToSize!=="function"){
+cells.forEach(c=>{ n=Math.max(n, String(c[0]==null? "" : c[0]).split("\n").length); });
+return n*lh+2*pad;
+}
+const f=(typeof doc.getFont==="function")? doc.getFont() : null;
+const fz=(typeof doc.getFontSize==="function")? doc.getFontSize() : null;
+const k=(doc.internal&&doc.internal.scaleFactor)||1;
+cells.forEach(c=>{
+doc.setFont("helvetica", c[2]? "bold" : "normal"); doc.setFontSize(fs);
+n=Math.max(n, doc.splitTextToSize(String(c[0]==null? "" : c[0]), c[1]-2*pad+1/k, {fontSize:fs}).length);
+});
+if(f) doc.setFont(f.fontName, f.fontStyle);
+if(fz) doc.setFontSize(fz);
+return n*lh+2*pad;
 }
 function pdfFooterOne(doc){
 const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
@@ -30789,6 +31063,13 @@ const wk=getWeek(ws), dates=weekDates(ws);
 { const ds=docSite((getWeek(ws).assignments)||[]);
 pdfHeader(doc, (S.org.name||"Weekly schedule"), (ds? ds+"  ·  ":"")+"Week of "+prettyFull(ws)); }
 const head=[["Staff","Role"].concat(dates.map(d=>DSHORT[d.dow]+" "+prettyDate(d.date)+(holidayTag(d.date)? "\n"+holidayTag(d.date):""))).concat(["Hrs"])];
+ 
+const roleFit=e=>{ if(typeof doc.getTextWidth!=="function" || typeof doc.getFont!=="function") return empRoleAbbrs(e);
+const f0=doc.getFont(), z0=doc.getFontSize(); doc.setFont("helvetica","normal"); doc.setFontSize(7.4);
+const fits=t=>doc.getTextWidth(t)<=36, fit=w=>{ if(typeof pdfNeedsInk==="function" && pdfNeedsInk(w)) return w; while(w.length>1 && !fits(w)) w=w.slice(0,-1); return w; };
+const all=empRoleAbbrs(e), each=((e&&e.roleIds)||[]).length? e.roleIds.map(roleAbbr) : [all];
+const out=fits(all)? all : each.map(x=>String(x).split(" ").map(fit).join(" ")).join("/\n");
+doc.setFont(f0.fontName, f0.fontStyle); doc.setFontSize(z0); return out; };
 const body=exportPeople(wk).map(e=>{
 const cells=dates.map(d=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id&&a.date===d.date);
@@ -30800,18 +31081,22 @@ const meal = S.rules.breakMode==="assigned"&&b.meals.length? "\nmeal "+b.meals.f
 return aShift(a).label+"\n"+aTimes(a)+meal;
 }).join("\n")+(clash? "\n"+clash : "");
 });
-return [e.name+(e.active? "" : " (set aside)"), empRoleAbbrs(e)]
+return [e.name+(e.active? "" : " (set aside)"), roleFit(e)]
 .concat(cells).concat([fmtHrs(empWeekMinutes(e.id,ws))]);
 });
 doc.autoTable({head,body,startY:82,styles:{fontSize:7.4,cellPadding:4,lineColor:[210,216,214],lineWidth:.5,textColor:[35,48,45]},
 headStyles:{fillColor:[28,106,102],textColor:255,fontSize:7.6},
 alternateRowStyles:{fillColor:[246,248,247]},
 columnStyles:{0:{cellWidth:86,fontStyle:"bold"},1:{cellWidth:44}},
-margin:{left:40,right:40}});
-const V=validate(ws).filter(v=>v.sev==="crit");
+margin:{left:40,right:40},
+ 
+rowPageBreak:"avoid", showHead:"everyPage"});
+ 
+const V=validate(ws).filter(v=>v.sev==="crit" && !v.empId).map(v=>v.team? Object.assign({}, v, v.team) : v);
 if(V.length){
 let y=doc.lastAutoTable.finalY+22;
-y=pdfKeep(doc, y, 10+36, 10);    
+ 
+y=pdfKeep(doc, y, 10+pdfRowH(doc, [[V[0].title, 190, true], [V[0].detail, doc.internal.pageSize.getWidth()-80-190, false]], 7.4, 3), 10);
 doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(171,56,44);
 doc.text("Open items ("+V.length+")",40,y); y+=6;
 doc.autoTable({body:V.map(v=>[v.title,v.detail]),startY:y+4,theme:"plain",
@@ -32749,32 +33034,93 @@ return h.common==="normal"? "skip" : h.common;
 const opt=(group,val,cur,title,desc,tag)=>`<button type="button" class="wopt ${cur===val?"on":""}" data-g="${group}" data-v="${val}">
     <span class="wt">${esc(title)}${tag? `<span class="wtag">${esc(tag)}</span>` : ""}</span>${desc?`<span class="wd">${esc(desc)}</span>`:""}</button>`;
  
-const cleanNameLine = raw => {
-let t=String(raw||"")
-.replace(/^[\s\u2022\u25CF\u25AA\u2013\u2014\-\*]+/,"")            
-.replace(/^\d{1,3}[\.\)]\s+/,"")                                 
-.replace(/<[^>]*>/g," ")                                           
-.replace(/\S+@\S+\.\S+/g," ")                                      
-.replace(/\(?\+?\d[\d\s().\-]{6,}\d\)?/g," ")                        
-.trim();
  
-const parts=t.split(/\t|\|/).map(x=>x.trim()).filter(Boolean);       
-if(parts.length>1) t=parts[0];
+const PASTE_EMAIL=/[^\s<>,;:"'()\[\]]+@[^\s<>,;:"'()\[\]]+\.[A-Za-z]{2,}/;
+const PASTE_PHONE=/\(?\+?\d[\d\s().\-]{6,}\d\)?/;
+ 
+const pasteSplit = (t, d) => { const out=[]; let cur="", q=false;
+for(let i=0;i<t.length;i++){ const c=t[i];
+if(c==='"'){ if(q && t[i+1]==='"'){ cur+='"'; i++; } else q=!q; continue; }
+if(c===d && !q){ out.push(cur.trim()); cur=""; continue; }
+cur+=c; }
+out.push(cur.trim()); return out; };
+const pasteBare = t => String(t||"").replace(/^[\s\u2022\u25CF\u25AA\u2013\u2014\-\*]+/,"")    
+.replace(/^\d{1,3}[\.\)]\s+/,"");                         
+const pasteTidy = t => { t=String(t||"").replace(/\s+/g," ").replace(/^[\s,;]+|[\s,;]+$/g,"").trim();
+const m=t.match(/^["\u201C](.*)["\u201D]$/); return m? m[1].trim() : t; };
+ 
+const pasteHeader = raw => {
+const t=pasteBare(raw).trim(); if(!t) return null;
+const d=["\t","|",",",";"].find(x=>pasteSplit(t,x).length>1); if(!d) return null;
+const f=pasteSplit(t,d).map(x=>x.toLowerCase().replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim());
+const is=(x,re)=>re.test(x);
+const NAME=/^(name|names|full name|employee|employee name|staff|staff name)$/, FIRST=/^(first|first name|firstname|given name)$/,
+LAST=/^(last|last name|lastname|surname|family name)$/, MAIL=/^(email|e mail|email address)$/,
+TEL=/^(phone|phone number|mobile|mobile phone|mobile number|cell|cell phone|telephone)$/,
+OTHER=/^(role|roles|position|job|job title|title|department|team|notes|note|id|employee id|type|hours)$/;
+if(!f.every(x=>!x || [NAME,FIRST,LAST,MAIL,TEL,OTHER].some(re=>is(x,re)))) return null;
+const at=re=>f.findIndex(x=>is(x,re));
+const h={d, name:at(NAME), first:at(FIRST), last:at(LAST), email:at(MAIL), phone:at(TEL)};
+return (h.name>=0||h.first>=0||h.last>=0||h.email>=0||h.phone>=0)? h : null;
+};
+const readPasteLine = (raw, hd) => {
+let t=pasteBare(raw).trim(), email="", phone="";
+const out=n=>{ n=pasteTidy(n);
+if(/^(name|names|employee|employees|staff|first name|last name|full name|team|role|roles)$/i.test(n)) n="";
+return {name:n, email, phone: phone? fmtPhone(phone) : ""}; };
+const known=(W.buckets||[]).concat((S.roles||[]).map(r=>r.name)).filter(Boolean).map(x=>x.toLowerCase());
+ 
+const d = /\t/.test(t)? "\t" : /\|/.test(t)? "|" : (hd && t.indexOf(hd.d)>=0)? hd.d
+: pasteSplit(t,",").length>2? "," : pasteSplit(t,";").length>2? ";" : "";
+if(d){
+const f=pasteSplit(t,d).map(pasteTidy);
+ 
+const mailIn=x=>(String(x||"").match(PASTE_EMAIL)||[""])[0];
+const rest=x=>pasteTidy(String(x||"").replace(/<[^>]*>/g," ").replace(new RegExp(PASTE_EMAIL.source,"g")," "));
+const isTel=x=>!/[A-Za-z]/.test(x) && PASTE_PHONE.test(x);
+if(hd && hd.d===d){
+const col=i=>(i>=0 && f[i]) || "";
+email=mailIn(col(hd.email));
+if(isTel(col(hd.phone))) phone=col(hd.phone).match(PASTE_PHONE)[0].trim();
+const nm = rest(col(hd.name)) || [rest(col(hd.first)), rest(col(hd.last))].filter(Boolean).join(" ");
+if(nm) return out(nm);
+}
+if(!email) email=f.map(mailIn).find(Boolean)||"";
+const ph=f.find(isTel); if(!phone && ph) phone=ph.match(PASTE_PHONE)[0].trim();
+const nameish=x=>!!x && !/\d/.test(x) && /[A-Za-z\u00C0-\u024F]/.test(x);
+const i=f.findIndex(x=>nameish(rest(x))); if(i<0) return out("");
+let nm=rest(f[i]);
+ 
+const nx=mailIn(f[i+1])? "" : rest(f[i+1]);
+const job=x=>known.includes(x.toLowerCase()) ||
+/^(cashier|manager|pharmacist|technician|tech|clerk|assistant|nurse|supervisor|intern|trainee|barista|bartender|dishwasher|stock|rph|pharmd|cpht|rn|lpn|lvn|cna|ft|pt|prn|full[- ]time|part[- ]time|per diem|staff|employee)$/i.test(x);
+if((email||phone) && !/\s/.test(nm) && nameish(nx) && !/\s/.test(nx) && !job(nx)) nm=nm+" "+nx;
+return out(nm);
+}
+ 
+email=(t.match(PASTE_EMAIL)||[""])[0];
+t=t.replace(/<[^>]*>/g," ")                                          
+.replace(new RegExp(PASTE_EMAIL.source,"g")," ");                  
+phone=((t.match(PASTE_PHONE)||[""])[0]).trim();
+t=pasteTidy(t.replace(new RegExp(PASTE_PHONE.source,"g")," "));      
+ 
 const ci=t.search(/[,;]/);
 if(ci>0){
 const head=t.slice(0,ci).trim(), tail=t.slice(ci+1).trim();
-const known=(W.buckets||[]).concat((S.roles||[]).map(r=>r.name)).filter(Boolean).map(x=>x.toLowerCase());
 const rolish = known.includes(tail.toLowerCase()) ||
 /\b(tech|technician|pharmacist|manager|clerk|cashier|assistant|nurse|driver|cook|server|host|lead|supervisor|intern|trainee|rph|pharmd|cpht|rn|lpn|lvn|cna|ma|md|do|np|pa|dds|dvm|cpa|ft|pt|prn|full[- ]time|part[- ]time|per diem)\b/i.test(tail);
 if(rolish) t=head;                                                 
 }
-t=t.replace(/\s+/g," ").trim();
-if(/^(name|names|employee|employees|staff|first name|last name|full name|team|role|roles)$/i.test(t)) return "";
-return t;
+return out(t);
 };
-const namesIn = b => { const seen=new Set(), out=[];
-(W.bucketNames[b]||"").split(/\n/).map(cleanNameLine).filter(Boolean).forEach(n=>{ const k=n.toLowerCase(); if(seen.has(k)) return; seen.add(k); out.push(n); });
+ 
+const peopleIn = b => { const seen=new Set(), out=[]; let hd=null;
+(W.bucketNames[b]||"").split(/\n/).forEach(raw=>{
+const h=pasteHeader(raw); if(h){ hd=h; return; }
+const p=readPasteLine(raw, hd); if(!p.name) return;
+const k=p.name.toLowerCase(); if(seen.has(k)) return; seen.add(k); out.push(p); });
 return out; };
+const namesIn = b => peopleIn(b).map(p=>p.name);
  
 const allNames = () => { const out=[];
 for(let b=0;b<W.bucketCount;b++){
@@ -32834,7 +33180,7 @@ const ps=shiftPresets(o, c, false, shiftLen(), W.juris);
 const cut = (eff==="openclose"||eff==="three") && ps.suggested!=="one";
 const shifts = cut
 ? ps.find(x=>x.id===ps.suggested).shifts.map(sh=>Object.assign({}, sh, {label:(both? "Weekend" : day)+" "+sh.label.toLowerCase(), desire:-1}))
-: [{label:day, start:o, end:c, desire:-1}];
+: [{label:(both? "Weekend" : day), start:o, end:c, desire:-1}];    
 made[key]=out[dow]={shifts, day};
 });
 return out;
@@ -33025,13 +33371,14 @@ NS>6? opt("siteCount",NS,NS,NS+" places","") : ""}</div></div>
 : `<div class="help">Separate rooms or counters inside one building are <b>posts</b>, not places.</div>`}
       </div>`;
 }
+ 
 if(k==="hours") return `
       <div class="stack">
         <p class="whead">The window people can be <b>scheduled to work</b> — not your door hours. Include prep and close-down.</p>
         <div class="wopts">${HOURS_PRESETS.map(x=>opt("hoursPreset",x.id,W.hoursPreset,x.t,x.d)).join("")}</div>
         ${W.hoursPreset!=="always"? `<div class="grid2">
-          <div class="field"><label>${W.hoursPreset==="wkend"?"Mon–Fri, first start":"First start of the day"}</label><input type="time" id="wo" value="${W.open}"></div>
-          <div class="field"><label>${W.hoursPreset==="wkend"?"Mon–Fri, last end":"Last end of the day"}</label><input type="time" id="wc" value="${W.close}"></div>
+          <div class="field"><label>${W.hoursPreset==="wkend"?"Mon–Fri, first start":"First start of the day"}</label><input type="time" id="wo" value="${esc(W.open)}"></div>
+          <div class="field"><label>${W.hoursPreset==="wkend"?"Mon–Fri, last end":"Last end of the day"}</label><input type="time" id="wc" value="${esc(W.close)}"></div>
         </div>
         ${W.hoursPreset==="wkend"? `
         <div class="sep"></div>
@@ -33041,16 +33388,16 @@ if(k==="hours") return `
             <div class="row" style="justify-content:space-between"><strong style="font-family:Archivo,sans-serif;font-size:13px">Saturday</strong>
               <label class="switch" style="font-size:12px"><input type="checkbox" id="wsatx" ${W.satClosed?"checked":""}> closed</label></div>
             <div class="grid2" style="margin-top:6px">
-              <div class="field"><label>First start</label><input type="time" id="wsato" value="${W.satOpen}" ${W.satClosed?"disabled":""}></div>
-              <div class="field"><label>Last end</label><input type="time" id="wsatc" value="${W.satClose}" ${W.satClosed?"disabled":""}></div>
+              <div class="field"><label>First start</label><input type="time" id="wsato" value="${esc(W.satOpen)}" ${W.satClosed?"disabled":""}></div>
+              <div class="field"><label>Last end</label><input type="time" id="wsatc" value="${esc(W.satClose)}" ${W.satClosed?"disabled":""}></div>
             </div>
           </div>
           <div class="dcol">
             <div class="row" style="justify-content:space-between"><strong style="font-family:Archivo,sans-serif;font-size:13px">Sunday</strong>
               <label class="switch" style="font-size:12px"><input type="checkbox" id="wsunx" ${W.sunClosed?"checked":""}> closed</label></div>
             <div class="grid2" style="margin-top:6px">
-              <div class="field"><label>First start</label><input type="time" id="wsuno" value="${W.sunOpen}" ${W.sunClosed?"disabled":""}></div>
-              <div class="field"><label>Last end</label><input type="time" id="wsunc" value="${W.sunClose}" ${W.sunClosed?"disabled":""}></div>
+              <div class="field"><label>First start</label><input type="time" id="wsuno" value="${esc(W.sunOpen)}" ${W.sunClosed?"disabled":""}></div>
+              <div class="field"><label>Last end</label><input type="time" id="wsunc" value="${esc(W.sunClose)}" ${W.sunClosed?"disabled":""}></div>
             </div>
           </div>
         </div>
@@ -33243,7 +33590,7 @@ W.custom.length+" shift"+(W.custom.length===1?"":"s")+" you built by hand.") : "
         ${wkSay? `<div class="banner info" id="wwknd" style="margin-top:6px"><div>${esc(wkSay)}</div></div>` : ""}
         ${cur.shifts.length? `<div class="stack" style="gap:6px">
           ${cur.shifts.map((sh,i)=>{
-const stv=(W.shifts[i]&&W.shifts[i].start)||sh.start, env=(W.shifts[i]&&W.shifts[i].end)||sh.end;
+const stv=(W.shifts[i]&&W.shifts[i].start)||sh.start, env=(W.shifts[i]&&W.shifts[i].end)||sh.end;    
  
  
 const asBuilt = eff!=="custom" && stv===sh.start && env===sh.end;
@@ -33251,9 +33598,9 @@ const note=(!asBuilt && typeof overnightNote==="function")? overnightNote(t2m(st
 return `<div class="wshiftrow">
             <div class="desrow">
             <input type="text" class="wsl" data-i="${i}" value="${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}" style="width:150px" aria-label="Shift name">
-            <input type="time" class="wss" data-i="${i}" value="${stv}" style="width:136px" aria-label="Starts">
+            <input type="time" class="wss" data-i="${i}" value="${esc(stv)}" style="width:136px" aria-label="Starts">
             <span class="mini">to</span>
-            <input type="time" class="wse" data-i="${i}" value="${env}" style="width:136px" aria-label="Ends">
+            <input type="time" class="wse" data-i="${i}" value="${esc(env)}" style="width:136px" aria-label="Ends">
             <button type="button" class="btn sm" style="margin-left:auto" data-wsdel="${i}" aria-label="Remove ${esc((W.shifts[i]&&W.shifts[i].label)||sh.label)}">Remove</button>
             </div>
             <div class="tablabel wsdesire">Guessed: ${esc((DESIRE_LABEL[sh.desire]||"Neutral").toLowerCase())}</div>
@@ -33337,7 +33684,7 @@ return `
  
 const row=h=>`
           <div class="desrow">
-            <div style="min-width:0;flex:1">
+            <div style="min-width:0;flex:1 1 80px">
               <strong style="font-family:Archivo,sans-serif;font-size:13px">${esc(h.name)}</strong>
               <div class="mini mono">${esc(prettyDate(h.date))}</div>
             </div>
@@ -33378,12 +33725,12 @@ if(k==="posts") return `
 : "The day is split into blocks and people swap posts at each change — the day sheet prints the times, so everyone can see where they are and when."}</span></div>
         <div class="field"><label>Numbered posts — one rotation or separate?</label>
           <select id="wpfam">
-            <option value="1" ${W.postFam==="1"?"selected":""}>Share one rotation \u2014 Typist 1 and 2 count as one</option>
+            <option value="1" ${W.postFam==="1"?"selected":""}>Share one rotation \u2014 Register 1 and 2 count as one</option>
             <option value="0" ${W.postFam==="0"?"selected":""}>Rotate separately — every post counted on its own</option>
           </select>
-          <span class="mini">${W.postFam==="1"
-? "Whoever typed yesterday is less likely to be typing today, on either number. This is what most floors want."
-: "Posts are drawn independently, so the same person can be on Typist 1 today and Typist 2 tomorrow."}</span></div>
+          <span class="mini">${ W.postFam==="1"
+? "Whoever was on a register yesterday is less likely to be on one today, on either number. This is what most floors want."
+: "Posts are drawn independently, so the same person can be on Register 1 today and Register 2 tomorrow."}</span></div>
         <div class="field"><label>When someone on a post goes to lunch</label>
           <select id="wprelief">
             <option value="family" ${W.postRelief==="family"?"selected":""}>Someone from the same rotation steps in</option>
@@ -33621,7 +33968,7 @@ return `
             <div class="ln"><span>Roles</span><b>${esc(Array.from({length:W.bucketCount},(_,i)=>bucketLabel(W,i)).filter(Boolean).join(", ")||"everyone the same")}</b></div>
             <div class="ln"><span>Shifts</span><b>${esc((cur.shifts.map((x,i)=>(W.shifts[i]&&W.shifts[i].label)||x.label).concat(
 W.hoursPreset==="wkend"&&cur.shifts.length? [
-(!W.satClosed && (W.satOpen!==W.open||W.satClose!==W.close))?"Saturday":null,
+(!W.satClosed && (W.satOpen!==W.open||W.satClose!==W.close))?((!W.sunClosed && W.sunOpen===W.satOpen && W.sunClose===W.satClose)? "Weekend" : "Saturday"):null,    
 (!W.sunClosed && (W.sunOpen!==W.open||W.sunClose!==W.close) && (W.sunOpen!==W.satOpen||W.sunClose!==W.satClose||W.satClosed))?"Sunday":null
 ].filter(Boolean):[])).join(", ")||"none yet")}</b></div>
             <div class="ln"><span>Weekend</span><b>${W.hoursPreset!=="wkend"? "same as the week"
@@ -33843,7 +34190,7 @@ W.buckets=W.buckets||[];         while(W.buckets.length<W.bucketCount)     W.buc
 W.bucketLic=W.bucketLic||[];     while(W.bucketLic.length<W.bucketCount)   W.bucketLic.push(false);
 W.bucketNames=W.bucketNames||[]; while(W.bucketNames.length<W.bucketCount) W.bucketNames.push("");
 paint(); }; }
-{ const rb=r.querySelector("#wraise");
+const wireRaise=()=>{ const rb=r.querySelector("#wraise");    
 if(rb) rb.onclick=()=>{ collect();
 W._raiseUndo={perShift:Object.assign({}, W.perShift), say:W._raiseSay||""};
 W.perShift=raisePlan().ps;
@@ -33851,7 +34198,8 @@ paint(); };
 const ub=r.querySelector("#wraiseundo");
 if(ub) ub.onclick=()=>{ collect();
 if(W._raiseUndo){ W.perShift=W._raiseUndo.perShift; delete W._raiseUndo; }
-paint(); }; }
+paint(); }; };
+wireRaise();
 { const wsa=r.querySelector("#wsadd");
 if(wsa) wsa.onclick=()=>{ collect();
 const list=bakeShifts();
@@ -33956,6 +34304,12 @@ clearTimeout(deb); deb=setTimeout(teamSummary, 500);
 t.addEventListener("blur",()=>{ W.buckets[+t.dataset.b]=t.value.trim(); teamSummary(); });
 });
 if(STEPS[W.step].k==="team") teamSummary();
+ 
+r.querySelectorAll(".wneed,.wmax").forEach(inp=>inp.addEventListener("input",()=>{
+clearTimeout(deb); deb=setTimeout(()=>{
+const was=r.querySelector("#wbalance"); if(!was) return;
+collect(); was.outerHTML=balanceLine(); wireRaise(); }, 300);
+}));
 r.querySelectorAll("[data-busy]").forEach(g=>{
 const i=+g.dataset.busy;
 g.querySelectorAll("button").forEach(b=>b.onclick=()=>{ W.dayLoad[i]=+b.dataset.v; collect(); paint(); });
@@ -34117,7 +34471,7 @@ else if(W.hoursPreset==="wkend") N.hours[d]= d===6? {closed:!!W.satClosed,open:W
 else N.hours[d]={closed:false,open:W.open,close:W.close};
 }
 const bucketNames=Array.from({length:W.bucketCount},(_,i)=>bucketLabel(W,i));
-N.roles=bucketNames.map((n,i)=>({id:uid("r"),name:n,abbr:n.slice(0,5),color:PALETTE[i%PALETTE.length],note:"",licensed:!!(W.bucketLic&&W.bucketLic[i])}));
+N.roles=bucketNames.map((n,i)=>({id:uid("r"),name:n,abbr:"" ,color:PALETTE[i%PALETTE.length],note:"",licensed:!!(W.bucketLic&&W.bucketLic[i])}));
 const cur=curShifts();
 N.shifts=cur.shifts.map((sh,i)=>({id:uid("s"),
 label:(W.shifts[i]&&W.shifts[i].label)||sh.label,
@@ -34336,10 +34690,10 @@ try{ const d=weekCostDetail(S.currentWeek);
 cost=Object.keys(d.byPerson||{}).reduce((t,k2)=>t+d.byPerson[k2],0); }catch(e){}
 return {mins, cost};
 })();
-toast("Drafted "+res.filled+" shifts across "+res.built.length+" week"+(res.built.length===1?"":"s")
+afterWelcome(()=>toast("Drafted "+res.filled+" shifts across "+res.built.length+" week"+(res.built.length===1?"":"s")
 +" \u00b7 "+fmtHrs(built.mins)+" in the first week"+(built.cost? " (about "+money(built.cost)+")":"")
 +(res.unfilled? " · "+res.unfilled+" left open":""),
-res.unfilled? {label:"Show me the fixes", run:()=>fixModal(S.currentWeek)} : null);
+res.unfilled? {label:"Show me the fixes", run:()=>fixModal(S.currentWeek)} : null));    
 } else {
  
 go(S.employees.length? "shifts" : "team");
@@ -35047,7 +35401,7 @@ return `<div class="rung" data-id="${id}" ${dragable?'draggable="true"':""}>
           <div class="lab" style="margin-bottom:8px">By shift</div>
           ${S.shifts.length? `<div class="stack" style="gap:6px">${S.shifts.map(sh=>`
             <div class="desrow">
-              <span class="tag" style="--sc:${sh.color}">${esc(sh.label)}</span>
+              <span class="tag" style="--sc:${esc(sh.color)}">${esc(sh.label)}</span>
               <span class="mono mini" style="width:120px">${m2disp(t2m(sh.start))}–${m2disp(t2m(sh.end))}</span>
               <div class="seg" data-desshift="${sh.id}" style="margin-left:auto">
                 ${[-2,-1,0,1,2].map(v=>`<button data-v="${v}" aria-pressed="${(sh.desire||0)===v}" title="${DESIRE_LABEL[v]}">${DESIRE_SHORT[v]}</button>`).join("")}
@@ -35195,13 +35549,13 @@ return `
       <div class="row">
         <span class="lab" style="margin:0">Numbered posts</span>
         <select data-bind="rules.stationFamilies" style="min-width:230px">
-          <option value="1" ${S.rules.stationFamilies!==false?"selected":""}>Share one rotation \u2014 Typist 1 and 2 count as one</option>
+          <option value="1" ${S.rules.stationFamilies!==false?"selected":""}>Share one rotation \u2014 Register 1 and 2 count as one</option>
           <option value="0" ${S.rules.stationFamilies===false?"selected":""}>Rotate separately — every post on its own</option>
         </select>
       </div>
-      <div class="mini" style="margin:-4px 0 8px">${S.rules.stationFamilies!==false
-? "A turn on Typist 1 counts as a turn on Typist, so that person is less likely to draw Typist 2 tomorrow. Posts group by their name — anything ending in a number joins its family automatically."
-: "Every post is counted on its own. A turn on Typist 1 says nothing about Typist 2, so someone can be typing two days running on different numbers."}</div>
+      <div class="mini" style="margin:-4px 0 8px">${ S.rules.stationFamilies!==false
+? "A turn on Register 1 counts as a turn on Register, so that person is less likely to draw Register 2 tomorrow. Posts group by their name — anything ending in a number joins its family automatically."
+: "Every post is counted on its own. A turn on Register 1 says nothing about Register 2, so someone can be on a register two days running on different numbers."}</div>
       <div class="row">
         <span class="lab" style="margin:0">Training on each post \u2014 who needs more time on what <span class="chip">optional</span></span>
         ${skillsOn()? twoTrainings() : ""}
@@ -35403,7 +35757,7 @@ const on=(Array.isArray(st.linkWith)&&st.linkWith.includes(o.id)) || st.linkedTo
 || (Array.isArray(o.linkWith)&&o.linkWith.includes(st.id)) || o.linkedTo===st.id;
 return `<label class="switch" style="border:1px solid var(--line);border-radius:7px;padding:4px 9px"><input type="checkbox" class="stlk" value="${esc(o.id)}" ${on?"checked":""}> ${esc(o.name)}</label>`;
 }).join("")}</div>
-            <span class="mini">This is about people physically changing places mid-shift \u2014 <b>not</b> about two posts counting as the same kind of work. If what you want is &ldquo;a turn on Typist 1 counts as a turn on Typist, so everyone gets variety across the week&rdquo;, that is <b>Numbered posts \u2192 Share one rotation</b> on this page, and posts named with a number already group themselves. Leave this empty for that.</span>
+            <span class="mini">This is about people physically changing places mid-shift \u2014 <b>not</b> about two posts counting as the same kind of work. If what you want is &ldquo;a turn on Register 1 counts as a turn on Register, so everyone gets variety across the week&rdquo;, that is <b>Numbered posts \u2192 Share one rotation</b> on this page, and posts named with a number already group themselves. Leave this empty for that.</span>
             <span class="mini">${(S.rules.stationSpan||"day")==="day"
 ? `You have the floor set to <b>All day \u2014 one post per person</b>, so ticking a post here changes nothing during the day \u2014 nobody swaps. It still means \u201csomeone from the same rotation\u201d covers this post at a meal. To make people change over mid-shift, set <b>How long someone holds a post</b> to half a day or an hourly block.`
 : `Tick every post this one swaps with. Two of them change places at the middle of the day; three or more pass along the ring, so nobody spends the whole day on the same one.`}</span>`
@@ -35418,7 +35772,7 @@ return `<label class="switch" style="border:1px solid var(--line);border-radius:
           ${coverGroupOf(st.id)? `<div class="banner info" style="margin-bottom:6px"><div>Set by the cover group
             <b>${esc(coverGroupName(coverGroupOf(st.id)))}</b> — anyone else in it steps in. Change it on the Stations page.</div></div>`:""}
           <select id="strelief" ${coverGroupOf(st.id)?"disabled":""}>
-            <option value="family" ${st.reliefFrom==="family"?"selected":""}>Someone from the same rotation (Typist covers Typist)</option>
+            <option value="family" ${ st.reliefFrom==="family"?"selected":""}>Someone from the same rotation (Register covers Register)</option>
             <option value="" ${!st.reliefFrom?"selected":""}>Whoever is free at the time</option>
             ${others.map(o=>`<option value="${o.id}" ${st.reliefFrom===o.id?"selected":""}>Someone from ${esc(o.name)}</option>`).join("")}
           </select>
@@ -36035,7 +36389,7 @@ return `<div class="banner warn"><div><b>${past.length} holiday${past.length===1
             ${holMode(h)!=="closed"&&h.hours? `<div class="mini mono">${esc(h.hours)}</div>`:""}${holSitesSet(h)? `<div class="mini holsum">${esc(holSitesSay(h)).replace(/(\d{1,2}(?::\d\d)?[ap])\u2013(\d{1,2}(?::\d\d)?[ap])/g, '<span style="white-space:nowrap">$1\u2013$2</span>')}</div>`:""}</td>
           ${multiSite()? "" : `<td>${holMode(h)==="closed"? '<span class="mini">closed — nobody scheduled</span>'
 : (Object.keys(h.need||{}).filter(k=>h.need[k]).map(k=>`<span class="chip">${h.need[k]} × ${esc(roleName(k))}</span> `).join("")||'<span class="mini">nobody needed</span>')}</td>`}
-          <td><button class="btn sm" data-edithol="${h.id}">Edit</button></td></tr>`).join("")}
+          <td><button class="btn sm" data-edithol="${esc(h.id)}">Edit</button></td></tr>`).join("")}
         </tbody></table>`:`<div class="empty"><strong>No holidays listed</strong>Add the days you have to staff.</div>`}
       </div>
       <div class="body" style="border-top:1px solid var(--line)">
@@ -36085,8 +36439,8 @@ return `<div class="desrow"><strong style="font-size:13px">${demCount(r)} × ${e
               <button class="btn sm" data-hdel="${i}" style="margin-left:auto">Remove</button></div>`;
 }).join("") : `<div class="mini">Nothing yet — every listed holiday drafts empty until you add what should run.</div>`}
           <div class="row" style="gap:6px;flex-wrap:wrap">
-            <select id="hdsh">${S.shifts.map(x=>`<option value="${x.id}">${esc(x.label)}</option>`).join("")}</select>
-            <select id="hdrole"><option value="">Anyone</option>${S.roles.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>
+            <select id="hdsh">${S.shifts.map(x=>`<option value="${esc(x.id)}">${esc(x.label)}</option>`).join("")}</select>
+            <select id="hdrole"><option value="">Anyone</option>${S.roles.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}</select>
             <input type="number" inputmode="decimal" id="hdct" min="1" max="20" value="1" style="width:76px">
             <button class="btn sm primary" id="hdadd">Add</button>
           </div>
@@ -36165,7 +36519,8 @@ return `<tr><td><strong>${esc(h.name)}</strong><div class="mini">${esc(h.hours||
               <td>${mine.map(r=>{
 const rk=r.rank; const cls = rk<=1?"ok":rk>=H.length-1?"crit":"";
 if(multiSite()) return `<span class="chip ${cls}">${esc((empById(r.empId)||{name:"—"}).name)} · ${esc(roleAbbr(r.roleId))}</span> `;
-return `<button class="chip ${cls}" data-holtweak="${r.empId}|${h.id}" style="cursor:pointer;border:0"
+ 
+return `<button class="chip ${cls}" data-holtweak="${esc(r.empId)}|${esc(h.id)}" style="cursor:pointer;border:0"
                   title="Not this person, or hold them to it">${esc((empById(r.empId)||{name:"—"}).name)} · ${esc(roleAbbr(r.roleId))}</button> `;
 }).join("")}
               ${!mine.length && !un.length && (alloc.dropped||{})[h.id]? `<span class="mini">${esc(holDropNote(alloc.dropped[h.id], h))}</span>` : ""}
@@ -36417,7 +36772,7 @@ modal(id?"Edit holiday":"Add a holiday", `
       <label class="row" style="gap:8px"><input type="checkbox" id="hrep" ${h.repeat===false?"":"checked"}> Repeats every year <span class="mini">${holPresetFor(h)? "\u2014 comes back on its real date" : "\u2014 comes back on the same day next year"}</span></label>
       ${multiSite()? `${hsRows}<div class="help" id="holneedmulti">Fewer people and holiday hours are staffed from the Holidays rows under Coverage needs, where every shift names its location.</div>` : `<div class="field"><label>Coverage needed</label>
         ${S.roles.length? S.roles.map(r=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin-bottom:6px">
-          <span class="tag" style="--sc:${r.color}">${esc(r.name)}</span>
+          <span class="tag" style="--sc:${esc(r.color)}">${esc(r.name)}</span>
           <input type="number" inputmode="decimal" class="hneed" data-r="${r.id}" min="0" max="20" value="${esc((h.need&&h.need[r.id])||0)}" style="width:80px"></div>`).join("")    
 : `<span class="mini">Add roles first under Roles &amp; shifts.</span>`}</div>`}
       ${(S.stations||[]).filter(x=>!x.off).length? `<div class="field"><label>Posts on this day</label>
@@ -37145,14 +37500,18 @@ startY:82,styles:{fontSize:8.5,cellPadding:6,lineColor:[210,216,214],lineWidth:.
 headStyles:{fillColor:[28,106,102],textColor:255},alternateRowStyles:{fillColor:[246,248,247]},
 columnStyles:{0:{fontStyle:"bold",cellWidth:120}},margin:{left:40,right:40}});
 let y=doc.lastAutoTable.finalY+22;
-y=pdfKeep(doc, y, 8+20+38, 10);    
+ 
+const load=S.employees.filter(e=>e.active).map(e=>{
+const mine=a.result.filter(r=>r.empId===e.id);
+return [e.name, String(mine.length), mine.map(m=>(H.find(h=>h.id===m.holidayId)||{}).name+" (their #"+(m.rank+1)+")").join(", ")||"none"];
+});
+{ const w=doc.internal.pageSize.getWidth()-80-110-52;
+y=pdfKeep(doc, y, 8+pdfRowH(doc, [["Person", 110, true], ["Holidays", 52, true], ["Which", w, true]], 8, 5)
++(load.length? pdfRowH(doc, [[load[0][0], 110, true], [load[0][1], 52, false], [load[0][2], w, false]], 8, 5) : 0), 10); }
 doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(20,32,30);
 doc.text("How the load fell",40,y);
 doc.autoTable({head:[["Person","Holidays","Which"]],
-body:S.employees.filter(e=>e.active).map(e=>{
-const mine=a.result.filter(r=>r.empId===e.id);
-return [e.name, String(mine.length), mine.map(m=>(H.find(h=>h.id===m.holidayId)||{}).name+" (their #"+(m.rank+1)+")").join(", ")||"none"];
-}),
+body:load,
 startY:y+8,styles:{fontSize:8,cellPadding:5,lineColor:[210,216,214],lineWidth:.5},
 headStyles:{fillColor:[105,119,115],textColor:255},columnStyles:{0:{fontStyle:"bold",cellWidth:110},1:{cellWidth:52}},margin:{left:40,right:40}});
 pdfFooter(doc);
@@ -37863,7 +38222,8 @@ a:"Press Fix. Every problem on Home, in the checks panel under This week, and ev
 a:"When the same flag shows up in two or more of the weeks on your board \u2014 the four before this one and the three after \u2014 Home lists it under This keeps happening. With the same roster and the same rules, next week will bring the same flag, so Fix for good opens only the changes that stop it: a rule lowered or narrowed, one more person on that weekday, the doors shut for lunch, a cap or a contract updated on a profile. A temporary fix each week is still a perfectly good choice \u2014 the point is that the pattern is pointed out, not that anything is changed for you. Nothing is applied until you press. Hide this one keeps a flag you have decided to live with off the list; Settings \u2192 This device \u2192 This board turns the whole thing off or brings the hidden ones back."},
 {t:"Keep two people from working together", k:"keep apart separate conflict grievance siblings family divorce lawsuit restraining order not together same shift same day same station post never schedule together", go:"team",
 a:"Open either person under Team and use Keep apart from someone. Pick the other person and how far apart: never on the same day, never on overlapping shifts, or the same shift is fine but never the same post or one alongside it (its linked twin, a post in the same family, or one that covers it at meals). The drafter treats it as a rule it may not break, Cover the gaps never offers a blocked person, and if you move somebody by hand into a breach the checks panel says so. It is private to you: nothing about it appears on a printout, a message, a calendar file or an export, and the optional note stays on that screen only."},
-{t:"Can I sign in with Google?", k:"google sign in login gmail account password continue with google link", go:null, when:()=>GOOGLE_SIGNIN,
+ 
+{t:"Can I sign in with Google?", k:"google sign in login gmail account password continue with google link", go:"settings|Your account", when:()=>GOOGLE_SIGNIN,
 a:"Yes. On the sign-in screen press Continue with Google. If you already have a Weeksolved account under the same email address, it is the same account \u2014 your board is there, nothing moves. If you are new, you are asked for your access code after Google confirms who you are, and that is the whole of it. Under Settings \u2192 Account \u2192 Your account you can attach Google to an account that has a password, or add a password to one that only has Google. Not yet offered on an iPhone or iPad, where the Google window cannot reliably hand the answer back to the page \u2014 there, use your email and password for now."},
 {t:"Draft the week", k:"draft generate build schedule create week make auto", go:"home",
 a:"Press Draft on the Home screen (or This week). The scheduler fills every shift you've defined, placing meal and rest breaks to the rules on this board. It never invents a shift — if something can't be covered, it stays open and the conflicts list tells you exactly which limit stopped each person."},
@@ -37965,8 +38325,9 @@ a:"Set someone\u2019s employment type to \u201cIn training\u201d and you choose 
 },
 {t:"Training on each post \u2014 who needs more time on what (optional)", k:"skill training learning comfortable signed off strong weak level qualified competency bias posts stations", go:"stations",
 a:"Optional and off unless you switch it on under Stations. It records what each person is trained on, post by post — still learning, can work it, or signed off to train others — and nothing else. It only ever affects which post someone is handed on the day sheet; it never changes anyone's hours or pay, and staff never see it. You choose when it applies (every day, only busy days, only when the floor is thin, or busy days for the trained and quiet days for learners to practice) and how strongly it leans (gentle nudge, balanced, strong). A post can also be marked so a learner is never left there alone. Deliberately a training record and not a rating of people — that keeps it useful and fair."},
+ 
 {t:"Posts and how the rotation works", k:"station post typist checker rotation family bucket daily sheet where people stand rotate two hours", go:"stations",
-a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Typist 1, Typist 2) share one rotation by default, so a turn on either counts as a turn on Typist and that person is less likely to draw it again; you can switch to counting every post separately under Posts on the floor. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
+a:"Stations are where people stand, not when they work — they never show on the weekly schedule, only on the day sheet, and they're handed out automatically every time you draft a week. Numbered posts (Register 1, Register 2) share one rotation by default, so a turn on either counts as a turn on Register and that person is less likely to draw it again; you can switch to counting every post separately under Posts on the floor. Choose whether a post is held all day or the floor rotates every half day, 2, 3 or 4 hours — rotating days print each block's times on the day sheet. Per post you can set the hours it must be staffed, lock it to one shift, mark it as never sitting empty, and say who covers its meal: someone from the same rotation, whoever's free, or nobody."},
 {t:"Which holidays we close for", k:"holiday closed open christmas eve thanksgiving new year observe list closures skeleton", go:"holidays",
 a:"Setup asks about every common US holiday and you answer each one: Doesn't apply, Closed, Open with fewer people, or Open normal hours. Closed days are never scheduled and never appear in the holiday poll. 'Fewer people' days draft from a lighter holiday pattern (about half your usual cover, editable on the Holidays page). 'Normal hours' days draft like the weekday they land on. Change any of it any time on the Holidays page, and 'Add the usual holidays' fills the standard list in one tap."},
 {t:"Different cover on holidays", k:"holiday coverage different closed cover staffing skeleton crew reduced hours draft", go:"holidays",
@@ -39400,12 +39761,16 @@ copyLastWeekForward(prev);
 };
 function copyLastWeekForward(prev){
 const wk=getWeek();
-wk.assignments = prev.assignments.map(a=>{
+ 
+const kept=wk.published? [] : wk.assignments.filter(a=>a.locked);
+wk.assignments = kept.concat(prev.assignments.map(a=>{
 const c=Object.assign({},a,{id:uid("a"),date:addDays(a.date,7),locked:false});
 delete c.holAssign;         
 applyBreaks(c); return c;
-});
-wk.generatedAt=Date.now(); wk.published=false; restampWeek(wk); save(); closeModal(); render();
+}).filter(c=>!copyClashes(kept, c)));
+wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
+ 
+wk.unfilled=[]; wk.generatedAt=Date.now(); wk.published=false; restampWeek(wk); save(); closeModal(); render();
 { const st=weekMealStamp(prev);    
 toast("Copied last week forward"+((st!==null && st!==mealsPaid())? " \u00b7 meals in the copy are "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : "")); }
 }
@@ -39438,9 +39803,10 @@ const fromLock=!!(rel && rel.fromLock);
 const wsx=weekStartOf(date,S.org.weekStart);
 const ask=!!(rel && weekIsPosted(wsx) && !commsOff());
 const askO=ask? {attr:"data-fask", rel} : null;
+ 
 modal("Who could work "+sh.label+"?", `
     <div class="stack">
-      <div class="mini">${DAYS[dow]} ${prettyFull(date)} · ${m2disp(aMin)}–${m2disp(bMin)} · ${esc(roleName(roleId))}</div>
+      <div class="mini">${prettyFull(date)} · ${m2disp(aMin)}–${m2disp(bMin)} · ${esc(roleName(roleId))}</div>
       ${ask && askedLine(rel)? `<div class="mini">${esc(askedLine(rel))}</div>` : ""}
       ${fromLock? `<p class="mini">Released from a lock — whoever covers it starts unlocked.</p>` : ""}
       ${free.length? `<div><div class="lab" style="margin-bottom:6px">Clear to take it</div>${candidateHTML(free,"data-pick",askO)}</div>`
