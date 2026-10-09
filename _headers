@@ -4,3 +4,10 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), usb=(), interest-cohort=()
+
+# The same pages answer on pages.dev; only weeksolved.com is meant for search.
+https://weeksolved.pages.dev/*
+  X-Robots-Tag: noindex
+
+https://:version.weeksolved.pages.dev/*
+  X-Robots-Tag: noindex
