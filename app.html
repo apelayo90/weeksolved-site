@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build 7e508e5d 2026-10-09 08:40 UTC -->
+<!-- build aabe3f4f 2026-10-09 17:49 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -470,7 +470,7 @@ tr:last-child td{border-bottom:0}
 .week .ecell{border-left:1px solid var(--line);padding:5px;min-height:56px;display:flex;flex-direction:column;gap:4px}
 .week .name{padding:8px 10px;display:flex;flex-direction:column;gap:2px;justify-content:center;min-width:0}
 .week .name .nm{font-weight:600;font-size:13px;overflow:hidden;display:-webkit-box;
-  -webkit-line-clamp:2;-webkit-box-orient:vertical;line-clamp:2;overflow-wrap:anywhere;line-height:1.25}
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;line-clamp:2;overflow-wrap:normal;line-height:1.25}
 .week .name .meta{font-size:10.5px;color:var(--muted);display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .week .name .bar{height:3px;border-radius:2px;background:var(--sunken);overflow:hidden;margin-top:3px}
 .week .name .bar i{display:block;height:100%;background:var(--accent)}
@@ -782,7 +782,6 @@ ol.a2hs li{padding-left:2px}
 .modal>header.wizhd h3{flex:1 1 0;min-width:0;font-size:1.375rem;line-height:1.25;align-self:center}
 .wizsub{display:flex;align-items:center;gap:10px;flex:1 1 100%;min-width:0}
 .wizsub .mini{flex:1;min-width:0}
-.wizsub .btn{flex:none;min-height:44px}
 .wbar{display:flex;gap:3px;padding:0 18px 12px}
 .wbar i{flex:1;height:3px;border-radius:2px;background:var(--sunken)}
 .wbar i.done{background:var(--accent);opacity:.45}
@@ -1019,7 +1018,6 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .drow .dw{grid-column:1;grid-row:1;font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .drow .ds{grid-column:1;grid-row:2;font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .drow .dt{grid-column:2;grid-row:1/3;align-self:center;font-size:12px;color:var(--ink2);white-space:nowrap}
-.dfoot{display:flex;gap:8px;flex-wrap:wrap;padding:8px 2px 2px}
 .tabbar{display:none}
 .mobonly{display:none}
 @media (max-width:820px){
@@ -1080,6 +1078,8 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
   .modal>header,.scrim.edge .modal>header{padding:6px 14px}
   .modal>footer{padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px))}
   .modal .body{padding-top:12px}
+  .modal>header.wizhd{row-gap:0}
+  .modal>header.wizhd>.sheet-x{margin-bottom:-16px}
 }
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:80;
   grid-template-columns:repeat(5,minmax(0,1fr));
@@ -1114,7 +1114,7 @@ kbd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;background:var(--sunk
 .tlrow.tlsite .tlname strong{font-family:Archivo,sans-serif}
 .tl{display:grid;grid-template-columns:176px minmax(0,1fr);min-width:820px;width:100%;padding-right:14px;box-sizing:border-box}
 @media (max-width:820px){ .tl:not(.fit){grid-template-columns:120px minmax(0,1fr);min-width:calc(134px + var(--tlh,14) * 46px)}
-  .tl:not(.fit) .tlname>*{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
+  .tl:not(.fit) .tlname>*{white-space:normal;overflow-wrap:normal;text-overflow:ellipsis}
   .tl:not(.fit) .tlbar{top:calc(50% - 17px);bottom:auto;height:34px}
   .tl:not(.fit) .tlmeal,.tl:not(.fit) .tlrest{top:calc(50% - 15px);bottom:auto;height:30px} }
 @media (max-width:375px){ .tl:not(.fit) .tlname,.tl:not(.fit) .tlhead>div:first-child{position:relative;left:auto} }
@@ -1738,7 +1738,7 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-mo
   font-weight:700;text-transform:uppercase;letter-spacing:.04em;line-height:1.25;color:var(--ink)}
 .week .hcell .ghrs{font-size:.8125rem;color:var(--muted);font-family:"IBM Plex Mono",monospace;margin-top:1px}
 .week .hcell .daysheet{font-size:.8125rem;padding:3px 7px;min-height:0}
-.week .name .nm{font-size:1.0625rem;line-height:1.25}
+.week .name .nm,.week .name .nm>.shname{font-size:1.0625rem;line-height:1.25;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .week .name .meta{font-size:.8125rem}
 .week .name .meta .tag{font-size:.8125rem;height:auto;padding:1px 7px}
 .week .ecell{position:relative}
@@ -3498,7 +3498,7 @@ modal("A few new questions from the latest update", `
         <div class="stack" style="gap:5px">${S.holidays.list.map(h=>`
           <div class="desrow"><div style="min-width:0;flex:1 1 80px"><strong style="font-size:12.5px">${esc(h.name)}</strong>
             <div class="mini mono">${esc(prettyDate(h.date))}</div></div>
-            <select data-uhol="${esc(h.id)}" style="margin-left:auto;max-width:180px">
+            <select data-uhol="${esc(h.id)}" style="margin-left:auto;width:auto;max-width:100%">
               <option value="closed" ${holMode(h)==="closed"?"selected":""}>Closed</option>
               <option value="reduced" ${holMode(h)==="reduced"?"selected":""}>Open, fewer people</option>
               <option value="normal" ${holMode(h)==="normal"?"selected":""}>Open, normal hours</option>
@@ -3761,8 +3761,8 @@ else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catc
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "7e508e5d";       
-const BUILD_AT = "2026-10-09 08:40 UTC";       
+const BUILD_ID = "aabe3f4f";       
+const BUILD_AT = "2026-10-09 17:49 UTC";       
 const TERMS_VERSION = "4";                  
 const TERMS_HASH = "ed1753c996121835";
 const TERMS_DATE = "September 12, 2026";
@@ -4264,7 +4264,7 @@ FB={ auth: firebase.auth(), db: firebase.firestore() };
 collectRedirectResult();
 FB.auth.onAuthStateChanged(async u=>{
 if(SIGNING_UP) return;                     
-if(!u){ FB.user=null; WELCOME_WITH=null; WELCOME_LATER=null; DEVLIST=[]; authScreen(); return; }    
+if(!u){ FB.user=null; WELCOME_WITH=null; WELCOME_LATER=null; DEVLIST=[]; BOOT_CONFLICT=null; forgetSession(); authScreen(); return; }    
 FB.user=u;
 try{ await cloudEnter(); deleteResumeOnBoot(u).catch(()=>{}); }
 catch(e){ authScreen("Couldn't reach your board. Check the connection and sign in again."); }
@@ -4298,7 +4298,7 @@ return;
 }
  
 if(SIGNING_UP){ if(u) last=u.id; return; }
-if(!u){ last=""; FB.user=null; FB.auth.currentUser=null; WELCOME_WITH=null; WELCOME_LATER=null; DEVLIST=[]; authScreen(); return; }    
+if(!u){ last=""; FB.user=null; FB.auth.currentUser=null; WELCOME_WITH=null; WELCOME_LATER=null; DEVLIST=[]; BOOT_CONFLICT=null; forgetSession(); authScreen(); return; }    
 if(u.id===last) return;                    
 last=u.id;
 FB.user=sbUserShim(u); FB.auth.currentUser=FB.user;
@@ -4411,6 +4411,7 @@ else { termsUpdateScreen(); CLOUD_ENTERING=false; return; }
 WKHASH={};
  
 SIGNED_OUT = false;
+if(ACCOUNT_DELETING) ACCOUNT_DELETING=false;    
 LS_UID = uid;                        
 const remote=await cloudFetchAll(uid);
 const local=lsLoad();                
@@ -6535,6 +6536,13 @@ if(!s.rules.mealPlan) s.rules.mealPlan="auto";
 if(typeof s.rules.sendOut!=="boolean") s.rules.sendOut=false;
 if(typeof s.rules.preferLong!=="boolean") s.rules.preferLong=false;
 if(typeof s.org.trackPto!=="boolean") s.org.trackPto=false;
+ 
+{ const n= s.org.budget==null || s.org.budget===""? NaN : +s.org.budget; s.org.budget= isFinite(n)? n : 0; }
+ 
+{ const capMax=r=>{ if(r && typeof r==="object" && r.max!=null){ const n= r.max===""? NaN : +r.max; r.max= isFinite(n)? n : null; } };
+const capSet=D=>{ if(D && typeof D==="object") [0,1,2,3,4,5,6].forEach(d=>{ if(Array.isArray(D[d])) D[d].forEach(capMax); }); };
+capSet(s.demand); (Array.isArray(s.patterns)? s.patterns : []).forEach(p=>capSet(p && p.demand));
+if(s.holidays && Array.isArray(s.holidays.demand)) s.holidays.demand.forEach(capMax); }
 if(s.rules.perDiem!=="auto") s.rules.perDiem="ask";
  
 if(!s.ui.b0923){
@@ -6698,7 +6706,10 @@ if(e.id==null || e.id==="") e.id=uid("e");
 ["name","email","phone","notes","type","seniority"].forEach(k=>{ if(typeof e[k]!=="string") e[k]= e[k]==null? "" : String(e[k]); });
 ["roleIds","prefShiftIds","avoidShiftIds","prefDaysOff"].forEach(k=>{ if(!Array.isArray(e[k])) e[k]=[]; });
 const num=(k,d)=>{ if(e[k]==null || e[k]==="") e[k]=d; };    
-num("minH", 0); num("maxH", 0); num("maxD", 7); num("rate", 0);
+ 
+const fig=(v,d)=>{ const n= v==null || v===""? NaN : +v; return isFinite(n)? n : d; };
+e.minH=fig(e.minH, 0); e.maxH=fig(e.maxH, 0); num("maxD", 7); e.rate=fig(e.rate, 0);
+if(e.pto && typeof e.pto==="object"){ e.pto.bal=fig(e.pto.bal, 0); if(e.pto.rate!==undefined) e.pto.rate=fig(e.pto.rate, 0); }
 if(e.cycle===undefined) e.cycle=null;
 if(typeof e.canOpen!=="boolean") e.canOpen = e.canOpen!==false;
 if(typeof e.canClose!=="boolean") e.canClose = e.canClose!==false;
@@ -23993,7 +24004,7 @@ sel("support.remind", [[1,"On"],[0,"Off"]], (S.support||{}).remind!==false?1:0))
     <div class="card" data-findcard="settings"><header><h3>Money</h3></header><div class="setbody">
       ${setRow("Track what the schedule costs", S.org.trackCost? "Rates live on each profile and never appear on a printed schedule" : "Nothing about cost appears anywhere",
 sel("org.trackCost", SET_OPTS["org.trackCost"], S.org.trackCost?1:0))}
-      ${S.org.trackCost? setRow("Weekly labor budget", "", `<input type="number" inputmode="decimal" step="50" min="0" data-bind="org.budget" value="${S.org.budget||0}" style="width:130px">`) : ""}
+      ${S.org.trackCost? setRow("Weekly labor budget", "", `<input type="number" inputmode="decimal" step="50" min="0" data-bind="org.budget" value="${esc(S.org.budget||0)}" style="width:130px">`) : ""}
       ${setRow("Track Time off balances", S.org.trackPto? "Each profile carries a balance and an accrual rule; approved time off draws it down" : "No balances anywhere — time off is just dates",
 sel("org.trackPto", [[0,"Don't track balances"],[1,"Track Time off balances"]], S.org.trackPto?1:0))}
       ${setRow("Who gets paid for holidays", S.employees.filter(e=>e.active&&e.holidayPay).length+" of "+S.employees.filter(e=>e.active).length+" — set per person on their profile", "", "holidays")}
@@ -26080,8 +26091,8 @@ fr(S.rules.topUpLabel||"Project time", `<select id="epj" data-long>
         <option value="range" ${e.hoursMode!=="exact"?"selected":""}>A range — somewhere between a guarantee and a cap</option></select>`)}</div>
       <p class="caption" id="ehmnote"></p></div>
     ${grp("",
-fr("Guaranteed hours", `<input type="number" inputmode="decimal" id="emin" min="0" max="80" value="${e.minH}" data-long>`, {row:'id="eminwrap"', subAttr:'id="eminnote"'})+
-fr("Hour cap", `<input type="number" inputmode="decimal" id="emax" min="0" max="80" value="${e.maxH}">`, {lab:'<span class="rowt" id="emaxlab"><span id="emaxlabt">Hour cap</span></span>'})+
+fr("Guaranteed hours", `<input type="number" inputmode="decimal" id="emin" min="0" max="80" value="${esc(e.minH)}" data-long>`, {row:'id="eminwrap"', subAttr:'id="eminnote"'})+
+fr("Hour cap", `<input type="number" inputmode="decimal" id="emax" min="0" max="80" value="${esc(e.maxH)}">`, {lab:'<span class="rowt" id="emaxlab"><span id="emaxlabt">Hour cap</span></span>'})+
 fr("Hours past the guarantee", `<select id="eextra" data-long>
         <option value="auto" ${(e.extraH||"auto")!=="ask"?"selected":""}>Schedule them freely, up to the cap</option>
         <option value="ask" ${e.extraH==="ask"?"selected":""}>Ask me first — guarantee is the cap until I say</option></select>`,
@@ -26091,7 +26102,7 @@ fr("When nobody else can cover", `<select id="epdm" data-long>
         <option value="ask" ${perDiemMode(e)==="ask"?"selected":""}>Ask me first</option></select>`,
 {row:'id="epdwrap" style="display:'+(e.onCall?"":"none")+'"', sub:"Only while a week is being drafted. Once a week is posted, nobody is put on it without you."})+
 fr("Max days a week", `<select id="emaxd">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${e.maxD===n?"selected":""}>${n} day${n===1?"":"s"}</option>`).join("")}</select>`)+
-(costOn()? fr("Hourly rate", `<input type="number" inputmode="decimal" id="erate" min="0" step="0.25" value="${e.rate||0}">`, {sub:"Optional — drives labor cost. Stays in your account; never shared."}) : ""))}
+(costOn()? fr("Hourly rate", `<input type="number" inputmode="decimal" id="erate" min="0" step="0.25" value="${esc(e.rate||0)}">`, {sub:"Optional — drives labor cost. Stays in your account; never shared."}) : ""))}
     <details class="morefold pfold" ${(e.licExp||e.holidayPay===false||(e.licenses||[]).length||e.noStations&&e.noStations.length||e.apart&&e.apart.length)?"open":""}><summary><span class="rowmain"><span class="rowt">More about this person</span><span class="rowsub">Holiday pay, availability, licences, PTO, training, keep-apart. All optional.</span></span></summary>
     <div class="stack pform">
     ${grp("HOLIDAY PAY",
@@ -26213,7 +26224,7 @@ posts.map(st=>fr(st.name, `<select class="eskill" data-st="${esc(st.id)}" data-l
       It is a note about <b>training and development on each post</b>, not a judgment of the person: "could use more time here" covers someone fully trained who still wants support on that post, not just a new starter.
       It only ever nudges which post they are handed on the day — never their hours, their pay, or how many shifts they get. Set it on one post of a rotation and its siblings follow.`) : ""}
     ${ptoOn()? grp("PTO",
-fr("Balance now", `<input type="number" inputmode="decimal" step="0.5" id="eptob" value="${(e.pto&&e.pto.bal)||0}">`, {sub:"Hours"})+
+fr("Balance now", `<input type="number" inputmode="decimal" step="0.5" id="eptob" value="${esc((e.pto&&e.pto.bal)||0)}">`, {sub:"Hours"})+
 fr("As of", `<input type="date" id="eptoa" data-when="past" value="${esc((e.pto&&e.pto.anchor)||ymd(new Date()))}">`)+
 fr("Accrues", `<select id="eptop" data-long>
         <option value="none" ${!(e.pto&&e.pto.per)||e.pto.per==="none"?"selected":""}>Doesn't accrue</option>
@@ -26222,7 +26233,7 @@ fr("Accrues", `<select id="eptop" data-long>
         <option value="per40" ${e.pto&&e.pto.per==="per40"?"selected":""}>Hours per 40h worked</option>
         <option value="month" ${e.pto&&e.pto.per==="month"?"selected":""}>A lump each month</option>
         <option value="year" ${e.pto&&e.pto.per==="year"?"selected":""}>A lump each year</option></select>`)+
-fr("At this rate", `<input type="number" inputmode="decimal" step="0.1" id="eptor" value="${(e.pto&&e.pto.rate)||1}">`,
+fr("At this rate", `<input type="number" inputmode="decimal" step="0.1" id="eptor" value="${esc((e.pto&&e.pto.rate)||1)}">`,
 {row:'id="eptorw" style="display:'+(e.pto&&e.pto.per&&e.pto.per!=="none"?"":"none")+'"'}),
 `Enter what they have <b>today</b> — straight off your payroll or your own records — and the date that figure is true as of. Everything after that is worked out for you: it grows by the rule below and comes down when approved time off draws on it.
       ${(function(){ const nx=ptoNextAccrual(e); const bal=ptoBalance(e);
@@ -26593,6 +26604,13 @@ from: (e.aside&&e.aside.from) || ymd(new Date()) }
  
 if(id && !e.gone) Object.keys(e).forEach(k=>{ if(!(k in rec)) rec[k]=e[k]; });
 if(rec.aside===undefined) delete rec.aside;
+ 
+if(id && e.gone && root.querySelector("#eact").value==="0"){
+const g=(S.gone||[]).find(x=>x.id===e.id);
+if(g){ g.name=rec.name; g.roleIds=rec.roleIds.slice(); }
+save(); sheetClean(); closeSheet(); render();
+return;
+}
 const i=S.employees.findIndex(x=>x.id===e.id);
 if(i>=0) S.employees[i]=rec; else S.employees.push(rec);
 apartCommit(root, e);
@@ -26935,7 +26953,7 @@ modal((cur? "Edit the "+DAY_LABEL(dow)+" row" : "Add a shift to "+DAY_LABEL(dow)
         <span class="mini">Never fewer than this. ${S.rules.fillMode==="full"
 ? "Anyone left over still gets their contracted hours as "+esc((S.rules.topUpLabel||"project time").toLowerCase())+"."
 : "Spare people simply aren't scheduled unless their profile guarantees them hours. A guarantee is met from the pool wherever there is room for it \u2014 a shift whose Coverage needs rows are all exact is full, and the checks say so by name rather than quietly adding somebody to it. To also fill everyone's contracted hours as project time, use Settings \u2192 Scheduling \u2192 Hours, guarantees and patterns \u2192 Hours past the cover you asked for."}</span></div>
-      <div class="field" id="dmwrap" style="display:${(cur && cur.max!=null && cur.max!==demCount(cur))? "":"none"}"><label>At most</label><input type="number" inputmode="decimal" id="dm" min="1" max="40" placeholder="no limit" value="${cur&&cur.max!=null? cur.max : ""}">
+      <div class="field" id="dmwrap" style="display:${(cur && cur.max!=null && cur.max!==demCount(cur))? "":"none"}"><label>At most</label><input type="number" inputmode="decimal" id="dm" min="1" max="40" placeholder="no limit" value="${esc(cur&&cur.max!=null? cur.max : "")}">
         <span class="mini">Leave it blank on the shift that should take the balance. \u201cTwo openers, two closers, everyone else on the day shift\u201d is: openers at most 2, closers at most 2, day shift no limit.</span></div>
       ${dow===DOW_HOL? `<input type="hidden" id="dall" value="one">` : cur
 ? `<div class="field"><label>Also apply to</label><select id="dall"><option value="one">Just ${DAYS[dow]}</option>${twins.length? `<option value="twins">The same row on ${esc(twins.map(d=>DSHORT[d]).join(", "))} too</option>` : ""}</select></div>`
@@ -27413,7 +27431,7 @@ return `${_first? `<div class="ppband${payShade(d.date)}"><i></i>Pay period ${es
             ${on.map(a=>{ const e=empById(a.empId)||{name:"—"}, sh=aShift(a);
 const bad=V.some(v=>v.sev==="crit"&&v.empId===a.empId&&v.date===a.date);
 return `<button class="drow ${bad?"viol":""}${CHG.has(a.empId+"|"+a.date)?" chg":""}${a.callout?" cout":""}" data-edita="${a.id}" style="--sc:${esc(sh.color)}">
-                <span class="dw">${esc(e.name)}</span>
+                <span class="dw" title="${esc(e.name)}">${esc(e.name)}</span>
                 <span class="ds">${a.locked?"● ":""}${esc(sh.label)}${a.topUp?' <span class="ptag">+ Project time</span>':""}</span>
                 <span class="dt mono">${aTimes(a)}</span></button>`;
 }).join("")}
@@ -28485,7 +28503,8 @@ const dst=getWeek(to);
 if(dst.published){ toast("That week is posted — unpost it first"); return; }
 const src=getWeek(from);
 const shift=Math.round((parseYmd(to)-parseYmd(from))/86400000);
-if(r.querySelector("#dupclear").checked) dst.assignments=[];
+ 
+if(r.querySelector("#dupclear").checked){ dst.assignments=[]; dst.unfilled=[]; }
  
 const had=dst.assignments.slice();
 src.assignments.forEach(a=>{
@@ -28783,7 +28802,7 @@ return `
 return [Object.assign({_siteHead:true}, z)].concat(rows); })
 : list
 ).map(a=>{
-if(a._siteHead) return `<div class="tlrow tlsite" data-site="${esc(a.id)}"><div class="tlname"><strong>${esc(siteName(a.id))}</strong><small>${(()=>{ const w=siteOpenOn(date, dow, a.id)? dayWindowOn(date, dow, a.id) : null;
+if(a._siteHead) return `<div class="tlrow tlsite" data-site="${esc(a.id)}"><div class="tlname"><strong title="${esc(siteName(a.id))}">${esc(siteName(a.id))}</strong><small>${(()=>{ const w=siteOpenOn(date, dow, a.id)? dayWindowOn(date, dow, a.id) : null;
 return w? esc(m2disp(w[0])+"\u2013"+m2disp(w[1])) : "Closed"; })()} · ${list.filter(x=>siteOf(x)===a.id).length} on today</small></div><div class="tltrack"></div></div>`;
 const e=empById(a.empId)||{name:"—",roleIds:[]};
 const sh=aShift(a);
@@ -28980,7 +28999,7 @@ return `<div class="stack brsheet">
       ${row("Paid hours", fmtHrs(paidMinutes(a)))}
       ${row("Standing", standing)}
       <label class="irow still noterow" data-nodirty><span class="rowmain"><span class="rowt">Note</span><span class="rowsub">Shows on the printed sheet</span></span>
-        <input type="text" class="snote" data-snote="${esc(a.empId)}" data-snotestart="${a.startMin}" data-rerender="no" maxlength="160"
+        <input type="text" class="snote" data-snote="${esc(a.empId)}" data-snotestart="${esc(String(a.startMin))}" data-rerender="no" maxlength="160"
           value="${esc(shiftNote(ws, date, a.empId, a.startMin))}" placeholder="Note for this shift…"></label>
       <button type="button" class="irow" data-brchange="${a.id}"><span class="rowmain"><span class="rowt">Change this shift</span><span class="rowsub">Who, the times, the post — the shift editor</span></span><span class="rowend"><span class="chev" aria-hidden="true">›</span></span></button>
     </div>
@@ -31070,6 +31089,16 @@ const fits=t=>doc.getTextWidth(t)<=36, fit=w=>{ if(typeof pdfNeedsInk==="functio
 const all=empRoleAbbrs(e), each=((e&&e.roleIds)||[]).length? e.roleIds.map(roleAbbr) : [all];
 const out=fits(all)? all : each.map(x=>String(x).split(" ").map(fit).join(" ")).join("/\n");
 doc.setFont(f0.fontName, f0.fontStyle); doc.setFontSize(z0); return out; };
+ 
+const nameFit=t=>{ if(typeof doc.getTextWidth!=="function" || typeof doc.getFont!=="function") return t;
+if(typeof pdfNeedsInk==="function" && pdfNeedsInk(t)) return t;
+const f0=doc.getFont(), z0=doc.getFontSize(); doc.setFont("helvetica","bold"); doc.setFontSize(7.4);
+const lines=[]; let line="";
+String(t).split(/\s+/).filter(Boolean).forEach(w=>(w.match(/[^-]*-|[^-]+/g)||[w]).forEach((piece,i)=>{
+const next=line? line+(i? "" : " ")+piece : piece;
+if(!line || doc.getTextWidth(next)<=77.5) line=next; else { lines.push(line); line=piece; } }));
+if(line) lines.push(line);
+doc.setFont(f0.fontName, f0.fontStyle); doc.setFontSize(z0); return lines.join("\n"); };
 const body=exportPeople(wk).map(e=>{
 const cells=dates.map(d=>{
 const mine=wk.assignments.filter(a=>a.empId===e.id&&a.date===d.date);
@@ -31081,7 +31110,7 @@ const meal = S.rules.breakMode==="assigned"&&b.meals.length? "\nmeal "+b.meals.f
 return aShift(a).label+"\n"+aTimes(a)+meal;
 }).join("\n")+(clash? "\n"+clash : "");
 });
-return [e.name+(e.active? "" : " (set aside)"), roleFit(e)]
+return [nameFit(e.name+(e.active? "" : " (set aside)")), roleFit(e)]
 .concat(cells).concat([fmtHrs(empWeekMinutes(e.id,ws))]);
 });
 doc.autoTable({head,body,startY:82,styles:{fontSize:7.4,cellPadding:4,lineColor:[210,216,214],lineWidth:.5,textColor:[35,48,45]},
@@ -33035,7 +33064,8 @@ const opt=(group,val,cur,title,desc,tag)=>`<button type="button" class="wopt ${c
     <span class="wt">${esc(title)}${tag? `<span class="wtag">${esc(tag)}</span>` : ""}</span>${desc?`<span class="wd">${esc(desc)}</span>`:""}</button>`;
  
  
-const PASTE_EMAIL=/[^\s<>,;:"'()\[\]]+@[^\s<>,;:"'()\[\]]+\.[A-Za-z]{2,}/;
+ 
+const PASTE_EMAIL=/[^\s<>,;:"'()\[\]@]+@[^\s<>,;:"'()\[\]@]+\.[A-Za-z]{2,}/;
 const PASTE_PHONE=/\(?\+?\d[\d\s().\-]{6,}\d\)?/;
  
 const pasteSplit = (t, d) => { const out=[]; let cur="", q=false;
@@ -39768,6 +39798,18 @@ const c=Object.assign({},a,{id:uid("a"),date:addDays(a.date,7),locked:false});
 delete c.holAssign;         
 applyBreaks(c); return c;
 }).filter(c=>!copyClashes(kept, c)));
+ 
+{ const copies=wk.assignments.slice(kept.length), took=[];
+copies.forEach(c=>{
+const lk=kept.filter(x=>x.date===c.date);
+if(lk.length){
+const sl=expandDemand(parseYmd(c.date).getDay(), curWeek()), on=lk.concat(took.filter(x=>x.date===c.date));
+const fills=matchDemand(sl, copies.filter(x=>x.date===c.date)).want.some(w=>w.used===c);
+if(fills && matchDemand(sl, on.concat(c)).missing.length===matchDemand(sl, on).missing.length) return;
+}
+took.push(c);
+});
+wk.assignments = kept.concat(took); }
 wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
  
 wk.unfilled=[]; wk.generatedAt=Date.now(); wk.published=false; restampWeek(wk); save(); closeModal(); render();
