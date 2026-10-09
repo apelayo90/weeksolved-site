@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build aabe3f4f 2026-10-09 17:49 UTC -->
+<!-- build e36bb54d 2026-10-09 21:53 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2700,7 +2700,8 @@ try{ clearInterval(TRIAL_TIMER); TRIAL_TIMER=null; }catch(e){}
 try{ EXPIRED_BOARD=null; EXPIRED_UNSENT=false; }catch(e){}
  
 try{ cloudRetryStop(); }catch(e){}
-try{ BOARD_READY=false; LOCAL_DIRTY=false; }catch(e){}
+ 
+try{ BOARD_READY=false; LOCAL_DIRTY=false; undoStack.length=0; lastJSON=null; }catch(e){}
  
 try{ clearTimeout(cloudPushTimer); cloudPushTimer=null; }catch(e){}
 try{ cloudRetryStop(); }catch(e){}
@@ -3756,13 +3757,14 @@ try{ localStorage.setItem(scopedKey(NDAKEY), JSON.stringify(rec)); }catch(e){}
 try{
 if(FB && FB.user && FB.db){
 if(BACKEND==="supabase") cloudTermsPut(FB.user.uid, rec);
-else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+ 
+else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v).set(rec).catch(()=>{});
 }
 }catch(e){}
 return rec;
 }
-const BUILD_ID = "aabe3f4f";       
-const BUILD_AT = "2026-10-09 17:49 UTC";       
+const BUILD_ID = "e36bb54d";       
+const BUILD_AT = "2026-10-09 21:53 UTC";       
 const TERMS_VERSION = "4";                  
 const TERMS_HASH = "ed1753c996121835";
 const TERMS_DATE = "September 12, 2026";
@@ -3800,7 +3802,8 @@ try{ localStorage.setItem(scopedKey(TERMSKEY), JSON.stringify(rec)); }catch(e){}
 try{
 if(FB && FB.user && FB.db){
 if(BACKEND==="supabase") cloudTermsPut(FB.user.uid, rec);
-else FB.db.doc("users/"+FB.user.uid+"/terms/"+rec.v+"_"+rec.at).set(rec).catch(()=>{});
+ 
+else FB.db.doc("users/"+FB.user.uid+"/terms/"+rec.v).set(rec).catch(()=>{});
 }
 }catch(e){}
 return rec;
@@ -4318,6 +4321,7 @@ var CLOUD_ENTERING=false;
 var LAST_SEEN_REV=0;
 async function cloudEnter(){
 const uid=FB.user.uid;
+if(undoStack.length || lastJSON!==null){ undoStack.length=0; lastJSON=null; }    
  
 if(WELCOME_WITH && WELCOME_WITH.uid!==uid) WELCOME_WITH=null;
 if(BOOT_CONFLICT) BOOT_CONFLICT=null;    
@@ -7735,6 +7739,56 @@ return (Math.abs(diff)===60 || Math.abs(diff)===30)? diff : 0;
 }
 function aClockShift(a){ return a? clockShiftMin(a.date, a.startMin, a.endMin) : 0; }
  
+function deviceZone(){
+try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; }catch(e){ return ""; }
+}
+ 
+const ZONESTEPS = new Map();
+function zoneSteps(tz, ws){
+const key=tz+"|"+ws;
+if(ZONESTEPS.has(key)) return ZONESTEPS.get(key);
+let out=null;
+try{
+const f=new Intl.DateTimeFormat("en-US", {timeZone:tz, hourCycle:"h23", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"});
+const off=t=>{ const p={}; f.formatToParts(new Date(t)).forEach(x=>{ p[x.type]=x.value; });
+return Math.round((Date.UTC(+p.year, +p.month-1, +p.day, (+p.hour)%24, +p.minute) - t)/60000); };
+const d=parseYmd(ws);
+if(!d || isNaN(d.getTime())) throw new Error("no week");
+const H=3600000, from=Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())-15*H, to=from+(8*24+30)*H;
+const lo=ws, hi=addDays(ws, 7), steps=[];
+let o=off(from);
+for(let t=from; t<to; t+=H){
+const o2=off(t+H);
+if(o2===o) continue;
+let a=t, b=t+H;
+while(b-a>60000){ const m=a+Math.floor((b-a)/120000)*60000; if(off(m)===o) a=m; else b=m; }
+const wall=new Date(b+o*60000).toISOString().slice(0,16), day=wall.slice(0,10);
+if(day>=lo && day<=hi) steps.push(wall+"|"+(o2-o));
+o=o2;
+}
+out=steps.join(",");
+}catch(e){ out=null; }
+ZONESTEPS.set(key, out);
+return out;
+}
+ 
+function zoneName(tz){
+let n="";
+try{ n=(new Intl.DateTimeFormat("en-US", {timeZone:tz, timeZoneName:"longGeneric"}).formatToParts(new Date()).find(x=>x.type==="timeZoneName")||{}).value||""; }catch(e){ n=""; }
+if(!n) n=String(tz).split("/").pop().replace(/_/g, " ")+" Time";
+return n.replace(/ Time$/, " time");
+}
+ 
+function weekZoneNote(wk, ws){
+const was=wk && wk.tz, here=deviceZone();
+if(!was || typeof was!=="string" || !here || was===here || !((wk.assignments||[]).length)) return null;
+const a=zoneSteps(was, ws), b=zoneSteps(here, ws);
+if(a===null || b===null || a===b) return null;
+let x=zoneName(was), y=zoneName(here);
+if(x===y){ const c=z=>String(z).split("/").pop().replace(/_/g, " "); x+=" ("+c(was)+")"; y+=" ("+c(here)+")"; }
+return {was:x, here:y};
+}
+ 
 function restMin(prevDate, prevEnd, startMin){
 return (startMin+1440)-prevEnd + clockShiftMin(prevDate, prevEnd, startMin+1440);
 }
@@ -8844,6 +8898,44 @@ if(!handOver(e, 1)) break;
 }
 return out;
 }
+ 
+function draftSeal(a){
+const k=[a.empId, a.date, a.shiftId||"", a.roleId||"", a.siteId||"", a.startMin, a.endMin].join("|");
+let h=2166136261;
+for(let i=0;i<k.length;i++){ h^=k.charCodeAt(i); h=Math.imul(h, 16777619); }
+return "d"+(h>>>0).toString(36);
+}
+function draftSealsOf(ws){ return (S.draftSeals && S.draftSeals[ws]) || {}; }
+function draftSealsKeep(ws, m){
+const all=(S.draftSeals && typeof S.draftSeals==="object" && !Array.isArray(S.draftSeals))? S.draftSeals : {};
+if(Object.keys(m).length) all[ws]=m; else delete all[ws];
+Object.keys(all).forEach(k=>{ const w=S.weeks[k]; if(!w || (w.published && !postPending(w))) delete all[k]; });
+if(Object.keys(all).length) S.draftSeals=all; else delete S.draftSeals;
+}
+ 
+const KEEP_MOVE_RULES=new Set(["inactive","role","norole","site","siteshut","closed","avail","holcant","licence","cycle","minor",
+"maxD","cap","exact","shiftlen","span","nosplit","stretch","rest","clopen","consec","request","reqcap"]);
+function keepDraftMoves(ws, list, sealed){
+const out=new Set();
+const live=list.filter(a=>!onTimeOffShift(a.empId, a.date, a.endMin));
+const moving=a=>!a.locked && sealed.has(a.id);
+const C=live.filter(a=>!moving(a)), st=stateFrom(ws, C);
+live.filter(moving).sort((x,y)=>x.date.localeCompare(y.date) || x.startMin-y.startMin).forEach(a=>{
+const e=empById(a.empId), sh=shiftById(a.shiftId);
+if(e && sh){
+const probe=Object.assign({}, sh, {start:m2t(a.startMin), end:m2t(a.endMin)}); delete probe.flex;
+const g=aGap(a); if(g){ probe.gapFrom=m2t(g.from); probe.gapTo=m2t(g.to); } else { delete probe.gapFrom; delete probe.gapTo; }
+const slot={shiftId:sh.id, roleId:a.roleId||null, sh:probe, siteId:(multiSite() && a.siteId && a.siteId!==mainSiteId())? a.siteId : null,
+_allowOnCall:true, _allowTrainee:true, _allowSite:!!a.elsewhere};
+const dow=(a.dow!=null)? a.dow : parseYmd(a.date).getDay();
+if(placeObjections(e, slot, a.date, dow, st, C, true).some(o=>KEEP_MOVE_RULES.has(o.rule))){ out.add(a.id); return; }
+}
+C.push(a);
+const t=st[a.empId];
+if(t){ stPut(t, a); t.days.add(a.date); (t.byDate[a.date]=t.byDate[a.date]||[]).push(a); if(a.dow===0||a.dow===6) t.weekend++; }
+});
+return out;
+}
 function generateSchedule(ws, opts){
 opts = opts || {};
 ws = ws || curWeek();
@@ -8853,11 +8945,20 @@ draftBegin();
  
 const borrow = opts.keepDraft? getWeek(ws) : null;
 const reallyLocked = new Set();
-if(borrow) (borrow.assignments||[]).forEach(a=>{ if(a.locked) reallyLocked.add(a.id); a.locked=true; });
+ 
+const seals=draftSealsOf(ws), was=new Set(), sealed=new Set();
+(getWeek(ws).assignments||[]).forEach(a=>{ was.add(a.id); if(seals[a.id] && seals[a.id]===draftSeal(a)) sealed.add(a.id); });
+if(borrow){ const moves=keepDraftMoves(ws, borrow.assignments||[], sealed);
+ 
+(borrow.assignments||[]).forEach(a=>{ if(a.locked) reallyLocked.add(a.id); if(!moves.has(a.id)) a.locked=true; }); }
 try{ return generateScheduleInner(ws, opts); }
 finally{
 if(borrow){ const w=getWeek(ws);
 (w.assignments||[]).forEach(a=>{ if(!reallyLocked.has(a.id)) delete a.locked; }); }
+ 
+{ const m={};
+(getWeek(ws).assignments||[]).forEach(a=>{ if(!was.has(a.id) || sealed.has(a.id)) m[a.id]=draftSeal(a); });
+draftSealsKeep(ws, m); }
 draftEnd();
 }
 }
@@ -8866,6 +8967,7 @@ opts = opts||{};
 ws = ws || curWeek();
 const wk = getWeek(ws);
 if(!wk.published || postPending(wk)) restampWeek(wk);    
+if(!wk.published || postPending(wk)){ const z=deviceZone(); if(z) wk.tz=z; }    
 SHUFFLE = wk.seed||0;
  
  
@@ -9748,6 +9850,18 @@ if(runsToday.size && !runsToday.has(sh.id)) return false;
 return true;
 })
 .sort((x,y)=> (dayRank(x)-dayRank(y)) || (P.length? (peakSpan(y,P)-peakSpan(x,P)) : 0));
+ 
+if(guaranteeMode && dayShifts.length>1){
+const grp=new Map(), first=new Map(), at=new Map(), xs=new Map();
+dayShifts.forEach((sh,i)=>{ const g=dayRank(sh)+"|"+(P.length? peakSpan(sh,P) : 0)+"|"+Math.round(fitLen(sh));
+grp.set(sh,g); at.set(sh,i); if(!first.has(g)) first.set(g,i); });
+const above=sh=>{ if(!xs.has(sh)){
+const on=assignments.filter(a=>a.date===d.date && a.shiftId===sh.id).length;
+const floor=demandRowsFor(d.dow, ws, d.date).filter(r=>r.shiftId===sh.id).reduce((t,r)=>t+(+r.count||0),0);
+xs.set(sh, on-floor); }
+return xs.get(sh); };
+dayShifts.sort((x,y)=> (first.get(grp.get(x))-first.get(grp.get(y))) || (above(x)-above(y)) || (at.get(x)-at.get(y)));
+}
  
 const openHere = openDemandOn(d.date, d.dow, ws, assignments);
 const mustFirst = new Set(openHere.map(x=>x.shiftId));
@@ -11576,6 +11690,23 @@ out.push({code:"setuphol", sev:"warn",
 title:h.name+" falls on "+DSHORT[h.dow]+" "+prettyDate(h.date)+", and the week drafts as an ordinary week",
 detail:h.detail, where:"holidays"});
 });
+ 
+if(!multiSite()) dates.forEach(({date,dow})=>{
+if(!(S.hours && S.hours[dow] && S.hours[dow].closed)) return;
+const h=((S.holidays && S.holidays.list)||[]).find(x=>x.date===date);
+if(!h || holPolled(h) || holMode(h)!=="reduced") return;
+const rows=(holNeedRows(h)||[]).filter(r=>demCount(r)>0);
+if(!rows.length) return;
+const by={}, keys=[];
+rows.forEach(r=>{ const k=r.roleId||""; if(!(k in by)){ by[k]=0; keys.push(k); } by[k]+=demCount(r); });
+const who=keys.map(k=>{ const n=by[k], ro=k? roleById(k) : null;
+return n+" "+(ro? ro.name+((n===1 || /s$/i.test(ro.name))? "" : "s") : (n===1? "person" : "people")); });
+const hh=holHoursOf(h), sh=shiftById(rows[0].shiftId);
+const span=(hh.from && hh.to)? [t2m(hh.from), t2m(hh.to)] : sh? shiftMinutes(sh) : null;
+out.push({code:"holshutday", sev:"warn", where:"holidays", detail:"",
+title:(h.name||"A holiday")+" asks for "+numsWord(who)+(span? ", "+m2disp(span[0])+"\u2013"+m2disp(span[1]) : "")+
+", on a "+DAYS[dow]+" you're closed, so nothing is drafted for it."});
+});
 
  
 {
@@ -12885,7 +13016,7 @@ return "  \u2022 "+prettyFull(sl.date)+" \u2014 "    +sh.label+", "+m2disp(a)+" 
 return "Subject: Shifts going spare \u2014 week of "+prettyDate(ws)+"\n\n"+
 "Hi all,\n\nThese shifts are open next week:\n\n"+rows.join("\n")+"\n\n"+
 "Attached is a one-page form \u2014 open it on your phone, check anything you\u2019d take, and it gives you a short code. Reply with the code and I\u2019ll confirm.\n\n"+
-"Ticking isn\u2019t a commitment until I confirm, and if two people want the same shift only one can have it \u2014 so no hard feelings either way.\n\nThanks!";
+"Ticking isn\u2019t a commitment until I confirm, and if two people want the same shift only one can have it \u2014 so no hard feelings either way.\n\nThanks.";
 }
 
  
@@ -13489,7 +13620,7 @@ return "Subject: What do you need for "+(A.weeks>1? prettyDate(A.ws)+" to "+pret
 "Hi all,\n\nI’m putting the schedule together. Attached is a one-page form — open it on your phone, add anything you need "+
 "(a day off, a shift you’d like, a time you can’t start before), and it gives you a short code. Reply with the code.\n\n"+
 (A.by? "Please get it back to me by "+prettyFull(A.by)+".\n\n" : "")+
-"Asking isn’t the same as it being granted — I read every one and do what I can.\n\nThanks!";
+"Asking isn’t the same as it being granted — I read every one and do what I can.\n\nThanks.";
 }
  
 function readAsk(code){
@@ -13587,7 +13718,7 @@ msg.value="Hi all,\n\nI’m putting the schedule together for "+
 : "the week of "+prettyDate(S.currentWeek))+
 ". Attached is a one-page form — open it on your phone, add anything you need "+
 "(a day off, a shift you’d like, a time you can’t start before), and it gives you a short code. Reply with the code.\n\n"+
-"Asking isn’t the same as it being granted — I read every one and do what I can.\n\nThanks!";
+"Asking isn’t the same as it being granted — I read every one and do what I can.\n\nThanks.";
 }
 })(r);
 }
@@ -13810,7 +13941,7 @@ return "Subject: A few details for the schedule\n\n"+
 "Hi,\n\nAttached is a one-page form — open it on your phone and fill in your details, when you can work, and anything you’d prefer. "+
 "It gives you a code at the end; reply with the code and I’ll put it in.\n\n"+
 "It’s preferences, not promises — I build the schedule around what the business needs first, so nothing on the form is agreed or owed. "+
-"It just means I know what you’d like when there’s room to allow it.\n\nThanks!";
+"It just means I know what you’d like when there’s room to allow it.\n\nThanks.";
 }
  
 function readIntake(code){
@@ -14299,7 +14430,7 @@ const what=(e.licLabel||licTypeName(e.licKind)||"license");
 const first=(e.name||"there").split(" ")[0];
 return "Hi "+first+" \u2014 my records have your "+what+" running out on "+prettyFull(e.licExp)+
 ". If you\u2019ve already renewed it, could you send me the new expiry date (and the license number if it changed)? "+
-"If it\u2019s still in hand, no problem, just let me know roughly when you expect it.\n\nThanks!";
+"If it\u2019s still in hand, no problem, just let me know roughly when you expect it.\n\nThanks.";
 }
 function licChaseModal(id){
 const e=empById(id); if(!e) return;
@@ -16210,7 +16341,8 @@ return true;
  
 var TELL_WORD = {email:"emailed to the team", sms:"texted to the team", copy:"copied out",
 print:"printed to pin up", pdf:"saved as a PDF", cards:"printed as one card each",
-csv:"exported as a spreadsheet"};
+csv:"exported as a spreadsheet",
+share:"shared as a PDF"};    
  
 function weekStamp(ws){
 const wk=peekWeek(ws); if(!wk) return "";
@@ -16247,7 +16379,8 @@ return !wk.sentAt || toldIsStale(ws);
 function tellBanner(ws){
 const wk=peekWeek(ws);
 if(!wk || !wk.published || postPending(wk) || !wk.assignments.length) return "";
-if(wk.sentAt && !toldIsStale(ws)) return `<div class="hnotice"><span><b>The team has this week.</b> ${esc(toldText(wk))}.</span>
+ 
+if(wk.sentAt && !toldIsStale(ws)) return `<div class="hnotice"><span><b>Handed out:</b> ${esc(toldText(wk))}.</span>
     <button class="btn sm" data-tell="${esc(ws)}" style="flex:none">Hand it out again</button></div>`;
  
 if(wk.sentAt) return `<div class="banner warn"><div><b>This week has changed since you handed it out.</b>
@@ -16369,7 +16502,8 @@ if(!au.checked){ cfg.on=false; save(); paint(); return; }
  
 const keepPick=[...pick]; const keepMode=mode, keepHow=how;
 closeModal(true);
-autoSendConfirm(()=>{ cfg.on=true; save(); toast("On \u2014 the day sheet goes out on its own from now on"); dayHandOutModal(date,{mode:keepMode,how:keepHow}); },
+ 
+autoSendConfirm(()=>{ cfg.on=true; save(); toast(!mailServerReady()? "On \u2014 the day sheet is made ready each "+(cfg.lead==="prev"? "evening" : "morning")+"; it goes out when you press Send it now on Home" : "On \u2014 the day sheet goes out on its own from now on"); dayHandOutModal(date,{mode:keepMode,how:keepHow}); },
 ()=>{ cfg.on=false; save(); dayHandOutModal(date,{mode:keepMode,how:keepHow}); }); };
 const dl=body.querySelector("#dlead"); if(dl) dl.onchange=()=>{ cfg.lead=dl.value; save(); };
 const da=body.querySelector("#dat"); if(da) da.onchange=()=>{ cfg.at=da.value||"06:00"; save(); };
@@ -16378,7 +16512,8 @@ go.textContent = how==="copy"? "Copy it" : how==="print"? "Print" : (mode==="eac
 go.disabled = !days.length || ((how==="email"||how==="sms") && !reach.length);
 go.onclick=async ()=>{
 if(how==="copy"){ const t=days.map(d=>wholeDayText(d)).join("\n\n"); try{ await navigator.clipboard.writeText(t); toast("Copied"); }catch(e){ showText(t); } days.forEach(d=>markDaySent(d,"copy")); save(); closeModal(); render(); return; }
-if(how==="print"){ const html=`<html><head><meta charset="utf-8"><title>Day sheet</title><style>body{font:13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:26px;color:#182421} pre{font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;page-break-after:always}</style></head><body>${days.map(d=>"<pre>"+esc(wholeDayText(d))+"</pre>").join("")}</body></html>`;
+if(how==="print"){ const html=`<html><head><meta charset="utf-8"><title>Day sheet</title><style>body{font:13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:26px;color:#182421} pre{font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;page-break-after:always}</style></head><body>${days.map(d=>{ const dm=draftMark(peekWeek(weekStartOf(d, S.org.weekStart)), true);    
+return (dm? '<p style="margin:0 0 8px">'+dm+'</p>' : "")+"<pre>"+esc(wholeDayText(d))+"</pre>"; }).join("")}</body></html>`;
 if(printDoc(html,"Day sheet")){ days.forEach(d=>markDaySent(d,"print")); save(); closeModal(); render(); } else toast("Your browser blocked the print window"); return; }
 if(mode==="all"){
 const to=reach.map(e=>contactOf(e)[how==="sms"?"phone":"email"]);
@@ -16505,6 +16640,7 @@ modal("Hand the week out", `
       <div class="sep"></div>
       <div class="stack" style="gap:8px">
         <div class="lab">On a screen</div>
+        ${shareWeekOK(ws)? `<button class="btn" id="tlshare">Share the PDF</button>` : ""}
         <button class="btn" id="tlcopy">Copy the week as text \u2014 paste it into your own group chat</button>
         ${commsOff()? ""
 : sendOn()
@@ -16526,7 +16662,7 @@ const html=`<html><head><meta charset="utf-8"><title>Schedule</title><style>
           body{font:13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:26px;color:#182421}
           pre{font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
           .f{margin-top:22px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#667}
-          </style></head><body><pre>${body}</pre>
+          </style></head><body>${draftMark(peekWeek(ws))? '<p style="margin:0 0 10px">'+draftMark(peekWeek(ws), true)+'</p>' : ""}<pre>${body}</pre>
           <div class="f">These are the hours and times scheduled, not a record of what anyone worked.</div>
           </body></html>`;
 if(printDoc(html, "Schedule \u2014 week of "+prettyDate(ws))) done("print");
@@ -16534,6 +16670,7 @@ else toast("Your browser blocked the print window \u2014 allow pop-ups, or use o
 };
 r.querySelector("#tlcards").onclick=()=>{ exportPersonCards().then(ok=>{ if(ok) done("cards"); }).catch(()=>pdfUnavailable()); };
 r.querySelector("#tlpdf").onclick=()=>{ exportWeekPDF().then(ok=>{ if(ok) done("pdf"); }).catch(()=>pdfUnavailable()); };
+const sw=r.querySelector("#tlshare"); if(sw) sw.onclick=()=>{ shareWeekPDF(ws).then(how=>{ if(how) done(how); }).catch(()=>pdfUnavailable()); };
 r.querySelector("#tlcopy").onclick=async()=>{
 try{ await navigator.clipboard.writeText(wholeWeekText(ws)); toast("Copied \u2014 paste it wherever your team reads things"); done("copy"); }
 catch(err){ toast("Couldn\u2019t copy on this device \u2014 print it or save the PDF instead"); }
@@ -16909,6 +17046,36 @@ let msg="Takes them to "+fmtHrs(tot)+(totPaid!==tot? " worked" : "")+" this week
 if(ot>0) msg+=" — "+fmtHrs(ot)+" past the "+otH+"h line"+otLineWhere(srcW);
 if(extra>0.5) msg+=(ot>0? ", about " : " — about ")+money(extra)+" extra at "+(anyDt? "premium rates" : "time-and-a-half");
 return {tot, ot, extra, msg: msg+"."};
+}
+ 
+function moveBreaks(empId, ws, aid, date, st, en, roleId){
+const e=empById(empId); if(!e) return [];
+const lim=effLimits(e, ws), out=[];
+const ord=n=>n+((n%100>=11 && n%100<=13)? "th" : (["th","st","nd","rd"][n%10]||"th"));
+const theirs=k=>((peekWeek(k)||{}).assignments||[]).filter(x=>x.empId===empId && x.id!==aid);
+const mine=theirs(ws), near=theirs(addDays(ws,-7)).concat(mine, theirs(addDays(ws,7)));
+const on=new Set(near.map(x=>x.date));
+if(!on.has(date)){
+const days=new Set(mine.map(x=>x.date)).size+1;
+if(lim.maxD && days>lim.maxD) out.push("a "+ord(days)+" day, past their limit of "+lim.maxD);
+if(lim.maxConsecDays){
+let run=1, d=addDays(date,-1);
+while(on.has(d) && run<30){ run++; d=addDays(d,-1); }
+d=addDays(date,1);
+while(on.has(d) && run<30){ run++; d=addDays(d,1); }
+if(run>lim.maxConsecDays) out.push("a "+ord(run)+" day in a row, past their limit of "+lim.maxConsecDays);
+}
+}
+if(roleId && !(e.roleIds||[]).includes(roleId)) out.push("not qualified as "+roleName(roleId));
+const need=((lim.houseRestH!=null? lim.houseRestH : lim.minRestH)||0)*60;
+if(need){
+const prev=near.filter(x=>x.date===addDays(date,-1)), next=near.filter(x=>x.date===addDays(date,1));
+if(prev.length){ const g=restMin(addDays(date,-1), Math.max.apply(null, prev.map(x=>x.endMin)), st);
+if(g>=0 && g<need) out.push("only "+fmtHrs(g)+" off after the night before, short of the "+(need/60)+"h required"); }
+if(next.length){ const g=restMin(date, en, Math.min.apply(null, next.map(x=>x.startMin)));
+if(g>=0 && g<need) out.push("only "+fmtHrs(g)+" off before the next day, short of the "+(need/60)+"h required"); }
+}
+return out;
 }
 
  
@@ -17612,6 +17779,12 @@ who.slice(0,4).join(", ")+(who.length>4? " and "+(who.length-4)+" more" : "")+".
 {date:one.date, code:"clockstale", aIds:stale.map(a=>a.id)});
 }
 }
+}
+ 
+{
+const z=weekZoneNote(wk, ws);
+if(z) push("info", "This week was drafted on "+z.was+". This device is on "+z.here+", so the night the clocks change can read differently here.", "",
+{code:"clockzone"});
 }
  
 wk.assignments.forEach(a=>{
@@ -20442,6 +20615,12 @@ const can = (typeof undo==="function") &&
 if(can) toast(msg, {label:"Undo", run:()=>undo()});
 else toast(msg);
 }catch(e){}
+}
+ 
+function toastUndo(msg, mark){
+const moved = mark!=null && JSON.stringify(S.weeks)!==mark && undoStack.length>0;
+if(moved) toast(msg, {label:"Undo", run:()=>undo()});
+else toast(msg);
 }
 
  
@@ -23753,9 +23932,11 @@ return f.length? esc(f.map(e=>e.name.split(" ")[0]+" — "+cycleLabel(e)).join("
 : "Allowed \u2014 each kind is switched on or off below, and every message is one you press send on",
 `<select data-set="rules.commsOff"><option value="0" ${!commsOff()?"selected":""}>Allowed</option><option value="1" ${commsOff()?"selected":""}>Off entirely</option></select>`)}
       ${commsOff()? "" : setRow("The day sheet, on its own", (S.daily&&S.daily.on)
-? "Goes out automatically "+((S.daily.lead==="prev")? "the evening before at " : "the morning of at ")+m2disp(t2m(S.daily.at||"06:00"))+" \u2014 "+(S.daily.mode==="all"? "the whole sheet to everyone" : "each person their own day")+", by "+(S.daily.how==="sms"?"text":"email")+". Only days inside a posted week."
+? (!mailServerReady()    
+? "Made ready "+((S.daily.lead==="prev")? "the evening before at " : "each morning at ")+m2disp(t2m(S.daily.at||"06:00"))+" \u2014 "+(S.daily.mode==="all"? "the whole sheet to everyone" : "each person their own day")+", by "+(S.daily.how==="sms"?"text":"email")+". It goes out when you press Send it now on Home. Only days inside a posted week."
+: "Goes out automatically "+((S.daily.lead==="prev")? "the evening before at " : "the morning of at ")+m2disp(t2m(S.daily.at||"06:00"))+" \u2014 "+(S.daily.mode==="all"? "the whole sheet to everyone" : "each person their own day")+", by "+(S.daily.how==="sms"?"text":"email")+". Only days inside a posted week.")
 : "Handed out by hand from the Day sheet page (Hand it out). Separate from the weekly schedule, so the week can go out a month ahead and the day the morning of.",
-`<select data-set="daily.on"><option value="0" ${!(S.daily&&S.daily.on)?"selected":""}>By hand, from the Day sheet</option><option value="1" ${(S.daily&&S.daily.on)?"selected":""}>Automatically, every posted day</option></select>`, "day")}
+`<select data-set="daily.on"><option value="0" ${!(S.daily&&S.daily.on)?"selected":""}>By hand, from the Day sheet</option><option value="1" ${(S.daily&&S.daily.on)?"selected":""}>${mailServerReady()? "Automatically, every posted day" : "Made ready daily"}</option></select>`, "day")}
       ${commsOff()? "" : setRow("Sending from Weeksolved", S.rules.confirmSend!==false
 ? "Asks first \u2014 who it goes to and what it says, then Send. Messages that open your own mail or text app already wait for you to press send there."
 : "Sends the moment you press the button.",
@@ -24228,7 +24409,8 @@ if(path==="org.jurisdiction") otFollowState(v);
 if(path==="org.weekStart"){ changeWeekStart(+v||0); return; }
 if(path.indexOf("daily.")===0) dailyCfg();
 if(path==="daily.on" && v===true && !S.daily.on){
-autoSendConfirm(()=>{ S.daily.on=true; save(); render(); toast("On \u2014 the day sheet goes out on its own from now on"); }, ()=>{ render(); });
+ 
+autoSendConfirm(()=>{ S.daily.on=true; save(); render(); toast(!mailServerReady()? "On \u2014 the day sheet is made ready each "+(S.daily.lead==="prev"? "evening" : "morning")+"; it goes out when you press Send it now on Home" : "On \u2014 the day sheet goes out on its own from now on"); }, ()=>{ render(); });
 return;
 }
 setPath(S,path,v);
@@ -25066,10 +25248,12 @@ se2.dispatchEvent(new Event("input",{bubbles:true}));
  
 { const M=mealRow(L.meal||null, gross, a); const lawMin=(M&&M.lengthMin)||0;
 const boardDef=Math.max(mealLenFor(null), lawMin);
-const extra=[45,60].filter(v=>v>=lawMin && v!==boardDef);
+ 
+const owes=br.owed.meals>0;
+const extra=owes? [45,60].filter(v=>v>=lawMin && v!==boardDef) : [];
 const chips=[{v:null,t:"Board default ("+boardDef+")"}].concat(extra.map(v=>({v,t:String(v)})));
 root.querySelector("#mealchips").innerHTML=chips.map(c=>
-`<button type="button" class="btn sm" data-mealchip="${c.v==null?"":c.v}" aria-pressed="${mealMin==null? c.v==null : mealMin===c.v}">${esc(c.t)}</button>`).join("");
+`<button type="button" class="btn sm" data-mealchip="${c.v==null?"":c.v}" aria-pressed="${(mealMin==null || !owes)? c.v==null : mealMin===c.v}">${esc(c.t)}</button>`).join("");
 root.querySelectorAll("#mealchips [data-mealchip]").forEach(btn=>{
 btn.onclick=()=>{
 mealMin = btn.dataset.mealchip===""? null : +btn.dataset.mealchip;
@@ -25183,7 +25367,7 @@ if(posted.length) setTimeout(()=>modal("Weeks already posted keep the old times"
             <div class="banner warn"><div><b>${esc(label)} now runs ${esc(m2disp(na))}\u2013${esc(m2disp(nb))}.</b> ${posted.length} week${posted.length===1?" has":"s have"} already gone out to your team on the old times, so ${posted.length===1?"it has":"they have"} been left as ${posted.length===1?"it is":"they are"} \u2014 changing what somebody was told to turn up to is not something to do quietly.</div></div>
             <div class="card"><div class="body"><div class="lab">Posted on the old times</div>
               <div class="mini">${posted.map(w=>esc(prettyFull(w))).join(" \u00b7 ")}</div></div></div>
-            <div class="help">To move them, open the week, draft it again and post it again \u2014 your team gets the corrected sheet with the change on it.</div>
+            <div class="help">To move them, unpost the week, draft it again and post it again, then hand out the new sheet.</div>
           </div>`, `<button class="btn primary" data-close>Understood</button>`), 250);
 else if(moved.length || postedBrk.length) toast((moved.length? moved.length+" shift"+(moved.length===1?"":"s")+" already drafted moved to the new times" : "")
 + (moved.length && postedBrk.length? " \u00b7 " : "") + (postedBrk.length? keepPosted : ""));
@@ -26052,8 +26236,8 @@ const BODY=`<div class="stack pform">
     ${grp("ABOUT",
 fr("Name", `<input type="text" id="en" value="${esc(e.name)}" placeholder="First Last">`)+
 fr("Employment type", `<select id="et" data-long>${Object.keys(TYPES).map(k=>`<option value="${k}" ${e.type===k?"selected":""}>${TYPES[k]}</option>`).join("")}</select>`)+
-fr("Email", `<input type="email" id="eem" value="${esc(e.email||"")}" placeholder="name@example.com" data-long>`, {sub:"Optional — for polls and sending schedules"})+
-fr("Mobile", `<input type="tel" inputmode="tel" id="eph" value="${esc(e.phone||"")}" placeholder="(555) 010-0100" data-long>`, {sub:"Optional — for polls and sending schedules"})+
+fr("Email", `<input type="email" id="eem" maxlength="120" value="${esc(e.email||"")}" placeholder="name@example.com" data-long>`, {sub:"Optional — for polls and sending schedules"})+
+fr("Mobile", `<input type="tel" inputmode="tel" id="eph" maxlength="32" value="${esc(e.phone||"")}" placeholder="(555) 010-0100" data-long>`, {sub:"Optional — for polls and sending schedules"})+
 fr("Started", `<input type="date" id="esen" data-when="past" value="${esc(e.seniority||"")}">`))}
     ${grp("",
 fr("How they’re used", `<select id="eoc" data-long>
@@ -26771,6 +26955,8 @@ return `<div style="border:1px solid var(--line);border-radius:var(--r);overflow
           ${rows.length? `<div class="demlist">${rows.map((r,ri)=>{
 const sh=shiftById(r.shiftId); if(!sh) return "";
 const [a,b]=shiftMinutes(sh);
+ 
+const mealChip=typeof sh.mealMin==="number" && computeBreaks(a,b,{gap:shiftGap(sh), shift:sh}).owed.meals>0;
 return `<div class="demrow" data-dshift="${esc(r.shiftId)}" data-editdem="${i}:${ri}" role="button" tabindex="0" title="Edit this row" style="cursor:pointer">
               ${multiSite()? `<span class="chip">${esc(siteName(siteOf(r)))}</span>` : ""}
               <span class="tag" style="--sc:${esc(sh.color)}">${esc(sh.label)}</span>
@@ -26778,7 +26964,7 @@ return `<div class="demrow" data-dshift="${esc(r.shiftId)}" data-editdem="${i}:$
               <span>${esc(roleName(r.roleId))}</span>
               <span class="chip acc">${r.max!=null? demCount(r)===r.max? r.max+" exactly" : "at least "+demCount(r)+" · at most "+r.max : "at least "+demCount(r)}</span>
               <span class="mini">${fmtHrs(b-a)} each</span>
-              ${typeof sh.mealMin==="number"? `<span class="chip">${sh.mealMin}-min meal</span>`:""}
+              ${mealChip? `<span class="chip">${sh.mealMin}-min meal</span>`:""}
               <span class="row" style="margin-left:auto;gap:6px"><button class="btn sm" data-editdem2="${i}:${ri}">Edit</button><button class="btn sm danger" data-deldem="${i}:${ri}">Remove</button></span></div>`;
 }).join("")}</div>`
 : `<div class="empty" style="padding:16px">${weekdayShut(i)?"Closed — nothing to staff.":"No shifts requested for this day."}</div>`}
@@ -27830,9 +28016,12 @@ const who=r.querySelector("#am").value;
 const el=r.querySelector("#aimpact"); if(!el) return;
  
 const im=weekImpact(who, null, a.id, st, en, a.date, aGap(Object.assign({}, a, {startMin:st, endMin:en})), aShift(a));
-el.textContent=im.msg; el.style.color = im.ot>0? "var(--warn)":"var(--muted)";
+ 
+const br=(who && who!==a.empId)? moveBreaks(who, weekStartOf(a.date, S.org.weekStart), a.id, a.date, st, en, (r.querySelector("#ar")||{}).value||null) : [];
+el.textContent=br.length? im.msg.replace(/\.$/, (im.msg.indexOf(" \u2014 ")>=0? "; " : " \u2014 ")+br.join("; ")+".") : im.msg;
+el.style.color = (im.ot>0 || br.length)? "var(--warn)":"var(--muted)";
 };
-["#as","#ae","#am"].forEach(x=>{ const el=r.querySelector(x); if(el) el.addEventListener("change",impact); });
+["#as","#ae","#am","#ar"].forEach(x=>{ const el=r.querySelector(x); if(el) el.addEventListener("change",impact); });
 impact();
 r.querySelector("#asave").onclick=()=>{
 const was={s:a.startMin, e:a.endMin, who:a.empId, meals:((a.breaks||{}).meals||[]).map(m=>({start:m.start,end:m.end,waived:!!m.waived}))};
@@ -28507,9 +28696,11 @@ const shift=Math.round((parseYmd(to)-parseYmd(from))/86400000);
 if(r.querySelector("#dupclear").checked){ dst.assignments=[]; dst.unfilled=[]; }
  
 const had=dst.assignments.slice();
+let skipped=0;    
 src.assignments.forEach(a=>{
 const c=Object.assign({},a,{id:uid("a"), date:addDays(a.date,shift), locked:false});
 delete c.holAssign;           
+if(c.empId && copyClashes(had, c)) skipped++;
 if(copyClashes(had, c)) return;
 applyBreaks(c); dst.assignments.push(c);
 });
@@ -28518,7 +28709,7 @@ dst.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin)
 dst.generatedAt=Date.now(); dst.touched=true; dst.suggested=false;
 S.currentWeek=to; save(); closeModal(); render();
 { const st=weekMealStamp(src);    
-toast("Copied to "+prettyDate(to)+((st!==null && st!==mealsPaid())? " \u00b7 meals in the copy are "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : "")); }
+toast("Copied to "+prettyDate(to)+(skipped? " \u00b7 "+skipped+" skipped, already working that day" : "")+((st!==null && st!==mealsPaid())? " \u00b7 meals in the copy are "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : "")); }
 }; });
 }
 
@@ -29030,7 +29221,7 @@ if(!roster.length || !wantSlots) return !head? "" : `<div class="banner warn"><d
  
 if(postPending(wk)) return !head? "" : `<div class="wkrev">
     <p class="wkverdict"><b>${wk.assignments.length} shift${wk.assignments.length===1?"":"s"} across ${new Set(wk.assignments.map(a=>a.date)).size} day${new Set(wk.assignments.map(a=>a.date)).size===1?"":"s"}</b>, ${fmtHrs(wk.assignments.reduce((t,a)=>t+paidMinutes(a),0))} of paid time.
-      Nobody can see it for another <span data-gracecount="${esc(ws)}">${esc(graceClock(postSecsLeft(wk)))}</span>.</p>
+      It locks in <span data-gracecount="${esc(ws)}">${esc(graceClock(postSecsLeft(wk)))}</span>. Until then, Take it back undoes it.</p>
     <button class="wklink" data-drafted="1">How this week was drafted ›</button>
     <div class="wkacts">${actionPair(ws)}</div>
   </div>`;
@@ -30170,6 +30361,7 @@ toast("That fixed it, but it caused "+(added.length===1? "one new thing" : added
 function fixBtn(v, i, cls){
 if(!v || !v.code) return "";
 if(v.code==="closure") return "";
+if(v.code==="clockzone") return "";    
 return `<button class="btn sm ${cls||(v.sev==="crit"?"primary":"")}" data-fixv="${i}" style="flex:none">Fix</button>`;
 }
 function wireFix(root, V, ws){
@@ -30986,6 +31178,25 @@ doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(105,119,
 doc.text(sub, 40, 60);
 doc.setDrawColor(210,216,214); doc.line(40,70,doc.internal.pageSize.getWidth()-40,70);
 }
+ 
+function pdfDraftMark(doc, wk, y, from){
+const t=draftMark(wk); if(!t) return false;
+const cur=doc.internal.getCurrentPageInfo().pageNumber;
+const last=(typeof doc.getNumberOfPages==="function")? doc.getNumberOfPages() : cur;
+const pages=[]; if(from){ for(let pg=from+1; pg<=last; pg++) pages.push(pg); } else pages.push(cur);
+ 
+const f=(typeof doc.getFont==="function")? doc.getFont() : null;
+const z=(typeof doc.getFontSize==="function")? doc.getFontSize() : null;
+const c=(typeof doc.getTextColor==="function")? doc.getTextColor() : null;
+pages.forEach(pg=>{ doc.setPage(pg);
+doc.setFont("helvetica","bold"); doc.setFontSize(8.6); doc.setTextColor(171,56,44);
+doc.text(t, 40, y); });
+doc.setPage(cur);
+if(f) doc.setFont(f.fontName, f.fontStyle);
+if(z) doc.setFontSize(z);
+if(c!=null) doc.setTextColor(c);
+return true;
+}
 function pdfFooter(doc){
  
 const total=(typeof doc.getNumberOfPages==="function")? doc.getNumberOfPages() : 1;
@@ -31077,10 +31288,35 @@ weeks.forEach((w,i)=>{ if(i) doc.addPage(); pdfWeekPage(doc, w); });
 pdfFooter(doc);
 return await saveFile(n>1? "schedule-"+n+"-weeks-from-"+first+".pdf" : "schedule-week-of-"+first+".pdf", doc.output("arraybuffer"));
 }
+ 
+function shareWeekOK(ws){
+if(!weekLive(ws) || !jsPDFReady() || a2hsPlatform()==="desktop") return false;
+try{ return !!(navigator.share && navigator.canShare &&
+navigator.canShare({files:[new File(["%PDF-"], "week.pdf", {type:"application/pdf"})]})); }
+catch(e){ return false; }
+}
+ 
+function shareWeekPDF(ws){
+if(!jsPDFReady()){ pdfUnavailable(); return Promise.resolve(null); }
+const doc=newDoc("landscape");
+pdfWeekPage(doc, ws);
+pdfFooter(doc);
+const name="schedule-week-of-"+ws+".pdf", data=doc.output("arraybuffer");
+let ask;
+try{ ask=navigator.share({files:[new File([data], name, {type:"application/pdf"})],
+title:"Schedule \u2014 week of "+prettyDate(ws)}); }
+catch(e){ ask=Promise.reject(e); }
+return Promise.resolve(ask).then(()=>"share", err=>{
+if(err && err.name==="AbortError") return null;
+return saveFile(name, data).then(ok=>ok? "pdf" : null);
+});
+}
 function pdfWeekPage(doc, ws){
 const wk=getWeek(ws), dates=weekDates(ws);
+const p0=doc.internal.getCurrentPageInfo().pageNumber;    
 { const ds=docSite((getWeek(ws).assignments)||[]);
 pdfHeader(doc, (S.org.name||"Weekly schedule"), (ds? ds+"  ·  ":"")+"Week of "+prettyFull(ws)); }
+const dm=pdfDraftMark(doc, wk, 81);
 const head=[["Staff","Role"].concat(dates.map(d=>DSHORT[d.dow]+" "+prettyDate(d.date)+(holidayTag(d.date)? "\n"+holidayTag(d.date):""))).concat(["Hrs"])];
  
 const roleFit=e=>{ if(typeof doc.getTextWidth!=="function" || typeof doc.getFont!=="function") return empRoleAbbrs(e);
@@ -31113,11 +31349,11 @@ return aShift(a).label+"\n"+aTimes(a)+meal;
 return [nameFit(e.name+(e.active? "" : " (set aside)")), roleFit(e)]
 .concat(cells).concat([fmtHrs(empWeekMinutes(e.id,ws))]);
 });
-doc.autoTable({head,body,startY:82,styles:{fontSize:7.4,cellPadding:4,lineColor:[210,216,214],lineWidth:.5,textColor:[35,48,45]},
+doc.autoTable({head,body,startY:dm? 90 : 82,styles:{fontSize:7.4,cellPadding:4,lineColor:[210,216,214],lineWidth:.5,textColor:[35,48,45]},
 headStyles:{fillColor:[28,106,102],textColor:255,fontSize:7.6},
 alternateRowStyles:{fillColor:[246,248,247]},
 columnStyles:{0:{cellWidth:86,fontStyle:"bold"},1:{cellWidth:44}},
-margin:{left:40,right:40},
+margin:Object.assign({left:40,right:40}, dm? {top:46} : {}),    
  
 rowPageBreak:"avoid", showHead:"everyPage"});
  
@@ -31129,8 +31365,9 @@ y=pdfKeep(doc, y, 10+pdfRowH(doc, [[V[0].title, 190, true], [V[0].detail, doc.in
 doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(171,56,44);
 doc.text("Open items ("+V.length+")",40,y); y+=6;
 doc.autoTable({body:V.map(v=>[v.title,v.detail]),startY:y+4,theme:"plain",
-styles:{fontSize:7.4,cellPadding:3,textColor:[80,92,89]},columnStyles:{0:{cellWidth:190,fontStyle:"bold"}},margin:{left:40,right:40}});
+styles:{fontSize:7.4,cellPadding:3,textColor:[80,92,89]},columnStyles:{0:{cellWidth:190,fontStyle:"bold"}},margin:Object.assign({left:40,right:40}, dm? {top:46} : {})});
 }
+pdfDraftMark(doc, wk, 36, p0);    
 }
  
 async function exportDayPDF(opts){
@@ -31151,12 +31388,15 @@ const list=dayList(entry.date, ws).sort((a,b)=>a.startMin-b.startMin);
 const L=law();
 pdfHeader(doc,(S.org.name||"Day sheet"), prettyFull(entry.date)+(holidayTag(entry.date)? "  ·  "+holidayTag(entry.date):"")+"  ·  "+(openAnywhere(entry.date, entry.dow)? dayHoursLabel(entry.date, entry.dow) : "Closed"));
 let tableY=82;
+ 
+const p0=doc.internal.getCurrentPageInfo().pageNumber, dm=pdfDraftMark(doc, wk, 81), dy=dm? 16 : 0;
+if(dm) tableY=93;
 if((wk.dayNotes||{})[entry.date]){
 doc.setFont("helvetica","bold"); doc.setFontSize(8.6); doc.setTextColor(28,106,102);
-doc.text("TODAY:", 40, 76);
+doc.text("TODAY:", 40, 76+dy);
 doc.setFont("helvetica","normal"); doc.setTextColor(60,74,71);
-doc.text(wk.dayNotes[entry.date], 78, 76, {maxWidth:doc.internal.pageSize.getWidth()-118});
-tableY=94;
+doc.text(wk.dayNotes[entry.date], 78, 76+dy, {maxWidth:doc.internal.pageSize.getWidth()-118});
+tableY=94+dy;
 }
 doc.autoTable({
 head:[[ "Employee" ].concat((S.stations||[]).length?["Station"]:[]).concat(["Role","In","Out","Meal","Rest breaks","Paid"])
@@ -31185,7 +31425,7 @@ mealTxt, restTxt, fmtHrs(paidMinutes(a))])
 }),
 startY:tableY, styles:{fontSize:8.2,cellPadding:5,lineColor:[210,216,214],lineWidth:.5},
 headStyles:{fillColor:[28,106,102],textColor:255}, alternateRowStyles:{fillColor:[246,248,247]},
-columnStyles:{0:{fontStyle:"bold",cellWidth:104}}, margin:{left:40,right:40}
+columnStyles:{0:{fontStyle:"bold",cellWidth:104}}, margin:Object.assign({left:40,right:40}, dm? {top:46} : {})
 });
 let y=doc.lastAutoTable.finalY+20;
 if((S.rules.sheetNotes||"lines")!=="off"){
@@ -31208,6 +31448,7 @@ doc.text("Break rules — "+L.name, 40, y); y+=13;
 doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(90,102,99);
 doc.text(L.note||"No break rules on this board.", 40, y, {maxWidth:doc.internal.pageSize.getWidth()-80}); y+=24;
 if(L.premium){ doc.setTextColor(168,112,26); doc.text(L.premium, 40, y, {maxWidth:doc.internal.pageSize.getWidth()-80}); }
+pdfDraftMark(doc, wk, 36, p0);    
 }
  
 function printCSS(orient){
@@ -31246,6 +31487,7 @@ return [
 ".cw td{padding:2px 3px;font-size:8.5px;line-height:1.25;border-bottom:1px solid #e4e9e7}",
 ".cw .nm{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
 ".cw .hrs{color:#697773}",
+".draftline{font-size:10.5px;margin:0 0 8px}.run .draftline{font-size:9.5px;margin:0 0 4px}.cw .draftline{font-size:8.5px;margin:0 0 3px}",
 ".lawfoot{margin-top:8px;font-size:8.5px;color:#697773;border-top:1px solid #d2d8d6;padding-top:6px}"
 ].join("\n");
 }
@@ -31258,6 +31500,7 @@ return '<span class="ppkey">'+seen.map(pp=>'<i class="'+((Math.abs(pp.idx)%2)?"p
 }
 function compactWeekHTML(ws){
 const wk=peekWeek(ws), dates=weekDates(ws);
+const dm=draftMark(wk)? '<div class="draftline">'+draftMark(wk, true)+'</div>' : "";    
 const roster=weekPeople(wk).sort((a,b)=>a.name.localeCompare(b.name));
 const short=n=>{ const p=String(n||"").split(" "); return p.length>1? p[0]+" "+p[1][0] : (p[0]||""); };
 const cell=(e,d)=>{
@@ -31271,8 +31514,8 @@ const clash=offClashTag(e.id, d.date, mine);
 return mine.map(a=>esc(aTimes(a)).replace(/:00/g,"")).join("<br>")+
 (clash? '<br><span class="off" title="'+esc(clash)+'">'+esc(clash)+'</span>' : "");
 };
-if(!roster.length) return '<div class="cw"><h2>'+esc(prettyDate(ws))+'</h2><div class="off" style="font-size:9px">Nothing drafted</div></div>';
-return '<div class="cw"><h2>Week of '+esc(prettyDate(ws))+(payOn()? printPayKey(ws):"")+'</h2><table>'+
+if(!roster.length) return '<div class="cw"><h2>'+esc(prettyDate(ws))+'</h2>'+dm+'<div class="off" style="font-size:9px">Nothing drafted</div></div>';
+return '<div class="cw"><h2>Week of '+esc(prettyDate(ws))+(payOn()? printPayKey(ws):"")+'</h2>'+dm+'<table>'+
 '<thead><tr><th style="width:20%">Who</th>'+
 dates.map(d=>'<th class="'+payShade(d.date).trim()+'">'+DSHORT[d.dow]+' '+esc(prettyDate(d.date).replace(/^[A-Za-z]+ /,""))+'</th>').join("")+
 '<th style="width:8%">Hrs</th></tr></thead><tbody>'+
@@ -31280,6 +31523,13 @@ roster.map(e=>'<tr><td class="nm">'+esc(short(e.name))+'</td>'+
 dates.map(d=>'<td class="'+payShade(d.date).trim()+'">'+cell(e,d)+'</td>').join("")+
 '<td class="hrs">'+fmtHrs(empWeekMinutes(e.id, ws)).replace(/\s/g,"")+'</td></tr>').join("")+
 '</tbody></table></div>';
+}
+ 
+function draftMark(wk, html){
+if(!wk || wk.published) return "";
+const when=prettyFull(ymd(new Date()));
+return html? "<b>DRAFT \u2014 not posted.</b> Printed "+esc(when)+"; it can still change."
+: "DRAFT \u2014 not posted. Printed "+when+"; it can still change.";
 }
  
 function weekSheetHTML(ws, forName, inRun){
@@ -31313,6 +31563,7 @@ return esc(aTimes(a))+
 const sp=payOn()? paySplit(ws):null;
 return `<div class="${inRun?"":"sheet"}">
     <h1${inRun?' style="font-size:13px;margin-top:6px"':""}>${inRun? "Week of "+esc(prettyFull(ws)) : esc(S.org.name||"Schedule")+" \u2014 week of "+esc(prettyFull(ws))}</h1>
+    ${inRun && draftMark(wk)? '<div class="draftline">'+draftMark(wk, true)+'</div>' : ""}
     ${inRun? "" : `<div class="sub">${esc(S.org.site||"")}${S.org.site?" \u00b7 ":""}${roster.length} on the schedule${
 payOn()? " \u00b7 pay period "+esc((payPeriod(ws)||{label:""}).label):""}${
 sp? " (changes on "+esc(prettyDate(sp.date))+")":""}${payOn()? printPayKey(ws):""}</div>`}
@@ -31328,7 +31579,7 @@ e.type==="TRAIN"? " \u00b7 in training":""}</div></td>
     </tbody></table>
     ${inRun? "" : `<div class="note">${wk.published
 ? "Posted "+esc(prettyFull(ymd(new Date(wk.publishedAt||wk.postedAt||Date.now()))))+"."
-: "<b>DRAFT \u2014 not posted.</b> Printed "+esc(prettyFull(ymd(new Date())))+"; it can still change."
+: draftMark(wk, true)
 } Times shown are the shift; meal and rest breaks are on the day sheet.</div>
       <div class="lawfoot">${esc(lawVintage())}. Generated by Weeksolved from rules entered by this employer. Times shown are scheduled times, not a record of what anyone worked. Not legal advice.</div>`}
   </div>`;
@@ -31336,6 +31587,7 @@ e.type==="TRAIN"? " \u00b7 in training":""}</div></td>
  
 function daySheetHTML(ws, date, forName){
 const wk=peekWeek(ws), L=law();
+const dm=draftMark(peekWeek(weekStartOf(date, S.org.weekStart)), true);    
 const dow=parseYmd(date).getDay();
 const list=dayList(date, ws).sort((a,b)=>a.startMin-b.startMin);    
 const room=(S.rules.sheetNotes||"lines")!=="off";
@@ -31344,6 +31596,7 @@ return `<div class="sheet">
     <h1>${esc(S.org.name||"Day sheet")} \u2014 ${esc(prettyFull(date))}${holidayTag(date)? " \u00b7 "+esc(holidayTag(date)):""}</h1>
     <div class="sub">${!openAnywhere(date,dow)? "Closed" : dayHoursLabel(date, dow)}${
 S.org.site?" \u00b7 "+esc(S.org.site):""} \u00b7 ${list.length} scheduled</div>
+    ${dm? '<div class="draftline">'+dm+'</div>' : ""}
     ${forName? `<div class="forwho">Copy for: <b>${esc(forName)}</b></div>`:""}
     ${(wk.dayNotes||{})[date]? `<div class="pad"><b>Today:</b> ${esc(wk.dayNotes[date])}</div>`:""}
     <table data-cols="${6+((S.stations||[]).length?1:0)+(room?1:0)}"><thead><tr><th style="width:20%">Who</th>${(S.stations||[]).length?'<th style="width:14%">Post</th>':""}
@@ -33080,7 +33333,7 @@ const pasteTidy = t => { t=String(t||"").replace(/\s+/g," ").replace(/^[\s,;]+|[
 const m=t.match(/^["\u201C](.*)["\u201D]$/); return m? m[1].trim() : t; };
  
 const pasteHeader = raw => {
-const t=pasteBare(raw).trim(); if(!t) return null;
+const t=pasteBare(String(raw||"").slice(0,1000)).trim(); if(!t) return null;    
 const d=["\t","|",",",";"].find(x=>pasteSplit(t,x).length>1); if(!d) return null;
 const f=pasteSplit(t,d).map(x=>x.toLowerCase().replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim());
 const is=(x,re)=>re.test(x);
@@ -33094,7 +33347,7 @@ const h={d, name:at(NAME), first:at(FIRST), last:at(LAST), email:at(MAIL), phone
 return (h.name>=0||h.first>=0||h.last>=0||h.email>=0||h.phone>=0)? h : null;
 };
 const readPasteLine = (raw, hd) => {
-let t=pasteBare(raw).trim(), email="", phone="";
+let t=pasteBare(String(raw||"").slice(0,1000)).trim(), email="", phone="";    
 const out=n=>{ n=pasteTidy(n);
 if(/^(name|names|employee|employees|staff|first name|last name|full name|team|role|roles)$/i.test(n)) n="";
 return {name:n, email, phone: phone? fmtPhone(phone) : ""}; };
@@ -33144,21 +33397,39 @@ if(rolish) t=head;
 return out(t);
 };
  
-const peopleIn = b => { const seen=new Set(), out=[]; let hd=null;
+ 
+const peopleIn = (b, skipped) => { const seen=new Set(), out=[]; let hd=null;
+const skip=(raw, head)=>{ if(skipped && String(raw).trim()) skipped.push({line:raw, head:!!head}); };
 (W.bucketNames[b]||"").split(/\n/).forEach(raw=>{
-const h=pasteHeader(raw); if(h){ hd=h; return; }
-const p=readPasteLine(raw, hd); if(!p.name) return;
-const k=p.name.toLowerCase(); if(seen.has(k)) return; seen.add(k); out.push(p); });
+const h=pasteHeader(raw); if(h){ hd=h; skip(raw, true); return; }
+const p=readPasteLine(raw, hd); if(!p.name){ skip(raw); return; }
+const k=p.name.toLowerCase(); if(seen.has(k)){ skip(raw); return; } seen.add(k); out.push(p); });
 return out; };
 const namesIn = b => peopleIn(b).map(p=>p.name);
+ 
+const pasteNote = b => {
+const lines=(W.bucketNames[b]||"").split(/\n/).filter(x=>x.trim()).length;
+if(!lines) return "";
+const skipped=[], ppl=peopleIn(b, skipped);
+const n=(k, one, many)=>k+" "+(k===1? one : many);
+let h=esc(n(lines,"line","lines")+" read. "+n(ppl.length,"person","people")+", "
++ppl.filter(p=>p.email).length+" with an email, "+ppl.filter(p=>p.phone).length+" with a phone.");
+if(skipped.length){
+const q=x=>{ const c=Array.from(String(x).replace(/\s+/g," ").trim());
+return "\u201C"+(c.length>60? c.slice(0,60).join("").trim()+"\u2026" : c.join(""))+"\u201D"; };
+h+="<br>"+esc("Skipped: "+skipped.slice(0,3).map(x=>q(x.line)+(x.head? " (a heading row)" : "")).join(", ")
++(skipped.length>3? " and "+(skipped.length-3)+" more" : "")+".");
+}
+return h;
+};
  
 const allNames = () => { const out=[];
 for(let b=0;b<W.bucketCount;b++){
 const seen={};
-namesIn(b).forEach((n,i)=>{
+peopleIn(b).forEach(({name:n, email, phone},i)=>{
 const nk=String(n).trim().toLowerCase();
 seen[nk]=(seen[nk]||0)+1;
-out.push({name:n, b, i, key:b+"|"+nk+(seen[nk]>1? "#"+seen[nk] : "")});
+out.push({name:n, b, i, key:b+"|"+nk+(seen[nk]>1? "#"+seen[nk] : ""), email, phone});
 });
 }
 return out; };
@@ -33224,6 +33495,35 @@ flex:((W.shifts[i]&&W.shifts[i].flex)||sh.flex||"none"),
 lenMinH:+((W.shifts[i]&&W.shifts[i].lenMinH)||sh.lenMinH||0),
 lenMaxH:+((W.shifts[i]&&W.shifts[i].lenMaxH)||sh.lenMaxH||0),
 desire:sh.desire||0}));
+ 
+const FT_DAYS=5;    
+const openDow = d => W.hoursPreset==="wkday"? (d>=1 && d<=5)
+: W.hoursPreset==="wkend"? !((d===6 && W.satClosed) || (d===0 && W.sunClosed)) : true;
+const ftReach = () => {
+const shifts=bakeShifts(); if(!shifts.length) return null;
+const paid=sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return Math.round(paidUnder(W.juris, a, b)); };
+const wp=weekendPlan(), base=shifts.map(paid).filter(x=>x>0);
+const goal=typeDefaults("FT").maxH*60;
+ 
+let st=[new Set([0])];
+[0,1,2,3,4,5,6].filter(openDow).forEach(d=>{
+const opts=wp[d]? wp[d].shifts.map(paid).filter(x=>x>0) : base;
+const nx=st.map(x=>new Set(x));
+st.forEach((set,n)=>{ if(n>=FT_DAYS) return;
+set.forEach(t=>opts.forEach(x=>{ if(t+x<=goal) (nx[n+1]=nx[n+1]||new Set()).add(t+x); })); });
+st=nx; });
+let best=0; st.forEach(set=>set.forEach(t=>{ if(t>best) best=t; }));
+return best;
+};
+const setupDefaults = type => {
+const d=Object.assign({}, typeDefaults(type));
+if(type==="PT") d.minH=0;
+if(type==="FT"){ const r=ftReach();
+if(r>0 && r < d.maxH*60-5){ d.hoursMode="range"; d.minH=Math.round(r/60*100)/100; } }
+return d;
+};
+ 
+const minOf = (pp, td) => (pp.minH!=null && !pp.minAuto)? Math.max(0, +pp.minH||0) : td.minH;
 
  
 const wizEstimate = () => {
@@ -33262,8 +33562,8 @@ const roleGuar=roles.map(()=>0);
  
 const usual = (()=>{ const ps=shifts.map(sh=>{ const a=t2m(sh.start); let b=t2m(sh.end); if(b<=a) b+=1440; return paidUnder(W.juris, a, b); }).filter(x=>x>0);
 return ps.length? Math.max.apply(null, ps) : 0; })();
-people.forEach(pn=>{ const pp=pset(pn)||{}; const type=pp.type||"FT"; const td=typeDefaults(type);
-const g=Math.max(0, pp.minH!=null? +pp.minH||0 : td.minH)*60;
+people.forEach(pn=>{ const pp=pset(pn)||{}; const type=pp.type||"FT"; const td=setupDefaults(type);    
+const g=minOf(pp, td)*60;
 const cap=Math.max(0, pp.maxH!=null? +pp.maxH||0 : td.maxH)*60;
 guarMin += g; if(roleGuar[pn.b]!=null) roleGuar[pn.b]+=g;
 capMin += cap;
@@ -33358,6 +33658,38 @@ added[k]=(added[k]||0)+1;
 }
 });
 return {ps, added};
+};
+
+ 
+const roleShortLine = () => {
+const est=wizEstimate(), shifts=bakeShifts(), wp=weekendPlan();
+const capacity = Math.max(1, Math.floor((allNames().length||W.headcount||1)*4.6/Math.max(1,est.openDays)));
+const per = Math.max(1, Math.min(est.roles.length, Math.ceil(capacity/2)));
+const ord = n => n+(n===1? "st" : n===2? "nd" : n===3? "rd" : "th");
+const lines=[];
+for(let ri=0; ri<W.bucketCount; ri++){
+const who=allNames().filter(pn=>pn.b===ri);
+if(!who.length) continue;                     
+const slots={};
+[0,1,2,3,4,5,6].filter(openDow).forEach(d=>{
+slots[d] = wp[d]? (ri<per? wp[d].shifts.length : 0)
+: shifts.reduce((t,_,si)=>{ const c=W.perShift[si+":"+ri]; return t+((c!=null)? +c||0 : (est.def[si+":"+ri]||0)); },0); });
+const total=Object.keys(slots).reduce((t,d)=>t+slots[d],0);
+if(!total) continue;
+const maxD=who.map(pn=>((pset(pn)||{}).type||"FT")==="FT"? FT_DAYS : 4);
+const can=(extra)=>{ const left=maxD.map(x=>x+extra); let n=0;
+Object.keys(slots).map(Number).sort((a,b)=>slots[b]-slots[a]).forEach(d=>{
+const free=who.map((pn,i)=>i).filter(i=>left[i]>0 && !doffOf(who[i]).includes(d)).sort((a,b)=>left[b]-left[a]);
+free.slice(0, slots[d]).forEach(i=>{ left[i]--; n++; }); });
+return n; };
+const n=can(0);
+if(n>=total) continue;
+const top=Math.max.apply(null, maxD);
+lines.push(bucketLabel(W,ri)+": "+total+" shifts a week, and "+who.length+(who.length===1? " person" : " people")+" can work "+n+" of them. "+
+(can(1)>n? "Allow a "+ord(top+1)+" day, or add someone." : "Add someone."));
+}
+if(!lines.length) return `<div id="wroleshort" hidden></div>`;
+return `<div class="banner warn" id="wroleshort"><div>${lines.map(l=>`<div class="wrsline">${esc(l)}</div>`).join("")}</div></div>`;
 };
 
 function body(){
@@ -33525,7 +33857,8 @@ if(k==="team") return `
             <input type="text" class="wbn-name" data-b="${b}" value="${esc(W.buckets[b]||"")}" placeholder="${esc(bucketSuggestionName(W,b))}">
             <label>Names <span style="color:var(--faint)">· <span class="wcnt" data-b="${b}">${namesIn(b).length}</span></span></label>
             <textarea class="wbn" data-b="${b}" style="min-height:130px" spellcheck="false"
-              placeholder="One name per line&#10;…and the next&#10;…and so on">${esc(W.bucketNames[b]||"")}</textarea></div>`).join("")}</div>
+              placeholder="One name per line&#10;…and the next&#10;…and so on">${esc(W.bucketNames[b]||"")}</textarea>
+            <div class="mini wpnote" data-b="${b}" style="margin-top:4px;overflow-wrap:anywhere">${pasteNote(b)}</div></div>`).join("")}</div>
         <div id="wteamsum"></div>
       </div>`;
 if(k==="days"){
@@ -33692,6 +34025,7 @@ opt("projectShape","spread",W.projectShape,"Wherever it fits","Shorter pieces, s
 opt("projectShare","fair",W.projectShare,"Share it round","Everyone eligible takes a turn.")+
 opt("projectShare","best",W.projectShare,"Stack it on your best people","Whoever is first in line fills up first.")}</div>
           </div>`:""}
+        ${roleShortLine()}
         ${balanceLine()}
       </div>`;
 }
@@ -33734,13 +34068,19 @@ return `<div class="stack" style="gap:6px">${soon.map(row).join("")}</div>`+
           Anything skipped, or not listed, can be added later.</div></div>
       </div>`;
 }
+ 
 if(k==="posts") return `
       <div class="stack">
         <p class="whead">Some floors run on posts — ${esc(bizEx(W.biz).postProse)} — with people moving between them during the day. <b>Posts show on the day sheet.</b></p>
         <div class="field"><label>Your posts — one per line</label>
           <textarea id="wposts" rows="5" placeholder="One per line \u2014 whatever you call them">${esc(W.posts||"")}</textarea>
           ${sugChips("wposts", bizEx(W.biz).posts, {lead:"Posts a place like yours usually runs \u2014 press to add, press again to take out. Type your own straight into the box."})}
-          <span class="mini">Leave it empty if you don't assign posts. Numbered posts like <b>${esc((bizEx(W.biz).posts[0]||"Post 1"))}</b> and <b>${esc((bizEx(W.biz).posts[1]||"Post 2"))}</b> are treated as one rotation${/\s\d+$/.test(bizEx(W.biz).posts[0]||"")? " called "+esc((bizEx(W.biz).posts[0]||"").replace(/\s\d+$/,"")) : " when they share a name and a number"}.</span></div>
+          <span class="mini">Leave it empty if you don't assign posts. ${(()=>{
+const num=/\s\d+$/, base=x=>x.replace(num,""), ps=(bizEx(W.biz).posts||[]).filter(x=>num.test(x));
+let pr=null;
+for(let i=0;!pr && i<ps.length;i++){ const j=ps.findIndex((x,m)=>m>i && base(x)===base(ps[i])); if(j>i) pr=[ps[i],ps[j]]; }
+pr=pr||["Post 1","Post 2"];
+return `Numbered posts like <b>${esc(pr[0])}</b> and <b>${esc(pr[1])}</b> are treated as one rotation called ${esc(base(pr[0]))}.`; })()}</span></div>
         ${(W.posts||"").trim()? `
         <div class="field"><label>How long does someone hold a post?</label>
           <select id="wpspan">
@@ -33871,7 +34211,7 @@ return `
         ${X("xNoComms", W.xNoComms, "No messages to staff, of any kind", "Printing and PDFs still work.")}
         ${W.xNoComms? "" : X("xMsg", W.xMsg, "Ready-written messages to staff", "Nothing sends on its own.")}
         ${X("xTrainee", W.xTrainee, "Someone still learning the job", "Scheduled as an extra, on top of the people you asked for \u2014 never alone.")}
-        ${X("xMinors", W.xMinors, "Under-18 hour limits", "Enforced automatically by age.")}
+        ${X("xMinors", W.xMinors, "Under-18 hour limits", "Anyone under 18 with a birth date on file.")}
         ${X("xWaiver", W.xWaiver, "Meal waivers \u2014 skip the meal on a short shift", "Only with the person\u2019s written agreement; you keep the form.")}
         <div class="field" id="xwaiverhow" style="margin:-4px 0 10px 14px;display:${W.xWaiver?"":"none"}"><label>Waived when?</label>
           <select data-wv="1">
@@ -34060,11 +34400,11 @@ box.innerHTML = `
 : "<b>Nothing listed yet.</b> Add at least one name to continue."}</div></div>
       ${listed? `<div class="lab" id="wteamhours" style="margin-top:12px">Full or part time, and hours a week</div>
         <div class="scroll wteamlist" style="max-height:210px;margin-top:6px">${allNames().map(pn=>{ const key=pn.key, pp=pset(pn)||{};
-const td=typeDefaults(pp.type||"FT");
+const td=setupDefaults(pp.type||"FT");    
 return `<div class="wteamrow"><div class="wtr-id"><strong>${esc(pn.name)}</strong><span class="mini">${esc(bucketLabel(W,pn.b))}</span></div>
             <div class="wtr-fields">
               <div class="wtr-f"><label>Type</label><select class="wpt" data-k="${esc(key)}">${Object.keys(TYPES).map(t=>`<option value="${t}" ${(pp.type||"FT")===t?"selected":""}>${TYPES[t]}</option>`).join("")}</select></div>
-              <div class="wtr-f"><label>Min</label><input type="number" inputmode="decimal" class="wmn" data-k="${esc(key)}" min="0" max="80" value="${pp.minH!=null? pp.minH : td.minH}" placeholder="none"></div>
+              <div class="wtr-f"><label>Min</label><input type="number" inputmode="decimal" class="wmn" data-k="${esc(key)}" min="0" max="80" value="${minOf(pp, td)}"${(pp.minH==null || pp.minAuto)? ` data-auto="1"` : ""} placeholder="none"></div>
               <div class="wtr-f"><label>Max</label><input type="number" inputmode="decimal" class="wph" data-k="${esc(key)}" min="0" max="80" value="${pp.maxH!=null? pp.maxH : td.maxH}"></div>
             </div></div>`;
 }).join("")}</div>
@@ -34073,17 +34413,17 @@ box.querySelectorAll(".wpt").forEach(i=>i.onchange=()=>{ const k=i.dataset.k;
 W.people[k]=W.people[k]||{}; W.people[k].type=i.value;
  
 const row=i.closest(".wteamrow")||box;
-const d=typeDefaults(i.value);
+const d=setupDefaults(i.value);    
 const h=row.querySelector(".wph");
 if(h) h.value = d.maxH;
 W.people[k].maxH=+((h||{}).value)||d.maxH;
  
 const mn=row.querySelector(".wmn");
-if(mn){ mn.value=d.minH; W.people[k].minH=Math.max(0, +mn.value||0); } });
+if(mn){ mn.value=d.minH; W.people[k].minH=Math.max(0, +mn.value||0); W.people[k].minAuto=true; mn.dataset.auto="1"; } });
 box.querySelectorAll(".wph").forEach(i=>i.oninput=()=>{ const k=i.dataset.k;
 W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
 box.querySelectorAll(".wmn").forEach(i=>i.oninput=()=>{ const k=i.dataset.k;
-W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
+W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); W.people[k].minAuto=false; delete i.dataset.auto; });
 }
 
 let PAINT_STEP=-1;
@@ -34322,6 +34662,8 @@ t.addEventListener("input",()=>{
 W.bucketNames[+t.dataset.b]=t.value;
 const c=r.querySelector('.wcnt[data-b="'+t.dataset.b+'"]');
 if(c) c.textContent = namesIn(+t.dataset.b).length;
+const pn=r.querySelector('.wpnote[data-b="'+t.dataset.b+'"]');
+if(pn) pn.innerHTML = pasteNote(+t.dataset.b);        
 clearTimeout(deb); deb=setTimeout(teamSummary, 500);    
 });
 t.addEventListener("blur",()=>{ W.bucketNames[+t.dataset.b]=t.value; teamSummary(); });
@@ -34338,7 +34680,8 @@ if(STEPS[W.step].k==="team") teamSummary();
 r.querySelectorAll(".wneed,.wmax").forEach(inp=>inp.addEventListener("input",()=>{
 clearTimeout(deb); deb=setTimeout(()=>{
 const was=r.querySelector("#wbalance"); if(!was) return;
-collect(); was.outerHTML=balanceLine(); wireRaise(); }, 300);
+collect(); was.outerHTML=balanceLine(); wireRaise();
+const rs=r.querySelector("#wroleshort"); if(rs) rs.outerHTML=roleShortLine(); }, 300);    
 }));
 r.querySelectorAll("[data-busy]").forEach(g=>{
 const i=+g.dataset.busy;
@@ -34465,7 +34808,8 @@ r.querySelectorAll(".wse").forEach(i=>{ W.shifts[+i.dataset.i]=W.shifts[+i.datas
  
 r.querySelectorAll(".wpt").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].type=i.value; });
 r.querySelectorAll(".wph").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].maxH=+i.value||40; });
-r.querySelectorAll(".wmn").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0); });
+r.querySelectorAll(".wmn").forEach(i=>{ const k=i.dataset.k; W.people[k]=W.people[k]||{}; W.people[k].minH=Math.max(0,+i.value||0);
+if(i.dataset.auto) W.people[k].minAuto=true; });    
 const wpx=r.querySelector("#wposts"); if(wpx) W.posts=wpx.value;
 r.querySelectorAll("[data-x]").forEach(cb=>{ W[cb.dataset.x]=cb.checked; });
 r.querySelectorAll(".wneed").forEach(i=>{ W.perShift[i.dataset.s+":"+i.dataset.r]=+i.value||0; });
@@ -34522,13 +34866,13 @@ N.employees=people.map(pn=>{
 const pp=pset(pn)||{};
 const type=pp.type||"FT";
  
-const td=typeDefaults(type);
+const td=setupDefaults(type);    
 const maxH=pp.maxH!=null? +pp.maxH : td.maxH;
 const roleId=N.roles[pn.b]? N.roles[pn.b].id : (N.roles[0]&&N.roles[0].id);
 const off=doffOf(pn);
-return {id:uid("e"),name:pn.name,email:"",phone:"",roleIds:roleId?[roleId]:[],type,
+return {id:uid("e"),name:pn.name,email:String(pn.email||"").slice(0,120),phone:String(pn.phone||"").slice(0,32),roleIds:roleId?[roleId]:[],type,
  
-minH: Math.min(maxH, pp.minH!=null? Math.max(0, +pp.minH||0) : td.minH), maxH, maxD: type==="FT"?5:4,
+minH: Math.min(maxH, minOf(pp, td)), maxH, maxD: type==="FT"?FT_DAYS:4,
 avail:[0,1,2,3,4,5,6].map(d=>({ok:!off.includes(d),from:"00:00",to:"23:59"})),
 prefShiftIds:[],avoidShiftIds:[],prefDaysOff:[],canOpen:true,canClose:true,
 hoursMode:td.hoursMode,
@@ -37381,7 +37725,7 @@ const V=S.vacations;
 return "Subject: Vacation requests for "+(V.windowFrom? V.windowFrom+" to "+V.windowTo : "the coming season")+" — due "+(V.deadline||"[date]")+"\n\n"+
 "Hi all,\n\nTime to plan the longer time off. Attached is a one-page form: open it on your phone or laptop, list up to "+(V.maxPicks||3)+" stretches you’d like ("+(V.minDays||5)+" days or more), best first, and it gives you a short code — reply with that code before "+(V.deadline||"the deadline")+".\n\n"+
 "Everyone’s requests are decided together, not first-come-first-served — submitting early or late changes nothing except that late means you’re not in the draw. The form shows which dates are already crowded, so if you’re flexible, quieter dates raise your odds.\n\n"+
-"Approvals start "+(V.openFrom||"after the deadline")+". I’ll confirm everyone’s dates once they’re granted.\n\nThanks!";
+"Approvals start "+(V.openFrom||"after the deadline")+". I’ll confirm everyone’s dates once they’re granted.\n\nThanks.";
 }
 function vacApprovedEmailText(){
 const rows=vacApprovedList().slice().sort((a,b)=>a.start.localeCompare(b.start))
@@ -38186,6 +38530,9 @@ a:"Yes, and nothing is filled in for you. Picking your kind of business tells We
 a:"On their profile, under Hours past the guarantee, choose Ask me first. The drafter then treats their guaranteed number as the cap and never goes past it on its own. If the week comes up short, covering the gap offers you a line saying they are held at their guarantee and how many hours are left before their cap — one press approves it, for that week only. It does not change their profile and it does not carry into next week. The other setting, Schedule them freely, is the normal behaviour and stays the default."},
 {t:"I want someone used only when the week is short", k:"on call per diem casual reserve backup only when needed gap last resort spare only if coverage demands schedule last", go:"team",
 a:"That is How they're used on their profile — set it to Only called in when there's a gap. The drafter builds the whole week from everybody scheduled as normal first, and only where coverage is still short does it reach for them. On the same card you then choose what happens at that point: Ask me first, where they are named in the Fix and you decide, or Call them in automatically, where the draft calls them in while the week is being drafted and never after it is posted. This is different from Hours past the guarantee: that one is for somebody who is definitely working and might do a few more hours; this one is for somebody you would rather not use at all unless the week needs them."},
+ 
+{t:"Can I take back a change?", k:"undo take back mistake oops revert reverse ctrl cmd command keyboard shortcut quick search palette restore", go:null,
+a:"Yes. On a computer, press Ctrl+Z (\u2318Z on a Mac). Each press takes back one more change. Undo forgets everything once the page is reloaded. On a phone, a bulk change such as copying last week forward offers Undo on the message that confirms it. Ctrl+K (\u2318K) or / opens a quick search for any page or action."},
 {t:"Will a fix cause another problem?", k:"fix causes another problem knock on side effect remove shift coverage warning breaks something else undo put it back", go:"week",
 a:"Weeksolved now tells you when it will. Removing a shift is rehearsed first: the change is run on a throwaway copy of the week, every check runs again, and if the removal would cause anything new you get the list before you press — coverage dips, an open shift, somebody now under their hours — and you decide. For the fix list, some fixes change rules and settings rather than the week, which is too much to rehearse safely; there Weeksolved checks straight afterwards instead and says what the fix cost, with a Put it back button on the message. Either way you are told, and nothing is decided for you: a fix that causes a smaller problem than the one it solves is often exactly the right call."},
 {t:"I removed someone and lost their shifts — can I keep the record?", k:"remove delete employee gone left quit fired history past shifts records keep erase warning confirmation undo", go:"team",
@@ -38264,7 +38611,7 @@ a:"On This week, press Draft again for a fresh take with the same rules. To stee
 {t:"Post the schedule", k:"post posting posted publish published lock locked finalize final done approve official", go:"week",
 a:"Posting locks every shift and marks the week as the official copy \u2014 inside Weeksolved. It does not reach anybody: nothing is emailed, texted or pushed to a phone. Until you hand it out, a posted week is a decision only you can see, and Weeksolved says so on the week until you do. Edit afterwards and you'll see a 'Changed since it last went out' list so you know who to tell. Unpost from the same place if you need to rework it."},
 {t:"Tell my team what they're working", k:"hand out handout tell told notify inform let them know print pin up wall board give distribute nobody knows staff dont know", go:"week",
-a:"Press 'Hand it out to the team' on Home or This week \u2014 it appears the moment a week is posted and stays until you have used one of the ways. Every way is there in one place: print the whole week to pin up, print one card each with only that person's shifts, save a PDF, or copy the week as text to paste into whatever your team already reads. If you switch the optional sending feature on (Settings \u2192 Messages \u2192 Posting and messages \u2192 'Sending the schedule out'), you also get one written message per person, opened in your own mail or messages app. Whichever you use, Weeksolved records it and the week stops asking."},
+a:"Press 'Hand it out to the team' on Home or This week \u2014 it appears the moment a week is posted and stays until you have used one of the ways. Every way is there in one place: print the whole week to pin up, print one card each with only that person's shifts, save a PDF, or copy the week as text to paste into whatever your team already reads. On a phone that can share a file, 'Share the PDF' opens its share sheet with the posted week's PDF. If you switch the optional sending feature on (Settings \u2192 Messages \u2192 Posting and messages \u2192 'Sending the schedule out'), you also get one written message per person, opened in your own mail or messages app. Whichever you use, Weeksolved records it and the week stops asking."},
 {t:"Send schedules by email or text", k:"send email text sms message everyone personal share out", go:"settings",
 a:"It is optional and off to begin with. Turn it on at Settings \u2192 Messages \u2192 Posting and messages \u2192 'Sending the schedule out' (setup asks you too). Then 'Hand it out to the team' on This week gains an email-or-text option: everyone gets their own shifts, or the whole team gets the whole week. It opens your own mail or messages app with everything written \u2014 Weeksolved sends nothing itself, and nothing goes until you press send there. Leave it off and printing, cards and copying still hand the week out."},
 {t:"Calendar files for phones", k:"calendar ics google apple outlook phone subscribe", go:"export",
@@ -39228,7 +39575,12 @@ lastJSON = now;
 function undo(){
 if(!undoStack.length){ toast("Nothing to undo"); return; }
 undoing=true;
+const was=S;
 S = migrate(JSON.parse(undoStack.pop()));
+ 
+S.weeks=S.weeks||{};
+Object.keys((was && was.weeks)||{}).forEach(k=>{ const w=was.weeks[k], r=S.weeks[k];
+if(w && w.published && !postPending(w) && !(r && r.published && !postPending(r))) S.weeks[k]=w; });
 lastJSON = JSON.stringify(S);
  
 LOCAL_DIRTY = true;
@@ -39490,6 +39842,7 @@ save(); closeModal(); render(); toast("Template saved");
 function applyTemplate(id){
 if(postedStands()) return;    
 const t=(S.templates||[]).find(x=>x.id===id); if(!t) return;
+const um=JSON.stringify(S.weeks);    
 const wk=getWeek(); const dates=weekDates();
 wk.assignments = wk.assignments.filter(a=>a.locked);
 t.rows.forEach(r=>{
@@ -39505,7 +39858,7 @@ applyBreaks(rec); wk.assignments.push(rec);
 });
 dates.forEach(({date})=>staggerDay(wk.assignments.filter(a=>a.date===date && !a.locked), wk.assignments.filter(a=>a.date===date)));
 wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
-wk.generatedAt=Date.now(); save(); render(); toast("Template applied");
+wk.generatedAt=Date.now(); save(); render(); toastUndo("Template applied", um);
 }
 
  
@@ -39614,7 +39967,7 @@ let y=88;
 people.forEach((e,idx)=>{
 if(idx) doc.addPage();
 pdfHeader(doc,(S.org.name||"Schedule"),"Individual schedule · week of "+prettyFull(ws));
-y=88;
+y=pdfDraftMark(doc, wk, 81)? 98 : 88;    
 doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(20,32,30);
 doc.text(e.name, 40, y);
 doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(105,119,115);
@@ -39767,7 +40120,8 @@ const sb=r.querySelector("#mtell"); if(sb) sb.onclick=()=>{ closeModal(); handOu
 const swb=r.querySelector("#mswap"); if(swb) swb.onclick=()=>{ closeModal(); swapModal(S.currentWeek); };
 const hb=r.querySelector("#mhand"); if(hb) hb.onclick=()=>{ closeModal(); handBackModal(curWeek()); };
 r.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>{ closeModal(); setTimeout(()=>inboxModal(""),120); });
-(r.querySelector("#mclear")||{}).onclick=()=>{ if(postedStands()) return; const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); };
+ 
+(r.querySelector("#mclear")||{}).onclick=()=>{ if(postedStands()) return; const um=JSON.stringify(S.weeks); const wk=getWeek(); wk.assignments=wk.assignments.filter(a=>a.locked); wk.unfilled=[]; wk.touched=true; wk.suggested=false; wk.auto=false; save(); closeModal(); render(); toastUndo("Unlocked shifts cleared", um); };
 { const md=r.querySelector("#mdiscard"); if(md) md.onclick=()=>{
 const ws=curWeek();
  
@@ -39776,7 +40130,7 @@ touched:true, suggested:false, auto:false, unfilled:[]};
 save(); closeModal(); render();
 toast("Draft discarded", {label:"Undo", run:undo});
 }; }
-(r.querySelector("#munlock")||{}).onclick=()=>{ if(postedStands()) return; getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toast("All shifts unlocked"); };
+(r.querySelector("#munlock")||{}).onclick=()=>{ if(postedStands()) return; const um=JSON.stringify(S.weeks); getWeek().assignments.forEach(a=>a.locked=false); save(); closeModal(); render(); toastUndo("All shifts unlocked", um); };
 r.querySelector("#mcopy").onclick=()=>{
 const prev=S.weeks[addDays(curWeek(),-7)];
 if(!prev||!prev.assignments.length){ toast("Nothing to copy from last week"); return; }
@@ -39790,6 +40144,7 @@ return;
 copyLastWeekForward(prev);
 };
 function copyLastWeekForward(prev){
+const um=JSON.stringify(S.weeks);    
 const wk=getWeek();
  
 const kept=wk.published? [] : wk.assignments.filter(a=>a.locked);
@@ -39814,7 +40169,7 @@ wk.assignments.sort((x,y)=>x.date.localeCompare(y.date)||x.startMin-y.startMin);
  
 wk.unfilled=[]; wk.generatedAt=Date.now(); wk.published=false; restampWeek(wk); save(); closeModal(); render();
 { const st=weekMealStamp(prev);    
-toast("Copied last week forward"+((st!==null && st!==mealsPaid())? " \u00b7 meals in the copy are "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : "")); }
+toastUndo("Copied last week forward"+((st!==null && st!==mealsPaid())? " \u00b7 meals in the copy are "+(mealsPaid()? "paid" : "unpaid")+", as Settings says" : ""), um); }
 }
 r.querySelector("#msave").onclick=()=>{ closeModal(); saveTemplate(); };
 r.querySelector("#mprint").onclick=()=>{ closeModal(); setTimeout(()=>printModal(), 120); };
