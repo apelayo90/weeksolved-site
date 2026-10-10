@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build e31bc01b 2026-10-10 00:53 UTC -->
+<!-- build aef38153 2026-10-10 04:51 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2960,6 +2960,8 @@ toast("That file is not a Weeksolved backup \u2014 it has no team or shifts in i
 if(o.complete===false){
 toast("That backup is only part of a board, so restoring it would delete the rest"); return; }
 try{ o=scrubRestored(o); }catch(e){ toast("That backup could not be read \u2014 nothing has changed"); return; }
+ 
+delete o.draftSeals;
 let next=null;
 try{ next=migrate(o); }catch(e){ toast("That backup could not be read \u2014 nothing has changed"); return; }
 const n=(next.employees||[]).filter(e=>e.active).length, wk=Object.keys(next.weeks||{}).length;
@@ -3777,8 +3779,8 @@ else w=FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v).set(rec).catch(()=>{})
 }catch(e){}
 return w;
 }
-const BUILD_ID = "e31bc01b";       
-const BUILD_AT = "2026-10-10 00:53 UTC";       
+const BUILD_ID = "aef38153";       
+const BUILD_AT = "2026-10-10 04:51 UTC";       
 const TERMS_VERSION = "4";                  
 const TERMS_HASH = "ed1753c996121835";
 const TERMS_DATE = "September 12, 2026";
@@ -4173,6 +4175,23 @@ const t=await FB.db.collection("users/"+uid+"/terms").get();
 return (t.docs||[]).map(d=>d.data()||{});
 }catch(e){ return []; }
 }
+ 
+function termsResend(uid){
+if(BACKEND==="supabase" || !uid) return Promise.resolve();
+const held=[], t=termsAccepted(), n=ndaNeeded()? ndaAccepted() : null;
+if(t && String(t.v)===String(TERMS_VERSION) && t.hash!=="nda") held.push(t);
+if(n && String(n.v)===String(NDA_VERSION) && n.hash==="nda") held.push(n);
+if(!held.length) return Promise.resolve();
+return cloudTermsRows(uid).then(rows=>{
+held.forEach(h=>{
+const nda=h.hash==="nda";
+if(rows.some(x=>x && (x.hash==="nda")===nda && String(x.v)===String(h.v))) return;
+if(!(FB && FB.user && FB.user.uid===uid && FB.db) || SIGNED_OUT || ACCOUNT_DELETING) return;
+const rec={ v:String(h.v), hash:String(h.hash||""), at:Date.now(), ua:String(h.ua||"").slice(0,200) };
+FB.db.doc("users/"+uid+"/terms/"+(nda? "nda" : "")+rec.v).set(rec).catch(()=>{});
+});
+}).catch(()=>{});
+}
 
  
 function bringAcrossAvailable(){
@@ -4433,6 +4452,7 @@ if(x && x.hash!=="nda" && String(x.v)===String(TERMS_VERSION)) seen=x; });
 if(seen){ try{ localStorage.setItem(scopedKey(TERMSKEY), JSON.stringify(seen)); }catch(e){} }
 else { termsUpdateScreen(); CLOUD_ENTERING=false; return; }
 }
+termsResend(uid);    
 
 WKHASH={};
  
@@ -4440,6 +4460,8 @@ SIGNED_OUT = false;
 if(ACCOUNT_DELETING) ACCOUNT_DELETING=false;    
 LS_UID = uid;                        
 const remote=await cloudFetchAll(uid);
+ 
+if(SIGNED_OUT || !(FB && FB.user && FB.user.uid===uid)){ if(!(FB && FB.user)) CLOUD_ENTERING=false; return; }
 const local=lsLoad();                
  
 CLOUD_ENTERING=false;
@@ -4553,7 +4575,15 @@ const rev=d.rev||0;
 try{
 const before={n:S.org.name, ids:S.employees.map(e=>e.id)};
 const r=await cloudFetchAll(uid);
-if(!r) return;
+ 
+if(!r || SIGNED_OUT || !(FB && FB.user && FB.user.uid===uid)) return;
+ 
+if(BOOT_CONFLICT){ const c=BOOT_CONFLICT, hr=r.rev||rev; let ok=false;
+LAST_SEEN_REV=Math.max(LAST_SEEN_REV||0, hr);
+try{ ok=!!migrate(JSON.parse(JSON.stringify(r.state))); }catch(e){}
+if(ok && FB && FB.user && FB.user.uid===uid && hr>(c.rev||0)){ c.state=r.state; c.rev=hr; c.at=r.at||d.at||c.at;
+if(modalRoot().querySelector("#bcmine")) bootConflictModal(); }
+setSync(false,"Your other device also made changes \u2014 unresolved"); return; }
  
  
 if(LOCAL_DIRTY || cloudPushTimer || CLOUD_RETRY){
@@ -4840,9 +4870,15 @@ const SMOOTH_STAFF = 100;
 function staffCount(){ return (S.employees||[]).length; }
 function staffRoom(){ return Math.max(0, MAX_STAFF - staffCount()); }
  
-function staffFullModal(){
+ 
+function staffFullModal(left){
+const lost=Array.isArray(left)? left : [], k=lost.length;
+const said=k===1? "1 of the names you typed: "+esc(lost[0])
+: k===2? "2 of the names you typed: "+esc(lost[0])+" and "+esc(lost[1])
+: k+" of the names you typed, from "+esc(lost[0])+" to "+esc(lost[k-1]);
 modal("This account is full", `
-        <div class="stack">
+        <div class="stack">${k? `
+          <p class="whead" style="overflow-wrap:anywhere">Setup left off ${said}.</p>` : ""}
           <p class="whead">One Weeksolved account holds <b>${MAX_STAFF} people</b>, and there are ${staffCount()} on this one.</p>
           <div class="help">That is not an arbitrary number \u2014 it is where an account's saved data starts running up against
             what the storage behind it will accept in one piece. Going past it would mean your schedules quietly stopped
@@ -6840,6 +6876,20 @@ if(list.length===1) return String(list[0]);
 return list.slice(0,-1).join(", ")+" and "+list[list.length-1];
 }
  
+function rolePlural(name){
+const s=String(name||""), m=s.match(/[A-Za-z]+$/);
+if(!/\p{L}$/u.test(s)) return s;
+if(!m) return s+"s";
+const w=m[0], lw=w.toLowerCase();
+if(w.length===1) return s+"s";
+if(/^(security|staff|maintenance)$/.test(lw) || /ing$/.test(lw)) return s;
+if(w.length>1 && w===w.toUpperCase()) return /S$/.test(w)? s : s+"s";
+if(/[^s]s$/.test(lw)) return s;
+if(/[^aeiou]y$/.test(lw)) return s.slice(0,-1)+"ies";
+if(lw!=="tech" && /(ss|x|z|ch|sh)$/.test(lw)) return s+"es";
+return s+"s";
+}
+ 
 function otFollowState(newJ){
 if(newJ===S.org.jurisdiction) return;
 const was=otDefaults(S.org.jurisdiction), now=otDefaults(newJ);
@@ -7377,14 +7427,18 @@ function covOn(r, dow){
 return !r || !Array.isArray(r.days) || !r.days.length || r.days.includes(dow);
 }
  
-function ruleWindowsOn(r, dow, date){
+function ruleWindowsOn(r, dow, date, siteId){
 const rs=t2m(r.start); let re=t2m(r.end); if(re<=rs) re+=1440;
 const w=[];
 if(covOn(r, dow)) w.push([rs, re]);
 const yd=(dow+6)%7;
 if(re>1440 && covOn(r, yd)){
 let y0=0;
-if(date){ const y=addDays(date,-1);
+ 
+const zs=siteId? [siteId] : covSites(r);
+if(date && multiSite() && zs[0]){ const y=addDays(date,-1);
+y0=Math.min.apply(null, zs.map(z=>{ const x=siteWindowOnDate(y, yd, z); return x? Math.max(0, x[1]-1440) : 0; })); }
+else if(date){ const y=addDays(date,-1);
 (multiSite()? sitesList().map(z=>siteWindowOnDate(y, yd, z.id)) : [dayWindow(yd)])
 .forEach(x=>{ if(x) y0=Math.max(y0, x[1]-1440); }); }
 if(re-1440>y0) w.push([y0, re-1440, true]);
@@ -8135,6 +8189,13 @@ return {want, missing:want.filter(w=>!w.used), spare:left};
  
 function openDemandOn(date, dow, ws, list){
 return matchDemand(expandDemand(dow, ws), list.filter(a=>a.date===date)).missing;
+}
+ 
+function askedTally(ws, list){
+let extra=0, open=0;
+weekDates(ws).forEach(d=>{ const on=list.filter(a=>a.date===d.date), m=matchDemand(expandDemand(d.dow, ws), on);
+extra+=on.length-(m.want.length-m.missing.length); open+=m.missing.length; });
+return {extra, open};
 }
  
 function nthDow(y, mon, dow, nth){             
@@ -11756,7 +11817,7 @@ const by={}, keys=[];
 rows.forEach(r=>{ const k=r.roleId||""; if(!(k in by)){ by[k]=0; keys.push(k); } by[k]+=demCount(r); });
  
 const who=keys.map(k=>{ const n=by[k], ro=k? roleById(k) : null;
-return n+" "+(ro? ro.name+((n===1 || /[ysx]$/i.test(ro.name))? "" : "s") : (n===1? "person" : "people")); });
+return n+" "+(ro? (n===1? ro.name : rolePlural(ro.name)) : (n===1? "person" : "people")); });
 const hh=holHoursOf(h), sh=shiftById(rows[0].shiftId);
 const span=(hh.from && hh.to)? [t2m(hh.from), t2m(hh.to)] : sh? shiftMinutes(sh) : null;
 out.push({code:"holshutday", sev:"warn", where:"holidays", detail:"",
@@ -16008,6 +16069,8 @@ win = open.length? [Math.min.apply(null, open.map(w=>w[0])), Math.max.apply(null
 }
 if(!win) return null;
 const [o,c]=win;
+ 
+const _zw=new Map(), zWins=(r,z)=>{ let m=_zw.get(r); if(!m) _zw.set(r, m={}); return m[z]||(m[z]=ruleWindowsOn(r, dow, date, z)); };
 const rules = (S.coverage||[]).filter(r=>covOn(r,dow));
  
 const wins = rules.concat((S.coverage||[]).filter(r=>!covOn(r,dow))).map(r=>[r, ruleWindowsOn(r, dow, date)]).filter(x=>x[1].length);
@@ -16023,6 +16086,7 @@ const O = {ignoreMeals: r.mealsCount===false};
  
 covSites(r).forEach(_z=>{
 if(_z && multiSite()){ const zw=siteWindowOnDate(date, dow, _z); if(!zw || t<zw[0] || t>=zw[1]) return; }    
+if(_z && multiSite() && !r.siteId && W.some(w=>w[2]) && !zWins(r,_z).some(w=>t>=w[0] && t<w[1])) return;    
 const list = _z? covPool(_list, _z) : _open;
 let have, need;
 if(kind==="min"){
@@ -20048,7 +20112,8 @@ const period=reqPeriod(ws,1);
 const live=(S.requests||[]).filter(r=>r.status!=="declined" && atSite(empById(r.empId)) && (r.kind==="maxh" || !(r.to<period.from||r.from>period.to)));
 const reqRes=wk.assignments.length? live.map(r=>reqOutcome(r,ws,1)) : [];
 const reqOk=reqRes.filter(x=>x.ok===true).length, reqNo=reqRes.filter(x=>x.ok===false).length;
-const wantSlots=dates.reduce((t,d)=>t+expandDemand(d.dow,ws).length,0);
+ 
+const tally=askedTally(ws, wk.assignments);
 const totalMin=wk.assignments.reduce((t,a)=>t+paidMinutes(a),0);
 const we=addDays(ws,6), offIds={};
 (S.timeoff||[]).forEach(t=>{ if(t.status==="denied") return; if(t.end<ws||t.start>we) return; offIds[t.empId]=1; });
@@ -20061,8 +20126,8 @@ return '<div class="tiles">'+
 : nOff+" on time off")+"</span></button>"+
 '<button class="tile" data-open="tray"><span class="tn mono">'+(drafted? wk.assignments.length : "—")+"</span>"+
 '<span class="tlab">'+(wk.assignments.length===1? "shift":"shifts")+
-(wk.assignments.length>wantSlots? " — "+(wk.assignments.length-wantSlots)+" more than you asked for"
-: wk.assignments.length<wantSlots? " — "+(wantSlots-wk.assignments.length)+" short of what you asked for"
+(tally.extra? " — "+tally.extra+" more than you asked for"
+: tally.open? " — "+tally.open+" short of what you asked for"
 : " — exactly what you asked for")+"</span>"+
 '<span class="td">'+(drafted? "across "+dates.filter(d=>wk.assignments.some(a=>a.date===d.date)).length+" days"
 : "not drafted yet")+"</span></button>"+
@@ -20079,6 +20144,20 @@ return '<div class="tiles">'+
 }
 
  
+function rowWho(v){
+const line=v.detail|| v.title, said=reviewedHtml(line);
+const e=v.empId? empById(v.empId) : null;
+if(!(e && e.name)) return said;
+ 
+const b=v.empB? empById(v.empB) : null;
+if(b && b.name) return '<div class="rowmain">'+said+'<div class="rowsub" style="overflow-wrap:anywhere">'+esc(e.name)+" and "+esc(b.name)+"</div></div>";
+ 
+if(String(line||"").indexOf(e.name)>=0) return said;
+ 
+return '<div class="rowmain">'+said+'<div class="rowsub" style="overflow-wrap:anywhere">'+esc(e.name)+"</div></div>";
+}
+
+ 
 function worthLook(ws){
 const P=homeProblems(ws|| curWeek());
  
@@ -20088,7 +20167,7 @@ const i=P.V.indexOf(v);
 if(v.code==="suspect" && v.rc && typeof rcRow==="function") return rcRow(v);
 const day = v.date? parseYmd(v.date).getDay() : (v.dow!=null? v.dow : null);
 return '<div class="hrow" data-sev="warn">'+
-'<div class="hrowhd"><span class="sdot" data-sev="warn"></span>'+reviewedHtml(v.detail|| v.title)+"</div>"+
+'<div class="hrowhd"><span class="sdot" data-sev="warn"></span>'+rowWho(v)+"</div>"+
 '<div class="hrowacts">'+
 (fixBtn(v,i)? '<button class="btn" data-act="fix" data-vix="'+i+'">Fix</button>' : "")+
 (day!=null? '<button class="btn" data-act="openday" data-day="'+day+'">Open the day</button>' : "")+
@@ -20145,7 +20224,7 @@ const i=V.indexOf(v);
 if(v.code==="suspect" && v.rc && typeof rcRow==="function") return rcRow(v);
 const day = v.date? parseYmd(v.date).getDay() : (v.dow!=null? v.dow : null);
 return '<div class="hrow" data-sev="'+esc(v.sev)+'">'+
-'<div class="hrowhd"><span class="sdot" data-sev="'+esc(v.sev)+'"></span>'+reviewedHtml(v.detail|| v.title)+"</div>"+
+'<div class="hrowhd"><span class="sdot" data-sev="'+esc(v.sev)+'"></span>'+rowWho(v)+"</div>"+
 (v.asked? '<div class="mini">'+esc(v.asked)+"</div>" : "")+
 '<div class="hrowacts">'+
 (fixBtn(v,i)? '<button class="btn '+(v.sev==="crit"? "primary":"")+'" data-act="fix" data-vix="'+i+'">'+
@@ -20157,7 +20236,8 @@ function trayBody(ws){
 ws=ws|| curWeek();
 const wk=peekWeek(ws), P=homeProblems(ws);
 const posted=!!(wk.published && !postPending(wk));
-const wantSlots=weekDates(ws).reduce((t,d)=>t+expandDemand(d.dow,ws).length,0);
+ 
+const tally=askedTally(ws, wk.assignments);
 const totalMin=wk.assignments.reduce((t,a)=>t+paidMinutes(a),0);
 const over = haveRates() && S.org.budget && weekCost(ws)>S.org.budget;
 let h="";
@@ -20183,7 +20263,7 @@ h+='<div><div class="eyebrow sec">THIS DRAFT</div><div class="inset">'+
 "</div>"+
 '<div class="hrow" data-sev="info"><div class="hrowhd"><span class="sdot" data-sev="info"></span>'+
 '<span class="rowmain"><span class="rowt">'+wk.assignments.length+" shift"+(wk.assignments.length===1?"":"s")+
-(wk.assignments.length>wantSlots? " — "+(wk.assignments.length-wantSlots)+" more than you asked for" : "")+
+(tally.extra>0? " — "+tally.extra+" more than you asked for" : "")+
 "</span>"+
 '<span class="rowsub">'+esc(fmtHrs(totalMin))+" of paid time across "+
 new Set(wk.assignments.map(a=>a.empId)).size+" people</span></span></div></div>"+
@@ -20970,7 +21050,9 @@ const tag=z=>(many && z && z!==main)? z : null;
 days.forEach(dow=>{
 const openAt=z=>!!siteDayWindow(z, dow);
  
-const boardRuns=(a,b)=>{ const W=sitesList().map(z=>[z.id, siteDayWindow(z.id, dow)]).filter(x=>x[1]), runs=[];
+const siteRun=z=>{ const w=siteDayWindow(z, dow), n=w && w[1]===1440 && siteDayWindow(z, (dow+1)%7); return (n && n[0]===0)? [w[0], 1440+n[1]] : w; };
+ 
+const boardRuns=(a,b)=>{ const W=sitesList().map(z=>[z.id, siteRun(z.id)]).filter(x=>x[1]), runs=[];
 const cuts=[...new Set([a,b].concat(...W.map(x=>x[1])))].filter(x=>x>=a && x<=b).sort((x,y)=>x-y);
 for(let i=0;i+1<cuts.length;i++){ const p=cuts[i], q=cuts[i+1], o=W.find(x=>p>=x[1][0] && p<x[1][1]); if(!o) continue;
 const l=runs[runs.length-1]; if(l && l[0]===o[0] && l[2]===p) l[2]=q; else runs.push([o[0], p, q]); }
@@ -20994,7 +21076,7 @@ rows.push(Object.assign({k, shiftId:sh.id, roleId:roleId||null, count:n, max:n, 
 (S.coverage||[]).filter(r=>(r.kind||"min")==="min" && covOn(r, dow)).forEach(r=>{
 let a=t2m(r.start), b=t2m(r.end); if(b<=a) b+=1440;
 const at=!many? [[null, a, b]] : covSites(r)[0]===null? boardRuns(a, b)
-: covSites(r).filter(openAt).map(z=>{ const w=siteDayWindow(z, dow);    
+: covSites(r).filter(openAt).map(z=>{ const w=siteRun(z);    
 return [z, Math.max(a, w[0]), Math.min(b, w[1])]; });
 at.forEach(([z,a2,b2])=>{ if(b2<=a2) return;
 add(shiftFor(a2,b2), r.roleId||null, Math.max(1, r.min||1), r.label||ruleSentence(r), tag(z)); });
@@ -22143,9 +22225,11 @@ mo=+mo; d=+d; y=+y;
 if(y<100) y += (y<=79? 2000 : 1900);
 if(mo<1||mo>12||d<1||d>31) return null;
 if(noYear){ const days=(new Date(y, mo-1, d)-new Date())/86400000;
-if(when==="past"){ if(days>0) y-=1; }
-else { if(days < -150) y+=1; else if(days > 210) y-=1; }
-if(after && y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0") < after) y+=1; }
+let dir=0; const leap=()=>{ if(mo===2 && d===29 && dir) while(new Date(y, 1, 29).getDate()!==29) y+=dir; };
+if(when==="past"){ if(days>0){ y-=1; dir=-1; } }
+else { if(days < -150){ y+=1; dir=1; } else if(days > 210){ y-=1; dir=-1; } }
+leap();
+if(after && y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0") < after){ y+=1; dir=1; leap(); } }
 const dt=new Date(y, mo-1, d);
 if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==d) return null;
 return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");
@@ -31416,7 +31500,8 @@ y=pdfKeep(doc, y, 10+pdfRowH(doc, [[V[0].title, 190, true], [V[0].detail, doc.in
 doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(171,56,44);
 doc.text("Open items ("+V.length+")",40,y); y+=6;
 doc.autoTable({body:V.map(v=>[v.title,v.detail]),startY:y+4,theme:"plain",
-styles:{fontSize:7.4,cellPadding:3,textColor:[80,92,89]},columnStyles:{0:{cellWidth:190,fontStyle:"bold"}},margin:Object.assign({left:40,right:40}, dm? {top:46} : {})});
+ 
+styles:{fontSize:7.4,cellPadding:3,textColor:[80,92,89]},columnStyles:{0:{cellWidth:190,fontStyle:"bold"}},rowPageBreak:"avoid",margin:Object.assign({left:40,right:40}, dm? {top:46} : {})});
 }
 pdfDraftMark(doc, wk, 36, p0);    
 }
@@ -31476,7 +31561,8 @@ mealTxt, restTxt, fmtHrs(paidMinutes(a))])
 }),
 startY:tableY, styles:{fontSize:8.2,cellPadding:5,lineColor:[210,216,214],lineWidth:.5},
 headStyles:{fillColor:[28,106,102],textColor:255}, alternateRowStyles:{fillColor:[246,248,247]},
-columnStyles:{0:{fontStyle:"bold",cellWidth:104}}, margin:Object.assign({left:40,right:40}, dm? {top:46} : {})
+ 
+columnStyles:{0:{fontStyle:"bold",cellWidth:104}}, rowPageBreak:"avoid", margin:Object.assign({left:40,right:40}, dm? {top:46} : {})
 });
 let y=doc.lastAutoTable.finalY+20;
 if((S.rules.sheetNotes||"lines")!=="off"){
@@ -35088,7 +35174,7 @@ N.requests = W.reqs.map(r=>({id:uid("q"), empId:(N.employees[r.pi]||{}).id, kind
 from:r.from, to:r.to, shiftId:(N.shifts[r.shiftIdx]||{}).id||null, time:r.time, num:r.num,
 note:"", status:"open", at:Date.now()})).filter(r=>r.empId);
  
-let staffOver=0;
+let staffOver=0, staffLeft=[];
 { const norm=x=>String(x||"").trim().toLowerCase();
 const have=(wizRealBoard(S) && !W.startFresh)? (S.employees||[]) : [];
 const left=have.map(e=>norm(e.name)), drop=new Set(); let room=MAX_STAFF-have.length;
@@ -35096,7 +35182,7 @@ N.employees.forEach(e=>{ const i=left.indexOf(norm(e.name));
 if(i>=0){ left.splice(i,1); return; }
 if(room>0){ room--; return; }
 drop.add(e.id); });
-if(drop.size){ staffOver=drop.size;
+if(drop.size){ staffOver=drop.size; staffLeft=N.employees.filter(e=>drop.has(e.id)).map(e=>e.name);    
 N.employees=N.employees.filter(e=>!drop.has(e.id));
 N.priority.order=(N.priority.order||[]).filter(id=>!drop.has(id));
 N.timeoff=(N.timeoff||[]).filter(t=>!drop.has(t.empId));
@@ -35150,7 +35236,7 @@ go(S.employees.length? "shifts" : "team");
 toast(S.employees.length? "Set up. Add the shifts you run and it will draft the week."
 : "Set up. Add who works here and it will draft the week.");
 }
-if(staffOver) afterWelcome(()=>staffFullModal());    
+if(staffOver) afterWelcome(()=>staffFullModal(staffLeft));    
 }
 
 paint();
@@ -37945,7 +38031,8 @@ return [h.name, prettyDate(h.date), h.hours||"—", mine.concat(un).join("\n")||
 }),
 startY:82,styles:{fontSize:8.5,cellPadding:6,lineColor:[210,216,214],lineWidth:.5},
 headStyles:{fillColor:[28,106,102],textColor:255},alternateRowStyles:{fillColor:[246,248,247]},
-columnStyles:{0:{fontStyle:"bold",cellWidth:120}},margin:{left:40,right:40}});
+ 
+columnStyles:{0:{fontStyle:"bold",cellWidth:120}},rowPageBreak:"avoid",margin:{left:40,right:40}});
 let y=doc.lastAutoTable.finalY+22;
  
 const load=S.employees.filter(e=>e.active).map(e=>{
@@ -37960,7 +38047,9 @@ doc.text("How the load fell",40,y);
 doc.autoTable({head:[["Person","Holidays","Which"]],
 body:load,
 startY:y+8,styles:{fontSize:8,cellPadding:5,lineColor:[210,216,214],lineWidth:.5},
-headStyles:{fillColor:[105,119,115],textColor:255},columnStyles:{0:{fontStyle:"bold",cellWidth:110},1:{cellWidth:52}},margin:{left:40,right:40}});
+headStyles:{fillColor:[105,119,115],textColor:255},
+ 
+columnStyles:{0:{fontStyle:"bold",cellWidth:110},1:{cellWidth:52}},rowPageBreak:"avoid",margin:{left:40,right:40}});
 pdfFooter(doc);
 await saveFile("holiday-coverage.pdf", doc.output("arraybuffer"));
 }
@@ -39667,7 +39756,7 @@ if(DB) DB.doc("app/state").set({json:lastJSON, at:Date.now()}).catch(()=>{});
 try{ if(typeof cloudPush==="function" && typeof FB!=="undefined" && FB && FB.user) cloudPush(); }catch(e){}
 }catch(e){
  
-undoing=false; try{ render(); }catch(e2){}
+undoing=false; try{ render(); }catch(e2){} toast("The last change could not be undone. Your board is unchanged.");
 return;
 } finally{ undoing=false; }
 render(); toast("Undone");
