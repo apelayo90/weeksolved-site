@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- build e36bb54d 2026-10-09 21:53 UTC -->
+<!-- build e31bc01b 2026-10-10 00:53 UTC -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -677,6 +677,7 @@ ol.a2hs li{padding-left:2px}
 .setrow .sc{display:flex;gap:8px;align-items:center;flex:0 1 auto;min-width:0;max-width:100%}
 .setrow .sc select,.setrow .sc input{min-width:150px}
 @media (max-width:640px){.setrow .sc{width:100%}.setrow .sc select,.setrow .sc input{flex:1;min-width:0}}
+@media (max-width:480px){.setrow .sc{flex-wrap:wrap}.setrow .sc select{flex:1 1 auto;min-width:0;max-width:100%}}
 .sumrows{padding:2px 0}
 .sumrow{padding:10px 16px;border-bottom:1px solid var(--line)}
 .sumrow:last-child{border-bottom:0}
@@ -1849,6 +1850,16 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-mo
   .wtr-f{flex:1}
   .wtr-f select,.wtr-f input{width:100%}
 }
+@media (max-width:700px){
+  .wteamrow .wtr-fields .wtr-f:first-child{flex:1 1 auto}
+  .wteamrow .wtr-fields .wtr-f:not(:first-child){flex:0 0 auto}
+  .wteamrow .wtr-fields .wtr-f .wpt{width:100%}
+}
+@media (max-width:380px){
+  .wteamrow .wtr-fields{display:grid;grid-template-columns:1fr 1fr}
+  .wteamrow .wtr-fields .wtr-f:first-child{grid-column:1/-1}
+  .wteamrow .wtr-fields .wtr-f .wmn,.wteamrow .wtr-fields .wtr-f .wph{width:100%}
+}
 .wshiftrow{display:flex;flex-direction:column;gap:2px}
 .wshiftrow .wsdesire{padding:0 12px}
 @media (max-width:700px){ .wshiftrow .wsdesire{display:none} }
@@ -2905,7 +2916,9 @@ const c=stripCapabilities(JSON.parse(JSON.stringify(o)));
 if(idBad(v)) throw new Error(SCRUB_REFUSED);
  
 if("abbr" in v && v.abbr!=null) v.abbr=String(v.abbr).slice(0,6); });
-Object.keys(c.weeks||{}).forEach(k=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) throw new Error(SCRUB_REFUSED); }); }
+Object.keys(c.weeks||{}).forEach(k=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) throw new Error(SCRUB_REFUSED); });
+ 
+if(c.draftSeals && typeof c.draftSeals==="object") Object.keys(c.draftSeals).forEach(k=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) delete c.draftSeals[k]; }); }
 return c;
 }
  
@@ -3754,17 +3767,18 @@ function recordNdaAccept(){
 const rec={ v:String(NDA_VERSION), hash:"nda", at:Date.now(),
 ua:String(navigator.userAgent||"").slice(0,200) };
 try{ localStorage.setItem(scopedKey(NDAKEY), JSON.stringify(rec)); }catch(e){}
+let w=Promise.resolve();    
 try{
 if(FB && FB.user && FB.db){
-if(BACKEND==="supabase") cloudTermsPut(FB.user.uid, rec);
+if(BACKEND==="supabase") w=cloudTermsPut(FB.user.uid, rec);
  
-else FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v).set(rec).catch(()=>{});
+else w=FB.db.doc("users/"+FB.user.uid+"/terms/nda"+rec.v).set(rec).catch(()=>{});
 }
 }catch(e){}
-return rec;
+return w;
 }
-const BUILD_ID = "e36bb54d";       
-const BUILD_AT = "2026-10-09 21:53 UTC";       
+const BUILD_ID = "e31bc01b";       
+const BUILD_AT = "2026-10-10 00:53 UTC";       
 const TERMS_VERSION = "4";                  
 const TERMS_HASH = "ed1753c996121835";
 const TERMS_DATE = "September 12, 2026";
@@ -3798,17 +3812,26 @@ function recordTermsAccept(){
 const rec={ v:String(TERMS_VERSION), hash:String(TERMS_HASH||""), at:Date.now(),
 ua:String(navigator.userAgent||"").slice(0,200) };
 try{ localStorage.setItem(scopedKey(TERMSKEY), JSON.stringify(rec)); }catch(e){}
+let w=Promise.resolve();    
  
 try{
 if(FB && FB.user && FB.db){
-if(BACKEND==="supabase") cloudTermsPut(FB.user.uid, rec);
+if(BACKEND==="supabase") w=cloudTermsPut(FB.user.uid, rec);
  
-else FB.db.doc("users/"+FB.user.uid+"/terms/"+rec.v).set(rec).catch(()=>{});
+else w=FB.db.doc("users/"+FB.user.uid+"/terms/"+rec.v).set(rec).catch(()=>{});
 }
 }catch(e){}
-return rec;
+return w;
 }
  
+ 
+ 
+function reloadAfter(p){
+let went=false;
+const go=()=>{ if(went) return; went=true; try{ location.reload(); }catch(e){} };
+setTimeout(go, 10000);
+try{ Promise.resolve(p).then(go, go); }catch(e){ go(); }
+}
  
 function ndaScreen(){
 document.body.innerHTML =
@@ -3829,7 +3852,7 @@ document.body.innerHTML =
 document.getElementById("ndago").onclick=()=>{
 if(!document.getElementById("ndaok").checked){
 document.getElementById("ndaerr").textContent="Check the box to continue."; return; }
-recordNdaAccept(); location.reload();
+reloadAfter(recordNdaAccept());    
 };
 document.getElementById("ndaout").onclick=()=>{
 try{ signOutClean(); }
@@ -3854,8 +3877,7 @@ document.body.innerHTML =
 document.getElementById("tugo").onclick=()=>{
 if(!document.getElementById("tuok").checked){
 document.getElementById("tuerr").textContent="Check the box to continue."; return; }
-recordTermsAccept();
-location.reload();
+reloadAfter(recordTermsAccept());    
 };
 document.getElementById("tuout").onclick=()=>{
 try{ signOutClean(); }
@@ -4817,6 +4839,20 @@ const STAFF_WARN_AT = Math.round(MAX_STAFF*0.8);
 const SMOOTH_STAFF = 100;
 function staffCount(){ return (S.employees||[]).length; }
 function staffRoom(){ return Math.max(0, MAX_STAFF - staffCount()); }
+ 
+function staffFullModal(){
+modal("This account is full", `
+        <div class="stack">
+          <p class="whead">One Weeksolved account holds <b>${MAX_STAFF} people</b>, and there are ${staffCount()} on this one.</p>
+          <div class="help">That is not an arbitrary number \u2014 it is where an account's saved data starts running up against
+            what the storage behind it will accept in one piece. Going past it would mean your schedules quietly stopped
+            saving to your account, which is worse than being told no.</div>
+          <div class="help">If somebody has left, mark them inactive under Team and their history stays; inactive people
+            still count toward the ${MAX_STAFF}, so remove anyone you will genuinely never schedule again.
+            If you truly need more than ${MAX_STAFF} at one site, write to ${esc(S.support.email||"weeksolved@gmail.com")} \u2014
+            it is worth knowing about.</div>
+        </div>`, `<button class="btn primary" data-close>Fine</button>`);
+}
  
 const DOC_LIMIT = 1048576, DOC_SAFE = 950000;
  
@@ -7170,6 +7206,12 @@ const by=clockOff(cn, a.startMin, a.endMin); if(!by) return null;
 return {cn, by, K:clockMaps(cn, a.startMin, a.endMin)};
 }
  
+function minorMealOwed(a, b, gap, sh, roleId){
+if(!minorsOn() || !law().minorBreak) return false;
+return minorsListed().some(e=>(!roleId || (e.roleIds||[]).includes(roleId))
+&& computeBreaks(a, b, {gap:gap||undefined, shift:sh||null, emp:e}).owed.meals>0);
+}
+ 
 function computeBreaks(startMin, endMin, opts){
 opts = opts || {};
 let L = law();
@@ -8909,7 +8951,16 @@ function draftSealsOf(ws){ return (S.draftSeals && S.draftSeals[ws]) || {}; }
 function draftSealsKeep(ws, m){
 const all=(S.draftSeals && typeof S.draftSeals==="object" && !Array.isArray(S.draftSeals))? S.draftSeals : {};
 if(Object.keys(m).length) all[ws]=m; else delete all[ws];
-Object.keys(all).forEach(k=>{ const w=S.weeks[k]; if(!w || (w.published && !postPending(w))) delete all[k]; });
+ 
+const from=addDays(thisWeekStart(), -7);
+ 
+Object.keys(all).forEach(k=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(k)){ delete all[k]; return; } const w=S.weeks[k]; if(!w || (w.published && !postPending(w)) || k<from) delete all[k]; });
+ 
+const keys=Object.keys(all).sort(), size=Object.create(null);
+let n=2+Math.max(0, keys.length-1), left=keys.length;
+keys.forEach(k=>{ size[k]=JSON.stringify(k).length+1+JSON.stringify(all[k]).length; n+=size[k]; });
+const drop=keys.filter(k=>k!==ws);
+while(n>150000 && drop.length){ const k=drop.pop(); n-=size[k]+(left>1? 1 : 0); left--; delete all[k]; }
 if(Object.keys(all).length) S.draftSeals=all; else delete S.draftSeals;
 }
  
@@ -9852,15 +9903,19 @@ return true;
 .sort((x,y)=> (dayRank(x)-dayRank(y)) || (P.length? (peakSpan(y,P)-peakSpan(x,P)) : 0));
  
 if(guaranteeMode && dayShifts.length>1){
-const grp=new Map(), first=new Map(), at=new Map(), xs=new Map();
-dayShifts.forEach((sh,i)=>{ const g=dayRank(sh)+"|"+(P.length? peakSpan(sh,P) : 0)+"|"+Math.round(fitLen(sh));
-grp.set(sh,g); at.set(sh,i); if(!first.has(g)) first.set(g,i); });
+const grp=new Map(), at=new Map(), xs=new Map();
+dayShifts.forEach((sh,i)=>{ grp.set(sh, dayRank(sh)+"|"+(P.length? peakSpan(sh,P) : 0)+"|"+Math.round(fitLen(sh))); at.set(sh,i); });
 const above=sh=>{ if(!xs.has(sh)){
 const on=assignments.filter(a=>a.date===d.date && a.shiftId===sh.id).length;
 const floor=demandRowsFor(d.dow, ws, d.date).filter(r=>r.shiftId===sh.id).reduce((t,r)=>t+(+r.count||0),0);
 xs.set(sh, on-floor); }
 return xs.get(sh); };
-dayShifts.sort((x,y)=> (first.get(grp.get(x))-first.get(grp.get(y))) || (above(x)-above(y)) || (at.get(x)-at.get(y)));
+ 
+for(let i=0; i<dayShifts.length; ){
+let j=i+1; while(j<dayShifts.length && grp.get(dayShifts[j])===grp.get(dayShifts[i])) j++;
+if(j-i>1) dayShifts.splice(i, j-i, ...dayShifts.slice(i, j).sort((x,y)=> (above(x)-above(y)) || (at.get(x)-at.get(y))));
+i=j;
+}
 }
  
 const openHere = openDemandOn(d.date, d.dow, ws, assignments);
@@ -11699,8 +11754,9 @@ const rows=(holNeedRows(h)||[]).filter(r=>demCount(r)>0);
 if(!rows.length) return;
 const by={}, keys=[];
 rows.forEach(r=>{ const k=r.roleId||""; if(!(k in by)){ by[k]=0; keys.push(k); } by[k]+=demCount(r); });
+ 
 const who=keys.map(k=>{ const n=by[k], ro=k? roleById(k) : null;
-return n+" "+(ro? ro.name+((n===1 || /s$/i.test(ro.name))? "" : "s") : (n===1? "person" : "people")); });
+return n+" "+(ro? ro.name+((n===1 || /[ysx]$/i.test(ro.name))? "" : "s") : (n===1? "person" : "people")); });
 const hh=holHoursOf(h), sh=shiftById(rows[0].shiftId);
 const span=(hh.from && hh.to)? [t2m(hh.from), t2m(hh.to)] : sh? shiftMinutes(sh) : null;
 out.push({code:"holshutday", sev:"warn", where:"holidays", detail:"",
@@ -14082,6 +14138,8 @@ const prefIds=v.pref.map(x=>x.id);
 const avoidIds=v.avoid.map(x=>x.id);
 let e=v.existing;
 const fresh=!e;
+ 
+if(fresh && staffCount()>=MAX_STAFF){ closeModal(true); staffFullModal(); return; }
 if(fresh){
 e={id:uid("e"), name:v.name, roleIds:[], type:"FT", hoursMode:"exact", minH:40, maxH:40, maxD:5, projectOk:"no",
 holidayPay:true, holidayPayH:8, onCall:false, cycle:null,
@@ -16219,6 +16277,7 @@ wk.published=true; wk.publishedAt=Date.now();
 auditPost(q.ws, q.notify||null, wk.postedOnce? weekDiff(q.ws) : []);
 wk.postedOnce=true; snapWeek(wk);
 wk.assignments.forEach(a=>a.locked=true);
+draftSealsKeep(q.ws, {});    
 q.status="done"; q.ranAt=Date.now();
 return true;
 }
@@ -16693,7 +16752,7 @@ const choice=wk.pendingChoice||null;
 const diff=wk.pendingDiff||[];
 auditPost(ws, choice, diff);
 wk.postedOnce=true;
-clearPending(wk);
+clearPending(wk); draftSealsKeep(ws, {});    
  
 if(choice && typeof repostNotify==="function"){ try{ repostNotify(ws, choice, diff); }catch(e){} }
 changed=true;
@@ -16950,7 +17009,8 @@ wk.pendingDiff=diff;
 wk.pendingLocks=wk.assignments.filter(a=>a.locked).map(a=>a.id);
 setTimeout(graceTick,0);
 } else {
-wk.publishedAt=Date.now(); auditPost(ws, choice, diff); wk.postedOnce=true;
+wk.publishedAt=Date.now(); auditPost(ws, choice, diff); wk.postedOnce=true; draftSealsKeep(ws, {});
+ 
 }
 }
 function clearPending(wk){
@@ -22058,10 +22118,9 @@ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||"")); if(!m) return "";
 return m[2]+"/"+m[3]+"/"+m[1];
 }
  
-function usToIso(s, when){
+function usToIso(s, when, after){
 s=String(s||"").trim(); if(!s) return "";
 let mo, d, y, noYear=false;
- 
 { const MN=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
 const m=/^([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{2,4})?$/i.exec(s) || /^(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)\.?,?\s*(\d{2,4})?$/i.exec(s);
 if(m){ const word=(/^[a-z]/i.test(m[1])? m[1] : m[2]).slice(0,3).toLowerCase(); const day=/^[a-z]/i.test(m[1])? m[2] : m[1];
@@ -22069,7 +22128,7 @@ const idx=MN.indexOf(word); if(idx<0) return null;
 if(!m[3]) noYear=true;
 s=(idx+1)+"/"+day+"/"+(m[3]||String(new Date().getFullYear())); } }
 const parts=s.split(/[\/\-. ]+/).filter(Boolean);
-if(parts.length===3 && parts[0].length===4){ [y,mo,d]=parts; }         
+if(parts.length===3 && parts[0].length===4){ [y,mo,d]=parts; }
 else if(parts.length===3){ [mo,d,y]=parts; }
 else if(parts.length===2){ [mo,d]=parts; y=String(new Date().getFullYear()); noYear=true; }
 else if(parts.length===1 && /^\d+$/.test(s)){
@@ -22081,12 +22140,12 @@ else return null;
 } else return null;
 if(!/^\d{1,2}$/.test(mo) || !/^\d{1,2}$/.test(d) || !/^\d{2}$|^\d{4}$/.test(y)) return null;
 mo=+mo; d=+d; y=+y;
-if(y<100) y += (y<=79? 2000 : 1900);          
+if(y<100) y += (y<=79? 2000 : 1900);
 if(mo<1||mo>12||d<1||d>31) return null;
- 
 if(noYear){ const days=(new Date(y, mo-1, d)-new Date())/86400000;
-if(when==="past"){ if(days>0) y-=1; }                     
-else { if(days < -150) y+=1; else if(days > 210) y-=1; } }
+if(when==="past"){ if(days>0) y-=1; }
+else { if(days < -150) y+=1; else if(days > 210) y-=1; }
+if(after && y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0") < after) y+=1; }
 const dt=new Date(y, mo-1, d);
 if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==d) return null;
 return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");
@@ -22141,7 +22200,7 @@ wrap.appendChild(txt); wrap.appendChild(nat); wrap.appendChild(cal);
 nat.classList.add("dnat"); nat.tabIndex=-1; nat.setAttribute("aria-hidden","true");
 const fire=(names)=>names.forEach(n=>nat.dispatchEvent(new Event(n,{bubbles:true})));
 const push=()=>{
-const iso=usToIso(txt.value, nat.dataset.when);
+const iso=usToIso(txt.value, nat.dataset.when, nat.dataset.after && (document.getElementById(nat.dataset.after)||{}).value);
 if(iso===null){ txt.classList.add("bad"); return false; }
 txt.classList.remove("bad");
 if(nat.value!==iso){ nat.value=iso; fire(["input","change"]); }
@@ -22154,7 +22213,7 @@ if(!txt.value.trim()){ txt.classList.remove("bad"); if(nat.value){ nat.value="";
 if(txt.value.length===10) push();
 });
 txt.addEventListener("blur", ()=>{
-const iso=usToIso(txt.value, nat.dataset.when);
+const iso=usToIso(txt.value, nat.dataset.when, nat.dataset.after && (document.getElementById(nat.dataset.after)||{}).value);
 if(iso===null){ txt.classList.add("bad"); return; }
 if(iso){ txt.value=isoToUs(iso); txt.dataset.prev=txt.value; }
 push(); fire(["blur"]);
@@ -25249,7 +25308,7 @@ se2.dispatchEvent(new Event("input",{bubbles:true}));
 { const M=mealRow(L.meal||null, gross, a); const lawMin=(M&&M.lengthMin)||0;
 const boardDef=Math.max(mealLenFor(null), lawMin);
  
-const owes=br.owed.meals>0;
+const owes=br.owed.meals>0 || minorMealOwed(a, b, gg, shiftLike, (s && s.roleId) || null);    
 const extra=owes? [45,60].filter(v=>v>=lawMin && v!==boardDef) : [];
 const chips=[{v:null,t:"Board default ("+boardDef+")"}].concat(extra.map(v=>({v,t:String(v)})));
 root.querySelector("#mealchips").innerHTML=chips.map(c=>
@@ -25628,20 +25687,7 @@ if(fb){ fb.addEventListener("input", notes); notes(); } }
 { const ha=root.querySelector("#histadd"); if(ha) ha.onclick=()=>historyModal("timeoff"); }
 { const ot=root.querySelector("#otoffer"); if(ot) ot.onclick=()=>otOfferModal(); }
 root.querySelector("#addemp").onclick=()=>{
-if(staffCount()>=MAX_STAFF){
-modal("This account is full", `
-        <div class="stack">
-          <p class="whead">One Weeksolved account holds <b>${MAX_STAFF} people</b>, and there are ${staffCount()} on this one.</p>
-          <div class="help">That is not an arbitrary number \u2014 it is where an account's saved data starts running up against
-            what the storage behind it will accept in one piece. Going past it would mean your schedules quietly stopped
-            saving to your account, which is worse than being told no.</div>
-          <div class="help">If somebody has left, mark them inactive under Team and their history stays; inactive people
-            still count toward the ${MAX_STAFF}, so remove anyone you will genuinely never schedule again.
-            If you truly need more than ${MAX_STAFF} at one site, write to ${esc(S.support.email||"weeksolved@gmail.com")} \u2014
-            it is worth knowing about.</div>
-        </div>`, `<button class="btn primary" data-close>Fine</button>`);
-return;
-}
+if(staffCount()>=MAX_STAFF){ staffFullModal(); return; }    
 empModal(null);
 };
 root.querySelector("#addgrp").onclick=()=>groupModal(null);
@@ -26198,6 +26244,8 @@ if(c) c.style.display = on? "" : "none";
 function empModal(id){
  
 if(id && !empById(id)){ toast("That person is no longer on the roster"); return; }
+ 
+if(!id && staffCount()>=MAX_STAFF){ staffFullModal(); return; }
 const blankAvail=()=>[0,1,2,3,4,5,6].map(()=>({ok:true,from:"06:00",to:"22:00"}));
 const e = id? JSON.parse(JSON.stringify(empById(id))) :
 {id:uid("e"),name:"",email:"",phone:"",roleIds:[],type:"FT",hoursMode:"exact",minH:40,maxH:40,maxD:5,projectOk:"no",
@@ -26957,6 +27005,8 @@ const sh=shiftById(r.shiftId); if(!sh) return "";
 const [a,b]=shiftMinutes(sh);
  
 const mealChip=typeof sh.mealMin==="number" && computeBreaks(a,b,{gap:shiftGap(sh), shift:sh}).owed.meals>0;
+ 
+const minorChip=!mealChip && typeof sh.mealMin==="number" && minorMealOwed(a, b, shiftGap(sh), sh, r.roleId);
 return `<div class="demrow" data-dshift="${esc(r.shiftId)}" data-editdem="${i}:${ri}" role="button" tabindex="0" title="Edit this row" style="cursor:pointer">
               ${multiSite()? `<span class="chip">${esc(siteName(siteOf(r)))}</span>` : ""}
               <span class="tag" style="--sc:${esc(sh.color)}">${esc(sh.label)}</span>
@@ -26965,6 +27015,7 @@ return `<div class="demrow" data-dshift="${esc(r.shiftId)}" data-editdem="${i}:$
               <span class="chip acc">${r.max!=null? demCount(r)===r.max? r.max+" exactly" : "at least "+demCount(r)+" · at most "+r.max : "at least "+demCount(r)}</span>
               <span class="mini">${fmtHrs(b-a)} each</span>
               ${mealChip? `<span class="chip">${sh.mealMin}-min meal</span>`:""}
+              ${minorChip? `<span class="chip">${sh.mealMin}-min meal</span>`:""}
               <span class="row" style="margin-left:auto;gap:6px"><button class="btn sm" data-editdem2="${i}:${ri}">Edit</button><button class="btn sm danger" data-deldem="${i}:${ri}">Remove</button></span></div>`;
 }).join("")}</div>`
 : `<div class="empty" style="padding:16px">${weekdayShut(i)?"Closed — nothing to staff.":"No shifts requested for this day."}</div>`}
@@ -32518,7 +32569,7 @@ modal("Reports", `
         ${fiscalStartMonth()===1? `<span class="mini">Your fiscal year runs with the calendar year. If it starts in another month, set it under Settings \u2192 Business \u2192 Your business and these options follow.</span>` : ""}</div>
       <div class="grid2" id="rpcustom" style="display:none">
         <div class="field"><label>From</label><input type="date" id="rpfrom" data-when="past" value="${esc(addDays(ws,-28))}"></div>
-        <div class="field"><label>To</label><input type="date" id="rpto" data-when="past" value="${esc(addDays(ws,6))}"></div>
+        <div class="field"><label>To</label><input type="date" id="rpto" data-when="past" data-after="rpfrom" value="${esc(addDays(ws,6))}"></div>
       </div>
       <div class="field"><label>Which reports?</label>
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
@@ -34405,7 +34456,7 @@ return `<div class="wteamrow"><div class="wtr-id"><strong>${esc(pn.name)}</stron
             <div class="wtr-fields">
               <div class="wtr-f"><label>Type</label><select class="wpt" data-k="${esc(key)}">${Object.keys(TYPES).map(t=>`<option value="${t}" ${(pp.type||"FT")===t?"selected":""}>${TYPES[t]}</option>`).join("")}</select></div>
               <div class="wtr-f"><label>Min</label><input type="number" inputmode="decimal" class="wmn" data-k="${esc(key)}" min="0" max="80" value="${minOf(pp, td)}"${(pp.minH==null || pp.minAuto)? ` data-auto="1"` : ""} placeholder="none"></div>
-              <div class="wtr-f"><label>Max</label><input type="number" inputmode="decimal" class="wph" data-k="${esc(key)}" min="0" max="80" value="${pp.maxH!=null? pp.maxH : td.maxH}"></div>
+              <div class="wtr-f"><label>Max</label><input type="number" inputmode="decimal" class="wph" data-k="${esc(key)}" min="0" max="80" value="${esc(pp.maxH!=null? pp.maxH : td.maxH)}"></div>
             </div></div>`;
 }).join("")}</div>
         <div class="mini" style="margin-top:8px">Min is a <b>guarantee</b>: the drafter adds shifts, on top of the people you asked for, until each person reaches it. Everyone starts available all week; set the days they can\u2019t work on their profile later. The order you listed is the seniority order; change it under Team.</div>`:""}`;
@@ -34989,7 +35040,17 @@ if(W.hols){
 const roleIds=N.roles.map(r=>r.id);
 const open=t2m(W.open||"09:00"), close=t2m(W.close||"17:00");
 const lightFrom=Math.max(open, 600), lightTo=Math.min(close, 960);
-const lightHours=(lightTo>lightFrom)? m2t(lightFrom)+"-"+m2t(lightTo) : m2t(open)+"-"+m2t(close);
+const lightWin=(lightTo>lightFrom)? [lightFrom, lightTo] : [open, close];
+ 
+const lightShift=(()=>{ const all=N.shifts.filter(sh=>sh && !sh.off);
+const exact=all.find(sh=>{ const [x,y]=shiftMinutes(sh); return x===lightWin[0] && y===lightWin[1]; });
+if(exact) return exact;
+let best=null, bestOv=-1;
+all.forEach(sh=>{ const [x,y]=shiftMinutes(sh); const ov=Math.max(0, Math.min(y,lightWin[1])-Math.max(x,lightWin[0]));
+if(ov>bestOv){ bestOv=ov; best=sh; } });
+return best; })();
+const ls=lightShift? shiftMinutes(lightShift) : null;
+const lightHours=(ls && ls[0]>=open && ls[1]<=close)? m2t(ls[0])+"-"+m2t(ls[1]) : m2t(lightWin[0])+"-"+m2t(lightWin[1]);
 N.holidays.list = holidayCandidates()
 .filter(h=>W.hols[h.key] && W.hols[h.key]!=="skip")
 .map(h=>{
@@ -35026,6 +35087,21 @@ if(e && n>0) N.holidays.priorTurns[e.id]=n;
 N.requests = W.reqs.map(r=>({id:uid("q"), empId:(N.employees[r.pi]||{}).id, kind:r.kind, hard:!!r.hard,
 from:r.from, to:r.to, shiftId:(N.shifts[r.shiftIdx]||{}).id||null, time:r.time, num:r.num,
 note:"", status:"open", at:Date.now()})).filter(r=>r.empId);
+ 
+let staffOver=0;
+{ const norm=x=>String(x||"").trim().toLowerCase();
+const have=(wizRealBoard(S) && !W.startFresh)? (S.employees||[]) : [];
+const left=have.map(e=>norm(e.name)), drop=new Set(); let room=MAX_STAFF-have.length;
+N.employees.forEach(e=>{ const i=left.indexOf(norm(e.name));
+if(i>=0){ left.splice(i,1); return; }
+if(room>0){ room--; return; }
+drop.add(e.id); });
+if(drop.size){ staffOver=drop.size;
+N.employees=N.employees.filter(e=>!drop.has(e.id));
+N.priority.order=(N.priority.order||[]).filter(id=>!drop.has(id));
+N.timeoff=(N.timeoff||[]).filter(t=>!drop.has(t.empId));
+N.requests=(N.requests||[]).filter(q=>!drop.has(q.empId));
+drop.forEach(id=>{ delete N.holidays.priorTurns[id]; }); } }
 wizClearDraft();
 N.setupDone=true; N.sample=false; N.templates=[]; N.horizon=W.weeks||1; N.ui={advanced:false, updSeen:UPDREV};
 N.currentWeek = addDays(weekStartOf(ymd(new Date()), N.org.weekStart), 7);
@@ -35074,6 +35150,7 @@ go(S.employees.length? "shifts" : "team");
 toast(S.employees.length? "Set up. Add the shifts you run and it will draft the week."
 : "Set up. Add who works here and it will draft the week.");
 }
+if(staffOver) afterWelcome(()=>staffFullModal());    
 }
 
 paint();
@@ -37606,12 +37683,8 @@ const FORM_DATES_CSS = '.datein{display:flex;align-items:stretch;position:relati
 '.datein .dnat{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;margin:0;padding:0;border:0}';
 const FORM_DATES_JS = [
 'function isoToUs(v){var m=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(String(v||""));return m?m[2]+"/"+m[3]+"/"+m[1]:"";}',
-'function usToIso(s){s=String(s||"").trim();if(!s)return "";var mo,d,y,p=s.split(/[\\/\\-. ]+/).filter(Boolean);',
-'if(p.length===3){mo=p[0];d=p[1];y=p[2];}else if(p.length===2){mo=p[0];d=p[1];y=String(new Date().getFullYear());}',
-'else if(p.length===1&&/^\\d+$/.test(s)){if(s.length===8||s.length===6){mo=s.slice(0,2);d=s.slice(2,4);y=s.slice(4);}else if(s.length===7){mo=s.slice(0,1);d=s.slice(1,3);y=s.slice(3);}else if(s.length===4){mo=s.slice(0,2);d=s.slice(2);y=String(new Date().getFullYear());}else return null;}else return null;',
-'if(!/^\\d{1,2}$/.test(mo)||!/^\\d{1,2}$/.test(d)||!/^(\\d{2}|\\d{4})$/.test(y))return null;mo=+mo;d=+d;y=+y;if(y<100)y+=(y<=79?2000:1900);',
-'if(mo<1||mo>12||d<1||d>31)return null;var dt=new Date(y,mo-1,d);if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;',
-'return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");}',
+ 
+usToIso.toString(),
 'function fmtTyping(v,prev){if(prev&&v.length<prev.length)return v;if(/[^\\d]/.test(v.replace(/\\//g,"")))return v;var g=v.replace(/\\D/g,"").slice(0,8);if(v.indexOf("/")>=0&&g.length<8)return v;',
 'if(g.length<=2)return g;if(g.length<=4)return g.slice(0,2)+"/"+g.slice(2);return g.slice(0,2)+"/"+g.slice(2,4)+"/"+g.slice(4);}',
 'function enhanceDates(root){Array.prototype.slice.call((root||document).querySelectorAll("input[type=date]:not([data-enh])")).forEach(function(nat){nat.setAttribute("data-enh","1");',
@@ -38183,7 +38256,7 @@ return `<div class="stack" id="rbbody">
           ${[["week","This week"],["4","The last 4 weeks"],["13","The last 13 weeks"]].concat(payOn()? [["pp","This pay period"],["pp-1","Last pay period"]] : []).concat([["ytd","This calendar year so far"],["fy","This fiscal year so far"+(fiscalStartMonth()!==1? " ("+fiscalYearOf(curWeek()).label+")":"")],["fy-1","Last fiscal year"],["all","Everything on file"],["custom","Dates I choose"]]).map(o=>`<option value="${o[0]}" ${(spec.period||"4")===o[0]?"selected":""}>${esc(o[1])}</option>`).join("")}</select></div>
         <div class="grid2" id="rbcustom" style="display:${spec.period==="custom"?"":"none"}">
           <div class="field"><label>From</label><input type="date" id="rbfrom" data-when="past" value="${esc(spec.from||addDays(curWeek(),-28))}"></div>
-          <div class="field"><label>To</label><input type="date" id="rbto" data-when="past" value="${esc(spec.to||addDays(curWeek(),6))}"></div></div>
+          <div class="field"><label>To</label><input type="date" id="rbto" data-when="past" data-after="rbfrom" value="${esc(spec.to||addDays(curWeek(),6))}"></div></div>
       </div>
       <details ${Object.keys(F).some(k=>Array.isArray(F[k])&&F[k].length)?"open":""}><summary><b>Only these</b> <span class="mini">(leave everything unticked for all)</span></summary>
         <div class="stack" style="gap:8px;margin-top:8px">
@@ -39575,6 +39648,8 @@ lastJSON = now;
 function undo(){
 if(!undoStack.length){ toast("Nothing to undo"); return; }
 undoing=true;
+ 
+try{
 const was=S;
 S = migrate(JSON.parse(undoStack.pop()));
  
@@ -39590,7 +39665,11 @@ try{ priorityRefresh(); }catch(e){}
 lsSave();
 if(DB) DB.doc("app/state").set({json:lastJSON, at:Date.now()}).catch(()=>{});
 try{ if(typeof cloudPush==="function" && typeof FB!=="undefined" && FB && FB.user) cloudPush(); }catch(e){}
-undoing=false;
+}catch(e){
+ 
+undoing=false; try{ render(); }catch(e2){}
+return;
+} finally{ undoing=false; }
 render(); toast("Undone");
 }
 
