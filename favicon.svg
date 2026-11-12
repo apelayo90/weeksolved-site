@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Weeksolved</title>
+  <style>g{fill:#545d7e}.t{display:none}@media (min-resolution:2dppx){.s{display:none}.t{display:inline}}@media (prefers-color-scheme:dark){g{fill:#99a9e3}}</style>
+  <g class="s">
+  <rect x="4" y="16" width="28" height="12" rx="6"/>
+  <rect x="40" y="16" width="20" height="12" rx="6"/>
+  <rect x="20" y="36" width="40" height="12" rx="6"/>
+  </g>
+  <g class="t">
+  <rect x="4" y="15" width="28" height="14" rx="7"/>
+  <rect x="40" y="15" width="20" height="14" rx="7"/>
+  <rect x="20" y="35" width="40" height="14" rx="7"/>
+  </g>
+</svg>
